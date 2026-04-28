@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>景区导览服务 AI 数字人</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>欢迎登录</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('login')">登录</button>
+                    <button class="tab-btn" onclick="switchTab('register')">注册</button>
+                </div>
+                
+                <div id="loginForm" class="form-container">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" id="loginUsername" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="loginPassword" placeholder="请输入密码">
+                    </div>
+                    <button class="submit-btn" onclick="login()">登 录</button>
+                    <div class="role-hint">管理员账号：admin/admin123</div>
+                </div>
+                
+                <div id="registerForm" class="form-container hidden">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" id="regUsername" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="regPassword" placeholder="请输入密码">
+                    </div>
+                    <div class="form-group">
+                        <label>邮箱</label>
+                        <input type="email" id="regEmail" placeholder="请输入邮箱（可选）">
+                    </div>
+                    <div class="form-group">
+                        <label>角色</label>
+                        <select id="regRole">
+                            <option value="visitor">游客</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <button class="submit-btn" onclick="register()">注 册</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <header class="header">
+            <div class="logo-section">
+                <i class="fas fa-mountain"></i>
+                <span class="title">AI Digital Human Tour Guide</span>
+                <span class="subtitle">游客多模态交互</span>
+            </div>
+            <div class="header-right">
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">1,284</span>
+                        <span class="stat-label">今日服务人次</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">93.2%</span>
+                        <span class="stat-label">知识命中率</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">2.4s</span>
+                        <span class="stat-label">平均响应</span>
+                    </div>
+                </div>
+                <div class="auth-section">
+                    <button id="loginBtn" class="auth-btn" onclick="openModal('login')">
+                        <i class="fas fa-user"></i>
+                        登录
+                    </button>
+                    <div id="userInfo" class="user-info hidden">
+                        <span id="currentUser"></span>
+                        <span id="userRole"></span>
+                        <button class="logout-btn" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i>
+                            退出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="digital-human-card">
+                    <div class="avatar-section">
+                        <div class="avatar-container">
+                            <div class="avatar" id="digitalAvatar">
+                                <div class="avatar-face">
+                                    <div class="hair"></div>
+                                    <div class="face-shape">
+                                        <div class="eye left-eye">
+                                            <div class="eyebrow"></div>
+                                            <div class="eye-ball"></div>
+                                            <div class="eyelid"></div>
+                                        </div>
+                                        <div class="eye right-eye">
+                                            <div class="eyebrow"></div>
+                                            <div class="eye-ball"></div>
+                                            <div class="eyelid"></div>
+                                        </div>
+                                        <div class="nose"></div>
+                                        <div class="mouth" id="mouth">
+                                            <div class="upper-lip"></div>
+                                            <div class="lower-lip"></div>
+                                            <div class="teeth"></div>
+                                        </div>
+                                        <div class="cheek left-cheek"></div>
+                                        <div class="cheek right-cheek"></div>
+                                    </div>
+                                    <div class="ear left-ear"></div>
+                                    <div class="ear right-ear"></div>
+                                    <div class="neck"></div>
+                                    <div class="body"></div>
+                                </div>
+                            </div>
+                            <div class="status-indicator online" id="avatarStatus">
+                                <span class="status-dot"></span>
+                                <span class="status-text">在线</span>
+                            </div>
+                            <div class="speaking-indicator" id="speakingIndicator">
+                                <div class="sound-wave">
+                                    <span></span><span></span><span></span><span></span><span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="avatar-info">
+                            <h3 id="avatarName">您好，我是云岚导游</h3>
+                            <p id="avatarDesc">可以问我景点历史、路线规划或服务信息。</p>
+                            <div class="avatar-status" id="avatarStatusTags">
+                                <span class="status-tag emotion-tag" id="emotionTag">表情：亲切</span>
+                                <span class="status-tag voice-tag" id="voiceTag">语音：女声·温和</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-section">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message bot-message">
+                                <div class="message-avatar bot"></div>
+                                <div class="message-content">
+                                    <p>欢迎来到青岚山景区，您可以询问"推荐一条历史文化路线"。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="chatInput" placeholder="输入您的问题..." />
+                            <button id="sendBtn" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                            <button id="voiceBtn" class="voice-btn" title="语音输入">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button id="speakerBtn" class="speaker-btn" title="语音播报">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </div>
+                        <div class="voice-status" id="voiceStatus">
+                            <span class="voice-state">等待输入...</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions">
+                        <button class="action-btn" onclick="sendMessage('我对历史感兴趣，时间大约 2 小时。')">
+                            我对历史感兴趣，时间大约 2 小时
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h3 class="card-title">实时指标</h3>
+                    <div class="stat-grid">
+                        <div class="mini-stat">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <span class="mini-value">1.8s</span>
+                                <span class="mini-label">首响应延迟</span>
+                            </div>
+                        </div>
+                        <div class="mini-stat">
+                            <i class="fas fa-check-circle"></i>
+                            <div>
+                                <span class="mini-value">93%</span>
+                                <span class="mini-label">知识命中率</span>
+                            </div>
+                        </div>
+                        <div class="mini-stat">
+                            <i class="fas fa-smile"></i>
+                            <div>
+                                <span class="mini-value">好奇</span>
+                                <span class="mini-label">当前情绪</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="center-panel">
+                <div class="route-panel">
+                    <h3 class="panel-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        推荐路线
+                    </h3>
+                    <div class="route-info">
+                        <p>建议从古城门出发，依次参观碑刻廊、文庙旧址和观景台。我会重点讲解历史沿革。</p>
+                    </div>
+                    <div class="route-steps">
+                        <div class="step active">
+                            <div class="step-number">1</div>
+                            <div class="step-info">
+                                <span class="step-name">东门游客中心</span>
+                                <span class="step-desc">起点</span>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-info">
+                                <span class="step-name">古城门</span>
+                                <span class="step-desc">历史建筑</span>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-info">
+                                <span class="step-name">碑刻廊</span>
+                                <span class="step-desc">文化展示</span>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-info">
+                                <span class="step-name">文庙旧址</span>
+                                <span class="step-desc">历史遗迹</span>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-info">
+                                <span class="step-name">观景台</span>
+                                <span class="step-desc">俯瞰全景</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="knowledge-panel">
+                    <h3 class="panel-title">
+                        <i class="fas fa-folder-open"></i>
+                        知识库管理
+                    </h3>
+                    <div id="uploadArea" class="upload-area">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <p>拖拽讲解词、FAQ、路线表或文史资料到此处</p>
+                        <p class="upload-hint">支持 Markdown、PDF、Word、Excel、TXT</p>
+                    </div>
+                    <div class="document-list">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>文档</th>
+                                    <th>类型</th>
+                                    <th>版本</th>
+                                    <th>解析状态</th>
+                                    <th>发布状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>青岚山历史讲解词</td>
+                                    <td>Markdown</td>
+                                    <td>v3</td>
+                                    <td><span class="status-badge completed">已完成</span></td>
+                                    <td><span class="status-badge published">已发布</span></td>
+                                    <td><button class="btn-preview">预览</button></td>
+                                </tr>
+                                <tr>
+                                    <td>热门问答 FAQ</td>
+                                    <td>Excel</td>
+                                    <td>v2</td>
+                                    <td><span class="status-badge completed">已完成</span></td>
+                                    <td><span class="status-badge pending">待发布</span></td>
+                                    <td><button class="btn-publish">发布</button></td>
+                                </tr>
+                                <tr>
+                                    <td>亲子路线表</td>
+                                    <td>Word</td>
+                                    <td>v1</td>
+                                    <td><span class="status-badge processing">解析中</span></td>
+                                    <td><span class="status-badge draft">草稿</span></td>
+                                    <td><button class="btn-view">查看</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="preferences-panel">
+                    <h3 class="panel-title">
+                        <i class="fas fa-sliders-h"></i>
+                        个性化设置
+                    </h3>
+                    <div class="preference-group">
+                        <label>形象名称</label>
+                        <input type="text" value="云岚" />
+                    </div>
+                    <div class="preference-group">
+                        <label>服装风格</label>
+                        <select>
+                            <option>古典汉服</option>
+                            <option>现代休闲</option>
+                            <option>民族服饰</option>
+                        </select>
+                    </div>
+                    <div class="preference-group">
+                        <label>声音风格</label>
+                        <select>
+                            <option>女声·温和</option>
+                            <option>女声·活泼</option>
+                            <option>男声·沉稳</option>
+                        </select>
+                    </div>
+                    <div class="preference-group">
+                        <label>默认表情</label>
+                        <select>
+                            <option>亲切</option>
+                            <option>微笑</option>
+                            <option>热情</option>
+                        </select>
+                    </div>
+                    <div class="preference-group">
+                        <label>文化标签</label>
+                        <input type="text" value="历史、自然、文化" />
+                    </div>
+                    <div class="preference-group">
+                        <label>示例台词</label>
+                        <textarea>欢迎来到青岚山，我将陪您了解这里的山水与人文故事。</textarea>
+                    </div>
+                </div>
+
+                <div class="analytics-panel">
+                    <h3 class="panel-title">
+                        <i class="fas fa-chart-bar"></i>
+                        运营分析
+                    </h3>
+                    <div class="satisfaction-display">
+                        <div class="satisfaction-ring">
+                            <svg viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="#4CAF50" stroke-width="8"
+                                        stroke-dasharray="221.23" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+                            </svg>
+                            <div class="ring-inner">
+                                <span class="ring-value">91.6%</span>
+                                <span class="ring-label">游客满意度</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analytics-grid">
+                        <div class="analytics-item">
+                            <span class="analytics-value">32%</span>
+                            <span class="analytics-label">历史故事占比</span>
+                        </div>
+                        <div class="analytics-item">
+                            <span class="analytics-value">7.8%</span>
+                            <span class="analytics-label">负向情绪</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insights-panel">
+                    <h3 class="panel-title">
+                        <i class="fas fa-lightbulb"></i>
+                        服务建议
+                    </h3>
+                    <div class="insight-item">
+                        <h4>关注点分析</h4>
+                        <p>游客最关注景区历史、拍照机位、亲子路线和餐饮位置。</p>
+                    </div>
+                    <div class="insight-item">
+                        <h4>情感趋势</h4>
+                        <p>上午满意度较高，下午负向情绪增加，主要来自热门景点排队时间。</p>
+                    </div>
+                    <div class="insight-item highlight">
+                        <h4>优化建议</h4>
+                        <p>建议在观景台入口增加排队时长提示，并补充亲子路线卫生间指引。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+
+# Go test coverage
+*.out
+coverage.*
+
+# Go module cache
+go.sum
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Database files
+*.db
+data/
+
+# Configuration files (keep example configs)
+configs/*.yaml
+configs/*.yml
+!configs/config.example.yaml
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build output
+bin/
+build/
+dist/
+
+# Temporary files
+tmp/
+temp/
+
+# Coverage reports
+coverage/
+
+# Editor directories
+.project
+.classpath
+.settings/
+
+# Docker
+docker-compose.override.yml
+
+# Node.js (if using for frontend)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Certificates
+*.pem
+*.key
+*.crt
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
