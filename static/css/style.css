@@ -349,6 +349,30 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
+.stop-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 100, 100, 0.8);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.stop-btn:hover {
+    background: #ff6464;
+    transform: scale(1.05);
+    box-shadow: 0 5px 20px rgba(255, 100, 100, 0.4);
+}
+
+.stop-btn.hidden {
+    display: none;
+}
+
 .quick-actions {
     padding: 0 20px 20px;
 }

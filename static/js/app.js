@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendBtn = document.getElementById('sendBtn');
     const voiceBtn = document.getElementById('voiceBtn');
     const speakerBtn = document.getElementById('speakerBtn');
+    const stopBtn = document.getElementById('stopBtn');
     const chatMessages = document.getElementById('chatMessages');
     const uploadArea = document.getElementById('uploadArea');
 
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isListening = false;
     let recognition = null;
     let currentAudio = null;
+    let currentUtterance = null;
 
     if (token) {
         loadUserInfo();
@@ -56,6 +58,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function login() {
+        stopSpeaking();
+        
         const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
 
@@ -98,6 +102,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function register() {
+        stopSpeaking();
+        
         const username = document.getElementById('regUsername').value;
         const password = document.getElementById('regPassword').value;
         const email = document.getElementById('regEmail').value;
@@ -130,12 +136,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function logout() {
+        stopSpeaking();
         localStorage.removeItem('token');
         token = null;
         currentUser = null;
         document.getElementById('loginBtn').classList.remove('hidden');
         document.getElementById('userInfo').classList.add('hidden');
-        stopSpeaking();
         alert('已退出登录');
     }
 
@@ -166,12 +172,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const mouth = document.getElementById('mouth');
         const speakingIndicator = document.getElementById('speakingIndicator');
         const voiceStatus = document.querySelector('.voice-state');
+        const stopBtn = document.getElementById('stopBtn');
 
         isSpeaking = true;
         avatar.classList.add('speaking');
         if (mouth) mouth.classList.add('speaking');
         if (speakingIndicator) speakingIndicator.classList.add('active');
         if (voiceStatus) voiceStatus.textContent = 'AI正在说话...';
+        if (stopBtn) stopBtn.classList.remove('hidden');
     }
 
     function stopSpeaking() {
@@ -179,17 +187,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const mouth = document.getElementById('mouth');
         const speakingIndicator = document.getElementById('speakingIndicator');
         const voiceStatus = document.querySelector('.voice-state');
+        const stopBtn = document.getElementById('stopBtn');
 
         isSpeaking = false;
         avatar.classList.remove('speaking');
         if (mouth) mouth.classList.remove('speaking');
         if (speakingIndicator) speakingIndicator.classList.remove('active');
         if (voiceStatus) voiceStatus.textContent = '等待输入...';
+        if (stopBtn) stopBtn.classList.add('hidden');
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
 
         if (currentAudio) {
             currentAudio.pause();
             currentAudio = null;
         }
+
+        currentUtterance = null;
     }
 
     function speakText(text, useWebSpeech = true) {
@@ -197,11 +213,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (useWebSpeech && ('speechSynthesis' in window)) {
             const utterance = new SpeechSynthesisUtterance(text);
+            currentUtterance = utterance;
             utterance.lang = 'zh-CN';
-            utterance.rate = 1.0;
+            utterance.rate = 0.9;
             utterance.pitch = 1.0;
+            utterance.volume = 1.0;
 
-            const voices = speechSynthesis.getVoices();
+            const voices = window.speechSynthesis.getVoices();
             const zhVoice = voices.find(v => v.lang.includes('zh'));
             if (zhVoice) {
                 utterance.voice = zhVoice;
@@ -220,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 stopSpeaking();
             };
 
-            speechSynthesis.speak(utterance);
+            window.speechSynthesis.speak(utterance);
         } else {
             fetchTTSAudio(text);
         }
@@ -349,6 +367,8 @@ document.addEventListener('DOMContentLoaded', function() {
     async function sendMessage(text) {
         if (!text.trim()) return;
 
+        stopSpeaking();
+
         addMessage(text, false);
         chatInput.value = '';
 
@@ -399,10 +419,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    chatInput.addEventListener('focus', function() {
+        if (isSpeaking) {
+            stopSpeaking();
+        }
+    });
+
     voiceBtn.addEventListener('click', function() {
         if (isListening) {
             stopListening();
         } else {
+            stopSpeaking();
             if (!recognition) {
                 initVoiceInput();
             }
@@ -421,10 +448,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    if (stopBtn) {
+        stopBtn.addEventListener('click', function() {
+            stopSpeaking();
+        });
+    }
+
     if ('speechSynthesis' in window) {
-        speechSynthesis.getVoices();
-        speechSynthesis.onvoiceschanged = () => {
-            speechSynthesis.getVoices();
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
         };
     }
 
@@ -482,4 +515,5 @@ document.addEventListener('DOMContentLoaded', function() {
     window.register = register;
     window.logout = logout;
     window.sendMessage = sendMessage;
+    window.stopSpeaking = stopSpeaking;
 });
