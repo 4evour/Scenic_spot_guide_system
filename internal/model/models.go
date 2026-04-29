@@ -87,5 +87,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&User{},
 		&VisitRecord{},
 		&SystemLog{},
+		&KnowledgeChunk{},
 	)
 }

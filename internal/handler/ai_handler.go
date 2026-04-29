@@ -1,38 +1,24 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
+	"io"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/pkg"
+	"github.com/scenic-guide/internal/service"
 )
 
-type AIHandler struct{}
+type AIHandler struct {
+	ragService *service.RAGService
+}
 
-func NewAIHandler() *AIHandler {
-	return &AIHandler{}
+func NewAIHandler(ragService *service.RAGService) *AIHandler {
+	return &AIHandler{ragService: ragService}
 }
 
 type ChatRequest struct {
 	Message string `json:"message"`
-}
-
-type DeepSeekRequest struct {
-	Model    string `json:"model"`
-	Messages []struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	} `json:"messages"`
-}
-
-type DeepSeekResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
 }
 
 func (h *AIHandler) Chat(c *gin.Context) {
@@ -47,69 +33,148 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		return
 	}
 
-	deepSeekReq := DeepSeekRequest{
-		Model: "deepseek-chat",
-		Messages: []struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		}{
-			{
-				Role:    "system",
-				Content: "你是一位专业的景区导游AI助手，名字叫云岚。你需要用友好、专业的语气回答游客的问题，包括景点介绍、历史背景、路线规划、服务信息等。请用中文回答，保持亲切自然。",
-			},
-			{
-				Role:    "user",
-				Content: req.Message,
-			},
-		},
+	if h.ragService != nil {
+		response, err := h.ragService.QueryWithRAG(req.Message)
+		if err != nil {
+			pkg.InternalError(c, "调用AI服务失败: "+err.Error())
+			return
+		}
+		pkg.Success(c, gin.H{
+			"response": response,
+		})
+	} else {
+		pkg.InternalError(c, "RAG服务未初始化")
 	}
+}
 
-	reqBody, err := json.Marshal(deepSeekReq)
+func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
+	file, err := c.FormFile("file")
 	if err != nil {
-		pkg.InternalError(c, "请求序列化失败")
+		pkg.BadRequest(c, "获取文件失败: "+err.Error())
 		return
 	}
 
-	apiKey := "<DEEPSEEK_API_KEY>"
-
-	httpReq, err := http.NewRequest("POST", "https://api.deepseek.com/v1/chat/completions", bytes.NewBuffer(reqBody))
+	f, err := file.Open()
 	if err != nil {
-		pkg.InternalError(c, "创建请求失败")
+		pkg.BadRequest(c, "打开文件失败: "+err.Error())
 		return
 	}
+	defer f.Close()
 
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(httpReq)
+	data, err := io.ReadAll(f)
 	if err != nil {
-		pkg.InternalError(c, "调用AI服务失败: "+err.Error())
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		pkg.InternalError(c, "AI服务返回错误: "+resp.Status)
+		pkg.BadRequest(c, "读取文件失败: "+err.Error())
 		return
 	}
 
-	var deepSeekResp DeepSeekResponse
-	if err := json.NewDecoder(resp.Body).Decode(&deepSeekResp); err != nil {
-		pkg.InternalError(c, "解析响应失败")
+	savePath, err := h.ragService.SaveUploadedFile(file.Filename, data)
+	if err != nil {
+		pkg.InternalError(c, "保存文件失败: "+err.Error())
 		return
 	}
 
-	if len(deepSeekResp.Choices) == 0 {
-		pkg.InternalError(c, "未获取到响应")
+	loadedCount, err := h.ragService.LoadKnowledgeFromJSONL(data)
+	if err != nil {
+		pkg.InternalError(c, "加载知识失败: "+err.Error())
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"response": deepSeekResp.Choices[0].Message.Content,
+		"file_path":     savePath,
+		"loaded_count":    loadedCount,
+		"message":          "知识上传并加载成功",
+	})
+}
+
+func (h *AIHandler) ListKnowledge(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	pageSizeStr := c.DefaultQuery("page_size", "20")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	list, total, err := h.ragService.ListKnowledge(page, pageSize)
+	if err != nil {
+		pkg.InternalError(c, "查询知识失败: "+err.Error())
+		return
+	}
+
+	pkg.Success(c, gin.H{
+		"list":  list,
+		"total": total,
+		"page":  page,
+		"page_size": pageSize,
+	})
+}
+
+func (h *AIHandler) GetKnowledge(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		pkg.BadRequest(c, "ID不能为空")
+		return
+	}
+
+	knowledge, err := h.ragService.GetKnowledge(id)
+	if err != nil {
+		pkg.InternalError(c, "查询知识失败: "+err.Error())
+		return
+	}
+
+	if knowledge == nil {
+		pkg.NotFound(c, "知识不存在")
+		return
+	}
+
+	pkg.Success(c, gin.H{
+		"knowledge": knowledge,
+	})
+}
+
+func (h *AIHandler) DeleteKnowledge(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		pkg.BadRequest(c, "ID不能为空")
+		return
+	}
+
+	if err := h.ragService.DeleteKnowledge(id); err != nil {
+		pkg.InternalError(c, "删除知识失败: "+err.Error())
+		return
+	}
+
+	pkg.Success(c, gin.H{
+		"message": "知识删除成功",
+	})
+}
+
+func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
+	if err := h.ragService.DeleteAllKnowledge(); err != nil {
+		pkg.InternalError(c, "清空知识失败: "+err.Error())
+		return
+	}
+
+	pkg.Success(c, gin.H{
+		"message": "知识清空成功",
 	})
 }
 
 func (h *AIHandler) Routes(r *gin.RouterGroup) {
 	r.POST("/ai/chat", h.Chat)
+
+	knowledge := r.Group("/knowledge")
+	{
+		knowledge.POST("/upload", h.UploadKnowledgeFile)
+		knowledge.GET("/list", h.ListKnowledge)
+		knowledge.GET("/:id", h.GetKnowledge)
+		knowledge.DELETE("/:id", h.DeleteKnowledge)
+		knowledge.DELETE("/all", h.DeleteAllKnowledge)
+	}
 }
+

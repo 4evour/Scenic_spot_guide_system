@@ -14,7 +14,7 @@ import (
 
 func main() {
 	fmt.Println("=== 启动景区导览服务 ===")
-	
+
 	fmt.Println("步骤1: 加载配置...")
 	cfg, err := config.LoadConfig("./configs")
 	if err != nil {
@@ -47,11 +47,19 @@ func main() {
 	}
 	fmt.Println("数据库迁移成功")
 
+	fmt.Println("步骤4.5: 初始化RAG知识库...")
+	ragService := initRAG(cfg)
+	if ragService != nil {
+		fmt.Println("RAG知识库初始化成功")
+	} else {
+		fmt.Println("RAG知识库初始化失败，将使用基础AI服务")
+	}
+
 	fmt.Println("步骤5: 设置路由...")
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
-	setupHandlers := setupDI()
+	setupHandlers := setupDI(ragService)
 	handler.SetupRoutes(r, setupHandlers)
 	fmt.Println("路由设置成功")
 
@@ -63,7 +71,57 @@ func main() {
 	}
 }
 
-func setupDI() *handler.Handlers {
+func initRAG(cfg *config.Config) *service.RAGService {
+	if cfg.AI.APIKey == "" {
+		fmt.Println("警告: AI API Key未配置，跳过RAG初始化")
+		return nil
+	}
+
+	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
+
+	var embeddingProvider service.EmbeddingProvider
+	// 暂时注释掉embedding provider的使用，先用BM25测试
+	/*
+		if cfg.Embedding.APIKey != "" {
+			embeddingProvider = service.NewQwenEmbeddingProvider(&cfg.Embedding)
+			if embeddingProvider.IsAvailable() {
+				fmt.Printf("Embedding Provider [%s] 可用\n", embeddingProvider.Name())
+			} else {
+				fmt.Println("Embedding Provider不可用，将使用BM25")
+				embeddingProvider = nil
+			}
+		} else {
+			fmt.Println("未配置Embedding API Key，将使用BM25")
+		}
+	*/
+	fmt.Println("使用BM25作为fallback方案")
+	embeddingProvider = nil
+
+	ragService := service.NewRAGService(knowledgeRepo, cfg.AI.APIKey, cfg.AI.Model, cfg.AI.BaseURL, embeddingProvider)
+
+	var err error
+	fmt.Println("清空旧知识库...")
+	if err = ragService.DeleteAllKnowledge(); err != nil {
+		fmt.Printf("清空知识库失败: %v\n", err)
+	}
+
+	fmt.Println("开始加载新知识文件...")
+	err = ragService.LoadKnowledgeFromFile("./knowledge/lingshan_chunks.jsonl")
+	if err != nil {
+		fmt.Printf("加载知识库失败: %v\n", err)
+		return ragService
+	}
+	fmt.Println("知识库加载完成")
+
+	newCount, err := knowledgeRepo.Count()
+	if err == nil {
+		fmt.Printf("当前知识库共有 %d 条知识\n", newCount)
+	}
+
+	return ragService
+}
+
+func setupDI(ragService *service.RAGService) *handler.Handlers {
 	scenicSpotRepo := repository.NewScenicSpotRepository(pkg.DB)
 	scenicSpotService := service.NewScenicSpotService(scenicSpotRepo)
 	scenicSpotHandler := handler.NewScenicSpotHandler(scenicSpotService)
@@ -84,7 +142,7 @@ func setupDI() *handler.Handlers {
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
 
-	aiHandler := handler.NewAIHandler()
+	aiHandler := handler.NewAIHandler(ragService)
 	ttsHandler := handler.NewTTSHandler()
 
 	return &handler.Handlers{
