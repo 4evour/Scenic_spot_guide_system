@@ -44,7 +44,7 @@ func (r *KnowledgeRepository) Exists(id string) (bool, error) {
 }
 
 func (r *KnowledgeRepository) DeleteAll() error {
-	return r.db.Delete(&model.KnowledgeChunk{}).Error
+	return r.db.Exec("DELETE FROM knowledge_chunks").Error
 }
 
 func (r *KnowledgeRepository) Count() (int64, error) {

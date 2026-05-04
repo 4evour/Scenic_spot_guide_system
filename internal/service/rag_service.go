@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,20 +25,16 @@ const (
 
 func isLingshanRelatedQuestion(query string) bool {
 	queryLower := strings.ToLower(query)
-	fmt.Printf("意图判断 - 查询: %s\n", query)
 	for _, keyword := range config.LingshanRelatedKeywords {
 		if strings.Contains(queryLower, strings.ToLower(keyword)) {
-			fmt.Printf("  匹配到关键词: %s\n", keyword)
 			return true
 		}
 	}
 	for _, pattern := range config.LingshanRelatedPatterns {
 		if strings.Contains(query, pattern) {
-			fmt.Printf("  匹配到模式: %s\n", pattern)
 			return true
 		}
 	}
-	fmt.Println("  未匹配到任何灵山相关关键词")
 	return false
 }
 
@@ -50,6 +47,7 @@ type RAGService struct {
 	bm25        *BM25FallbackProvider
 	useBM25     bool
 	uploadDir   string
+	httpClient  *http.Client
 }
 
 func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, chatBaseURL string, embeddingProvider EmbeddingProvider) *RAGService {
@@ -58,9 +56,6 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 
 	if embeddingProvider != nil && embeddingProvider.IsAvailable() {
 		useBM25 = false
-		fmt.Printf("使用Embedding Provider: %s\n", embeddingProvider.Name())
-	} else {
-		fmt.Printf("Embedding Provider不可用，将使用BM25\n")
 	}
 
 	return &RAGService{
@@ -72,6 +67,14 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		bm25:        bm25,
 		useBM25:     useBM25,
 		uploadDir:   "./knowledge",
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				IdleConnTimeout:     90 * time.Second,
+				MaxIdleConnsPerHost: 10,
+			},
+		},
 	}
 }
 
@@ -100,7 +103,6 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 
 		var chunk ChunkData
 		if err := json.Unmarshal([]byte(line), &chunk); err != nil {
-			fmt.Printf("跳过无效行: %v\n", err)
 			continue
 		}
 
@@ -110,13 +112,11 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 		}
 
 		if exists {
-			fmt.Printf("知识 %s 已存在，跳过\n", chunk.ID)
 			continue
 		}
 
 		vector, err := s.GenerateEmbedding(chunk.Content)
 		if err != nil {
-			fmt.Printf("生成embedding失败，使用BM25: %v\n", err)
 			vector = s.bm25FallbackVector(chunk.Content)
 		}
 
@@ -132,14 +132,12 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 		}
 
 		if err := s.repo.Create(knowledge); err != nil {
-			fmt.Printf("保存知识 %s 失败: %v\n", chunk.ID, err)
 			continue
 		}
 
 		loadedCount++
 	}
 
-	fmt.Printf("成功加载 %d 条知识\n", loadedCount)
 	return nil
 }
 
@@ -324,22 +322,25 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 
 	var scoredChunks []scoredChunk
 
+	var queryVec []float64
+	if !s.useBM25 {
+		vec, err := s.embedding.GenerateEmbedding(query)
+		if err == nil {
+			queryVec = vec
+		}
+	}
+
 	for _, chunk := range allChunks {
 		var similarity float64
 
-		if s.useBM25 {
+		if s.useBM25 || len(queryVec) == 0 {
 			similarity = s.BM25Similarity(query, chunk.Content)
 		} else {
-			vec1, err := s.embedding.GenerateEmbedding(query)
+			vec2, err := s.parseVector(chunk.Vector)
 			if err != nil {
 				similarity = s.BM25Similarity(query, chunk.Content)
 			} else {
-				vec2, err := s.parseVector(chunk.Vector)
-				if err != nil {
-					similarity = s.BM25Similarity(query, chunk.Content)
-				} else {
-					similarity = s.CosineSimilarity(vec1, vec2)
-				}
+				similarity = s.CosineSimilarity(queryVec, vec2)
 			}
 		}
 
@@ -349,20 +350,9 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		})
 	}
 
-	for i := 0; i < len(scoredChunks)-1; i++ {
-		for j := i + 1; j < len(scoredChunks); j++ {
-			if scoredChunks[j].similarity > scoredChunks[i].similarity {
-				scoredChunks[i], scoredChunks[j] = scoredChunks[j], scoredChunks[i]
-			}
-		}
-	}
-
-	fmt.Printf("\n检索调试 - 查询: %s\n", query)
-	for i, sc := range scoredChunks {
-		if i < 3 {
-			fmt.Printf("  [%d] %s (相似度: %.4f)\n", i+1, sc.chunk.Title, sc.similarity)
-		}
-	}
+	sort.Slice(scoredChunks, func(i, j int) bool {
+		return scoredChunks[i].similarity > scoredChunks[j].similarity
+	})
 
 	result := make([]model.KnowledgeChunk, 0, topK)
 	maxSimilarity := 0.0
@@ -370,10 +360,7 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		maxSimilarity = scoredChunks[0].similarity
 	}
 
-	fmt.Printf("  最高相似度: %.4f\n", maxSimilarity)
-
 	if maxSimilarity < MinSimilarityThreshold {
-		fmt.Printf("  最高相似度 %.4f 低于阈值 %.4f，返回空（将调用通用知识API）\n", maxSimilarity, MinSimilarityThreshold)
 		return nil, nil
 	}
 
@@ -436,17 +423,10 @@ func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk)
 }
 
 func (s *RAGService) QueryWithRAG(query string) (string, error) {
-	fmt.Printf("\n===== QueryWithRAG 开始 =====\n")
-	fmt.Printf("查询内容: %s\n", query)
-	fmt.Printf("useBM25: %v\n", s.useBM25)
-
 	chunks, err := s.RetrieveRelevantKnowledge(query, TopK)
 	if err != nil {
-		fmt.Printf("检索失败: %v\n", err)
 		return "", fmt.Errorf("检索相关知识失败: %v", err)
 	}
-
-	fmt.Printf("检索到 %d 条相关知识\n", len(chunks))
 
 	if len(chunks) == 0 {
 		fmt.Println("未检索到相关知识，使用通用Chat模式")
@@ -475,9 +455,6 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
-		Output struct {
-			Text string `json:"text"`
-		} `json:"output"`
 		Error struct {
 			Message string `json:"message"`
 		} `json:"error"`
@@ -514,16 +491,13 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
 
-	client := &http.Client{}
-	resp, err := client.Do(httpReq)
-	if err != nil { 	
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
 		return s.generateAnswerFromChunks(query, chunks), nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("API返回错误状态码: %d, 响应: %s\n", resp.StatusCode, string(body))
 		return s.generateAnswerFromChunks(query, chunks), nil
 	}
 
@@ -531,19 +505,15 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	var dashScopeResp DashScopeResponse
 	if err := json.Unmarshal(body, &dashScopeResp); err != nil {
-		fmt.Printf("解析API响应失败: %v\n", err)
 		return s.generateAnswerFromChunks(query, chunks), nil
 	}
 
 	if dashScopeResp.Error.Message != "" {
-		fmt.Printf("DashScope API错误: %s\n", dashScopeResp.Error.Message)
 		return s.generateAnswerFromChunks(query, chunks), nil
 	}
 
 	if len(dashScopeResp.Choices) > 0 && dashScopeResp.Choices[0].Message.Content != "" {
 		return dashScopeResp.Choices[0].Message.Content, nil
-	} else if dashScopeResp.Output.Text != "" {
-		return dashScopeResp.Output.Text, nil
 	}
 
 	return s.generateAnswerFromChunks(query, chunks), nil
@@ -582,8 +552,10 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		}
 	}()
 
-	fmt.Printf("\n--- 调用通用知识Chat ---\n")
+	fmt.Printf("\n--- 调用QueryGeneralChat ---\n")
 	fmt.Printf("查询内容: %s\n", query)
+	fmt.Printf("API Base URL: %s\n", s.chatBaseURL)
+	fmt.Printf("Model: %s\n", s.chatModel)
 
 	type DashScopeRequest struct {
 		Model    string `json:"model"`
@@ -599,28 +571,32 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
-		Output struct {
-			Text string `json:"text"`
-		} `json:"output"`
 		Error struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
 
-	userPrompt := fmt.Sprintf(`你是一个中文智能助手，请根据你的通用知识回答用户问题。
+	userPrompt := fmt.Sprintf(`你是一位经验丰富的专业导游，熟悉中国各地的风景名胜、历史文化、风土人情。请以专业导游的角度回答游客的问题。
 
 回答要求：
-1. 如果用户问题与灵山胜境、景区导览、无锡旅游、佛教文化、景点介绍等相关，但当前没有可用资料，请明确说明“当前灵山胜境知识库中没有检索到相关资料”，然后可以给出一般性建议，但不要伪装成官方信息。
-2. 如果用户问题与灵山胜境无关，请作为通用助手正常回答。
-3. 对于实时性较强的信息，例如票价、营业时间、演出时间、交通管制、优惠政策等，如果没有可靠资料，请提醒用户以景区官方公告为准。
-4. 不要编造具体数据、官方政策、价格、时间表。
-5. 回答要简洁、自然、中文表达清楚。
-6. 不要提到“RAG”“向量数据库”“知识片段”等技术词。
+1. 首先判断问题类型：
+   - 如果问题与灵山胜境、无锡旅游、佛教文化直接相关，但当前知识库没有资料，请明确说明："当前灵山胜境知识库中没有检索到相关资料，不过我可以为您提供一些一般性的参考信息..."
+   - 如果问题与灵山胜境无关，而是询问其他景点（如井冈山、黄山、故宫等），请以专业导游的身份进行详细介绍
+2. 导游回答规范：
+   - 介绍景点时，包括历史背景、主要看点、文化价值、最佳游览时间、推荐游览路线等
+   - 语言要亲切自然，富有感染力，像真导游在讲解
+   - 结构清晰，重点突出
+   - 可以适当加入一些有趣的历史故事或传说
+   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
+3. 不要编造具体数据、官方政策、价格、时间表
+4. 回答要简洁但信息丰富，中文表达清楚
+5. 不要提到"RAG""向量数据库""知识片段"等技术词
+6. 回答格式要友好，适合游客阅读
 
 用户问题：
 %s
 
-请回答：`, query)
+请以专业导游的角度回答：`, query)
 
 	req := DashScopeRequest{
 		Model: s.chatModel,
@@ -630,7 +606,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是一个友好的中文智能助手，能够回答各类问题。",
+				Content: "你是一位专业的景区导游，熟悉中国各地的风景名胜和历史文化，回答问题时要亲切友好、专业准确。",
 			},
 			{
 				Role:    "user",
@@ -645,7 +621,11 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		return "抱歉，我现在无法回答这个问题。", nil
 	}
 
+	fmt.Printf("请求体: %s\n", string(reqBody))
+
 	apiURL := s.chatBaseURL + "/chat/completions"
+	fmt.Printf("完整API URL: %s\n", apiURL)
+
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		fmt.Printf("创建HTTP请求失败: %v\n", err)
@@ -655,16 +635,15 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
 
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	resp, err := client.Do(httpReq)
+	fmt.Println("开始调用DeepSeek API...")
+	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
-		fmt.Printf("调用Chat API失败: %v\n", err)
+		fmt.Printf("调用DeepSeek API失败: %v\n", err)
 		return "抱歉，我现在无法回答这个问题。", nil
 	}
 	defer resp.Body.Close()
+
+	fmt.Printf("API响应状态码: %d\n", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -673,6 +652,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	}
 
 	body, _ := io.ReadAll(resp.Body)
+	fmt.Printf("API响应体: %s\n", string(body))
 
 	var dashScopeResp DashScopeResponse
 	if err := json.Unmarshal(body, &dashScopeResp); err != nil {
@@ -680,20 +660,20 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		return "抱歉，我现在无法回答这个问题。", nil
 	}
 
-	if dashScopeResp.Error.Message != "" { 	
-		fmt.Printf("Chat API错误: %s\n", dashScopeResp.Error.Message)
+	if dashScopeResp.Error.Message != "" {
+		fmt.Printf("DeepSeek API错误: %s\n", dashScopeResp.Error.Message)
 		return "抱歉，我现在无法回答这个问题。", nil
 	}
 
 	var answer string
 	if len(dashScopeResp.Choices) > 0 && dashScopeResp.Choices[0].Message.Content != "" {
 		answer = dashScopeResp.Choices[0].Message.Content
-	} else if dashScopeResp.Output.Text != "" {
-		answer = dashScopeResp.Output.Text
 	} else {
+		fmt.Println("API返回空结果")
 		return "抱歉，我无法生成合适的回答。", nil
 	}
 
+	fmt.Printf("API返回回答: %s\n", answer[:min(len(answer), 100)]+"...")
 	return answer, nil
 }
 
@@ -723,13 +703,32 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
-		Output struct {
-			Text string `json:"text"`
-		} `json:"output"`
 		Error struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
+
+	userPrompt := fmt.Sprintf(`你是一位经验丰富的专业导游，熟悉中国各地的风景名胜、历史文化、风土人情。请以专业导游的角度回答游客的问题。
+
+回答要求：
+1. 首先判断问题类型：
+   - 如果问题与灵山胜境、无锡旅游、佛教文化直接相关，但当前知识库没有资料，请明确说明："当前灵山胜境知识库中没有检索到相关资料，不过我可以为您提供一些一般性的参考信息..."
+   - 如果问题与灵山胜境无关，而是询问其他景点（如井冈山、黄山、故宫等），请以专业导游的身份进行详细介绍
+2. 导游回答规范：
+   - 介绍景点时，包括历史背景、主要看点、文化价值、最佳游览时间、推荐游览路线等
+   - 语言要亲切自然，富有感染力，像真导游在讲解
+   - 结构清晰，重点突出
+   - 可以适当加入一些有趣的历史故事或传说
+   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
+3. 不要编造具体数据、官方政策、价格、时间表
+4. 回答要简洁但信息丰富，中文表达清楚
+5. 不要提到"RAG""向量数据库""知识片段"等技术词
+6. 回答格式要友好，适合游客阅读
+
+用户问题：
+%s
+
+请以专业导游的角度回答：`, query)
 
 	req := DashScopeRequest{
 		Model: s.chatModel,
@@ -739,11 +738,11 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是一个知识问答助手。请基于你的通用知识回答用户问题，以不出错为主。如果不确定答案，请说明无法确认。",
+				Content: "你是一位专业的景区导游，熟悉中国各地的风景名胜和历史文化，回答问题时要亲切友好、专业准确。",
 			},
 			{
 				Role:    "user",
-				Content: query,
+				Content: userPrompt,
 			},
 		},
 	}
@@ -805,8 +804,6 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 	var answer string
 	if len(dashScopeResp.Choices) > 0 && dashScopeResp.Choices[0].Message.Content != "" {
 		answer = dashScopeResp.Choices[0].Message.Content
-	} else if dashScopeResp.Output.Text != "" {
-		answer = dashScopeResp.Output.Text
 	} else {
 		fmt.Println("API返回空结果")
 		return "根据当前资料无法确认", nil

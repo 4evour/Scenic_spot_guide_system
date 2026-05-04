@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"io"
 	"strconv"
 
@@ -33,9 +34,15 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("\n=== AI Chat请求 ===\n")
+	fmt.Printf("消息内容: %s\n", req.Message)
+	fmt.Printf("RAG服务是否可用: %v\n", h.ragService != nil)
+
 	if h.ragService != nil {
 		response, err := h.ragService.QueryWithRAG(req.Message)
+		fmt.Printf("RAG响应: %s\n", response)
 		if err != nil {
+			fmt.Printf("RAG错误: %v\n", err)
 			pkg.InternalError(c, "调用AI服务失败: "+err.Error())
 			return
 		}

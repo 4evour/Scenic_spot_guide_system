@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/scenic-guide/internal/config"
 )
@@ -19,18 +21,27 @@ type EmbeddingProvider interface {
 }
 
 type QwenEmbeddingProvider struct {
-	apiKey string
-	model  string
-	baseURL string
+	apiKey    string
+	model     string
+	baseURL   string
 	available bool
+	client    *http.Client
 }
 
 func NewQwenEmbeddingProvider(cfg *config.EmbeddingConfig) *QwenEmbeddingProvider {
 	return &QwenEmbeddingProvider{
-		apiKey:   cfg.APIKey,
-		model:    cfg.Model,
-		baseURL:  cfg.BaseURL,
+		apiKey:    cfg.APIKey,
+		model:     cfg.Model,
+		baseURL:   cfg.BaseURL,
 		available: cfg.APIKey != "",
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				IdleConnTimeout:     90 * time.Second,
+				MaxIdleConnsPerHost: 10,
+			},
+		},
 	}
 }
 
@@ -48,8 +59,8 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 	}
 
 	type Request struct {
-		Model string `json:"model"`
-		Input string `json:"input"`
+		Model string   `json:"model"`
+		Input []string `json:"input"`
 	}
 
 	type Response struct {
@@ -63,7 +74,7 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 
 	reqBody := Request{
 		Model: p.model,
-		Input: text,
+		Input: []string{text},
 	}
 
 	reqJSON, err := json.Marshal(reqBody)
@@ -71,7 +82,9 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 		return nil, fmt.Errorf("序列化请求失败: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", p.baseURL+"/embeddings", bytes.NewBuffer(reqJSON))
+	apiURL := p.baseURL + "/embeddings"
+
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqJSON))
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %v", err)
 	}
@@ -79,19 +92,23 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+p.apiKey)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := p.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("调用embedding API失败: %v", err)
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, fmt.Errorf("读取响应体失败: %v", readErr)
+	}
+
 	var embResp Response
-	if err := json.NewDecoder(resp.Body).Decode(&embResp); err != nil {
+	if err := json.Unmarshal(bodyBytes, &embResp); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
 	}
 
-	if len(embResp.Error.Message) > 0 {
+	if embResp.Error.Message != "" {
 		return nil, fmt.Errorf("embedding API错误: %s", embResp.Error.Message)
 	}
 
@@ -121,16 +138,16 @@ func (p *BM25FallbackProvider) IsAvailable() bool {
 }
 
 type BM25Document struct {
-	ID     string
+	ID      string
 	Content string
-	Tokens []string
+	Tokens  []string
 }
 
 func (p *BM25FallbackProvider) Tokenize(text string) []string {
 	text = strings.ToLower(text)
-	
+
 	var tokens []string
-	
+
 	// 添加n-gram分词（2-gram和3-gram）来处理中文
 	runes := []rune(text)
 	for i := 0; i < len(runes); i++ {
@@ -143,7 +160,7 @@ func (p *BM25FallbackProvider) Tokenize(text string) []string {
 			tokens = append(tokens, string(runes[i:i+3]))
 		}
 	}
-	
+
 	// 添加单个词
 	stopWords := map[string]bool{
 		"的": true, "了": true, "和": true, "是": true, "就": true, "都": true,
@@ -156,7 +173,7 @@ func (p *BM25FallbackProvider) Tokenize(text string) []string {
 		"西": true, "南": true, "北": true, "吗": true, "呢": true, "吧": true,
 		"啊": true, "呀": true, "哦": true, "嗯": true, "哎": true, "哈": true,
 	}
-	
+
 	re := regexp.MustCompile(`[\p{L}\p{N}]+`)
 	matches := re.FindAllString(text, -1)
 	for _, token := range matches {
@@ -164,7 +181,7 @@ func (p *BM25FallbackProvider) Tokenize(text string) []string {
 			tokens = append(tokens, token)
 		}
 	}
-	
+
 	return tokens
 }
 
@@ -198,7 +215,7 @@ func (p *BM25FallbackProvider) CalculateScore(queryTokens, docTokens []string) f
 	if len(docTokens) == 0 {
 		return 0
 	}
-	
+
 	return score / (1.0 + math.Log10(float64(len(docTokens)+1)))
 }
 

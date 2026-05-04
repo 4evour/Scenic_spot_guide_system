@@ -80,42 +80,33 @@ func initRAG(cfg *config.Config) *service.RAGService {
 	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
 
 	var embeddingProvider service.EmbeddingProvider
-	// 暂时注释掉embedding provider的使用，先用BM25测试
-	/*
-		if cfg.Embedding.APIKey != "" {
-			embeddingProvider = service.NewQwenEmbeddingProvider(&cfg.Embedding)
-			if embeddingProvider.IsAvailable() {
-				fmt.Printf("Embedding Provider [%s] 可用\n", embeddingProvider.Name())
-			} else {
-				fmt.Println("Embedding Provider不可用，将使用BM25")
-				embeddingProvider = nil
-			}
+	if cfg.Embedding.APIKey != "" {
+		embeddingProvider = service.NewQwenEmbeddingProvider(&cfg.Embedding)
+		if embeddingProvider.IsAvailable() {
+			fmt.Printf("Embedding Provider [%s] 可用\n", embeddingProvider.Name())
 		} else {
-			fmt.Println("未配置Embedding API Key，将使用BM25")
+			fmt.Println("Embedding Provider不可用，将使用BM25")
+			embeddingProvider = nil
 		}
-	*/
-	fmt.Println("使用BM25作为fallback方案")
-	embeddingProvider = nil
+	} else {
+		fmt.Println("未配置Embedding API Key，将使用BM25")
+	}
 
 	ragService := service.NewRAGService(knowledgeRepo, cfg.AI.APIKey, cfg.AI.Model, cfg.AI.BaseURL, embeddingProvider)
 
-	var err error
-	fmt.Println("清空旧知识库...")
-	if err = ragService.DeleteAllKnowledge(); err != nil {
-		fmt.Printf("清空知识库失败: %v\n", err)
-	}
-
-	fmt.Println("开始加载新知识文件...")
-	err = ragService.LoadKnowledgeFromFile("./knowledge/lingshan_chunks.jsonl")
-	if err != nil {
-		fmt.Printf("加载知识库失败: %v\n", err)
-		return ragService
-	}
-	fmt.Println("知识库加载完成")
-
-	newCount, err := knowledgeRepo.Count()
-	if err == nil {
-		fmt.Printf("当前知识库共有 %d 条知识\n", newCount)
+	// 检查现有知识库
+	count, _ := knowledgeRepo.Count()
+	if count > 0 {
+		fmt.Printf("当前知识库已有 %d 条知识，无需重新加载\n", count)
+	} else {
+		fmt.Println("知识库为空，开始加载知识库...")
+		err := ragService.LoadKnowledgeFromFile("./knowledge/lingshan_chunks.jsonl")
+		if err != nil {
+			fmt.Printf("加载知识库失败: %v\n", err)
+		} else {
+			count, _ = knowledgeRepo.Count()
+			fmt.Printf("知识库加载完成，共 %d 条知识\n", count)
+		}
 	}
 
 	return ragService
