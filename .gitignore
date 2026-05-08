@@ -10,8 +10,9 @@
 *.out
 coverage.*
 
-# Go module cache
-go.sum
+# Local caches
+.gocache/
+*.tsbuildinfo
 
 # IDE/editor files
 .vscode/
@@ -64,7 +65,6 @@ docker-compose.override.yml
 
 # Node.js (if using for frontend)
 node_modules/
-package-lock.json
 yarn.lock
 
 # Certificates

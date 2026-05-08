@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵山胜境 - AI数字人导览</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .live2d-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .live2d-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .live2d-title {
+            font-size: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .live2d-container {
+            flex: 1;
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow: hidden;
+            min-height: 500px;
+        }
+
+        #live2d-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .chat-panel {
+            width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chat-header h2 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            max-height: 500px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.user .message-avatar {
+            background: #4caf50;
+            color: white;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn, .voice-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .send-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .send-btn:hover {
+            background: #5568d3;
+            transform: scale(1.1);
+        }
+
+        .voice-btn {
+            background: #4caf50;
+            color: white;
+        }
+
+        .voice-btn:hover {
+            background: #45a049;
+            transform: scale(1.1);
+        }
+
+        .voice-btn.recording {
+            background: #f44336;
+            animation: recording-pulse 1s infinite;
+        }
+
+        @keyframes recording-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quick-action-btn {
+            padding: 10px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .quick-action-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #666;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .chat-panel {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <i class="fas fa-mountain"></i>
+            灵山胜境 AI数字人导览
+        </h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.location.href='/static/index.html'">
+                <i class="fas fa-home"></i>
+                返回首页
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='/static/dashboard.html'">
+                <i class="fas fa-tachometer-alt"></i>
+                控制台
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="live2d-panel">
+            <div class="live2d-header">
+                <div class="live2d-title">
+                    <i class="fas fa-user-circle"></i>
+                    数字人导览员 - 小灵
+                </div>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span id="statusText">在线服务中</span>
+                </div>
+            </div>
+            <div class="live2d-container">
+                <iframe id="live2d-iframe" src="/static/digital-human/index.html"></iframe>
+            </div>
+        </div>
+
+        <div class="chat-panel">
+            <div class="chat-header">
+                <i class="fas fa-comments"></i>
+                <h2>智能对话</h2>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <div>您好！我是灵山胜境的AI数字人导览员"小灵"，很高兴为您服务。您可以问我关于灵山大佛、九龙灌浴、梵宫等景点的任何问题，我会竭诚为您解答！</div>
+                        <div class="message-time" id="welcomeTime"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loadingIndicator">
+                <i class="fas fa-spinner"></i> 正在思考...
+            </div>
+
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chatInput" placeholder="输入您的问题..." />
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+                <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceInput()">
+                    <i class="fas fa-microphone"></i>
+                </button>
+            </div>
+
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="quickAsk('灵山大佛有多高？')">
+                    <i class="fas fa-question-circle"></i>
+                    大佛高度
+                </button>
+                <button class="quick-action-btn" onclick="quickAsk('推荐一条游览路线')">
+                    <i class="fas fa-route"></i>
+                    推荐路线
+                </button>
+                <button class="quick-action-btn" onclick="quickAsk('门票价格是多少？')">
+                    <i class="fas fa-ticket-alt"></i>
+                    门票价格
+                </button>
+                <button class="quick-action-btn" onclick="quickAsk('景区开放时间')">
+                    <i class="fas fa-clock"></i>
+                    开放时间
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const API_BASE_URL = 'http://127.0.0.1:8080/api/v1';
+        let sessionId = null;
+        let isRecording = false;
+        let recognition = null;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initSession();
+            setupEventListeners();
+            updateWelcomeTime();
+        });
+
+        // 创建会话
+        async function initSession() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/dh/session/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: 'web_user_' + Date.now(),
+                        scene: '景区导览',
+                        location: '灵山胜境'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.code === 0) {
+                    sessionId = result.data.session_id;
+                    console.log('会话创建成功:', sessionId);
+                } else {
+                    console.error('会话创建失败:', result.message);
+                }
+            } catch (error) {
+                console.error('创建会话错误:', error);
+            }
+        }
+
+        // 设置事件监听
+        function setupEventListeners() {
+            const chatInput = document.getElementById('chatInput');
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // 显示用户消息
+            addMessage(message, 'user');
+            input.value = '';
+
+            // 显示加载状态
+            showLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/dh/chat/text`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        input_text: message
+                    })
+                });
+
+                const result = await response.json();
+                showLoading(false);
+
+                if (result.code === 0) {
+                    const answerText = result.data.answer_text;
+                    const emotion = result.data.emotion;
+
+                    // 显示AI回复
+                    addMessage(answerText, 'bot');
+
+                    // 发送消息到Live2D iframe
+                    sendToLive2D(answerText, emotion);
+                } else {
+                    addMessage('抱歉，我暂时无法回答这个问题。', 'bot');
+                }
+            } catch (error) {
+                console.error('发送消息错误:', error);
+                showLoading(false);
+                addMessage('网络错误，请稍后重试。', 'bot');
+            }
+        }
+
+        // 快速提问
+        function quickAsk(question) {
+            document.getElementById('chatInput').value = question;
+            sendMessage();
+        }
+
+        // 添加消息到聊天框
+        function addMessage(text, type) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = type === 'user' ? '👤' : '🤖';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            const textDiv = document.createElement('div');
+            textDiv.textContent = text;
+
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            content.appendChild(textDiv);
+            content.appendChild(timeDiv);
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // 发送消息到Live2D iframe
+        function sendToLive2D(text, emotion) {
+            const iframe = document.getElementById('live2d-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    type: 'speak',
+                    text: text,
+                    emotion: emotion
+                }, '*');
+            }
+        }
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            const loading = document.getElementById('loadingIndicator');
+            if (show) {
+                loading.classList.add('active');
+            } else {
+                loading.classList.remove('active');
+            }
+        }
+
+        // 语音输入
+        function toggleVoiceInput() {
+            const voiceBtn = document.getElementById('voiceBtn');
+
+            if (isRecording && recognition) {
+                recognition.stop();
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                addMessage('当前浏览器不支持语音识别，请使用 Chrome 或 Edge 体验语音导览。', 'bot');
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = () => {
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                document.getElementById('statusText').textContent = '正在聆听';
+                addMessage('我在听，请说出您的问题。', 'bot');
+            };
+
+            recognition.onresult = async (event) => {
+                const transcript = event.results[0][0].transcript.trim();
+                const confidence = event.results[0][0].confidence || 0;
+                if (!transcript) return;
+
+                addMessage(transcript, 'user');
+                showLoading(true);
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/dh/chat/voice-transcript`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            session_id: sessionId,
+                            transcript: transcript,
+                            confidence: confidence,
+                            scene: '景区导览',
+                            location: '灵山胜境'
+                        })
+                    });
+
+                    const result = await response.json();
+                    showLoading(false);
+
+                    if (result.code === 0) {
+                        const answerText = result.data.answer_text;
+                        const emotion = result.data.emotion;
+                        addMessage(answerText, 'bot');
+                        sendToLive2D(answerText, emotion);
+                    } else {
+                        addMessage('抱歉，我暂时无法回答这个语音问题。', 'bot');
+                    }
+                } catch (error) {
+                    console.error('语音问答错误:', error);
+                    showLoading(false);
+                    addMessage('语音问答网络错误，请稍后重试。', 'bot');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                addMessage('语音识别失败，请靠近麦克风后再试一次。', 'bot');
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                document.getElementById('statusText').textContent = '在线服务中';
+            };
+
+            recognition.start();
+        }
+
+        // 更新欢迎消息时间
+        function updateWelcomeTime() {
+            const welcomeTime = document.getElementById('welcomeTime');
+            if (welcomeTime) {
+                welcomeTime.textContent = new Date().toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+    </script>
+</body>
+</html>

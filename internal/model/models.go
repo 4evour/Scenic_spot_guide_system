@@ -78,6 +78,43 @@ type SystemLog struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
+// InteractionLog 交互日志 - 记录每次游客与AI的对话
+type InteractionLog struct {
+	ID             uint      `gorm:"primaryKey"`
+	UserID         uint      `gorm:"default:0"`
+	SessionID      string    `gorm:"size:100"`
+	Query          string    `gorm:"text;not null"`
+	Response       string    `gorm:"text"`
+	Emotion        string    `gorm:"size:50"`
+	ResponseTimeMs int64     `gorm:"default:0"` // 响应时间(毫秒)
+	SpotID         uint      `gorm:"default:0"`
+	Category       string    `gorm:"size:100"`  // 问题分类
+	Source         string    `gorm:"size:50"`   // 来源: web/voice/digital_human
+	CreatedAt      time.Time `gorm:"autoCreateTime"`
+}
+
+// SystemSetting 系统设置 - 键值对存储
+type SystemSetting struct {
+	ID        uint      `gorm:"primaryKey"`
+	Key       string    `gorm:"size:255;unique;not null"`
+	Value     string    `gorm:"text"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+}
+
+// DigitalHumanConfig 数字人配置
+type DigitalHumanConfig struct {
+	ID          uint      `gorm:"primaryKey"`
+	Name        string    `gorm:"size:100;default:'小灵'"`
+	Style       string    `gorm:"size:100;default:'古典汉服'"`
+	Color       string    `gorm:"size:20;default:'#D4AF37'"`
+	VoiceType   string    `gorm:"size:100;default:'温柔女声'"`
+	Speed       float64   `gorm:"default:0.8"`
+	Volume      int       `gorm:"default:80"`
+	DefaultEmotion string `gorm:"size:50;default:'joy'"`
+	EmotionLevel   int    `gorm:"default:3"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+}
+
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&ScenicSpot{},
@@ -88,5 +125,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&VisitRecord{},
 		&SystemLog{},
 		&KnowledgeChunk{},
+		&InteractionLog{},
+		&SystemSetting{},
+		&DigitalHumanConfig{},
 	)
 }

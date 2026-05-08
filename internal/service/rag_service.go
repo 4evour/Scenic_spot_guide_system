@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/scenic-guide/config"
@@ -21,7 +23,27 @@ import (
 const (
 	MinSimilarityThreshold = 0.01
 	TopK                   = 5
+	CacheTTL               = 5 * time.Minute
+	MaxCacheSize           = 1000
 )
+
+type CacheEntry struct {
+	Response   string
+	ExpireTime time.Time
+}
+
+type TourRouteStep struct {
+	Number int    `json:"number"`
+	Name   string `json:"name"`
+	Desc   string `json:"desc"`
+}
+
+type TourRoute struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Steps       []TourRouteStep `json:"steps"`
+	Duration    string          `json:"duration"`
+}
 
 func isLingshanRelatedQuestion(query string) bool {
 	queryLower := strings.ToLower(query)
@@ -39,15 +61,20 @@ func isLingshanRelatedQuestion(query string) bool {
 }
 
 type RAGService struct {
-	repo        *repository.KnowledgeRepository
-	chatAPIKey  string
-	chatModel   string
-	chatBaseURL string
-	embedding   EmbeddingProvider
-	bm25        *BM25FallbackProvider
-	useBM25     bool
-	uploadDir   string
-	httpClient  *http.Client
+	repo           *repository.KnowledgeRepository
+	chatAPIKey     string
+	chatModel      string
+	chatBaseURL    string
+	embedding      EmbeddingProvider
+	bm25           *BM25FallbackProvider
+	useBM25        bool
+	uploadDir      string
+	httpClient     *http.Client
+	queryCache     map[string]CacheEntry
+	embeddingCache map[string][]float64
+	knowledgeCache []model.KnowledgeChunk
+	cacheMutex     sync.RWMutex
+	lastCacheTime  time.Time
 }
 
 func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, chatBaseURL string, embeddingProvider EmbeddingProvider) *RAGService {
@@ -59,22 +86,124 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 	}
 
 	return &RAGService{
-		repo:        repo,
-		chatAPIKey:  chatAPIKey,
-		chatModel:   chatModel,
-		chatBaseURL: chatBaseURL,
-		embedding:   embeddingProvider,
-		bm25:        bm25,
-		useBM25:     useBM25,
-		uploadDir:   "./knowledge",
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-			Transport: &http.Transport{
-				MaxIdleConns:        100,
-				IdleConnTimeout:     90 * time.Second,
-				MaxIdleConnsPerHost: 10,
-			},
+		repo:           repo,
+		chatAPIKey:     chatAPIKey,
+		chatModel:      chatModel,
+		chatBaseURL:    chatBaseURL,
+		embedding:      embeddingProvider,
+		bm25:           bm25,
+		useBM25:        useBM25,
+		uploadDir:      "./knowledge",
+		httpClient:     createHTTPClient(),
+		queryCache:     make(map[string]CacheEntry),
+		embeddingCache: make(map[string][]float64),
+		knowledgeCache: nil,
+		lastCacheTime:  time.Now(),
+	}
+}
+
+func createHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        200,
+			IdleConnTimeout:     60 * time.Second,
+			MaxIdleConnsPerHost: 20,
+			DisableCompression:  false,
+			ForceAttemptHTTP2:   true,
 		},
+	}
+}
+
+func (s *RAGService) getCachedKnowledge() ([]model.KnowledgeChunk, error) {
+	s.cacheMutex.RLock()
+	now := time.Now()
+	if s.knowledgeCache != nil && now.Sub(s.lastCacheTime) < CacheTTL {
+		chunks := make([]model.KnowledgeChunk, len(s.knowledgeCache))
+		copy(chunks, s.knowledgeCache)
+		s.cacheMutex.RUnlock()
+		return chunks, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+
+	if s.knowledgeCache != nil && now.Sub(s.lastCacheTime) < CacheTTL {
+		chunks := make([]model.KnowledgeChunk, len(s.knowledgeCache))
+		copy(chunks, s.knowledgeCache)
+		return chunks, nil
+	}
+
+	allChunks, err := s.repo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	s.knowledgeCache = allChunks
+	s.lastCacheTime = now
+	return allChunks, nil
+}
+
+func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
+	s.cacheMutex.RLock()
+	if vec, ok := s.embeddingCache[text]; ok {
+		s.cacheMutex.RUnlock()
+		return vec, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	vec, err := s.embedding.GenerateEmbedding(text)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cacheMutex.Lock()
+	if len(s.embeddingCache) >= MaxCacheSize {
+		for k := range s.embeddingCache {
+			delete(s.embeddingCache, k)
+			break
+		}
+	}
+	s.embeddingCache[text] = vec
+	s.cacheMutex.Unlock()
+
+	return vec, nil
+}
+
+func (s *RAGService) getCachedResponse(query string) (string, bool) {
+	s.cacheMutex.RLock()
+	entry, ok := s.queryCache[query]
+	s.cacheMutex.RUnlock()
+
+	if !ok {
+		return "", false
+	}
+
+	if time.Now().After(entry.ExpireTime) {
+		s.cacheMutex.Lock()
+		delete(s.queryCache, query)
+		s.cacheMutex.Unlock()
+		return "", false
+	}
+
+	return entry.Response, true
+}
+
+func (s *RAGService) setCachedResponse(query, response string) {
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+
+	if len(s.queryCache) >= MaxCacheSize {
+		for k := range s.queryCache {
+			delete(s.queryCache, k)
+			break
+		}
+	}
+
+	s.queryCache[query] = CacheEntry{
+		Response:   response,
+		ExpireTime: time.Now().Add(CacheTTL),
 	}
 }
 
@@ -84,6 +213,31 @@ type ChunkData struct {
 	Source   string                 `json:"source"`
 	Title    string                 `json:"title"`
 	Metadata map[string]interface{} `json:"metadata"`
+}
+
+func normalizeKnowledgeChunk(chunk *ChunkData) {
+	chunk.ID = strings.TrimSpace(chunk.ID)
+	chunk.Title = strings.TrimSpace(chunk.Title)
+	chunk.Source = strings.TrimSpace(chunk.Source)
+	chunk.Content = strings.TrimSpace(chunk.Content)
+
+	if chunk.ID == "" {
+		sum := sha1.Sum([]byte(chunk.Title + "\n" + chunk.Source + "\n" + chunk.Content))
+		chunk.ID = fmt.Sprintf("chunk-%x", sum[:8])
+	}
+	if chunk.Title == "" {
+		runes := []rune(chunk.Content)
+		if len(runes) > 24 {
+			runes = runes[:24]
+		}
+		chunk.Title = string(runes)
+	}
+	if chunk.Source == "" {
+		chunk.Source = "admin"
+	}
+	if chunk.Metadata == nil {
+		chunk.Metadata = map[string]interface{}{}
+	}
 }
 
 func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
@@ -103,6 +257,10 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 
 		var chunk ChunkData
 		if err := json.Unmarshal([]byte(line), &chunk); err != nil {
+			continue
+		}
+		normalizeKnowledgeChunk(&chunk)
+		if chunk.Content == "" {
 			continue
 		}
 
@@ -154,6 +312,10 @@ func (s *RAGService) LoadKnowledgeFromJSONL(data []byte) (int, error) {
 		var chunk ChunkData
 		if err := json.Unmarshal([]byte(line), &chunk); err != nil {
 			return loadedCount, fmt.Errorf("解析JSON失败: %v", err)
+		}
+		normalizeKnowledgeChunk(&chunk)
+		if chunk.Content == "" {
+			return loadedCount, fmt.Errorf("知识内容不能为空")
 		}
 
 		exists, err := s.repo.Exists(chunk.ID)
@@ -306,7 +468,7 @@ func (s *RAGService) BM25Similarity(query, content string) float64 {
 }
 
 func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.KnowledgeChunk, error) {
-	allChunks, err := s.repo.GetAll()
+	allChunks, err := s.getCachedKnowledge()
 	if err != nil {
 		return nil, fmt.Errorf("获取所有知识片段失败: %v", err)
 	}
@@ -320,11 +482,11 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		similarity float64
 	}
 
-	var scoredChunks []scoredChunk
+	scoredChunks := make([]scoredChunk, 0, len(allChunks))
 
 	var queryVec []float64
 	if !s.useBM25 {
-		vec, err := s.embedding.GenerateEmbedding(query)
+		vec, err := s.getCachedEmbedding(query)
 		if err == nil {
 			queryVec = vec
 		}
@@ -344,10 +506,16 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 			}
 		}
 
-		scoredChunks = append(scoredChunks, scoredChunk{
-			chunk:      chunk,
-			similarity: similarity,
-		})
+		if similarity >= MinSimilarityThreshold {
+			scoredChunks = append(scoredChunks, scoredChunk{
+				chunk:      chunk,
+				similarity: similarity,
+			})
+		}
+	}
+
+	if len(scoredChunks) == 0 {
+		return nil, nil
 	}
 
 	sort.Slice(scoredChunks, func(i, j int) bool {
@@ -355,15 +523,6 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 	})
 
 	result := make([]model.KnowledgeChunk, 0, topK)
-	maxSimilarity := 0.0
-	if len(scoredChunks) > 0 {
-		maxSimilarity = scoredChunks[0].similarity
-	}
-
-	if maxSimilarity < MinSimilarityThreshold {
-		return nil, nil
-	}
-
 	for i := 0; i < min(topK, len(scoredChunks)); i++ {
 		result = append(result, scoredChunks[i].chunk)
 	}
@@ -396,33 +555,46 @@ func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk)
 		context.WriteString(fmt.Sprintf("%d. 【%s】\n%s\n来源：%s\n\n", i+1, chunk.Title, chunk.Content, chunk.Source))
 	}
 
-	prompt := fmt.Sprintf(`你是灵山胜境景区智能导览助手，负责基于知识库资料回答游客关于灵山胜境、景点介绍、历史文化、门票开放、游览路线、演艺活动、交通餐饮等问题。
+	prompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员”小灵”，负责为游客提供专业、热情的导览服务。
 
-请严格依据下面提供的知识库资料回答用户问题。
+【身份设定】
+- 你是灵山胜境景区的官方数字人导览员
+- 你熟悉灵山大佛、九龙灌浴、梵宫等所有景点
+- 你的职责是帮助游客了解景区、规划行程、解答疑问
 
-回答要求：
-1. 优先使用知识库资料中的内容回答。
-2. 不要编造资料中没有的信息，尤其是门票价格、开放时间、演出时间、路线安排、交通方式等。
-3. 如果资料中有多个相关信息，请整理成清晰、自然的中文回答。
-4. 如果用户问题适合分点回答，请使用简洁列表。
-5. 如果资料中只包含部分答案，请说明“根据当前资料，可以确认的是……”。
-6. 如果资料中完全没有相关答案，请回答“根据当前灵山胜境资料无法确认”。
-7. 回答语气要像景区导览员，友好、准确、自然。
-8. 不要提到“RAG”“向量数据库”“知识片段”等技术词。
-9. 如有来源信息，可以在回答末尾简要标注“参考资料：xxx”。
+【回答策略】
+1. 优先使用知识库资料中的内容回答
+2. 不要编造资料中没有的信息，尤其是门票价格、开放时间、演出时间、路线安排、交通方式等
+3. 如果资料中有多个相关信息，请整理成清晰、自然的中文回答
+4. 如果用户问题适合分点回答，请使用简洁列表
+5. 如果资料中只包含部分答案，请说明”根据当前资料，可以确认的是……”
+6. 如果资料中完全没有相关答案，请回答”这个问题我暂时无法确认，建议您咨询景区服务中心”
+7. 不要提到”RAG””向量数据库””知识片段”等技术词
 
-知识库资料：
+【语言风格】
+- 称呼游客为”您”，保持礼貌尊重
+- 使用温暖、亲切的语气，像真人导游一样自然
+- 适当使用”欢迎来到灵山胜境”、”祝您游览愉快”等礼貌用语
+- 主动提供相关建议（如游览路线、最佳时间、注意事项等）
+- 回答要简洁明了，突出重点
+
+【知识库资料】
 %s
 
-用户问题：
+【游客问题】
 %s
 
-请基于以上资料回答：`, context.String(), query)
+请以灵山景区数字人导览员的身份，基于以上资料回答：`, context.String(), query)
 
 	return prompt
 }
 
 func (s *RAGService) QueryWithRAG(query string) (string, error) {
+	if cachedResp, ok := s.getCachedResponse(query); ok {
+		fmt.Println("命中查询缓存")
+		return cachedResp, nil
+	}
+
 	chunks, err := s.RetrieveRelevantKnowledge(query, TopK)
 	if err != nil {
 		return "", fmt.Errorf("检索相关知识失败: %v", err)
@@ -436,12 +608,14 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 	fmt.Println("使用RAG知识库回答")
 
 	if s.chatAPIKey == "" {
-		return s.generateAnswerFromChunks(query, chunks), nil
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
 	prompt := s.BuildRAGPrompt(query, chunks)
 
-	type DashScopeRequest struct {
+	type OpenAIRequest struct {
 		Model    string `json:"model"`
 		Messages []struct {
 			Role    string `json:"role"`
@@ -449,18 +623,23 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 		} `json:"messages"`
 	}
 
-	type DashScopeResponse struct {
+	type OpenAIError struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+		Param   string `json:"param"`
+		Code    string `json:"code"`
+	}
+
+	type OpenAIResponse struct {
 		Choices []struct {
 			Message struct {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
-		Error struct {
-			Message string `json:"message"`
-		} `json:"error"`
+		Error *OpenAIError `json:"error"`
 	}
 
-	req := DashScopeRequest{
+	req := OpenAIRequest{
 		Model: s.chatModel,
 		Messages: []struct {
 			Role    string `json:"role"`
@@ -468,7 +647,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是灵山胜境景区智能导览助手，负责基于知识库资料回答游客问题。",
+				Content: "你是灵山胜境景区的AI数字人导览员「小灵」，负责为游客提供专业、热情的导览服务。你熟悉灵山大佛、九龙灌浴、梵宫等所有景点。回答要热情友好、准确专业，像真人导游一样自然亲切。",
 			},
 			{
 				Role:    "user",
@@ -479,13 +658,20 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		return s.generateAnswerFromChunks(query, chunks), nil
+		fmt.Printf("JSON序列化失败: %v\n", err)
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
 	apiURL := s.chatBaseURL + "/chat/completions"
+
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return s.generateAnswerFromChunks(query, chunks), nil
+		fmt.Printf("创建HTTP请求失败: %v\n", err)
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -493,30 +679,54 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
-		return s.generateAnswerFromChunks(query, chunks), nil
+		fmt.Printf("调用DeepSeek API失败: %v\n", err)
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return s.generateAnswerFromChunks(query, chunks), nil
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("RAG API返回错误状态码: %d, 响应: %s\n", resp.StatusCode, string(body))
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
-	body, _ := io.ReadAll(resp.Body)
-
-	var dashScopeResp DashScopeResponse
-	if err := json.Unmarshal(body, &dashScopeResp); err != nil {
-		return s.generateAnswerFromChunks(query, chunks), nil
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		fmt.Printf("读取响应体失败: %v\n", readErr)
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
-	if dashScopeResp.Error.Message != "" {
-		return s.generateAnswerFromChunks(query, chunks), nil
+	var openAIResp OpenAIResponse
+	if err := json.Unmarshal(body, &openAIResp); err != nil {
+		fmt.Printf("解析RAG API响应失败: %v\n", err)
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
-	if len(dashScopeResp.Choices) > 0 && dashScopeResp.Choices[0].Message.Content != "" {
-		return dashScopeResp.Choices[0].Message.Content, nil
+	if openAIResp.Error != nil {
+		fmt.Printf("RAG DeepSeek API错误 - Type: %s, Code: %s, Message: %s\n",
+			openAIResp.Error.Type, openAIResp.Error.Code, openAIResp.Error.Message)
+		answer := s.generateAnswerFromChunks(query, chunks)
+		s.setCachedResponse(query, answer)
+		return answer, nil
 	}
 
-	return s.generateAnswerFromChunks(query, chunks), nil
+	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
+		answer := openAIResp.Choices[0].Message.Content
+		s.setCachedResponse(query, answer)
+		return answer, nil
+	}
+
+	answer := s.generateAnswerFromChunks(query, chunks)
+	s.setCachedResponse(query, answer)
+	return answer, nil
 }
 
 func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.KnowledgeChunk) string {
@@ -546,6 +756,11 @@ func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.Knowl
 }
 
 func (s *RAGService) QueryGeneralChat(query string) (string, error) {
+	if cachedResp, ok := s.getCachedResponse(query); ok {
+		fmt.Println("命中查询缓存 (通用Chat)")
+		return cachedResp, nil
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("QueryGeneralChat panic: %v\n", r)
@@ -556,8 +771,9 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	fmt.Printf("查询内容: %s\n", query)
 	fmt.Printf("API Base URL: %s\n", s.chatBaseURL)
 	fmt.Printf("Model: %s\n", s.chatModel)
+	fmt.Printf("API Key: %s\n", s.chatAPIKey[:min(8, len(s.chatAPIKey))]+"...")
 
-	type DashScopeRequest struct {
+	type OpenAIRequest struct {
 		Model    string `json:"model"`
 		Messages []struct {
 			Role    string `json:"role"`
@@ -565,40 +781,67 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		} `json:"messages"`
 	}
 
-	type DashScopeResponse struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-		Error struct {
-			Message string `json:"message"`
-		} `json:"error"`
+	type OpenAIError struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+		Param   string `json:"param"`
+		Code    string `json:"code"`
 	}
 
-	userPrompt := fmt.Sprintf(`你是一位经验丰富的专业导游，熟悉中国各地的风景名胜、历史文化、风土人情。请以专业导游的角度回答游客的问题。
+	type OpenAIResponse struct {
+		ID      string `json:"id"`
+		Object  string `json:"object"`
+		Created int64  `json:"created"`
+		Model   string `json:"model"`
+		Choices []struct {
+			Index   int `json:"index"`
+			Message struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
+		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
+		Error *OpenAIError `json:"error"`
+	}
 
-回答要求：
+	userPrompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员「小灵」。
+
+【身份设定】
+- 你是灵山胜境景区的官方数字人导览员
+- 你熟悉灵山大佛、九龙灌浴、梵宫等所有景点
+- 你的职责是帮助游客了解景区、规划行程、解答疑问
+
+【回答策略】
 1. 首先判断问题类型：
    - 如果问题与灵山胜境、无锡旅游、佛教文化直接相关，但当前知识库没有资料，请明确说明："当前灵山胜境知识库中没有检索到相关资料，不过我可以为您提供一些一般性的参考信息..."
-   - 如果问题与灵山胜境无关，而是询问其他景点（如井冈山、黄山、故宫等），请以专业导游的身份进行详细介绍
-2. 导游回答规范：
-   - 介绍景点时，包括历史背景、主要看点、文化价值、最佳游览时间、推荐游览路线等
-   - 语言要亲切自然，富有感染力，像真导游在讲解
-   - 结构清晰，重点突出
-   - 可以适当加入一些有趣的历史故事或传说
-   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
-3. 不要编造具体数据、官方政策、价格、时间表
-4. 回答要简洁但信息丰富，中文表达清楚
-5. 不要提到"RAG""向量数据库""知识片段"等技术词
-6. 回答格式要友好，适合游客阅读
+   - 如果问题与灵山胜境无关，而是询问其他景点，请礼貌说明："我主要负责灵山胜境的导览服务。关于其他景区，建议您咨询相关景区的导览服务。"
+   - 如果是完全无关的问题，礼貌地引导回到景区话题
 
-用户问题：
+2. 回答灵山相关问题时：
+   - 重点介绍灵山大佛（88米高，世界著名青铜立佛）
+   - 推荐九龙灌浴表演（精彩的佛教文化演出）
+   - 介绍灵山梵宫（佛教艺术殿堂）
+   - 提供游览建议和注意事项
+   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
+
+3. 语言风格：
+   - 称呼游客为"您"，保持礼貌尊重
+   - 使用温暖、亲切的语气
+   - 适当使用"欢迎来到灵山胜境"、"祝您游览愉快"等礼貌用语
+   - 像真人导游一样自然、专业
+   - 不要提到"RAG""向量数据库""知识片段"等技术词
+
+【游客问题】
 %s
 
-请以专业导游的角度回答：`, query)
+请以灵山景区数字人导览员的身份回答：`, query)
 
-	req := DashScopeRequest{
+	req := OpenAIRequest{
 		Model: s.chatModel,
 		Messages: []struct {
 			Role    string `json:"role"`
@@ -606,7 +849,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是一位专业的景区导游，熟悉中国各地的风景名胜和历史文化，回答问题时要亲切友好、专业准确。",
+				Content: "你是灵山胜境景区的AI数字人导览员「小灵」，熟悉灵山大佛、九龙灌浴、梵宫等所有景点。回答问题时要热情友好、专业准确，像真人导游一样自然亲切。",
 			},
 			{
 				Role:    "user",
@@ -618,10 +861,10 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		fmt.Printf("JSON序列化失败: %v\n", err)
-		return "抱歉，我现在无法回答这个问题。", nil
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("JSON序列化失败: %v", err)
 	}
 
-	fmt.Printf("请求体: %s\n", string(reqBody))
+	fmt.Printf("请求体长度: %d bytes\n", len(reqBody))
 
 	apiURL := s.chatBaseURL + "/chat/completions"
 	fmt.Printf("完整API URL: %s\n", apiURL)
@@ -629,7 +872,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		fmt.Printf("创建HTTP请求失败: %v\n", err)
-		return "抱歉，我现在无法回答这个问题。", nil
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("创建HTTP请求失败: %v", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -639,40 +882,50 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		fmt.Printf("调用DeepSeek API失败: %v\n", err)
-		return "抱歉，我现在无法回答这个问题。", nil
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("调用DeepSeek API失败: %v", err)
 	}
 	defer resp.Body.Close()
 
 	fmt.Printf("API响应状态码: %d\n", resp.StatusCode)
 
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		fmt.Printf("读取响应体失败: %v\n", readErr)
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("读取响应体失败: %v", readErr)
+	}
+
+	fmt.Printf("响应体长度: %d bytes\n", len(body))
+	if len(body) > 0 {
+		fmt.Printf("响应体内容: %s\n", string(body))
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("API返回错误: %s\n", string(body))
-		return "抱歉，我现在无法回答这个问题。", nil
+		fmt.Printf("API返回错误状态码: %d\n", resp.StatusCode)
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, string(body))
 	}
 
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("API响应体: %s\n", string(body))
-
-	var dashScopeResp DashScopeResponse
-	if err := json.Unmarshal(body, &dashScopeResp); err != nil {
+	var openAIResp OpenAIResponse
+	if err := json.Unmarshal(body, &openAIResp); err != nil {
 		fmt.Printf("解析API响应失败: %v\n", err)
-		return "抱歉，我现在无法回答这个问题。", nil
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("解析API响应失败: %v", err)
 	}
 
-	if dashScopeResp.Error.Message != "" {
-		fmt.Printf("DeepSeek API错误: %s\n", dashScopeResp.Error.Message)
-		return "抱歉，我现在无法回答这个问题。", nil
+	if openAIResp.Error != nil {
+		fmt.Printf("DeepSeek API错误 - Type: %s, Code: %s, Message: %s\n",
+			openAIResp.Error.Type, openAIResp.Error.Code, openAIResp.Error.Message)
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("DeepSeek API错误: %s - %s",
+			openAIResp.Error.Code, openAIResp.Error.Message)
 	}
 
 	var answer string
-	if len(dashScopeResp.Choices) > 0 && dashScopeResp.Choices[0].Message.Content != "" {
-		answer = dashScopeResp.Choices[0].Message.Content
+	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
+		answer = openAIResp.Choices[0].Message.Content
 	} else {
 		fmt.Println("API返回空结果")
-		return "抱歉，我无法生成合适的回答。", nil
+		return "抱歉，我无法生成合适的回答。", fmt.Errorf("API返回空结果")
 	}
 
+	s.setCachedResponse(query, answer)
 	fmt.Printf("API返回回答: %s\n", answer[:min(len(answer), 100)]+"...")
 	return answer, nil
 }
@@ -708,27 +961,37 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		} `json:"error"`
 	}
 
-	userPrompt := fmt.Sprintf(`你是一位经验丰富的专业导游，熟悉中国各地的风景名胜、历史文化、风土人情。请以专业导游的角度回答游客的问题。
+	userPrompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员「小灵」。
 
-回答要求：
+【身份设定】
+- 你是灵山胜境景区的官方数字人导览员
+- 你熟悉灵山大佛、九龙灌浴、梵宫等所有景点
+- 你的职责是帮助游客了解景区、规划行程、解答疑问
+
+【回答策略】
 1. 首先判断问题类型：
    - 如果问题与灵山胜境、无锡旅游、佛教文化直接相关，但当前知识库没有资料，请明确说明："当前灵山胜境知识库中没有检索到相关资料，不过我可以为您提供一些一般性的参考信息..."
-   - 如果问题与灵山胜境无关，而是询问其他景点（如井冈山、黄山、故宫等），请以专业导游的身份进行详细介绍
-2. 导游回答规范：
-   - 介绍景点时，包括历史背景、主要看点、文化价值、最佳游览时间、推荐游览路线等
-   - 语言要亲切自然，富有感染力，像真导游在讲解
-   - 结构清晰，重点突出
-   - 可以适当加入一些有趣的历史故事或传说
-   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
-3. 不要编造具体数据、官方政策、价格、时间表
-4. 回答要简洁但信息丰富，中文表达清楚
-5. 不要提到"RAG""向量数据库""知识片段"等技术词
-6. 回答格式要友好，适合游客阅读
+   - 如果问题与灵山胜境无关，而是询问其他景点，请礼貌说明："我主要负责灵山胜境的导览服务。关于其他景区，建议您咨询相关景区的导览服务。"
+   - 如果是完全无关的问题，礼貌地引导回到景区话题
 
-用户问题：
+2. 回答灵山相关问题时：
+   - 重点介绍灵山大佛（88米高，世界著名青铜立佛）
+   - 推荐九龙灌浴表演（精彩的佛教文化演出）
+   - 介绍灵山梵宫（佛教艺术殿堂）
+   - 提供游览建议和注意事项
+   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
+
+3. 语言风格：
+   - 称呼游客为"您"，保持礼貌尊重
+   - 使用温暖、亲切的语气
+   - 适当使用"欢迎来到灵山胜境"、"祝您游览愉快"等礼貌用语
+   - 像真人导游一样自然、专业
+   - 不要提到"RAG""向量数据库""知识片段"等技术词
+
+【游客问题】
 %s
 
-请以专业导游的角度回答：`, query)
+请以灵山景区数字人导览员的身份回答：`, query)
 
 	req := DashScopeRequest{
 		Model: s.chatModel,
@@ -738,7 +1001,7 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是一位专业的景区导游，熟悉中国各地的风景名胜和历史文化，回答问题时要亲切友好、专业准确。",
+				Content: "你是灵山胜境景区的AI数字人导览员「小灵」，熟悉灵山大佛、九龙灌浴、梵宫等所有景点。回答问题时要热情友好、专业准确，像真人导游一样自然亲切。",
 			},
 			{
 				Role:    "user",
@@ -811,6 +1074,82 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 
 	fmt.Printf("API返回回答: %s\n", answer[:min(len(answer), 100)]+"...")
 	return "[通用知识回答] " + answer, nil
+}
+
+func (s *RAGService) GenerateTourRoute(query string) *TourRoute {
+	defaultRoutes := []TourRoute{
+		{
+			Name:        "经典文化之旅",
+			Description: "建议从景区入口出发，依次参观灵山大照壁、五明桥、佛足坛、五智门，最后到达灵山大佛。我会重点讲解佛教文化和历史故事。",
+			Duration:    "约2.5小时",
+			Steps: []TourRouteStep{
+				{Number: 1, Name: "灵山胜境入口", Desc: "起点"},
+				{Number: 2, Name: "灵山大照壁", Desc: "华夏第一壁"},
+				{Number: 3, Name: "五明桥", Desc: "佛教智慧象征"},
+				{Number: 4, Name: "佛足坛", Desc: "祈福朝圣"},
+				{Number: 5, Name: "五智门", Desc: "核心景区门户"},
+				{Number: 6, Name: "灵山大佛", Desc: "世界最高佛立像"},
+			},
+		},
+		{
+			Name:        "禅意体验之旅",
+			Description: "深入体验灵山禅意文化，从灵山梵宫开始，途经五印坛城、曼飞龙塔，最后到达拈花湾禅意小镇。",
+			Duration:    "约3小时",
+			Steps: []TourRouteStep{
+				{Number: 1, Name: "灵山梵宫", Desc: "东方卢浮宫"},
+				{Number: 2, Name: "五印坛城", Desc: "藏传佛教文化"},
+				{Number: 3, Name: "曼飞龙塔", Desc: "南传佛教建筑"},
+				{Number: 4, Name: "拈花广场", Desc: "禅意开篇"},
+				{Number: 5, Name: "梵天花海", Desc: "自然禅意"},
+				{Number: 6, Name: "香月花街", Desc: "禅意商业街"},
+			},
+		},
+		{
+			Name:        "亲子欢乐之旅",
+			Description: "适合家庭出游的轻松路线，从九龙灌浴开始，途经百子戏弥勒、祥符禅寺，最后到灵山胜境儿童乐园。",
+			Duration:    "约2小时",
+			Steps: []TourRouteStep{
+				{Number: 1, Name: "九龙灌浴", Desc: "动态喷泉表演"},
+				{Number: 2, Name: "百子戏弥勒", Desc: "亲子互动"},
+				{Number: 3, Name: "祥符禅寺", Desc: "千年古刹"},
+				{Number: 4, Name: "佛教文化博览馆", Desc: "科普教育"},
+				{Number: 5, Name: "灵山胜境儿童乐园", Desc: "亲子游乐"},
+			},
+		},
+		{
+			Name:        "深度历史之旅",
+			Description: "探索灵山千年历史，从无尽意斋开始，了解赵朴初先生与灵山的渊源，最后到达祥符禅寺感受千年禅意。",
+			Duration:    "约1.5小时",
+			Steps: []TourRouteStep{
+				{Number: 1, Name: "无尽意斋", Desc: "赵朴初纪念馆"},
+				{Number: 2, Name: "降魔浮雕", Desc: "佛教故事"},
+				{Number: 3, Name: "阿育王柱", Desc: "佛教文化象征"},
+				{Number: 4, Name: "祥符禅寺", Desc: "千年禅宗祖庭"},
+			},
+		},
+	}
+
+	queryLower := strings.ToLower(query)
+
+	if strings.Contains(queryLower, "亲子") || strings.Contains(queryLower, "儿童") || strings.Contains(queryLower, "家庭") {
+		return &defaultRoutes[2]
+	} else if strings.Contains(queryLower, "历史") || strings.Contains(queryLower, "文化") || strings.Contains(queryLower, "千年") {
+		return &defaultRoutes[3]
+	} else if strings.Contains(queryLower, "禅意") || strings.Contains(queryLower, "体验") || strings.Contains(queryLower, "拈花湾") {
+		return &defaultRoutes[1]
+	}
+
+	return &defaultRoutes[0]
+}
+
+func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, error) {
+	response, err := s.QueryWithRAG(query)
+	if err != nil {
+		return "", nil, err
+	}
+
+	route := s.GenerateTourRoute(query)
+	return response, route, nil
 }
 
 func (s *RAGService) RunEvaluation(evalFile string) error {

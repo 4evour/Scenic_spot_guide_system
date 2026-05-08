@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/pkg"
@@ -38,17 +39,39 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	fmt.Printf("消息内容: %s\n", req.Message)
 	fmt.Printf("RAG服务是否可用: %v\n", h.ragService != nil)
 
+	startTime := time.Now()
+
 	if h.ragService != nil {
-		response, err := h.ragService.QueryWithRAG(req.Message)
+		response, route, err := h.ragService.QueryWithRAGAndRoute(req.Message)
+		elapsed := time.Since(startTime).Milliseconds()
 		fmt.Printf("RAG响应: %s\n", response)
 		if err != nil {
 			fmt.Printf("RAG错误: %v\n", err)
 			pkg.InternalError(c, "调用AI服务失败: "+err.Error())
 			return
 		}
-		pkg.Success(c, gin.H{
+
+		// 记录交互日志
+		if pkg.StatsService != nil {
+			pkg.StatsService.RecordInteraction(service.InteractionRecord{
+				Query:          req.Message,
+				Response:       response,
+				Emotion:        detectEmotion(response),
+				ResponseTimeMs: elapsed,
+				Category:       service.DetectCategory(req.Message),
+				Source:         "web",
+			})
+		}
+
+		responseData := gin.H{
 			"response": response,
-		})
+		}
+
+		if route != nil {
+			responseData["route"] = route
+		}
+
+		pkg.Success(c, responseData)
 	} else {
 		pkg.InternalError(c, "RAG服务未初始化")
 	}

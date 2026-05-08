@@ -135,14 +135,28 @@ func setupDI(ragService *service.RAGService) *handler.Handlers {
 
 	aiHandler := handler.NewAIHandler(ragService)
 	ttsHandler := handler.NewTTSHandler()
+	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService)
+	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService)
+
+	// 初始化统计服务
+	interactionRepo := repository.NewInteractionRepository(pkg.DB)
+	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
+	settingRepo := repository.NewSystemSettingRepository(pkg.DB)
+	dhConfigRepo := repository.NewDigitalHumanConfigRepository(pkg.DB)
+	statsService := service.NewStatsService(interactionRepo, settingRepo, dhConfigRepo, knowledgeRepo)
+	pkg.StatsService = statsService
+	adminHandler := handler.NewAdminHandler(statsService)
 
 	return &handler.Handlers{
-		ScenicSpot:   scenicSpotHandler,
-		GuideContent: guideContentHandler,
-		TourRoute:    tourRouteHandler,
-		VisitorQuery: visitorQueryHandler,
-		User:         userHandler,
-		AI:           aiHandler,
-		TTS:          ttsHandler,
+		ScenicSpot:    scenicSpotHandler,
+		GuideContent:  guideContentHandler,
+		TourRoute:     tourRouteHandler,
+		VisitorQuery:  visitorQueryHandler,
+		User:          userHandler,
+		AI:            aiHandler,
+		TTS:           ttsHandler,
+		DigitalHuman:  digitalHumanHandler,
+		OpenAIProxy:   openAIProxyHandler,
+		Admin:         adminHandler,
 	}
 }

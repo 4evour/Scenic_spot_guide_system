@@ -1,0 +1,63 @@
+import type { VtuberMessage } from '../types/digitalHuman';
+
+type Handlers = {
+  onOpen?: () => void;
+  onClose?: () => void;
+  onError?: (message: string) => void;
+  onMessage?: (message: VtuberMessage) => void;
+};
+
+export class VtuberSocketClient {
+  private ws: WebSocket | null = null;
+  private handlers: Handlers;
+  private url: string;
+
+  constructor(url = defaultVtuberWsUrl(), handlers: Handlers = {}) {
+    this.url = url;
+    this.handlers = handlers;
+  }
+
+  connect() {
+    this.disconnect();
+    this.ws = new WebSocket(this.url);
+    this.ws.onopen = () => {
+      this.handlers.onOpen?.();
+      this.send({ type: 'fetch-configs' });
+      this.send({ type: 'fetch-history-list' });
+      this.send({ type: 'create-new-history' });
+    };
+    this.ws.onclose = () => this.handlers.onClose?.();
+    this.ws.onerror = () => this.handlers.onError?.('WebSocket 连接失败，请确认 Open-LLM-VTuber 服务已启动。');
+    this.ws.onmessage = event => {
+      try {
+        this.handlers.onMessage?.(JSON.parse(event.data));
+      } catch {
+        this.handlers.onError?.('收到无法解析的数字人消息。');
+      }
+    };
+  }
+
+  disconnect() {
+    if (this.ws && this.ws.readyState < WebSocket.CLOSING) this.ws.close();
+    this.ws = null;
+  }
+
+  sendText(text: string) {
+    return this.send({ type: 'text-input', text });
+  }
+
+  interrupt(heardResponse = '') {
+    return this.send({ type: 'interrupt-signal', text: heardResponse });
+  }
+
+  send(payload: Record<string, unknown>) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    this.ws.send(JSON.stringify(payload));
+    return true;
+  }
+}
+
+function defaultVtuberWsUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/vtuber-ws/client-ws`;
+}

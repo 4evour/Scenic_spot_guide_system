@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据大屏 - 灵山景区AI数字人</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/console-tech.css">
+</head>
+<body class="dashboard-page tech-console">
+    <main class="bigscreen">
+        <header class="bigscreen-header">
+            <div>
+                <p class="eyebrow">LingShan Scenic AI Operation Center</p>
+                <h1>景区导览服务AI数字人数据大屏</h1>
+            </div>
+            <nav class="screen-actions">
+                <button class="date-btn active" data-range="today">今日</button>
+                <button class="date-btn" data-range="week">本周</button>
+                <button class="date-btn" data-range="month">本月</button>
+                <a href="/static/admin.html"><i class="fas fa-cog"></i> 管理后台</a>
+                <a href="http://localhost:12393" target="_blank"><i class="fas fa-comments"></i> 数字人</a>
+            </nav>
+            <div class="screen-time" id="currentTime">--:--:--</div>
+        </header>
+
+        <section class="screen-kpis">
+            <article><span>服务人次</span><strong id="totalVisitors">12,356</strong><small>较昨日 +12.5%</small></article>
+            <article><span>问答次数</span><strong id="totalChats">8,923</strong><small>RAG命中率 91.7%</small></article>
+            <article><span>满意度</span><strong id="satisfactionRate">96.8%</strong><small>正向情绪稳定</small></article>
+            <article><span>平均响应</span><strong id="avgResponseTime">2.1s</strong><small>低于5秒要求</small></article>
+            <article><span>当前在线</span><strong id="onlineUsers">2,345</strong><small>终端+手机</small></article>
+        </section>
+
+        <section class="bigscreen-grid">
+            <article class="screen-panel span-2">
+                <h2>全天服务趋势</h2>
+                <svg id="trendChart" viewBox="0 0 900 320" preserveAspectRatio="none"></svg>
+                <div class="axis-labels"><span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span></div>
+            </article>
+            <article class="screen-panel">
+                <h2>热门问答 Top5</h2>
+                <div class="horizontal-bar-chart" id="topQuestions"></div>
+            </article>
+            <article class="screen-panel">
+                <h2>问题类型占比</h2>
+                <div class="donut-wrap"><svg id="categoryDonut" viewBox="0 0 220 220"></svg><strong>RAG</strong></div>
+                <div class="pie-legend" id="categoryLegend"></div>
+            </article>
+            <article class="screen-panel">
+                <h2>响应耗时分布</h2>
+                <div class="response-chart" id="responseChart"></div>
+            </article>
+            <article class="screen-panel">
+                <h2>游客情绪雷达</h2>
+                <div class="radar-card">
+                    <div class="emotion-ring"><strong>96.8%</strong><span>满意度</span></div>
+                    <p>积极 78% / 中性 17% / 待改进 5%</p>
+                </div>
+            </article>
+            <article class="screen-panel span-2">
+                <h2>实时交互记录</h2>
+                <div class="chat-log" id="recentConversations"></div>
+            </article>
+        </section>
+
+        <footer class="screen-footer">
+            <span>数据更新时间：<strong id="updateTime">--</strong></span>
+            <span>演示数据可用于初赛答辩与视频录制</span>
+        </footer>
+    </main>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
