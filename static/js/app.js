@@ -2,6 +2,7 @@ let currentUser = null;
 let isSpeaking = false;
 let recognition = null;
 let map = null;
+const DIGITAL_HUMAN_URL = '/digital-human#/digital-human';
 
 const digitalHuman = {
     name: '灵灵',
@@ -12,12 +13,20 @@ const digitalHuman = {
     isActive: false
 };
 
+function openDigitalHuman() {
+    window.location.href = DIGITAL_HUMAN_URL;
+}
+
 function goToSection(sectionId) {
+    if (sectionId === 'chatBtn') {
+        openDigitalHuman();
+        return;
+    }
+
     const sectionMap = {
         'homeBtn': 'homeSection',
         'spotsBtn': 'spotsSection',
         'routesBtn': 'routesSection',
-        'chatBtn': 'chatSection',
         'profileBtn': 'profileSection'
     };
 
@@ -51,7 +60,10 @@ function initNavigation() {
 
 function initDigitalHuman() {
     const avatarContainer = document.getElementById('digitalHumanContainer');
-    if (!avatarContainer) return;
+    if (!avatarContainer) {
+        digitalHuman.avatar = null;
+        return;
+    }
 
     digitalHuman.avatar = avatarContainer;
 
@@ -163,9 +175,7 @@ function filterSpots(category) {
 }
 
 function showSpotDetail(spotName) {
-    goToSection('chatBtn');
-    document.getElementById('chatInput').value = `我想了解${spotName}`;
-    sendMessage(`我想了解${spotName}`);
+    openDigitalHuman();
 }
 
 function loadRoutes() {
@@ -235,9 +245,7 @@ function filterRoutes(difficulty) {
 }
 
 function selectRoute(routeName) {
-    goToSection('chatBtn');
-    document.getElementById('chatInput').value = `我想走${routeName}`;
-    sendMessage(`我想走${routeName}`);
+    openDigitalHuman();
 }
 
 let autoSpeakEnabled = true;
@@ -913,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const toggleDHBtn = document.getElementById('toggleDHBtn');
     if (toggleDHBtn) {
-        toggleDHBtn.addEventListener('click', toggleDigitalHuman);
+        toggleDHBtn.addEventListener('click', openDigitalHuman);
     }
 
     const loginBtn = document.getElementById('loginBtn');

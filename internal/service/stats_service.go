@@ -37,23 +37,29 @@ func NewStatsService(
 
 // DashboardOverview 大屏概览数据
 type DashboardOverview struct {
-	TotalVisitors    string  `json:"total_visitors"`    // 服务人次
-	TotalChats       string  `json:"total_chats"`       // 交互次数
-	SatisfactionRate string  `json:"satisfaction_rate"` // 满意度
-	AvgResponseTime  string  `json:"avg_response_time"` // 平均响应时间
-	VisitorsTrend    float64 `json:"visitors_trend"`    // 服务人次趋势%
-	ChatsTrend       float64 `json:"chats_trend"`       // 交互次数趋势%
+	TotalVisitors     string  `json:"total_visitors"`     // 服务人次
+	WeeklyVisitors    string  `json:"weekly_visitors"`    // 本周服务人次
+	TotalChats        string  `json:"total_chats"`        // 交互次数
+	WeeklyChats       string  `json:"weekly_chats"`       // 本周交互次数
+	SatisfactionRate  string  `json:"satisfaction_rate"`  // 满意度
+	AvgResponseTime   string  `json:"avg_response_time"`  // 平均响应时间
+	VisitorsTrend     float64 `json:"visitors_trend"`     // 服务人次趋势%
+	ChatsTrend        float64 `json:"chats_trend"`        // 交互次数趋势%
 	SatisfactionTrend float64 `json:"satisfaction_trend"` // 满意度趋势%
-	ResponseTrend    float64 `json:"response_trend"`    // 响应时间趋势%
+	ResponseTrend     float64 `json:"response_trend"`     // 响应时间趋势%
 }
 
 func (s *StatsService) GetDashboardOverview() DashboardOverview {
 	now := time.Now()
 	today := now.Truncate(24 * time.Hour)
 	yesterday := today.Add(-24 * time.Hour)
+	weekStart := today.AddDate(0, 0, -int(today.Weekday()+6)%7)
 
-	todayVisitors, _ := s.interactionRepo.GetTodayTotal()
+	todayVisitors, _ := s.interactionRepo.GetUniqueSessionCount(today)
+	yesterdayVisitors, _ := s.interactionRepo.GetUniqueSessionCount(yesterday)
+	weeklyVisitors, _ := s.interactionRepo.GetUniqueSessionCount(weekStart)
 	todayChats, _ := s.interactionRepo.GetTotalCount(today)
+	weeklyChats, _ := s.interactionRepo.GetTotalCount(weekStart)
 	yesterdayChats, _ := s.interactionRepo.GetTotalCount(yesterday)
 
 	avgRT, _ := s.interactionRepo.GetAvgResponseTime(today)
@@ -66,9 +72,8 @@ func (s *StatsService) GetDashboardOverview() DashboardOverview {
 	if yesterdayChats > 0 {
 		chatsTrend = float64(todayChats-yesterdayChats) / float64(yesterdayChats) * 100
 	}
-	if todayVisitors > 0 {
-		// 简化计算
-		visitorsTrend = math.Round(chatsTrend*10) / 10
+	if yesterdayVisitors > 0 {
+		visitorsTrend = float64(todayVisitors-yesterdayVisitors) / float64(yesterdayVisitors) * 100
 	}
 	if yesterdaySatisfaction > 0 {
 		satisfactionTrend = satisfaction - yesterdaySatisfaction
@@ -80,8 +85,10 @@ func (s *StatsService) GetDashboardOverview() DashboardOverview {
 	avgRTSeconds := avgRT / 1000
 
 	return DashboardOverview{
-		TotalVisitors:     formatNumber(int64(float64(todayVisitors)*7.3)) + "", // 估算
+		TotalVisitors:     formatNumber(todayVisitors),
+		WeeklyVisitors:    formatNumber(weeklyVisitors),
 		TotalChats:        fmt.Sprintf("%d", todayChats),
+		WeeklyChats:       fmt.Sprintf("%d", weeklyChats),
 		SatisfactionRate:  fmt.Sprintf("%.1f%%", satisfaction),
 		AvgResponseTime:   fmt.Sprintf("%.1fs", avgRTSeconds),
 		VisitorsTrend:     math.Round(visitorsTrend*10) / 10,
@@ -180,6 +187,12 @@ type ResponseTimeDistItem struct {
 	Percent float64 `json:"percent"`
 }
 
+type SatisfactionTrendItem struct {
+	Date  string  `json:"date"`
+	Rate  float64 `json:"rate"`
+	Total int64   `json:"total"`
+}
+
 func (s *StatsService) GetResponseTimeDistribution() []ResponseTimeDistItem {
 	today := time.Now().Truncate(24 * time.Hour)
 	dist, _ := s.interactionRepo.GetResponseTimeDistribution(today)
@@ -198,6 +211,27 @@ func (s *StatsService) GetResponseTimeDistribution() []ResponseTimeDistItem {
 			pct = float64(count) / float64(total) * 100
 		}
 		result[i] = ResponseTimeDistItem{Bucket: b, Count: count, Percent: math.Round(pct)}
+	}
+	return result
+}
+
+func (s *StatsService) GetSatisfactionTrend() []SatisfactionTrendItem {
+	since := time.Now().AddDate(0, 0, -6).Truncate(24 * time.Hour)
+	stats, _ := s.interactionRepo.GetDailySatisfactionTrend(since)
+	byDate := make(map[string]repository.DailySatisfactionStat)
+	for _, stat := range stats {
+		byDate[stat.Date] = stat
+	}
+
+	result := make([]SatisfactionTrendItem, 0, 7)
+	for i := 0; i < 7; i++ {
+		day := since.AddDate(0, 0, i).Format("2006-01-02")
+		stat := byDate[day]
+		result = append(result, SatisfactionTrendItem{
+			Date:  day,
+			Rate:  math.Round(stat.SatisfactionRate*10) / 10,
+			Total: stat.Total,
+		})
 	}
 	return result
 }
@@ -234,10 +268,12 @@ func (s *StatsService) GetRecentConversations(limit int) []RecentConversation {
 // ==================== 游客感受度报告 ====================
 
 type VisitorReport struct {
-	AttentionAnalysis []AttentionItem   `json:"attention_analysis"`
-	EmotionDistribution []EmotionItem   `json:"emotion_distribution"`
-	Suggestions       []SuggestionItem  `json:"suggestions"`
-	PeakHours         []PeakHourItem    `json:"peak_hours"`
+	AttentionAnalysis   []AttentionItem    `json:"attention_analysis"`
+	EmotionDistribution []EmotionItem      `json:"emotion_distribution"`
+	EmotionTrend        []EmotionTrendItem `json:"emotion_trend"`
+	Suggestions         []SuggestionItem   `json:"suggestions"`
+	PeakHours           []PeakHourItem     `json:"peak_hours"`
+	Summary             ReportSummary      `json:"summary"`
 }
 
 type AttentionItem struct {
@@ -246,9 +282,9 @@ type AttentionItem struct {
 }
 
 type EmotionItem struct {
-	Label string  `json:"label"`
-	Icon  string  `json:"icon"`
-	Count int64   `json:"count"`
+	Label   string  `json:"label"`
+	Icon    string  `json:"icon"`
+	Count   int64   `json:"count"`
 	Percent float64 `json:"percent"`
 }
 
@@ -261,8 +297,24 @@ type PeakHourItem struct {
 	Count int64  `json:"count"`
 }
 
+type EmotionTrendItem struct {
+	Date         string  `json:"date"`
+	PositiveRate float64 `json:"positive_rate"`
+	NegativeRate float64 `json:"negative_rate"`
+	Total        int64   `json:"total"`
+}
+
+type ReportSummary struct {
+	TotalInteractions int64   `json:"total_interactions"`
+	SatisfactionRate  float64 `json:"satisfaction_rate"`
+	NegativeRate      float64 `json:"negative_rate"`
+	TopConcern        string  `json:"top_concern"`
+	PeakHour          string  `json:"peak_hour"`
+}
+
 func (s *StatsService) GetVisitorReport() VisitorReport {
 	weekAgo := time.Now().Add(-7 * 24 * time.Hour)
+	totalInteractions, _ := s.interactionRepo.GetTotalCount(weekAgo)
 
 	// 关注点分析 - 从分类分布获取
 	cats, _ := s.interactionRepo.GetCategoryDistribution(weekAgo)
@@ -272,18 +324,20 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 	}
 
 	attentionLabels := map[string]string{
-		"历史":  "历史文化",
-		"景点":  "自然风光",
-		"路线":  "路线规划",
-		"美食":  "美食推荐",
-		"门票":  "票务咨询",
-		"拍照":  "拍照打卡",
-		"活动":  "亲子活动",
-		"时间":  "开放时间",
-		"交通":  "交通出行",
+		"历史": "历史文化",
+		"景点": "自然风光",
+		"路线": "路线规划",
+		"美食": "美食推荐",
+		"门票": "票务咨询",
+		"拍照": "拍照打卡",
+		"活动": "亲子活动",
+		"时间": "开放时间",
+		"交通": "交通出行",
 	}
 
 	attention := make([]AttentionItem, 0)
+	topConcern := "暂无数据"
+	var topConcernValue float64
 	for _, c := range cats {
 		label := c.Category
 		if mapped, ok := attentionLabels[label]; ok {
@@ -296,7 +350,12 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 		if total > 0 {
 			pct = float64(c.Count) / float64(total) * 100
 		}
-		attention = append(attention, AttentionItem{Label: label, Value: math.Round(pct)})
+		value := math.Round(pct)
+		if value > topConcernValue {
+			topConcernValue = value
+			topConcern = label
+		}
+		attention = append(attention, AttentionItem{Label: label, Value: value})
 	}
 
 	// 补充默认数据
@@ -308,6 +367,7 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 			{Label: "拍照打卡", Value: 88},
 			{Label: "亲子活动", Value: 55},
 		}
+		topConcern = "拍照打卡"
 	}
 
 	// 情感分布
@@ -353,12 +413,23 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 			{Label: "负面", Icon: "😞", Percent: 7},
 		}
 	}
+	satisfactionRate := findEmotionPercent(emotions, "正面")
+	negativeRate := findEmotionPercent(emotions, "负面")
+
+	emotionTrend := s.buildEmotionTrend(weekAgo)
 
 	// 热门时段
 	hourlyStats, _ := s.interactionRepo.GetHourlyStats(weekAgo)
 	var peakHours []PeakHourItem
+	peakHour := "暂无数据"
+	var maxPeakCount int64
 	for _, hs := range hourlyStats {
-		peakHours = append(peakHours, PeakHourItem{Hour: hs.Hour + ":00", Count: hs.Count})
+		item := PeakHourItem{Hour: hs.Hour + ":00", Count: hs.Count}
+		if hs.Count > maxPeakCount {
+			maxPeakCount = hs.Count
+			peakHour = item.Hour
+		}
+		peakHours = append(peakHours, item)
 	}
 	sort.Slice(peakHours, func(i, j int) bool {
 		return peakHours[i].Count > peakHours[j].Count
@@ -378,32 +449,122 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 			{Hour: "15:00", Count: 70},
 			{Hour: "16:00", Count: 55},
 		}
+		peakHour = "11:00"
 	}
 
-	// 服务建议
-	suggestions := []SuggestionItem{
-		{Content: "游客建议增加更多互动体验项目"},
-		{Content: "建议延长景区开放时间"},
-		{Content: "希望增加更多餐饮选择"},
-	}
+	suggestions := buildServiceSuggestions(attention, emotions, peakHour, totalInteractions)
 
 	return VisitorReport{
 		AttentionAnalysis:   attention,
 		EmotionDistribution: emotions,
+		EmotionTrend:        emotionTrend,
 		Suggestions:         suggestions,
 		PeakHours:           peakHours,
+		Summary: ReportSummary{
+			TotalInteractions: totalInteractions,
+			SatisfactionRate:  satisfactionRate,
+			NegativeRate:      negativeRate,
+			TopConcern:        topConcern,
+			PeakHour:          peakHour,
+		},
 	}
+}
+
+func (s *StatsService) buildEmotionTrend(since time.Time) []EmotionTrendItem {
+	stats, _ := s.interactionRepo.GetDailyEmotionTrend(since)
+	byDate := make(map[string]repository.DailyEmotionStat)
+	for _, item := range stats {
+		byDate[item.Date] = item
+	}
+
+	result := make([]EmotionTrendItem, 0, 7)
+	start := time.Now().AddDate(0, 0, -6)
+	for i := 0; i < 7; i++ {
+		day := start.AddDate(0, 0, i).Format("2006-01-02")
+		stat := byDate[day]
+		item := EmotionTrendItem{Date: day, Total: stat.Total}
+		if stat.Total > 0 {
+			item.PositiveRate = math.Round(float64(stat.Positive) / float64(stat.Total) * 100)
+			item.NegativeRate = math.Round(float64(stat.Negative) / float64(stat.Total) * 100)
+		}
+		result = append(result, item)
+	}
+
+	return result
+}
+
+func findEmotionPercent(items []EmotionItem, label string) float64 {
+	for _, item := range items {
+		if item.Label == label {
+			return item.Percent
+		}
+	}
+	return 0
+}
+
+func buildServiceSuggestions(attention []AttentionItem, emotions []EmotionItem, peakHour string, totalInteractions int64) []SuggestionItem {
+	suggestions := make([]SuggestionItem, 0, 5)
+
+	if totalInteractions == 0 {
+		return []SuggestionItem{
+			{Content: "近 7 天暂无有效交互记录，建议先引导游客通过数字人入口咨询路线、票务和服务设施问题。"},
+			{Content: "运营初期可预置讲解词、常见问答和游客服务知识，提升首批问答覆盖率。"},
+		}
+	}
+
+	sort.Slice(attention, func(i, j int) bool {
+		return attention[i].Value > attention[j].Value
+	})
+	if len(attention) > 0 {
+		top := attention[0]
+		suggestions = append(suggestions, SuggestionItem{
+			Content: fmt.Sprintf("游客最关注「%s」（%.0f%%），建议在首页、数字人欢迎语和知识库中优先强化相关指引。", top.Label, top.Value),
+		})
+	}
+
+	negativeRate := findEmotionPercent(emotions, "负面")
+	if negativeRate >= 20 {
+		suggestions = append(suggestions, SuggestionItem{
+			Content: fmt.Sprintf("负面情绪占比 %.0f%%，建议复盘低分对话并补充票务、排队、交通等易引发焦虑的问题答案。", negativeRate),
+		})
+	} else {
+		suggestions = append(suggestions, SuggestionItem{
+			Content: "当前负面情绪占比较低，可继续保持亲切讲解语气，并重点优化高频问题的回答精度。",
+		})
+	}
+
+	if peakHour != "" && peakHour != "暂无数据" {
+		suggestions = append(suggestions, SuggestionItem{
+			Content: fmt.Sprintf("交互高峰集中在 %s 附近，建议该时段加强入口引导、路线推荐和现场服务人员联动。", peakHour),
+		})
+	}
+
+	for _, item := range attention {
+		if strings.Contains(item.Label, "票务") || strings.Contains(item.Label, "交通") {
+			suggestions = append(suggestions, SuggestionItem{
+				Content: "票务或交通咨询热度较高，建议同步检查开放时间、停车、接驳和优惠政策信息是否最新。",
+			})
+			break
+		}
+	}
+
+	return suggestions
 }
 
 // ==================== 数字人配置 ====================
 
 type DigitalHumanSettings struct {
 	Name           string  `json:"name"`
+	Appearance     string  `json:"appearance"`
+	Costume        string  `json:"costume"`
 	Style          string  `json:"style"`
 	Color          string  `json:"color"`
+	CultureTheme   string  `json:"culture_theme"`
 	VoiceType      string  `json:"voice_type"`
+	VoiceTone      string  `json:"voice_tone"`
 	Speed          float64 `json:"speed"`
 	Volume         int     `json:"volume"`
+	Greeting       string  `json:"greeting"`
 	DefaultEmotion string  `json:"default_emotion"`
 	EmotionLevel   int     `json:"emotion_level"`
 }
@@ -412,14 +573,18 @@ func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
 	config, err := s.dhConfigRepo.Get()
 	if err != nil {
 		return DigitalHumanSettings{
-			Name: "小灵", Style: "古典汉服", Color: "#D4AF37",
-			VoiceType: "温柔女声", Speed: 0.8, Volume: 80,
+			Name: "小灵", Appearance: "亲和型国风讲解员", Costume: "古典汉服",
+			Style: "古典汉服", Color: "#D4AF37", CultureTheme: "灵山佛教文化与江南山水意境",
+			VoiceType: "温柔女声", VoiceTone: "温暖、端庄、亲切", Speed: 0.8, Volume: 80,
+			Greeting:       "欢迎来到灵山胜境，我是您的数字导览员小灵。",
 			DefaultEmotion: "joy", EmotionLevel: 3,
 		}
 	}
 	return DigitalHumanSettings{
-		Name: config.Name, Style: config.Style, Color: config.Color,
-		VoiceType: config.VoiceType, Speed: config.Speed, Volume: config.Volume,
+		Name: config.Name, Appearance: config.Appearance, Costume: config.Costume,
+		Style: config.Style, Color: config.Color, CultureTheme: config.CultureTheme,
+		VoiceType: config.VoiceType, VoiceTone: config.VoiceTone, Speed: config.Speed, Volume: config.Volume,
+		Greeting:       config.Greeting,
 		DefaultEmotion: config.DefaultEmotion, EmotionLevel: config.EmotionLevel,
 	}
 }
@@ -430,11 +595,16 @@ func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) e
 		return err
 	}
 	config.Name = settings.Name
+	config.Appearance = settings.Appearance
+	config.Costume = settings.Costume
 	config.Style = settings.Style
 	config.Color = settings.Color
+	config.CultureTheme = settings.CultureTheme
 	config.VoiceType = settings.VoiceType
+	config.VoiceTone = settings.VoiceTone
 	config.Speed = settings.Speed
 	config.Volume = settings.Volume
+	config.Greeting = settings.Greeting
 	config.DefaultEmotion = settings.DefaultEmotion
 	config.EmotionLevel = settings.EmotionLevel
 	return s.dhConfigRepo.Update(config)
@@ -454,26 +624,26 @@ func (s *StatsService) GetKnowledgeStats() KnowledgeStats {
 // ==================== 系统设置 ====================
 
 type SystemSettings struct {
-	ScenicName    string `json:"scenic_name"`
-	ScenicDesc    string `json:"scenic_desc"`
+	ScenicName     string `json:"scenic_name"`
+	ScenicDesc     string `json:"scenic_desc"`
 	ServiceHotline string `json:"service_hotline"`
-	EnableLogin   bool   `json:"enable_login"`
-	EnableVoice   bool   `json:"enable_voice"`
-	EnableFilter  bool   `json:"enable_filter"`
-	BackupFreq    string `json:"backup_frequency"`
-	DataRetention string `json:"data_retention"`
+	EnableLogin    bool   `json:"enable_login"`
+	EnableVoice    bool   `json:"enable_voice"`
+	EnableFilter   bool   `json:"enable_filter"`
+	BackupFreq     string `json:"backup_frequency"`
+	DataRetention  string `json:"data_retention"`
 }
 
 func (s *StatsService) GetSystemSettings() SystemSettings {
 	settings := SystemSettings{
-		ScenicName:    "灵山胜境",
-		ScenicDesc:    "灵山胜境是著名的佛教文化景区...",
+		ScenicName:     "灵山胜境",
+		ScenicDesc:     "灵山胜境是著名的佛教文化景区...",
 		ServiceHotline: "400-xxx-xxxx",
-		EnableLogin:   true,
-		EnableVoice:   true,
-		EnableFilter:  false,
-		BackupFreq:    "每日",
-		DataRetention: "30",
+		EnableLogin:    true,
+		EnableVoice:    true,
+		EnableFilter:   false,
+		BackupFreq:     "每日",
+		DataRetention:  "30",
 	}
 	// 从数据库加载
 	if val, err := s.settingRepo.Get("scenic_name"); err == nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,40 @@ func NewAIHandler(ragService *service.RAGService) *AIHandler {
 
 type ChatRequest struct {
 	Message string `json:"message"`
+}
+
+type KnowledgeRequest struct {
+	ID       string                 `json:"id"`
+	Title    string                 `json:"title"`
+	Source   string                 `json:"source"`
+	Content  string                 `json:"content"`
+	Category string                 `json:"category"`
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
+func (h *AIHandler) ensureRAG(c *gin.Context) bool {
+	if h.ragService == nil {
+		pkg.InternalError(c, "知识库服务未初始化")
+		return false
+	}
+	return true
+}
+
+func (req KnowledgeRequest) toServiceInput() service.KnowledgeUpsertInput {
+	metadata := req.Metadata
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+	if strings.TrimSpace(req.Category) != "" {
+		metadata["category"] = strings.TrimSpace(req.Category)
+	}
+	return service.KnowledgeUpsertInput{
+		ID:       req.ID,
+		Title:    req.Title,
+		Source:   req.Source,
+		Content:  req.Content,
+		Metadata: metadata,
+	}
 }
 
 func (h *AIHandler) Chat(c *gin.Context) {
@@ -78,6 +113,10 @@ func (h *AIHandler) Chat(c *gin.Context) {
 }
 
 func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		pkg.BadRequest(c, "获取文件失败: "+err.Error())
@@ -103,20 +142,24 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 		return
 	}
 
-	loadedCount, err := h.ragService.LoadKnowledgeFromJSONL(data)
+	loadedCount, err := h.ragService.LoadKnowledgeDocument(file.Filename, data, c.PostForm("category"))
 	if err != nil {
 		pkg.InternalError(c, "加载知识失败: "+err.Error())
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"file_path":     savePath,
-		"loaded_count":    loadedCount,
-		"message":          "知识上传并加载成功",
+		"file_path":    savePath,
+		"loaded_count": loadedCount,
+		"message":      "知识上传并加载成功",
 	})
 }
 
 func (h *AIHandler) ListKnowledge(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
 	pageStr := c.DefaultQuery("page", "1")
 	pageSizeStr := c.DefaultQuery("page_size", "20")
 
@@ -130,21 +173,72 @@ func (h *AIHandler) ListKnowledge(c *gin.Context) {
 		pageSize = 20
 	}
 
-	list, total, err := h.ragService.ListKnowledge(page, pageSize)
+	list, total, err := h.ragService.ListKnowledge(page, pageSize, c.Query("keyword"), c.Query("category"))
 	if err != nil {
 		pkg.InternalError(c, "查询知识失败: "+err.Error())
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"list":  list,
-		"total": total,
-		"page":  page,
+		"list":      list,
+		"total":     total,
+		"page":      page,
 		"page_size": pageSize,
 	})
 }
 
+func (h *AIHandler) CreateKnowledge(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
+	var req KnowledgeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Content) == "" {
+		pkg.BadRequest(c, "知识内容不能为空")
+		return
+	}
+
+	knowledge, err := h.ragService.CreateKnowledge(req.toServiceInput())
+	if err != nil {
+		pkg.InternalError(c, "保存知识失败: "+err.Error())
+		return
+	}
+	pkg.Success(c, gin.H{"knowledge": knowledge})
+}
+
+func (h *AIHandler) UpdateKnowledge(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
+	id := c.Param("id")
+	var req KnowledgeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Content) == "" {
+		pkg.BadRequest(c, "知识内容不能为空")
+		return
+	}
+
+	knowledge, err := h.ragService.UpdateKnowledge(id, req.toServiceInput())
+	if err != nil {
+		pkg.InternalError(c, "更新知识失败: "+err.Error())
+		return
+	}
+	pkg.Success(c, gin.H{"knowledge": knowledge})
+}
+
 func (h *AIHandler) GetKnowledge(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
 	id := c.Param("id")
 	if id == "" {
 		pkg.BadRequest(c, "ID不能为空")
@@ -168,6 +262,10 @@ func (h *AIHandler) GetKnowledge(c *gin.Context) {
 }
 
 func (h *AIHandler) DeleteKnowledge(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
 	id := c.Param("id")
 	if id == "" {
 		pkg.BadRequest(c, "ID不能为空")
@@ -185,6 +283,10 @@ func (h *AIHandler) DeleteKnowledge(c *gin.Context) {
 }
 
 func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
+	if !h.ensureRAG(c) {
+		return
+	}
+
 	if err := h.ragService.DeleteAllKnowledge(); err != nil {
 		pkg.InternalError(c, "清空知识失败: "+err.Error())
 		return
@@ -200,11 +302,12 @@ func (h *AIHandler) Routes(r *gin.RouterGroup) {
 
 	knowledge := r.Group("/knowledge")
 	{
+		knowledge.POST("", h.CreateKnowledge)
 		knowledge.POST("/upload", h.UploadKnowledgeFile)
 		knowledge.GET("/list", h.ListKnowledge)
-		knowledge.GET("/:id", h.GetKnowledge)
-		knowledge.DELETE("/:id", h.DeleteKnowledge)
 		knowledge.DELETE("/all", h.DeleteAllKnowledge)
+		knowledge.GET("/:id", h.GetKnowledge)
+		knowledge.PUT("/:id", h.UpdateKnowledge)
+		knowledge.DELETE("/:id", h.DeleteKnowledge)
 	}
 }
-

@@ -64,7 +64,7 @@
             <button class="nav-btn active" id="homeBtn"><i class="fas fa-home"></i> 首页</button>
             <button class="nav-btn" id="spotsBtn"><i class="fas fa-landmark"></i> 景点</button>
             <button class="nav-btn" id="routesBtn"><i class="fas fa-route"></i> 路线</button>
-            <button class="nav-btn" id="chatBtn" onclick="window.location.href='http://localhost:12393'"><i class="fas fa-comments"></i> 智能导览</button>
+            <button class="nav-btn" id="chatBtn"><i class="fas fa-comments"></i> 智能导览</button>
             <button class="nav-btn" id="profileBtn"><i class="fas fa-user"></i> 个人中心</button>
             <button class="nav-btn nav-admin" onclick="window.location.href='/static/dashboard.html'"><i class="fas fa-chart-line"></i> 数据大屏</button>
             <button class="nav-btn nav-admin" onclick="window.location.href='/static/admin.html'"><i class="fas fa-cog"></i> 管理后台</button>
@@ -82,17 +82,17 @@
                     <h1>AI 智能导览助手</h1>
                     <p>探索灵山胜境，开启智慧之旅</p>
                     <div class="hero-buttons">
-                        <button class="btn-primary" onclick="window.location.href='http://localhost:12393'">
+                        <button class="btn-primary" onclick="openDigitalHuman()">
                             <i class="fas fa-user-circle"></i> 数字人导览
                         </button>
                         <button class="btn-primary" onclick="goToSection('spotsBtn')">浏览景点</button>
-                        <button class="btn-secondary" onclick="goToSection('chatBtn')">智能问答</button>
+                        <button class="btn-secondary" onclick="openDigitalHuman()">智能问答</button>
                     </div>
                 </div>
             </div>
 
             <div class="features-section">
-                <div class="feature-card" onclick="window.location.href='http://localhost:12393'" style="cursor: pointer;">
+                <div class="feature-card" onclick="openDigitalHuman()" style="cursor: pointer;">
                     <i class="fas fa-user-circle"></i>
                     <h3>数字人导览</h3>
                     <p>AI数字人"小灵"为您服务</p>
@@ -160,34 +160,6 @@
             </div>
         </section>
 
-        <section id="chatSection" class="section">
-            <div class="chat-container">
-                <div class="chat-header">
-                    <h2><i class="fas fa-comments"></i> AI 智能导览</h2>
-                    <div class="chat-options">
-                        <label class="auto-speak-toggle">
-                            <input type="checkbox" id="autoSpeak" checked>
-                            <span>自动语音</span>
-                        </label>
-                        <button class="clear-btn" id="clearChat">清空对话</button>
-                    </div>
-                </div>
-                <div id="chatMessages" class="chat-messages">
-                    <div class="message bot-message">
-                        <div class="avatar">🤖</div>
-                        <div class="message-content">
-                            <p>您好！我是您的AI导览助手，有什么可以帮助您的吗？</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-input">
-                    <input type="text" id="chatInput" placeholder="输入您的问题...">
-                    <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
-                    <button class="voice-btn" id="voiceBtn"><i class="fas fa-microphone"></i></button>
-                </div>
-            </div>
-        </section>
-
         <section id="profileSection" class="section">
             <div class="profile-container">
                 <div class="profile-header">
@@ -220,56 +192,6 @@
     <footer class="footer">
         <p>&copy; 2024 景区导览服务 AI 数字人. 保留所有权利.</p>
     </footer>
-
-    <div id="digitalHumanContainer" class="digital-human-container">
-        <div class="digital-human-header">
-            <div class="digital-human-info">
-                <span class="status-dot"></span>
-                <span id="digitalHumanName">数字人导览员</span>
-            </div>
-            <button class="dh-close-btn" onclick="toggleDigitalHuman()">×</button>
-        </div>
-        <div class="digital-human-body">
-            <div class="digital-human-avatar" data-emotion="friendly">
-                <div class="avatar-face">
-                    <div class="avatar-eyes">
-                        <div class="eye left"></div>
-                        <div class="eye right"></div>
-                    </div>
-                    <div class="avatar-mouth"></div>
-                </div>
-                <div class="avatar-body">
-                    <div class="avatar-torso"></div>
-                </div>
-                <div class="avatar-glow"></div>
-            </div>
-            <div class="digital-human-controls">
-                <button class="dh-voice-btn" onclick="startVoiceInput()">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <button class="dh-speak-btn" onclick="toggleSpeak()">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-                <button class="dh-emotion-btn" onclick="cycleEmotion()">
-                    <i class="fas fa-smile"></i>
-                </button>
-            </div>
-        </div>
-        <div id="digitalHumanMessage" class="digital-human-message">
-            您好！我是您的AI数字人导览员
-        </div>
-        <div class="digital-human-actions">
-            <button class="dh-action-btn" onclick="goToSection('spotsBtn')">
-                <i class="fas fa-landmark"></i> 浏览景点
-            </button>
-            <button class="dh-action-btn" onclick="goToSection('routesBtn')">
-                <i class="fas fa-route"></i> 推荐路线
-            </button>
-            <button class="dh-action-btn primary" onclick="goToSection('chatBtn')">
-                <i class="fas fa-comments"></i> 智能问答
-            </button>
-        </div>
-    </div>
 
     <button id="toggleDHBtn" class="toggle-digital-human">
         <i class="fas fa-user-circle"></i>

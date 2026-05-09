@@ -74,7 +74,6 @@ func main() {
 func initRAG(cfg *config.Config) *service.RAGService {
 	if cfg.AI.APIKey == "" {
 		fmt.Println("警告: AI API Key未配置，跳过RAG初始化")
-		return nil
 	}
 
 	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
@@ -148,15 +147,15 @@ func setupDI(ragService *service.RAGService) *handler.Handlers {
 	adminHandler := handler.NewAdminHandler(statsService)
 
 	return &handler.Handlers{
-		ScenicSpot:    scenicSpotHandler,
-		GuideContent:  guideContentHandler,
-		TourRoute:     tourRouteHandler,
-		VisitorQuery:  visitorQueryHandler,
-		User:          userHandler,
-		AI:            aiHandler,
-		TTS:           ttsHandler,
-		DigitalHuman:  digitalHumanHandler,
-		OpenAIProxy:   openAIProxyHandler,
-		Admin:         adminHandler,
+		ScenicSpot:   scenicSpotHandler,
+		GuideContent: guideContentHandler,
+		TourRoute:    tourRouteHandler,
+		VisitorQuery: visitorQueryHandler,
+		User:         userHandler,
+		AI:           aiHandler,
+		TTS:          ttsHandler,
+		DigitalHuman: digitalHumanHandler,
+		OpenAIProxy:  openAIProxyHandler,
+		Admin:        adminHandler,
 	}
 }

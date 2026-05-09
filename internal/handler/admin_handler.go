@@ -26,6 +26,7 @@ func (h *AdminHandler) Routes(api *gin.RouterGroup) {
 		admin.GET("/dashboard/top-questions", h.GetTopQuestions)
 		admin.GET("/dashboard/category-distribution", h.GetCategoryDistribution)
 		admin.GET("/dashboard/response-time-distribution", h.GetResponseTimeDistribution)
+		admin.GET("/dashboard/satisfaction-trend", h.GetSatisfactionTrend)
 		admin.GET("/dashboard/recent-conversations", h.GetRecentConversations)
 
 		// 游客感受度报告
@@ -76,6 +77,12 @@ func (h *AdminHandler) GetCategoryDistribution(c *gin.Context) {
 func (h *AdminHandler) GetResponseTimeDistribution(c *gin.Context) {
 	dist := h.statsService.GetResponseTimeDistribution()
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": dist})
+}
+
+// GetSatisfactionTrend 获取近7日满意度趋势
+func (h *AdminHandler) GetSatisfactionTrend(c *gin.Context) {
+	trend := h.statsService.GetSatisfactionTrend()
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": trend})
 }
 
 // GetRecentConversations 获取最近对话

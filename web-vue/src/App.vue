@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { appState, type AppRoute } from './router';
+import { appState, openDigitalHuman, type AppRoute } from './router';
 import DashboardView from './views/DashboardView.vue';
 import AdminView from './views/AdminView.vue';
 import DigitalHumanView from './views/DigitalHumanView.vue';
@@ -12,6 +12,11 @@ const currentView = computed(() => {
 });
 
 function navigate(route: AppRoute) {
+  if (route === 'digital-human') {
+    openDigitalHuman();
+    return;
+  }
+
   window.location.hash = `/${route}`;
 }
 </script>

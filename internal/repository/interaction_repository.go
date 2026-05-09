@@ -29,6 +29,16 @@ func (r *InteractionRepository) GetTotalCount(since time.Time) (int64, error) {
 	return count, err
 }
 
+// GetUniqueSessionCount 获取指定时间后的去重会话数
+func (r *InteractionRepository) GetUniqueSessionCount(since time.Time) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.InteractionLog{}).
+		Where("created_at >= ?", since).
+		Distinct("session_id").
+		Count(&count).Error
+	return count, err
+}
+
 // GetAvgResponseTime 获取平均响应时间
 func (r *InteractionRepository) GetAvgResponseTime(since time.Time) (float64, error) {
 	var avg float64
@@ -140,6 +150,63 @@ func (r *InteractionRepository) GetHourlyStats(since time.Time) ([]HourlyStat, e
 type HourlyStat struct {
 	Hour  string
 	Count int64
+}
+
+type DailyEmotionStat struct {
+	Date     string
+	Emotion  string
+	Count    int64
+	Positive int64
+	Negative int64
+	Total    int64
+}
+
+type DailySatisfactionStat struct {
+	Date             string
+	Total            int64
+	Positive         int64
+	SatisfactionRate float64
+}
+
+// GetDailyEmotionTrend 获取每日情绪趋势
+func (r *InteractionRepository) GetDailyEmotionTrend(since time.Time) ([]DailyEmotionStat, error) {
+	var results []DailyEmotionStat
+	err := r.db.Model(&model.InteractionLog{}).
+		Where("created_at >= ?", since).
+		Select(`
+			strftime('%Y-%m-%d', created_at) as date,
+			SUM(CASE WHEN emotion IN ('joy', 'surprise') THEN 1 ELSE 0 END) as positive,
+			SUM(CASE WHEN emotion IN ('sadness', 'fear', 'anger', 'disgust') THEN 1 ELSE 0 END) as negative,
+			COUNT(*) as total
+		`).
+		Group("date").
+		Order("date").
+		Find(&results).Error
+	return results, err
+}
+
+// GetDailySatisfactionTrend 获取每日满意度趋势
+func (r *InteractionRepository) GetDailySatisfactionTrend(since time.Time) ([]DailySatisfactionStat, error) {
+	var results []DailySatisfactionStat
+	err := r.db.Model(&model.InteractionLog{}).
+		Where("created_at >= ?", since).
+		Select(`
+			strftime('%Y-%m-%d', created_at) as date,
+			COUNT(*) as total,
+			SUM(CASE WHEN emotion IN ('joy', 'surprise') THEN 1 ELSE 0 END) as positive
+		`).
+		Group("date").
+		Order("date").
+		Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	for i := range results {
+		if results[i].Total > 0 {
+			results[i].SatisfactionRate = float64(results[i].Positive) / float64(results[i].Total) * 100
+		}
+	}
+	return results, nil
 }
 
 // GetRecentConversations 获取最近N条对话

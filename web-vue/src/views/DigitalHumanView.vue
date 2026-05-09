@@ -10,6 +10,10 @@ type Expression = 'neutral' | 'happy' | 'thinking' | 'surprised' | 'interrupted'
 const input = ref('');
 const mouthOpen = ref(0);
 const transcriptBuffer = ref('');
+const hasActiveTurn = ref(false);
+const isPlaybackActive = ref(false);
+const isVoiceListening = ref(false);
+const isVoiceStarting = ref(false);
 
 const state = reactive({
   conversation: 'idle' as ConversationState,
@@ -38,11 +42,14 @@ let lastAssistantSpeechText = '';
 
 const audio = new AudioPlaybackController({
   onStart: (text, cue) => {
+    isPlaybackActive.value = true;
+    hasActiveTurn.value = true;
     if (text) showAssistantSpeech(text);
     state.conversation = 'speaking';
     state.expression = resolveSpeechExpression(cue?.expression, text);
   },
   onEnd: () => {
+    isPlaybackActive.value = false;
     mouthOpen.value = 0;
     if (state.conversation === 'speaking') {
       state.conversation = 'idle';
@@ -64,7 +71,14 @@ const statusLabel = computed(() => {
   return state.connected ? '数字人在线' : '离线演示模式';
 });
 
-const canInterrupt = computed(() => ['speaking', 'thinking', 'listening'].includes(state.conversation));
+const canInterrupt = computed(
+  () =>
+    hasActiveTurn.value ||
+    isPlaybackActive.value ||
+    isVoiceListening.value ||
+    isVoiceStarting.value ||
+    ['speaking', 'thinking', 'listening'].includes(state.conversation),
+);
 
 function nowTime() {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -167,6 +181,7 @@ function handleSocketMessage(message: VtuberMessage) {
     if (blockIncomingPlayback && !waitingForFreshServerTurn) return;
     conversationTurn += 1;
     interruptedTurn = -1;
+    hasActiveTurn.value = true;
     blockIncomingPlayback = false;
     waitingForFreshServerTurn = false;
     audio.resume();
@@ -176,6 +191,7 @@ function handleSocketMessage(message: VtuberMessage) {
   }
 
   if (message.type === 'control' && message.text === 'conversation-chain-end') {
+    hasActiveTurn.value = isPlaybackActive.value;
     if (state.conversation !== 'interrupted') {
       state.conversation = 'idle';
       state.expression = 'neutral';
@@ -190,6 +206,8 @@ function handleSocketMessage(message: VtuberMessage) {
   if (message.type === 'interrupt-signal') {
     audio.interrupt();
     mouthOpen.value = 0;
+    hasActiveTurn.value = false;
+    isPlaybackActive.value = false;
     blockIncomingPlayback = true;
     waitingForFreshServerTurn = false;
     interruptedTurn = conversationTurn;
@@ -213,6 +231,7 @@ function handleSocketMessage(message: VtuberMessage) {
   }
 
   if (message.type === 'backend-synth-complete') {
+    hasActiveTurn.value = isPlaybackActive.value;
     if (state.conversation === 'thinking') {
       state.conversation = 'idle';
       state.expression = 'neutral';
@@ -232,6 +251,7 @@ function sendText() {
   window.clearTimeout(fallbackTimer);
   conversationTurn += 1;
   interruptedTurn = -1;
+  hasActiveTurn.value = true;
   const shouldWaitForServerTurn = Boolean(blockIncomingPlayback && socket);
   addMessage('user', text);
   lastAssistantSpeechText = '';
@@ -264,6 +284,10 @@ function interruptAnswer() {
   recognition?.stop();
   window.clearTimeout(fallbackTimer);
   interruptedTurn = conversationTurn;
+  hasActiveTurn.value = false;
+  isPlaybackActive.value = false;
+  isVoiceListening.value = false;
+  isVoiceStarting.value = false;
   blockIncomingPlayback = true;
   waitingForFreshServerTurn = false;
   audio.interrupt();
@@ -292,35 +316,60 @@ function toggleVoice() {
     return;
   }
 
-  if (recognition && state.conversation === 'listening') {
+  if (recognition && (isVoiceListening.value || isVoiceStarting.value)) {
     recognition.stop();
     return;
   }
 
-  recognition = new Recognition();
-  recognition.lang = 'zh-CN';
-  recognition.interimResults = false;
-  recognition.continuous = false;
-  recognition.onstart = () => {
+  const nextRecognition = new Recognition();
+  recognition = nextRecognition;
+  nextRecognition.lang = 'zh-CN';
+  nextRecognition.interimResults = false;
+  nextRecognition.continuous = false;
+  nextRecognition.onstart = () => {
+    isVoiceStarting.value = false;
+    isVoiceListening.value = true;
     state.conversation = 'listening';
     state.expression = 'surprised';
+    state.subtitle = '我在听，请说出你的问题。';
   };
-  recognition.onresult = event => {
-    input.value = event.results[0][0].transcript.trim();
+  nextRecognition.onresult = event => {
+    const spokenText = event.results?.[0]?.[0]?.transcript?.trim();
+    if (!spokenText) return;
+    input.value = spokenText;
     sendText();
   };
-  recognition.onerror = () => {
-    addMessage('system', '无法启动语音输入，请检查浏览器麦克风权限。');
-    state.conversation = 'idle';
-    state.expression = 'neutral';
-  };
-  recognition.onend = () => {
+  nextRecognition.onerror = event => {
+    const detail = event.error === 'not-allowed' || event.error === 'service-not-allowed'
+      ? '浏览器没有麦克风权限，请允许后重试。'
+      : '无法启动语音输入，请确认浏览器支持并且麦克风可用。';
+    addMessage('system', detail);
+    isVoiceStarting.value = false;
+    isVoiceListening.value = false;
     if (state.conversation === 'listening') {
       state.conversation = 'idle';
       state.expression = 'neutral';
     }
   };
-  recognition.start();
+  nextRecognition.onend = () => {
+    isVoiceStarting.value = false;
+    isVoiceListening.value = false;
+    if (recognition === nextRecognition) recognition = null;
+    if (state.conversation === 'listening') {
+      state.conversation = 'idle';
+      state.expression = 'neutral';
+    }
+  };
+
+  try {
+    isVoiceStarting.value = true;
+    nextRecognition.start();
+  } catch {
+    isVoiceStarting.value = false;
+    isVoiceListening.value = false;
+    recognition = null;
+    addMessage('system', '语音输入启动失败，请稍后重试。');
+  }
 }
 
 function quickAsk(text: string) {
@@ -348,6 +397,10 @@ onUnmounted(() => {
   socket?.disconnect();
   recognition?.stop();
   audio.interrupt();
+  hasActiveTurn.value = false;
+  isPlaybackActive.value = false;
+  isVoiceListening.value = false;
+  isVoiceStarting.value = false;
   mouthOpen.value = 0;
 });
 </script>
@@ -389,7 +442,9 @@ onUnmounted(() => {
       <div class="input-row">
         <input v-model="input" placeholder="请输入景点、路线、开放时间等问题..." @keydown.enter="sendText" />
         <button class="primary-action" @click="sendText">发送</button>
-        <button class="voice-action" :class="{ active: state.conversation === 'listening' }" @click="toggleVoice">语音</button>
+        <button class="voice-action" :class="{ active: isVoiceListening || isVoiceStarting }" @click="toggleVoice">
+          {{ isVoiceListening || isVoiceStarting ? '停止' : '语音' }}
+        </button>
       </div>
     </aside>
   </main>

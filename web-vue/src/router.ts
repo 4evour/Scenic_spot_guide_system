@@ -2,6 +2,12 @@ import { reactive } from 'vue';
 
 export type AppRoute = 'dashboard' | 'admin' | 'digital-human';
 
+export const DIGITAL_HUMAN_URL = '/digital-human#/digital-human';
+
+export function openDigitalHuman() {
+  window.location.href = DIGITAL_HUMAN_URL;
+}
+
 export const appState = reactive({
   route: resolveRoute(),
 });

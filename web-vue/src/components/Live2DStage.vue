@@ -19,6 +19,9 @@ let pixiApp: any = null;
 let live2dModel: any = null;
 let resizeObserver: ResizeObserver | null = null;
 let appliedExpression = '';
+let expressionSeq = 0;
+
+const lipSyncParameterIds = ['ParamA'];
 
 const expressionClass = computed(() => `expr-${props.expression}`);
 const statusText = computed(() => {
@@ -119,9 +122,12 @@ async function loadLive2DModel() {
     live2dHost.value.appendChild(pixiApp.view);
 
     live2dModel = await Live2DModel.from('/static/live2d-models/mao_pro/runtime/mao_pro.model3.json');
+    live2dModel.autoUpdate = false;
     live2dModel.anchor.set(0.5, 0.5);
     syncLive2DLayout();
     pixiApp.stage.addChild(live2dModel);
+    pixiApp.ticker.add(syncLive2DFrame);
+    live2dModel.internalModel?.on?.('beforeModelUpdate', applyLipSyncParameters);
     live2dLoaded.value = true;
     live2dError.value = '';
     cancelAnimationFrame(raf);
@@ -165,18 +171,35 @@ function applyExpression() {
   const expression = map[props.expression];
   if (expression === appliedExpression) return;
   appliedExpression = expression;
-  live2dModel.expression(expression);
+  const seq = ++expressionSeq;
+  void live2dModel.expression(expression).then((applied: boolean) => {
+    if (!applied && seq === expressionSeq) {
+      appliedExpression = '';
+      console.warn(`Live2D expression "${expression}" was not applied.`);
+    }
+  }).catch((error: unknown) => {
+    if (seq === expressionSeq) appliedExpression = '';
+    console.warn(`Live2D expression "${expression}" failed.`, error);
+  });
 }
 
-function applyLive2DState() {
+function syncLive2DFrame() {
+  if (!live2dModel) return;
+  live2dModel.update?.(pixiApp?.ticker?.deltaMS ?? 16.7);
+  applyExpression();
+}
+
+function applyLipSyncParameters() {
   if (!live2dModel) return;
   const mouthValue = props.state === 'speaking' ? Math.min(Math.max(props.mouthOpen, 0), 1) : 0;
   const coreModel = live2dModel.internalModel?.coreModel;
   if (coreModel?.setParameterValueById) {
-    coreModel.setParameterValueById('ParamA', mouthValue);
-    coreModel.setParameterValueById('ParamMouthOpenY', mouthValue);
-    coreModel.setParameterValueById('PARAM_MOUTH_OPEN_Y', mouthValue);
+    lipSyncParameterIds.forEach(id => coreModel.setParameterValueById(id, mouthValue, 1));
   }
+}
+
+function applyLive2DState() {
+  applyLipSyncParameters();
   applyExpression();
 }
 
@@ -195,6 +218,8 @@ onUnmounted(() => {
   cancelAnimationFrame(raf);
   window.removeEventListener('resize', syncLive2DLayout);
   resizeObserver?.disconnect();
+  pixiApp?.ticker?.remove?.(syncLive2DFrame);
+  live2dModel?.internalModel?.off?.('beforeModelUpdate', applyLipSyncParameters);
   pixiApp?.destroy?.(true);
 });
 

@@ -9,7 +9,7 @@ declare global {
     continuous: boolean;
     onstart: (() => void) | null;
     onend: (() => void) | null;
-    onerror: ((event: Event) => void) | null;
+    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
     onresult: ((event: SpeechRecognitionEvent) => void) | null;
     start(): void;
     stop(): void;
@@ -17,6 +17,20 @@ declare global {
 
   interface SpeechRecognitionEvent extends Event {
     results: SpeechRecognitionResultList;
+  }
+
+  interface SpeechRecognitionErrorEvent extends Event {
+    error:
+      | 'aborted'
+      | 'audio-capture'
+      | 'bad-grammar'
+      | 'language-not-supported'
+      | 'network'
+      | 'no-speech'
+      | 'not-allowed'
+      | 'phrases-not-supported'
+      | 'service-not-allowed';
+    message: string;
   }
 
   interface SpeechRecognitionAlternative {
