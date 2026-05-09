@@ -47,6 +47,7 @@ configs/*.yml
 bin/
 build/
 dist/
+*.map
 
 # Temporary files
 tmp/

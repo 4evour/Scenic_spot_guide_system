@@ -1,0 +1,29 @@
+server:
+  host: "0.0.0.0"
+  port: "8080"
+
+database:
+  driver: "sqlite"
+  path: "./data/scenic_guide.db"
+
+logging:
+  level: "info"
+  output: "console"
+
+ai:
+  api_key: ""
+  model: "deepseek-chat"
+  base_url: "https://api.deepseek.com/v1"
+
+embedding:
+  api_key: ""
+  model: "text-embedding-v2"
+  base_url: "https://dashscope.aliyuncs.com/api/v1"
+
+speech:
+  api_key: ""
+  region: ""
+
+security:
+  jwt_secret: "please-change-this-secret"
+  token_expire_hours: 24

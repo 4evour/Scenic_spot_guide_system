@@ -7,7 +7,7 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: '../static/vue-app',
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false,
   },
   server: {
     proxy: {
