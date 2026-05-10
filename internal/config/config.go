@@ -1,17 +1,19 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Database   DatabaseConfig   `mapstructure:"database"`
-	Logging    LoggingConfig    `mapstructure:"logging"`
-	AI         AIConfig         `mapstructure:"ai"`
-	Embedding  EmbeddingConfig  `mapstructure:"embedding"`
-	Speech     SpeechConfig     `mapstructure:"speech"`
-	Security   SecurityConfig   `mapstructure:"security"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Logging   LoggingConfig   `mapstructure:"logging"`
+	AI        AIConfig        `mapstructure:"ai"`
+	Embedding EmbeddingConfig `mapstructure:"embedding"`
+	Speech    SpeechConfig    `mapstructure:"speech"`
+	Security  SecurityConfig  `mapstructure:"security"`
 }
 
 type ServerConfig struct {
@@ -52,16 +54,20 @@ type SpeechConfig struct {
 }
 
 type SecurityConfig struct {
-	JWTSecret       string `mapstructure:"jwt_secret"`
+	JWTSecret        string `mapstructure:"jwt_secret"`
 	TokenExpireHours int    `mapstructure:"token_expire_hours"`
 }
 
 func LoadConfig(path string) (*Config, error) {
+	viper.Reset()
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(path)
 
+	viper.SetEnvPrefix("SCENIC_GUIDE")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+	bindEnvKeys()
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
@@ -73,4 +79,33 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func bindEnvKeys() {
+	keys := []string{
+		"server.host",
+		"server.port",
+		"database.driver",
+		"database.host",
+		"database.port",
+		"database.name",
+		"database.user",
+		"database.password",
+		"database.path",
+		"logging.level",
+		"logging.output",
+		"ai.api_key",
+		"ai.model",
+		"ai.base_url",
+		"embedding.api_key",
+		"embedding.model",
+		"embedding.base_url",
+		"speech.api_key",
+		"speech.region",
+		"security.jwt_secret",
+		"security.token_expire_hours",
+	}
+	for _, key := range keys {
+		_ = viper.BindEnv(key)
+	}
 }

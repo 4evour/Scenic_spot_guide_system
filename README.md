@@ -89,13 +89,32 @@ go run .
 ## 常用命令
 
 ```powershell
+make check
 go test ./...
 go vet ./...
 
 Set-Location web-vue
+npm run check
+npm run check:encoding
 npm run build
 Set-Location ..
 ```
+
+## 配置与环境变量
+
+运行时配置默认读取 `configs/config.yaml`，也可以用 `SCENIC_GUIDE_` 前缀的环境变量覆盖嵌套配置，例如：
+
+```powershell
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET="至少32位随机字符串"
+$env:SCENIC_GUIDE_SECURITY_TOKEN_EXPIRE_HOURS="4"
+$env:SCENIC_GUIDE_AI_API_KEY="你的服务端密钥"
+```
+
+## 编码约定
+
+- 源码和文档统一使用 UTF-8，规则见 `.editorconfig`。
+- Windows PowerShell 若直接输出中文出现乱码，通常是控制台代码页/宿主解码问题，不代表文件已损坏。排查时优先使用 UTF-8 明确输出或运行 `npm run check:encoding`。
+- `npm run check:encoding` 会扫描源码和文档中的替换字符及常见 mojibake 模式；构建产物和第三方资源不纳入该检查。
 
 ## 清理与提交约定
 

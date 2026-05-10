@@ -3,6 +3,8 @@ package handler
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +13,19 @@ import (
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/service"
 )
+
+const (
+	maxKnowledgeUploadSize     = 10 << 20
+	maxKnowledgeUploadBodySize = maxKnowledgeUploadSize + (1 << 20)
+)
+
+var allowedKnowledgeUploadExts = map[string]struct{}{
+	".jsonl":    {},
+	".json":     {},
+	".md":       {},
+	".markdown": {},
+	".txt":      {},
+}
 
 type AIHandler struct {
 	ragService *service.RAGService
@@ -71,7 +86,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	}
 
 	fmt.Printf("\n=== AI Chat请求 ===\n")
-	fmt.Printf("消息内容: %s\n", req.Message)
+	fmt.Printf("AI chat message length: %d\n", len([]rune(req.Message)))
 	fmt.Printf("RAG服务是否可用: %v\n", h.ragService != nil)
 
 	startTime := time.Now()
@@ -79,7 +94,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	if h.ragService != nil {
 		response, route, err := h.ragService.QueryWithRAGAndRoute(req.Message)
 		elapsed := time.Since(startTime).Milliseconds()
-		fmt.Printf("RAG响应: %s\n", response)
+		fmt.Printf("RAG response length: %d\n", len([]rune(response)))
 		if err != nil {
 			fmt.Printf("RAG错误: %v\n", err)
 			pkg.InternalError(c, "调用AI服务失败: "+err.Error())
@@ -117,9 +132,20 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 		return
 	}
 
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxKnowledgeUploadBodySize)
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		pkg.BadRequest(c, "获取文件失败: "+err.Error())
+		return
+	}
+
+	if file.Size > maxKnowledgeUploadSize {
+		pkg.BadRequest(c, "上传文件不能超过 10MB")
+		return
+	}
+	if _, ok := allowedKnowledgeUploadExts[strings.ToLower(filepath.Ext(file.Filename))]; !ok {
+		pkg.BadRequest(c, "仅支持 JSONL、JSON、Markdown 或 TXT 文件")
 		return
 	}
 
@@ -287,6 +313,11 @@ func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
 		return
 	}
 
+	if c.Query("confirm") != "DELETE_ALL_KNOWLEDGE" {
+		pkg.BadRequest(c, "confirm=DELETE_ALL_KNOWLEDGE is required")
+		return
+	}
+
 	if err := h.ragService.DeleteAllKnowledge(); err != nil {
 		pkg.InternalError(c, "清空知识失败: "+err.Error())
 		return
@@ -301,6 +332,7 @@ func (h *AIHandler) Routes(r *gin.RouterGroup) {
 	r.POST("/ai/chat", h.Chat)
 
 	knowledge := r.Group("/knowledge")
+	knowledge.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
 	{
 		knowledge.POST("", h.CreateKnowledge)
 		knowledge.POST("/upload", h.UploadKnowledgeFile)

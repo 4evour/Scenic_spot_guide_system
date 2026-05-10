@@ -2,9 +2,64 @@ package pkg
 
 import (
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+type rateLimitEntry struct {
+	count   int
+	resetAt time.Time
+}
+
+func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
+	if limit <= 0 {
+		limit = 1
+	}
+	if window <= 0 {
+		window = time.Minute
+	}
+
+	var mu sync.Mutex
+	entries := make(map[string]rateLimitEntry)
+
+	return func(c *gin.Context) {
+		now := time.Now()
+		key := c.ClientIP()
+
+		mu.Lock()
+		entry := entries[key]
+		if entry.resetAt.IsZero() || now.After(entry.resetAt) {
+			entry = rateLimitEntry{resetAt: now.Add(window)}
+		}
+		entry.count++
+		entries[key] = entry
+
+		for ip, item := range entries {
+			if now.After(item.resetAt) {
+				delete(entries, ip)
+			}
+		}
+
+		allowed := entry.count <= limit
+		resetAt := entry.resetAt
+		mu.Unlock()
+
+		if !allowed {
+			c.AbortWithStatusJSON(429, Response{
+				Code:    429,
+				Message: "too many requests",
+				Data: gin.H{
+					"retry_after_seconds": int(time.Until(resetAt).Seconds()),
+				},
+			})
+			return
+		}
+
+		c.Next()
+	}
+}
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

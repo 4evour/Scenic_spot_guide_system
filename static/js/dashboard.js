@@ -1,5 +1,20 @@
 const API_BASE = '/api/v1';
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function authHeaders() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const mockDashboard = {
     overview: {
         total_visitors: 12356,
@@ -53,7 +68,9 @@ function updateCurrentTime() {
 async function loadDashboardData() {
     let overview = mockDashboard.overview;
     try {
-        const resp = await fetch(`${API_BASE}/admin/dashboard/overview`);
+        const resp = await fetch(`${API_BASE}/admin/dashboard/overview`, {
+            headers: authHeaders()
+        });
         const data = await resp.json();
         if (data && data.code === 0 && data.data) overview = { ...overview, ...data.data };
     } catch (error) {}
@@ -103,7 +120,7 @@ function renderTopQuestions(items) {
     const max = Math.max(...items.map(item => item[1]));
     document.getElementById('topQuestions').innerHTML = items.map(([label, value]) => `
         <div class="h-bar-item">
-            <span class="h-bar-label">${label}</span>
+            <span class="h-bar-label">${escapeHtml(label)}</span>
             <div class="h-bar-wrapper"><div class="h-bar" style="width:${Math.round(value / max * 100)}%"></div></div>
             <strong>${value.toLocaleString('zh-CN')}</strong>
         </div>
@@ -122,15 +139,15 @@ function renderCategoryDonut(items) {
         return circle;
     }).join('') + '<circle cx="110" cy="110" r="54" fill="rgba(5,17,20,.96)"></circle>';
     document.getElementById('categoryLegend').innerHTML = items.map(([label, percent, color]) => `
-        <div class="legend-item"><span class="legend-color" style="background:${color}"></span><span>${label}</span><strong>${percent}%</strong></div>
+        <div class="legend-item"><span class="legend-color" style="background:${escapeHtml(color)}"></span><span>${escapeHtml(label)}</span><strong>${escapeHtml(percent)}%</strong></div>
     `).join('');
 }
 
 function renderResponseChart(items) {
     document.getElementById('responseChart').innerHTML = items.map(([label, value]) => `
         <div class="response-bar" style="height:${Math.max(value, 8)}%">
-            <span>${value}%</span>
-            <small>${label}</small>
+            <span>${escapeHtml(value)}%</span>
+            <small>${escapeHtml(label)}</small>
         </div>
     `).join('');
 }
@@ -140,9 +157,9 @@ function renderConversations(items) {
         <div class="chat-item ${name === '小灵' ? 'ai' : ''}">
             <div class="chat-avatar">${name === '小灵' ? 'AI' : '客'}</div>
             <div class="chat-content">
-                <span class="chat-name">${name}</span>
-                <span class="chat-text">${message}</span>
-                <span class="chat-time">${time}</span>
+                <span class="chat-name">${escapeHtml(name)}</span>
+                <span class="chat-text">${escapeHtml(message)}</span>
+                <span class="chat-time">${escapeHtml(time)}</span>
             </div>
         </div>
     `).join('');

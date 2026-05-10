@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test
+        run: go test ./...
+
+      - name: Vet
+        run: go vet ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-vue/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web-vue
+        run: npm ci
+
+      - name: Encoding check
+        working-directory: web-vue
+        run: npm run check:encoding
+
+      - name: Type check
+        working-directory: web-vue
+        run: npm run check
+
+      - name: Build
+        working-directory: web-vue
+        run: npm run build

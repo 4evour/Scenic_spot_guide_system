@@ -53,8 +53,8 @@ func (h *DigitalHumanHandler) CreateSession(c *gin.Context) {
 	sessionID := uuid.New().String()
 	expiresAt := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
 
-	fmt.Printf("[数字人] 创建会话: session_id=%s, user_id=%s, scene=%s\n",
-		sessionID, req.UserID, req.Scene)
+	fmt.Printf("[数字人] 创建会话: session_id=%s, user_present=%t, scene_present=%t\n",
+		sessionID, req.UserID != "", req.Scene != "")
 
 	pkg.Success(c, SessionCreateResponse{
 		SessionID: sessionID,
@@ -72,10 +72,10 @@ type ChatTextRequest struct {
 }
 
 type ChatTextResponse struct {
-	AnswerText   string                 `json:"answer_text"`
-	Emotion      string                 `json:"emotion"`
-	RoutePayload *RoutePayload          `json:"route_payload,omitempty"`
-	TraceID      string                 `json:"trace_id"`
+	AnswerText   string        `json:"answer_text"`
+	Emotion      string        `json:"emotion"`
+	RoutePayload *RoutePayload `json:"route_payload,omitempty"`
+	TraceID      string        `json:"trace_id"`
 }
 
 type RoutePayload struct {
@@ -96,8 +96,8 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	}
 
 	traceID := uuid.New().String()
-	fmt.Printf("[数字人] 文本聊天: session_id=%s, trace_id=%s, input=%s\n",
-		req.SessionID, traceID, req.InputText)
+	fmt.Printf("[数字人] 文本聊天: session_id=%s, trace_id=%s, input_len=%d\n",
+		req.SessionID, traceID, len([]rune(req.InputText)))
 
 	startTime := time.Now()
 
@@ -113,7 +113,7 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 			emotion = "sadness"
 		} else {
 			answer = response
-			emotion = h.detectEmotion(answer)
+			emotion = detectEmotion(answer)
 
 			// 记录交互日志
 			if pkg.StatsService != nil {
@@ -154,19 +154,19 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 }
 
 type VoiceTranscriptRequest struct {
-	SessionID   string  `json:"session_id"`
-	UserID      string  `json:"user_id,omitempty"`
-	Transcript  string  `json:"transcript"`
-	Scene       string  `json:"scene,omitempty"`
-	Location    string  `json:"location,omitempty"`
-	Confidence  float64 `json:"confidence,omitempty"`
+	SessionID  string  `json:"session_id"`
+	UserID     string  `json:"user_id,omitempty"`
+	Transcript string  `json:"transcript"`
+	Scene      string  `json:"scene,omitempty"`
+	Location   string  `json:"location,omitempty"`
+	Confidence float64 `json:"confidence,omitempty"`
 }
 
 type VoiceTranscriptResponse struct {
-	AnswerText   string                 `json:"answer_text"`
-	Emotion      string                 `json:"emotion"`
-	RoutePayload *RoutePayload          `json:"route_payload,omitempty"`
-	TraceID      string                 `json:"trace_id"`
+	AnswerText   string        `json:"answer_text"`
+	Emotion      string        `json:"emotion"`
+	RoutePayload *RoutePayload `json:"route_payload,omitempty"`
+	TraceID      string        `json:"trace_id"`
 }
 
 func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
@@ -182,8 +182,8 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	}
 
 	traceID := uuid.New().String()
-	fmt.Printf("[数字人] 语音聊天: session_id=%s, trace_id=%s, transcript=%s, confidence=%.2f\n",
-		req.SessionID, traceID, req.Transcript, req.Confidence)
+	fmt.Printf("[数字人] 语音聊天: session_id=%s, trace_id=%s, transcript_len=%d, confidence=%.2f\n",
+		req.SessionID, traceID, len([]rune(req.Transcript)), req.Confidence)
 
 	startTime := time.Now()
 
@@ -199,7 +199,7 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 			emotion = "sadness"
 		} else {
 			answer = response
-			emotion = h.detectEmotion(answer)
+			emotion = detectEmotion(answer)
 
 			// 记录交互日志
 			if pkg.StatsService != nil {
@@ -255,8 +255,8 @@ func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("[数字人] 反馈上报: session_id=%s, trace_id=%s, rating=%d, comment=%s\n",
-		req.SessionID, req.TraceID, req.Rating, req.Comment)
+	fmt.Printf("[数字人] 反馈上报: session_id=%s, trace_id=%s, rating=%d, comment_len=%d\n",
+		req.SessionID, req.TraceID, req.Rating, len([]rune(req.Comment)))
 
 	if h.visitorQueryService != nil {
 		query := &model.VisitorQuery{
@@ -287,31 +287,6 @@ func (h *DigitalHumanHandler) Health(c *gin.Context) {
 		"route_service": "available",
 		"timestamp":     time.Now().Format(time.RFC3339),
 	})
-}
-
-func (h *DigitalHumanHandler) detectEmotion(text string) string {
-	textLower := strings.ToLower(text)
-
-	// 返回Live2D可识别的表情标签格式 [emotion]
-	// 根据model_dict.json中的emotionMap映射：
-	// neutral:0, anger:2, disgust:2, fear:1, joy:3, smirk:3, sadness:1, surprise:3
-
-	if strings.Contains(textLower, "抱歉") || strings.Contains(textLower, "对不起") || strings.Contains(textLower, "无法") {
-		return "sadness"  // 道歉/遗憾 -> sadness
-	}
-	if strings.Contains(textLower, "欢迎") || strings.Contains(textLower, "您好") || strings.Contains(textLower, "很高兴") {
-		return "joy"  // 欢迎/高兴 -> joy
-	}
-	if strings.Contains(textLower, "推荐") || strings.Contains(textLower, "建议") || strings.Contains(textLower, "最佳") {
-		return "joy"  // 推荐/建议 -> joy
-	}
-	if strings.Contains(textLower, "注意") || strings.Contains(textLower, "提醒") || strings.Contains(textLower, "警告") {
-		return "surprise"  // 提醒/警告 -> surprise
-	}
-	if strings.Contains(textLower, "不好") || strings.Contains(textLower, "糟糕") || strings.Contains(textLower, "问题") {
-		return "fear"  // 担心/问题 -> fear
-	}
-	return "neutral"  // 默认中性表情
 }
 
 func (h *DigitalHumanHandler) matchRoute(text string) *model.TourRoute {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/model"
@@ -10,11 +11,15 @@ import (
 )
 
 type UserHandler struct {
-	service service.UserService
+	service          service.UserService
+	tokenExpireHours int
 }
 
-func NewUserHandler(service service.UserService) *UserHandler {
-	return &UserHandler{service: service}
+func NewUserHandler(service service.UserService, tokenExpireHours int) *UserHandler {
+	if tokenExpireHours <= 0 {
+		tokenExpireHours = 4
+	}
+	return &UserHandler{service: service, tokenExpireHours: tokenExpireHours}
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
@@ -24,9 +29,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	if user.Role == "" {
-		user.Role = "visitor"
-	}
+	user.Role = "visitor"
 
 	if err := h.service.Register(&user); err != nil {
 		pkg.BadRequest(c, err.Error())
@@ -53,7 +56,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, 24)
+	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, h.tokenExpireHours)
 	if err != nil {
 		pkg.InternalError(c, "生成token失败")
 		return
@@ -193,7 +196,7 @@ func (h *UserHandler) GetUsersByRole(c *gin.Context) {
 }
 
 func (h *UserHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/register", h.Register)
+	r.POST("/register", pkg.RateLimitMiddleware(5, time.Minute), h.Register)
 	r.POST("/login", h.Login)
 
 	auth := r.Group("")

@@ -102,7 +102,10 @@ function trendText(value: number, label: string) {
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
-  const response = await fetch(`/api/v1${path}`);
+  const token = localStorage.getItem('authToken');
+  const response = await fetch(`/api/v1${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   const payload = await response.json();
   if (!response.ok || payload.code !== 0) {
     throw new Error(payload.message || payload.msg || '请求失败');

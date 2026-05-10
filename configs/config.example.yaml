@@ -25,5 +25,5 @@ speech:
   region: ""
 
 security:
-  jwt_secret: "please-change-this-secret"
-  token_expire_hours: 24
+  jwt_secret: "change-this-to-a-random-32-character-secret"
+  token_expire_hours: 4

@@ -1,0 +1,10 @@
+.git
+.gitignore
+data
+configs/config.yaml
+node_modules
+web-vue/node_modules
+web-vue/dist
+static/vue-app
+*.exe
+*.log

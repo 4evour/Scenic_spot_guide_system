@@ -192,9 +192,15 @@ function normalizeKnowledge(raw: Record<string, unknown>): KnowledgeItem {
 }
 
 async function apiFetch(path: string, options?: RequestInit) {
+  const token = localStorage.getItem('authToken');
+  const headers: HeadersInit = {
+    ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options?.headers || {}),
+  };
   const response = await fetch(`/api/v1${path}`, {
-    headers: options?.body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
   const payload = await response.json();
   if (!response.ok || payload.code !== 0) {

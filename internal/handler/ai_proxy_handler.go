@@ -122,7 +122,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 
 	var req ChatCompletionRequest
 	if err := json.Unmarshal(rawBody, &req); err != nil {
-		fmt.Printf("[OpenAI Proxy] JSON解析失败: %v, body: %s\n", err, string(rawBody))
+		fmt.Printf("[OpenAI Proxy] JSON解析失败: %v, body_len=%d\n", err, len(rawBody))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
@@ -143,7 +143,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("[OpenAI Proxy] 收到请求: %s (stream=%v)\n", truncate(query, 100), req.Stream)
+	fmt.Printf("[OpenAI Proxy] 收到请求: query_len=%d, stream=%v\n", len([]rune(query)), req.Stream)
 
 	if h.ragService == nil {
 		if req.Stream {
@@ -184,7 +184,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		})
 	}
 
-	fmt.Printf("[OpenAI Proxy] 回答 (emotion=%s, len=%d): %s\n", emotion, len([]rune(response)), truncate(response, 80))
+	fmt.Printf("[OpenAI Proxy] 回答完成: emotion=%s, response_len=%d\n", emotion, len([]rune(response)))
 
 	if req.Stream {
 		h.writeStreamResponse(c, req.Model, responseWithEmotion)
@@ -356,33 +356,3 @@ func (h *OpenAIProxyHandler) writeStreamError(c *gin.Context, errMsg string) {
 }
 
 // ==================== 工具函数 ====================
-
-// detectEmotion 根据回答文本检测情绪，返回 Live2D 能识别的情绪标签
-func detectEmotion(text string) string {
-	textLower := strings.ToLower(text)
-
-	if strings.Contains(textLower, "抱歉") || strings.Contains(textLower, "对不起") || strings.Contains(textLower, "无法") {
-		return "sadness"
-	}
-	if strings.Contains(textLower, "欢迎") || strings.Contains(textLower, "您好") || strings.Contains(textLower, "很高兴") {
-		return "joy"
-	}
-	if strings.Contains(textLower, "推荐") || strings.Contains(textLower, "建议") || strings.Contains(textLower, "最佳") {
-		return "joy"
-	}
-	if strings.Contains(textLower, "注意") || strings.Contains(textLower, "提醒") || strings.Contains(textLower, "警告") {
-		return "surprise"
-	}
-	if strings.Contains(textLower, "不好") || strings.Contains(textLower, "糟糕") || strings.Contains(textLower, "问题") {
-		return "fear"
-	}
-	return "neutral"
-}
-
-func truncate(s string, maxLen int) string {
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	return string(runes[:maxLen]) + "..."
-}

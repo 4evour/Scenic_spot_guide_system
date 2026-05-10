@@ -4,6 +4,23 @@ let recognition = null;
 let map = null;
 const DIGITAL_HUMAN_URL = '/digital-human#/digital-human';
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function escapeJsString(value) {
+    return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r?\n/g, ' ');
+}
+
 const digitalHuman = {
     name: '灵灵',
     status: 'idle',
@@ -130,14 +147,14 @@ function loadSpots() {
     ];
 
     spotsGrid.innerHTML = spots.map(spot => `
-        <div class="spot-card" onclick="showSpotDetail('${spot.name}')">
+        <div class="spot-card" onclick="showSpotDetail('${escapeJsString(spot.name)}')">
             <div class="spot-image">🗿</div>
             <div class="spot-info">
-                <h3>${spot.name}</h3>
-                <p>${spot.desc}</p>
+                <h3>${escapeHtml(spot.name)}</h3>
+                <p>${escapeHtml(spot.desc)}</p>
                 <div class="spot-meta">
-                    <span class="spot-category">${spot.category}</span>
-                    <span class="spot-rating">⭐ ${spot.rating}</span>
+                    <span class="spot-category">${escapeHtml(spot.category)}</span>
+                    <span class="spot-rating">⭐ ${escapeHtml(spot.rating)}</span>
                 </div>
             </div>
         </div>
@@ -160,14 +177,14 @@ function filterSpots(category) {
     const filteredSpots = category === 'all' ? spots : spots.filter(s => s.category === category);
 
     spotsGrid.innerHTML = filteredSpots.map(spot => `
-        <div class="spot-card" onclick="showSpotDetail('${spot.name}')">
+        <div class="spot-card" onclick="showSpotDetail('${escapeJsString(spot.name)}')">
             <div class="spot-image">🗿</div>
             <div class="spot-info">
-                <h3>${spot.name}</h3>
-                <p>${spot.desc}</p>
+                <h3>${escapeHtml(spot.name)}</h3>
+                <p>${escapeHtml(spot.desc)}</p>
                 <div class="spot-meta">
-                    <span class="spot-category">${spot.category}</span>
-                    <span class="spot-rating">⭐ ${spot.rating}</span>
+                    <span class="spot-category">${escapeHtml(spot.category)}</span>
+                    <span class="spot-rating">⭐ ${escapeHtml(spot.rating)}</span>
                 </div>
             </div>
         </div>
@@ -190,18 +207,18 @@ function loadRoutes() {
     ];
 
     routesList.innerHTML = routeData.map(route => `
-        <div class="route-card" onclick="selectRoute('${route.name}')">
+        <div class="route-card" onclick="selectRoute('${escapeJsString(route.name)}')">
             <div class="route-info">
-                <h3>${route.name}</h3>
-                <p>${route.desc}</p>
+                <h3>${escapeHtml(route.name)}</h3>
+                <p>${escapeHtml(route.desc)}</p>
                 <div class="route-details">
                     <div class="route-detail">
                         <i class="fas fa-clock"></i>
-                        <span>${route.duration}</span>
+                        <span>${escapeHtml(route.duration)}</span>
                     </div>
                     <div class="route-detail">
                         <i class="fas fa-map-marker-alt"></i>
-                        <span>${route.spots}个景点</span>
+                        <span>${escapeHtml(route.spots)}个景点</span>
                     </div>
                     <span class="route-difficulty ${route.difficulty}">${route.difficulty === 'easy' ? '轻松' : route.difficulty === 'medium' ? '适中' : '挑战'}</span>
                 </div>
@@ -224,18 +241,18 @@ function filterRoutes(difficulty) {
     const filteredRoutes = difficulty === 'all' ? routeData : routeData.filter(r => r.difficulty === difficulty);
 
     routesList.innerHTML = filteredRoutes.map(route => `
-        <div class="route-card" onclick="selectRoute('${route.name}')">
+        <div class="route-card" onclick="selectRoute('${escapeJsString(route.name)}')">
             <div class="route-info">
-                <h3>${route.name}</h3>
-                <p>${route.desc}</p>
+                <h3>${escapeHtml(route.name)}</h3>
+                <p>${escapeHtml(route.desc)}</p>
                 <div class="route-details">
                     <div class="route-detail">
                         <i class="fas fa-clock"></i>
-                        <span>${route.duration}</span>
+                        <span>${escapeHtml(route.duration)}</span>
                     </div>
                     <div class="route-detail">
                         <i class="fas fa-map-marker-alt"></i>
-                        <span>${route.spots}个景点</span>
+                        <span>${escapeHtml(route.spots)}个景点</span>
                     </div>
                     <span class="route-difficulty ${route.difficulty}">${route.difficulty === 'easy' ? '轻松' : route.difficulty === 'medium' ? '适中' : '挑战'}</span>
                 </div>
@@ -383,7 +400,7 @@ function switchTab(tab) {
     document.getElementById(`${tab}Form`).classList.remove('hidden');
 }
 
-function login() {
+async function login() {
     const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
 
@@ -392,12 +409,27 @@ function login() {
         return;
     }
 
-    currentUser = { username, role: 'user' };
-    closeModal();
-    alert(`欢迎, ${username}!`);
+    try {
+        const response = await fetch('/api/v1/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const result = await response.json();
+        if (!response.ok || result.code !== 0) {
+            throw new Error(result.message || '登录失败');
+        }
+        currentUser = result.data;
+        localStorage.setItem('authToken', result.data.token);
+        localStorage.setItem('currentUser', JSON.stringify(result.data));
+        closeModal();
+        alert(`欢迎, ${result.data.username}!`);
+    } catch (error) {
+        alert(error.message || '登录失败');
+    }
 }
 
-function register() {
+async function register() {
     const username = document.getElementById('regUsername').value;
     const password = document.getElementById('regPassword').value;
 
@@ -406,19 +438,45 @@ function register() {
         return;
     }
 
-    currentUser = { username, role: document.getElementById('regRole').value };
-    closeModal();
-    alert(`注册成功! 欢迎, ${username}!`);
+    try {
+        const response = await fetch('/api/v1/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const result = await response.json();
+        if (!response.ok || result.code !== 0) {
+            throw new Error(result.message || '注册失败');
+        }
+        closeModal();
+        alert(`注册成功，请使用 ${username} 登录`);
+    } catch (error) {
+        alert(error.message || '注册失败');
+    }
 }
 
-function adminLogin() {
+async function adminLogin() {
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
 
-    if (username === 'admin' && password === 'admin123') {
+    try {
+        const response = await fetch('/api/v1/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const result = await response.json();
+        if (!response.ok || result.code !== 0) {
+            throw new Error(result.message || '管理员账号或密码错误');
+        }
+        if (result.data?.role !== 'admin') {
+            throw new Error('当前账号没有管理员权限');
+        }
+        localStorage.setItem('authToken', result.data.token);
+        localStorage.setItem('currentUser', JSON.stringify(result.data));
         window.location.href = '/admin';
-    } else {
-        alert('管理员账号或密码错误');
+    } catch (error) {
+        alert(error.message || '管理员账号或密码错误');
     }
 }
 
@@ -440,7 +498,7 @@ function sendMessage(message) {
     userMessage.innerHTML = `
         <div class="message-avatar user"></div>
         <div class="message-content">
-            <p>${message}</p>
+            <p>${escapeHtml(message)}</p>
             <span class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
     `;
@@ -477,7 +535,7 @@ function sendMessage(message) {
             aiMessage.innerHTML = `
                 <div class="message-avatar"></div>
                 <div class="message-content">
-                    <p>${errorMsg}</p>
+                    <p>${escapeHtml(errorMsg)}</p>
                     <span class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             `;
@@ -497,7 +555,7 @@ function sendMessage(message) {
         aiMessage.innerHTML = `
             <div class="message-avatar"></div>
             <div class="message-content">
-                <p>${displayText}</p>
+                <p>${escapeHtml(displayText)}</p>
                 <span class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
         `;
@@ -578,9 +636,9 @@ function updateRoutePanel(route) {
             <div class="timeline-dot ${index === 0 ? 'start' : index === normalizedRoute.steps.length - 1 ? 'end' : ''}"></div>
             ${index < normalizedRoute.steps.length - 1 ? '<div class="timeline-line"></div>' : ''}
             <div class="timeline-content">
-                <h5>${step.name}</h5>
-                <p>${step.desc}</p>
-                <span class="time">${step.time || ''}</span>
+                <h5>${escapeHtml(step.name)}</h5>
+                <p>${escapeHtml(step.desc)}</p>
+                <span class="time">${escapeHtml(step.time || '')}</span>
             </div>
         `;
         timelineList.appendChild(item);

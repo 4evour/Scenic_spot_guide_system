@@ -109,10 +109,19 @@ func (h *VisitorQueryHandler) DeleteQuery(c *gin.Context) {
 }
 
 func (h *VisitorQueryHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/queries", h.CreateQuery)
-	r.GET("/queries", h.GetAllQueries)
-	r.GET("/queries/unanswered", h.GetUnansweredQueries)
-	r.GET("/queries/:id", h.GetQuery)
-	r.PUT("/queries/:id", h.UpdateQuery)
-	r.DELETE("/queries/:id", h.DeleteQuery)
+	auth := r.Group("")
+	auth.Use(pkg.AuthMiddleware())
+	{
+		auth.POST("/queries", h.CreateQuery)
+		auth.GET("/queries/:id", h.GetQuery)
+	}
+
+	admin := r.Group("")
+	admin.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
+	{
+		admin.GET("/queries", h.GetAllQueries)
+		admin.GET("/queries/unanswered", h.GetUnansweredQueries)
+		admin.PUT("/queries/:id", h.UpdateQuery)
+		admin.DELETE("/queries/:id", h.DeleteQuery)
+	}
 }

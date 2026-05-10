@@ -129,10 +129,15 @@ func (h *GuideContentHandler) DeleteContent(c *gin.Context) {
 }
 
 func (h *GuideContentHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/contents", h.CreateContent)
 	r.GET("/contents/:id", h.GetContent)
 	r.GET("/contents/spot/:spot_id", h.GetContentsBySpotID)
 	r.GET("/contents/spot/:spot_id/type", h.GetContentsBySpotIDAndType)
-	r.PUT("/contents/:id", h.UpdateContent)
-	r.DELETE("/contents/:id", h.DeleteContent)
+
+	admin := r.Group("")
+	admin.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
+	{
+		admin.POST("/contents", h.CreateContent)
+		admin.PUT("/contents/:id", h.UpdateContent)
+		admin.DELETE("/contents/:id", h.DeleteContent)
+	}
 }

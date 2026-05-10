@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"github.com/scenic-guide/internal/model"
 	"gorm.io/gorm"
 )
@@ -27,6 +29,43 @@ func (r *KnowledgeRepository) GetAll() ([]model.KnowledgeChunk, error) {
 	var chunks []model.KnowledgeChunk
 	err := r.db.Find(&chunks).Error
 	return chunks, err
+}
+
+func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string) ([]model.KnowledgeChunk, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+
+	query := r.db.Model(&model.KnowledgeChunk{})
+	keyword = strings.TrimSpace(keyword)
+	if keyword != "" {
+		like := "%" + strings.ToLower(keyword) + "%"
+		query = query.Where(
+			"LOWER(title) LIKE ? OR LOWER(source) LIKE ? OR LOWER(content) LIKE ? OR LOWER(metadata) LIKE ?",
+			like, like, like, like,
+		)
+	}
+
+	category = strings.TrimSpace(category)
+	if category != "" {
+		like := "%" + strings.ToLower(category) + "%"
+		query = query.Where("LOWER(metadata) LIKE ? OR LOWER(source) LIKE ?", like, like)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var chunks []model.KnowledgeChunk
+	err := query.Order("updated_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&chunks).Error
+	return chunks, total, err
 }
 
 func (r *KnowledgeRepository) Update(chunk *model.KnowledgeChunk) error {

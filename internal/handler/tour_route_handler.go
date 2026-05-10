@@ -115,10 +115,15 @@ func (h *TourRouteHandler) DeleteRoute(c *gin.Context) {
 }
 
 func (h *TourRouteHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/routes", h.CreateRoute)
 	r.GET("/routes", h.GetAllRoutes)
 	r.GET("/routes/difficulty", h.GetRoutesByDifficulty)
 	r.GET("/routes/:id", h.GetRoute)
-	r.PUT("/routes/:id", h.UpdateRoute)
-	r.DELETE("/routes/:id", h.DeleteRoute)
+
+	admin := r.Group("")
+	admin.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
+	{
+		admin.POST("/routes", h.CreateRoute)
+		admin.PUT("/routes/:id", h.UpdateRoute)
+		admin.DELETE("/routes/:id", h.DeleteRoute)
+	}
 }

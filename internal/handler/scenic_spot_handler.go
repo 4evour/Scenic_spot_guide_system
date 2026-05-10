@@ -115,10 +115,15 @@ func (h *ScenicSpotHandler) DeleteSpot(c *gin.Context) {
 }
 
 func (h *ScenicSpotHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/spots", h.CreateSpot)
 	r.GET("/spots", h.GetAllSpots)
 	r.GET("/spots/category", h.GetSpotsByCategory)
 	r.GET("/spots/:id", h.GetSpot)
-	r.PUT("/spots/:id", h.UpdateSpot)
-	r.DELETE("/spots/:id", h.DeleteSpot)
+
+	admin := r.Group("")
+	admin.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
+	{
+		admin.POST("/spots", h.CreateSpot)
+		admin.PUT("/spots/:id", h.UpdateSpot)
+		admin.DELETE("/spots/:id", h.DeleteSpot)
+	}
 }

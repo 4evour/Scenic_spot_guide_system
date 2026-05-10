@@ -46,7 +46,10 @@ func NewQwenEmbeddingProvider(cfg *config.EmbeddingConfig) *QwenEmbeddingProvide
 }
 
 func (p *QwenEmbeddingProvider) Name() string {
-	return "qwen-embedding-v4"
+	if strings.TrimSpace(p.model) != "" {
+		return p.model
+	}
+	return "qwen-embedding"
 }
 
 func (p *QwenEmbeddingProvider) IsAvailable() bool {

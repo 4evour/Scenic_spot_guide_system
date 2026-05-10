@@ -1,0 +1,18 @@
+services:
+  scenic-guide:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SCENIC_GUIDE_SERVER_HOST: "0.0.0.0"
+      SCENIC_GUIDE_SERVER_PORT: "8080"
+      SCENIC_GUIDE_DATABASE_PATH: "/app/data/scenic_guide.db"
+      SCENIC_GUIDE_SECURITY_JWT_SECRET: "${SCENIC_GUIDE_SECURITY_JWT_SECRET:?set a 32+ character JWT secret}"
+      SCENIC_GUIDE_SECURITY_TOKEN_EXPIRE_HOURS: "4"
+      SCENIC_GUIDE_AI_API_KEY: "${SCENIC_GUIDE_AI_API_KEY:-}"
+      SCENIC_GUIDE_EMBEDDING_API_KEY: "${SCENIC_GUIDE_EMBEDDING_API_KEY:-}"
+    volumes:
+      - scenic-guide-data:/app/data
+
+volumes:
+  scenic-guide-data:

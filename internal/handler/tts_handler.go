@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -16,9 +17,9 @@ func NewTTSHandler() *TTSHandler {
 }
 
 type TTSRequest struct {
-	Text   string `json:"text"`
-	Voice  string `json:"voice"`
-	Speed  string `json:"speed"`
+	Text  string `json:"text"`
+	Voice string `json:"voice"`
+	Speed string `json:"speed"`
 }
 
 func (h *TTSHandler) TTS(c *gin.Context) {
@@ -28,6 +29,7 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 		return
 	}
 
+	req.Text = strings.TrimSpace(req.Text)
 	if req.Text == "" {
 		pkg.BadRequest(c, "文本内容不能为空")
 		return
@@ -42,25 +44,30 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 
 	ttsURL := "https://tts.baidu.com/text2audio"
 
-	paramStr := strings.Builder{}
-	paramStr.WriteString("tex=")
-	paramStr.WriteString(req.Text)
-	paramStr.WriteString("&cuid=baike&lan=ZH&ctp=1&pdt=301&vol=9&rate=32&per=")
+	values := url.Values{}
+	values.Set("tex", strings.TrimSpace(req.Text))
+	values.Set("cuid", "baike")
+	values.Set("lan", "ZH")
+	values.Set("ctp", "1")
+	values.Set("pdt", "301")
+	values.Set("vol", "9")
+	values.Set("rate", "32")
 
 	switch req.Voice {
 	case "female_tianmei":
-		paramStr.WriteString("0")
+		values.Set("per", "0")
 	case "female_zhiling":
-		paramStr.WriteString("1")
+		values.Set("per", "1")
 	case "male_zhizhong":
-		paramStr.WriteString("3")
+		values.Set("per", "3")
 	case "male_yige":
-		paramStr.WriteString("4")
+		values.Set("per", "4")
 	default:
-		paramStr.WriteString("0")
+		values.Set("per", "0")
 	}
+	paramStr := values.Encode()
 
-	ttsReq, err := http.NewRequest("POST", ttsURL, strings.NewReader(paramStr.String()))
+	ttsReq, err := http.NewRequest("POST", ttsURL, strings.NewReader(paramStr))
 	if err != nil {
 		pkg.InternalError(c, "创建TTS请求失败")
 		return
@@ -84,7 +91,7 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 	var result map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		pkg.Success(c, gin.H{
-			"audio_url": ttsURL + "?" + paramStr.String(),
+			"audio_url": ttsURL + "?" + paramStr,
 			"text":      req.Text,
 			"voice":     req.Voice,
 		})
@@ -92,12 +99,16 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 	}
 
 	if errCode, ok := result["err_no"].(float64); ok && errCode != 0 {
-		pkg.InternalError(c, "TTS服务错误: "+result["err_msg"].(string))
+		errMsg, _ := result["err_msg"].(string)
+		if errMsg == "" {
+			errMsg = "unknown error"
+		}
+		pkg.InternalError(c, "TTS服务错误: "+errMsg)
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"audio_url": ttsURL + "?" + paramStr.String(),
+		"audio_url": ttsURL + "?" + paramStr,
 		"text":      req.Text,
 		"voice":     req.Voice,
 	})

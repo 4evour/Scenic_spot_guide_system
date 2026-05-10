@@ -160,10 +160,7 @@ func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 
 	s.cacheMutex.Lock()
 	if len(s.embeddingCache) >= MaxCacheSize {
-		for k := range s.embeddingCache {
-			delete(s.embeddingCache, k)
-			break
-		}
+		s.embeddingCache = make(map[string][]float64)
 	}
 	s.embeddingCache[text] = vec
 	s.cacheMutex.Unlock()
@@ -195,10 +192,7 @@ func (s *RAGService) setCachedResponse(query, response string) {
 	defer s.cacheMutex.Unlock()
 
 	if len(s.queryCache) >= MaxCacheSize {
-		for k := range s.queryCache {
-			delete(s.queryCache, k)
-			break
-		}
+		s.queryCache = make(map[string]CacheEntry)
 	}
 
 	s.queryCache[query] = CacheEntry{
@@ -546,44 +540,7 @@ func (s *RAGService) DeleteAllKnowledge() error {
 }
 
 func (s *RAGService) ListKnowledge(page, pageSize int, keyword, category string) ([]model.KnowledgeChunk, int64, error) {
-	all, err := s.repo.GetAll()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	keyword = strings.ToLower(strings.TrimSpace(keyword))
-	category = strings.ToLower(strings.TrimSpace(category))
-	filtered := make([]model.KnowledgeChunk, 0, len(all))
-	for _, item := range all {
-		if keyword != "" {
-			haystack := strings.ToLower(item.Title + " " + item.Source + " " + item.Content + " " + item.Metadata)
-			if !strings.Contains(haystack, keyword) {
-				continue
-			}
-		}
-		if category != "" && !strings.Contains(strings.ToLower(item.Metadata), category) && !strings.Contains(strings.ToLower(item.Source), category) {
-			continue
-		}
-		filtered = append(filtered, item)
-	}
-
-	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i].UpdatedAt.After(filtered[j].UpdatedAt)
-	})
-
-	total := int64(len(filtered))
-
-	start := (page - 1) * pageSize
-	if start >= len(filtered) {
-		return []model.KnowledgeChunk{}, total, nil
-	}
-
-	end := start + pageSize
-	if end > len(filtered) {
-		end = len(filtered)
-	}
-
-	return filtered[start:end], total, nil
+	return s.repo.List(page, pageSize, keyword, category)
 }
 
 func (s *RAGService) GetKnowledge(id string) (*model.KnowledgeChunk, error) {
@@ -874,7 +831,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("RAG API返回错误状态码: %d, 响应: %s\n", resp.StatusCode, string(body))
+		fmt.Printf("RAG API返回错误状态码: %d, 响应长度: %d bytes\n", resp.StatusCode, len(body))
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -960,10 +917,9 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	}()
 
 	fmt.Printf("\n--- 调用QueryGeneralChat ---\n")
-	fmt.Printf("查询内容: %s\n", query)
+	fmt.Printf("General chat query length: %d\n", len([]rune(query)))
 	fmt.Printf("API Base URL: %s\n", s.chatBaseURL)
 	fmt.Printf("Model: %s\n", s.chatModel)
-	fmt.Printf("API Key: %s\n", s.chatAPIKey[:min(8, len(s.chatAPIKey))]+"...")
 
 	type OpenAIRequest struct {
 		Model    string `json:"model"`
@@ -1087,13 +1043,10 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	}
 
 	fmt.Printf("响应体长度: %d bytes\n", len(body))
-	if len(body) > 0 {
-		fmt.Printf("响应体内容: %s\n", string(body))
-	}
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("API返回错误状态码: %d\n", resp.StatusCode)
-		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("API返回错误状态码: %d, 响应长度: %d bytes", resp.StatusCode, len(body))
 	}
 
 	var openAIResp OpenAIResponse
@@ -1118,7 +1071,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	}
 
 	s.setCachedResponse(query, answer)
-	fmt.Printf("API返回回答: %s\n", answer[:min(len(answer), 100)]+"...")
+	fmt.Printf("API返回回答长度: %d\n", len([]rune(answer)))
 	return answer, nil
 }
 
@@ -1130,7 +1083,7 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 	}()
 
 	fmt.Printf("\n--- 调用通用知识API ---\n")
-	fmt.Printf("查询内容: %s\n", query)
+	fmt.Printf("Fallback chat query length: %d\n", len([]rune(query)))
 	fmt.Printf("API Base URL: %s\n", s.chatBaseURL)
 	fmt.Printf("Model: %s\n", s.chatModel)
 
@@ -1208,7 +1161,7 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		return "根据当前资料无法确认", nil
 	}
 
-	fmt.Printf("请求体: %s\n", string(reqBody))
+	fmt.Printf("请求体长度: %d bytes\n", len(reqBody))
 
 	apiURL := s.chatBaseURL + "/chat/completions"
 	fmt.Printf("完整API URL: %s\n", apiURL)
@@ -1238,12 +1191,12 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("API返回错误: %s\n", string(body))
+		fmt.Printf("API返回错误状态码: %d, 响应长度: %d bytes\n", resp.StatusCode, len(body))
 		return "根据当前资料无法确认", nil
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("API响应体: %s\n", string(body))
+	fmt.Printf("API响应体长度: %d bytes\n", len(body))
 
 	var dashScopeResp DashScopeResponse
 	if err := json.Unmarshal(body, &dashScopeResp); err != nil {
@@ -1264,7 +1217,7 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		return "根据当前资料无法确认", nil
 	}
 
-	fmt.Printf("API返回回答: %s\n", answer[:min(len(answer), 100)]+"...")
+	fmt.Printf("API返回回答长度: %d\n", len([]rune(answer)))
 	return "[通用知识回答] " + answer, nil
 }
 

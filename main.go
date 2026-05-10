@@ -1,7 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/config"
@@ -13,13 +20,19 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "服务启动失败: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	fmt.Println("=== 启动景区导览服务 ===")
 
 	fmt.Println("步骤1: 加载配置...")
 	cfg, err := config.LoadConfig("./configs")
 	if err != nil {
-		fmt.Printf("加载配置失败: %v\n", err)
-		return
+		return fmt.Errorf("加载配置失败: %w", err)
 	}
 	fmt.Println("配置加载成功")
 
@@ -28,22 +41,22 @@ func main() {
 	fmt.Println("日志初始化成功")
 
 	fmt.Println("步骤2.5: 初始化JWT...")
-	pkg.InitJWT(&cfg.Security)
+	if err := pkg.InitJWT(&cfg.Security); err != nil {
+		return fmt.Errorf("JWT 初始化失败: %w", err)
+	}
 	fmt.Println("JWT初始化成功")
 
 	fmt.Println("步骤3: 初始化数据库...")
 	err = pkg.InitDatabase(&cfg.Database)
 	if err != nil {
-		fmt.Printf("数据库连接失败: %v\n", err)
-		return
+		return fmt.Errorf("数据库连接失败: %w", err)
 	}
 	fmt.Println("数据库连接成功")
 
 	fmt.Println("步骤4: 数据库迁移...")
 	err = model.AutoMigrate(pkg.DB)
 	if err != nil {
-		fmt.Printf("数据库迁移失败: %v\n", err)
-		return
+		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 	fmt.Println("数据库迁移成功")
 
@@ -59,16 +72,44 @@ func main() {
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
-	setupHandlers := setupDI(ragService)
+	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours)
 	handler.SetupRoutes(r, setupHandlers)
 	fmt.Println("路由设置成功")
 
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	fmt.Printf("步骤6: 启动服务器，监听地址: %s\n", addr)
-	err = r.Run(addr)
-	if err != nil {
-		fmt.Printf("服务器启动失败: %v\n", err)
+
+	server := &http.Server{
+		Addr:    addr,
+		Handler: r,
 	}
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	shutdownSignals := make(chan os.Signal, 1)
+	signal.Notify(shutdownSignals, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(shutdownSignals)
+
+	select {
+	case err := <-serverErrors:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("服务器启动失败: %w", err)
+	case sig := <-shutdownSignals:
+		fmt.Printf("收到退出信号: %s，正在关闭服务...\n", sig)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("服务器关闭失败: %w", err)
+	}
+	fmt.Println("服务已优雅关闭")
+	return nil
 }
 
 func initRAG(cfg *config.Config) *service.RAGService {
@@ -111,7 +152,7 @@ func initRAG(cfg *config.Config) *service.RAGService {
 	return ragService
 }
 
-func setupDI(ragService *service.RAGService) *handler.Handlers {
+func setupDI(ragService *service.RAGService, tokenExpireHours int) *handler.Handlers {
 	scenicSpotRepo := repository.NewScenicSpotRepository(pkg.DB)
 	scenicSpotService := service.NewScenicSpotService(scenicSpotRepo)
 	scenicSpotHandler := handler.NewScenicSpotHandler(scenicSpotService)
@@ -130,7 +171,7 @@ func setupDI(ragService *service.RAGService) *handler.Handlers {
 
 	userRepo := repository.NewUserRepository(pkg.DB)
 	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService, tokenExpireHours)
 
 	aiHandler := handler.NewAIHandler(ragService)
 	ttsHandler := handler.NewTTSHandler()

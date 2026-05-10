@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,8 +11,29 @@ import (
 
 var jwtSecret []byte
 
-func InitJWT(cfg *config.SecurityConfig) {
-	jwtSecret = []byte(cfg.JWTSecret)
+var insecureJWTSecrets = map[string]struct{}{
+	"please-change-this-secret":                  {},
+	"replace-with-at-least-32-random-characters": {},
+	"change-this-to-a-random-32-character-secret": {},
+	"scenic-guide-secret-key":                    {},
+	"your-secret-key":                            {},
+	"your-secret-key-here":                       {},
+}
+
+func InitJWT(cfg *config.SecurityConfig) error {
+	secret := strings.TrimSpace(cfg.JWTSecret)
+	if secret == "" {
+		return errors.New("jwt secret cannot be empty")
+	}
+	if _, ok := insecureJWTSecrets[secret]; ok {
+		return errors.New("jwt secret uses an insecure default value")
+	}
+	if len(secret) < 32 {
+		return errors.New("jwt secret must be at least 32 characters")
+	}
+
+	jwtSecret = []byte(secret)
+	return nil
 }
 
 type Claims struct {

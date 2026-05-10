@@ -1,5 +1,10 @@
 const API_BASE = '/api/v1';
 
+function authHeaders() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const sectionCopy = {
     knowledge: {
         title: '知识库管理',
@@ -113,7 +118,9 @@ function renderKnowledgeList(items = mockKnowledge) {
 
 async function loadKnowledgeList() {
     try {
-        const resp = await fetch(`${API_BASE}/knowledge/list?page=1&page_size=20`);
+        const resp = await fetch(`${API_BASE}/knowledge/list?page=1&page_size=20`, {
+            headers: authHeaders()
+        });
         const data = await resp.json();
         const list = data && data.code === 0 && data.data && data.data.list ? data.data.list : [];
         if (!list.length) {
