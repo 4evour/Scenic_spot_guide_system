@@ -191,7 +191,7 @@ function normalizeKnowledge(raw: Record<string, unknown>): KnowledgeItem {
   };
 }
 
-async function apiFetch(path: string, options?: RequestInit) {
+async function apiFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('authToken');
   const headers: HeadersInit = {
     ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
@@ -202,11 +202,19 @@ async function apiFetch(path: string, options?: RequestInit) {
     ...options,
     headers,
   });
-  const payload = await response.json();
-  if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.message || payload.msg || '请求失败');
+  const raw = await response.text();
+  let payload: { code?: number; message?: string; msg?: string; data?: unknown } = {};
+  if (raw.trim()) {
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      throw new Error(`接口返回非 JSON 响应 (${response.status})`);
+    }
   }
-  return payload.data;
+  if (!response.ok || payload.code !== 0) {
+    throw new Error(payload.message || payload.msg || response.statusText || `请求失败 (${response.status})`);
+  }
+  return payload.data as T;
 }
 
 function normalizeAvatarConfig(raw: Partial<AvatarConfig>): AvatarConfig {
@@ -223,7 +231,7 @@ async function loadKnowledge() {
   state.loading = true;
   state.error = '';
   try {
-    const data = await apiFetch(`/knowledge/list?page=${state.page}&page_size=${state.pageSize}`);
+    const data = await apiFetch<{ list?: Array<Record<string, unknown>>; total?: number }>(`/knowledge/list?page=${state.page}&page_size=${state.pageSize}`);
     state.knowledge = (data.list || []).map((item: Record<string, unknown>) => normalizeKnowledge(item));
     state.total = Number(data.total || state.knowledge.length);
   } catch (error) {
@@ -237,7 +245,7 @@ async function loadAvatarConfig() {
   state.avatarLoading = true;
   state.avatarError = '';
   try {
-    const data = await apiFetch('/admin/digital-human/config');
+    const data = await apiFetch<Partial<AvatarConfig>>('/admin/digital-human/config');
     state.avatar = normalizeAvatarConfig(data);
   } catch (error) {
     state.avatarError = error instanceof Error ? error.message : '数字人配置加载失败';
@@ -250,7 +258,7 @@ async function loadVisitorReport() {
   state.reportLoading = true;
   state.reportError = '';
   try {
-    const data = await apiFetch('/admin/reports/visitor');
+    const data = await apiFetch<Partial<VisitorReport> & { summary?: Partial<VisitorReport['summary']> }>('/admin/reports/visitor');
     state.report = {
       ...defaultVisitorReport,
       ...data,
@@ -345,7 +353,7 @@ async function uploadKnowledge() {
     const form = new FormData();
     form.append('file', state.selectedFile);
     form.append('category', state.uploadCategory);
-    const data = await apiFetch('/knowledge/upload', { method: 'POST', body: form });
+    const data = await apiFetch<{ imported?: number; loaded_count?: number }>('/knowledge/upload', { method: 'POST', body: form });
     state.message = `上传完成，已导入 ${data.loaded_count || 0} 条知识片段。`;
     state.selectedFile = null;
     await loadKnowledge();

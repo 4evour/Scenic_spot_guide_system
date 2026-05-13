@@ -1,16 +1,7 @@
+@import "./design-tokens.css";
+
 :root {
-  --bg: #061012;
-  --panel: rgba(8, 24, 28, 0.84);
-  --panel-strong: rgba(5, 17, 20, 0.94);
-  --line: rgba(82, 240, 238, 0.28);
-  --line-strong: rgba(82, 240, 238, 0.56);
-  --cyan: #52f0ee;
-  --gold: #f4c765;
-  --green: #7ef2a0;
-  --red: #ff8b8b;
-  --text: #eafcff;
-  --muted: #91b9bd;
-  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  font-family: var(--sg-font-family);
   color: var(--text);
   background: var(--bg);
 }
@@ -27,10 +18,11 @@ body {
   background:
     linear-gradient(rgba(82, 240, 238, 0.055) 1px, transparent 1px),
     linear-gradient(90deg, rgba(82, 240, 238, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 20% 0%, rgba(82, 240, 238, 0.16), transparent 34%),
-    radial-gradient(circle at 82% 12%, rgba(244, 199, 101, 0.13), transparent 30%),
+    radial-gradient(ellipse at 18% 0%, rgba(82, 240, 238, 0.16), transparent 34%),
+    radial-gradient(ellipse at 82% 10%, rgba(244, 199, 101, 0.14), transparent 30%),
+    linear-gradient(140deg, rgba(6, 16, 18, 0) 0%, rgba(23, 35, 22, 0.52) 72%, rgba(61, 47, 22, 0.22) 100%),
     #061012;
-  background-size: 34px 34px, 34px 34px, cover, cover, cover;
+  background-size: 34px 34px, 34px 34px, cover, cover, cover, cover;
 }
 
 button,
@@ -61,7 +53,9 @@ button:disabled {
   z-index: 0;
   pointer-events: none;
   content: "";
-  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 5px);
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 5px),
+    radial-gradient(ellipse at 50% 100%, rgba(244, 199, 101, 0.09), transparent 46%);
 }
 
 .top-nav {
@@ -73,7 +67,7 @@ button:disabled {
   align-items: center;
   padding: 12px 18px;
   border-bottom: 1px solid var(--line);
-  background: rgba(4, 15, 18, 0.82);
+  background: linear-gradient(90deg, rgba(4, 15, 18, 0.92), rgba(13, 31, 31, 0.82));
   backdrop-filter: blur(16px);
 }
 
@@ -84,11 +78,23 @@ button:disabled {
   gap: 8px;
   min-height: 38px;
   padding: 0 13px;
-  border: 1px solid rgba(82, 240, 238, 0.2);
-  border-radius: 8px;
+  border: 1px solid var(--sg-border-soft);
+  border-radius: var(--sg-radius-md);
   color: var(--text);
   background: rgba(8, 28, 32, 0.72);
   text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.top-nav button:focus-visible,
+.top-nav .nav-link:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(244, 199, 101, 0.86);
+  outline-offset: 2px;
 }
 
 .top-nav button.active,
@@ -105,10 +111,43 @@ button:disabled {
 
 .dashboard-view,
 .admin-content,
+.admin-guard,
 .digital-main,
 .chat-console {
   position: relative;
   z-index: 1;
+}
+
+.admin-guard {
+  display: grid;
+  min-height: calc(100vh - 63px);
+  padding: 18px;
+  place-items: center;
+}
+
+.admin-guard-panel {
+  width: min(620px, 100%);
+  min-height: auto;
+}
+
+.admin-guard-panel h1 {
+  margin: 4px 0 8px;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.admin-guard-panel p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.admin-guard-panel .primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  margin-top: 10px;
+  text-decoration: none;
 }
 
 .dashboard-view {
@@ -123,10 +162,10 @@ button:disabled {
 .subtitle-panel,
 .live2d-stage {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--sg-radius-md);
   background: var(--panel);
-  box-shadow: inset 0 0 28px rgba(82, 240, 238, 0.045), 0 18px 44px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(14px);
+  box-shadow: var(--sg-shadow-panel);
+  backdrop-filter: var(--sg-blur-panel);
 }
 
 .hero-console {
@@ -135,6 +174,10 @@ button:disabled {
   justify-content: space-between;
   gap: 18px;
   padding: 18px;
+  background:
+    linear-gradient(115deg, rgba(82, 240, 238, 0.08), transparent 35%),
+    linear-gradient(300deg, rgba(244, 199, 101, 0.11), transparent 42%),
+    var(--panel);
 }
 
 .hero-console.compact {
@@ -164,7 +207,7 @@ button:disabled {
   min-width: max-content;
   padding: 9px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--sg-radius-md);
   color: var(--cyan);
   background: rgba(4, 16, 19, 0.78);
   font-weight: 800;
@@ -188,6 +231,9 @@ button:disabled {
 .kpi-card {
   min-height: 112px;
   padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    var(--panel);
 }
 
 .kpi-card span {
@@ -220,6 +266,7 @@ button:disabled {
 .panel h2 {
   margin: 0 0 14px;
   font-size: 18px;
+  color: var(--sg-text-soft);
 }
 
 .span-2 {
@@ -482,6 +529,15 @@ textarea {
   color: var(--text);
   background: rgba(4, 16, 19, 0.78);
   outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--line-strong);
+  background: rgba(5, 20, 23, 0.92);
+  box-shadow: 0 0 0 3px rgba(82, 240, 238, 0.1);
 }
 
 textarea {
@@ -499,6 +555,16 @@ textarea {
   color: var(--text);
   background: rgba(10, 33, 37, 0.82);
   white-space: nowrap;
+  box-shadow: var(--sg-shadow-action);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.primary-action:hover,
+.secondary-action:hover,
+.danger-action:hover,
+.voice-action:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
 }
 
 .primary-action {
@@ -639,7 +705,9 @@ textarea {
   border: 1px dashed rgba(82, 240, 238, 0.45);
   border-radius: 50%;
   color: #031012;
-  background: radial-gradient(circle, var(--cyan), var(--gold));
+  background:
+    radial-gradient(circle at 45% 38%, rgba(255, 255, 255, 0.78), transparent 17%),
+    radial-gradient(circle, var(--cyan), var(--gold));
   font-size: 28px;
   font-weight: 900;
 }
@@ -760,6 +828,189 @@ textarea {
   padding: 18px;
 }
 
+.map-view {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.map-stage {
+  min-height: 650px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 70% 18%, rgba(244, 199, 101, 0.12), transparent 28%),
+    radial-gradient(ellipse at 30% 80%, rgba(82, 240, 238, 0.14), transparent 34%),
+    var(--panel);
+}
+
+.map-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.map-toolbar > div {
+  padding: 12px;
+  border: 1px solid rgba(82, 240, 238, 0.18);
+  border-radius: var(--sg-radius-md);
+  background: rgba(4, 16, 19, 0.62);
+}
+
+.map-toolbar span,
+.map-card p,
+.route-option small,
+.next-list span {
+  color: var(--muted);
+}
+
+.map-toolbar strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 20px;
+}
+
+.scenic-map {
+  width: 100%;
+  min-height: 540px;
+  border: 1px solid rgba(82, 240, 238, 0.18);
+  border-radius: var(--sg-radius-md);
+  background:
+    linear-gradient(rgba(82, 240, 238, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(82, 240, 238, 0.05) 1px, transparent 1px),
+    rgba(3, 16, 18, 0.56);
+  background-size: 28px 28px;
+}
+
+.terrain-shape {
+  opacity: 0.5;
+}
+
+.terrain-shape.lake {
+  fill: rgba(82, 240, 238, 0.1);
+}
+
+.terrain-shape.hill {
+  fill: rgba(244, 199, 101, 0.11);
+}
+
+.route-base,
+.route-active {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-base {
+  stroke: rgba(145, 185, 189, 0.32);
+  stroke-width: 1.2;
+  stroke-dasharray: 1.5 2.2;
+}
+
+.route-active {
+  stroke: url(#routeLine);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 5px rgba(82, 240, 238, 0.34));
+}
+
+.map-point {
+  cursor: pointer;
+}
+
+.map-point circle {
+  fill: var(--panel-strong);
+  stroke: var(--cyan);
+  stroke-width: 1.4;
+  transition: r 160ms ease, fill 160ms ease, stroke 160ms ease;
+}
+
+.map-point text {
+  fill: var(--text);
+  font-size: 3px;
+  font-weight: 800;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(3, 16, 18, 0.88);
+  stroke-width: 0.7px;
+}
+
+.map-point:hover circle,
+.map-point.selected circle {
+  r: 4.5;
+  fill: var(--gold);
+  stroke: #fff4cf;
+}
+
+.map-point.current circle {
+  r: 5;
+  fill: var(--green);
+  stroke: #effff3;
+}
+
+.map-side {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.map-card {
+  min-height: auto;
+}
+
+.map-card h2 {
+  margin-bottom: 10px;
+}
+
+.map-card > strong {
+  display: block;
+  color: var(--text);
+  font-size: 26px;
+}
+
+.route-option,
+.next-list button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(82, 240, 238, 0.18);
+  border-radius: var(--sg-radius-md);
+  color: var(--text);
+  background: rgba(8, 28, 32, 0.62);
+  text-align: left;
+}
+
+.route-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.route-option.active,
+.route-option:hover,
+.next-list button:hover {
+  border-color: var(--line-strong);
+  background: rgba(82, 240, 238, 0.12);
+}
+
+.next-list {
+  display: grid;
+  gap: 8px;
+}
+
+.next-list strong,
+.next-list span {
+  display: block;
+}
+
 .digital-main {
   display: grid;
   gap: 14px;
@@ -772,6 +1023,7 @@ textarea {
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 45%, rgba(82, 240, 238, 0.16), transparent 35%),
+    radial-gradient(ellipse at 50% 100%, rgba(244, 199, 101, 0.12), transparent 42%),
     rgba(5, 17, 20, 0.88);
 }
 
@@ -780,7 +1032,8 @@ textarea {
   inset: 0;
   background:
     linear-gradient(rgba(82, 240, 238, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(82, 240, 238, 0.07) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(82, 240, 238, 0.07) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 74%, rgba(244, 199, 101, 0.1), transparent 42%);
   background-size: 32px 32px;
   mask-image: radial-gradient(circle, #000, transparent 78%);
 }
@@ -920,11 +1173,13 @@ textarea {
   .kpi-grid.four,
   .dashboard-grid,
   .digital-human-view,
+  .map-layout,
   .admin-view {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .digital-human-view,
+  .map-layout,
   .admin-view {
     grid-template-columns: 1fr;
   }
@@ -957,9 +1212,22 @@ textarea {
   }
 
   .digital-human-view,
+  .map-view,
   .dashboard-view,
   .admin-content {
     padding: 12px;
+  }
+
+  .map-stage {
+    min-height: auto;
+  }
+
+  .map-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .scenic-map {
+    min-height: 420px;
   }
 
   .live2d-stage {

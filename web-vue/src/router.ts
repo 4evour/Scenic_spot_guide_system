@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 
-export type AppRoute = 'dashboard' | 'admin' | 'digital-human';
+export type AppRoute = 'dashboard' | 'admin' | 'digital-human' | 'map';
 
 export const DIGITAL_HUMAN_URL = '/digital-human#/digital-human';
 
@@ -14,7 +14,7 @@ export const appState = reactive({
 
 export function resolveRoute(): AppRoute {
   const hash = window.location.hash.replace('#/', '').replace('#', '');
-  if (hash === 'admin' || hash === 'digital-human' || hash === 'dashboard') return hash;
+  if (hash === 'admin' || hash === 'digital-human' || hash === 'dashboard' || hash === 'map') return hash;
   return 'dashboard';
 }
 

@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +65,11 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if applyDevAdminBypass(c) {
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.AbortWithStatusJSON(401, Response{
@@ -96,6 +103,32 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("role", claims.Role)
 		c.Next()
 	}
+}
+
+func applyDevAdminBypass(c *gin.Context) bool {
+	if !devAdminBypassEnabled() || !isLoopbackRequest(c) {
+		return false
+	}
+
+	c.Set("user_id", uint(0))
+	c.Set("username", "local-dev-admin")
+	c.Set("role", "admin")
+	c.Set("dev_admin_bypass", true)
+	return true
+}
+
+func devAdminBypassEnabled() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS")))
+	return value == "1" || value == "true" || value == "yes" || value == "on"
+}
+
+func isLoopbackRequest(c *gin.Context) bool {
+	host, _, err := net.SplitHostPort(c.Request.RemoteAddr)
+	if err != nil {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func AdminMiddleware() gin.HandlerFunc {

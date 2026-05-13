@@ -422,6 +422,7 @@ async function login() {
         currentUser = result.data;
         localStorage.setItem('authToken', result.data.token);
         localStorage.setItem('currentUser', JSON.stringify(result.data));
+        updateUserInterface();
         closeModal();
         alert(`欢迎, ${result.data.username}!`);
     } catch (error) {
@@ -482,11 +483,55 @@ async function adminLogin() {
 
 function logout() {
     currentUser = null;
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    updateUserInterface();
     alert('已退出登录');
 }
 
 function openDashboard() {
     window.location.href = '/dashboard';
+}
+
+function updateUserInterface() {
+    const storedUser = currentUser || (() => {
+        try {
+            return JSON.parse(localStorage.getItem('currentUser') || 'null');
+        } catch {
+            return null;
+        }
+    })();
+
+    currentUser = storedUser;
+
+    const userName = document.getElementById('userName');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const adminBtn = document.getElementById('adminBtn');
+    const profileName = document.getElementById('profileName');
+    const profileEmail = document.getElementById('profileEmail');
+
+    if (storedUser) {
+        if (userName) userName.textContent = storedUser.username || '已登录用户';
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        if (profileName) profileName.textContent = storedUser.username || '已登录用户';
+        if (profileEmail) profileEmail.textContent = storedUser.role === 'admin' ? '管理员账号' : '游客账号';
+        if (adminBtn) adminBtn.style.display = storedUser.role === 'admin' ? 'block' : 'none';
+    } else {
+        if (userName) userName.textContent = '游客';
+        if (loginBtn) loginBtn.style.display = 'inline-block';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        if (adminBtn) adminBtn.style.display = 'none';
+        if (profileName) profileName.textContent = '未登录用户';
+        if (profileEmail) profileEmail.textContent = '请登录以查看个人信息';
+    }
+}
+
+function openLoginFromHash() {
+    if (window.location.hash !== '#login') return;
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.classList.add('show');
 }
 
 function sendMessage(message) {
@@ -1029,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const adminBtn = document.getElementById('adminBtn');
     if (adminBtn) {
         adminBtn.addEventListener('click', function() {
-            window.location.href = '/admin';
+            window.location.href = '/app#/admin';
         });
     }
 
@@ -1037,6 +1082,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
             currentUser = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
             document.getElementById('userName').textContent = '游客';
             document.getElementById('loginBtn').style.display = 'inline-block';
             document.getElementById('logoutBtn').style.display = 'none';
@@ -1061,5 +1108,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    updateUserInterface();
     updateRoutePanel(routes.classic);
+
+    openLoginFromHash();
 });

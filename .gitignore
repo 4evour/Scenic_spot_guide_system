@@ -52,6 +52,7 @@ dist/
 # Temporary files
 tmp/
 temp/
+server_*_preview.txt
 
 # Coverage reports
 coverage/

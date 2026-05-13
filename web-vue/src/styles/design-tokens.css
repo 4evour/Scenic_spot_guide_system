@@ -1,0 +1,42 @@
+:root {
+  --sg-font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  --sg-bg: #061012;
+  --sg-bg-ink: #031012;
+  --sg-surface: rgba(8, 24, 28, 0.84);
+  --sg-surface-strong: rgba(5, 17, 20, 0.94);
+  --sg-surface-soft: rgba(255, 255, 255, 0.035);
+  --sg-border: rgba(82, 240, 238, 0.28);
+  --sg-border-strong: rgba(82, 240, 238, 0.56);
+  --sg-border-soft: rgba(82, 240, 238, 0.16);
+  --sg-cyan: #52f0ee;
+  --sg-gold: #f4c765;
+  --sg-jade: #7ef2a0;
+  --sg-vermilion: #ff8b8b;
+  --sg-blue: #8aa4ff;
+  --sg-text: #eafcff;
+  --sg-text-muted: #91b9bd;
+  --sg-text-soft: #c9e5e8;
+  --sg-radius-sm: 6px;
+  --sg-radius-md: 8px;
+  --sg-radius-lg: 12px;
+  --sg-space-2: 8px;
+  --sg-space-3: 12px;
+  --sg-space-4: 16px;
+  --sg-space-5: 20px;
+  --sg-space-6: 24px;
+  --sg-shadow-panel: inset 0 0 28px rgba(82, 240, 238, 0.045), 0 18px 44px rgba(0, 0, 0, 0.24);
+  --sg-shadow-action: 0 0 0 1px rgba(82, 240, 238, 0.08), 0 10px 28px rgba(0, 0, 0, 0.24);
+  --sg-blur-panel: blur(14px);
+
+  --bg: var(--sg-bg);
+  --panel: var(--sg-surface);
+  --panel-strong: var(--sg-surface-strong);
+  --line: var(--sg-border);
+  --line-strong: var(--sg-border-strong);
+  --cyan: var(--sg-cyan);
+  --gold: var(--sg-gold);
+  --green: var(--sg-jade);
+  --red: var(--sg-vermilion);
+  --text: var(--sg-text);
+  --muted: var(--sg-text-muted);
+}

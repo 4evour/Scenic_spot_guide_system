@@ -47,6 +47,7 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 
 - 不提交 `configs/config.yaml`、数据库、日志、可执行文件、缓存目录和本地环境文件。
 - `static/vue-app` 是 Vue 构建输出，会随 `web-vue` 构建刷新。
+- Vue 应用包含数据看板、管理后台、数字人导览和游客地图四个主要视图。
 - 前端生产构建关闭 sourcemap，避免提交大体积调试映射文件。
 - `static/digital-human/libs/live2dcubismcore.min.js` 被 Vue 入口引用，不能随意删除。
 - 当前 Live2D 主模型使用 `static/live2d-models/mao_pro`。
@@ -62,6 +63,7 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - 旧静态游客页和大屏中由用户或接口返回的文本插入 HTML 前必须经过 `escapeHtml` 转义。
 - RAG 通用问答日志不得打印 API Key 或其前缀；调试日志应避免输出完整请求体和敏感响应体。
 - HTTP 服务显式配置读取、写入、空闲和请求头超时，并设置不破坏同源 iframe、语音输入和数字人媒体能力的基础安全响应头。
+- `SCENIC_GUIDE_DEV_ADMIN_BYPASS` 仅用于本机开发调试，且只接受真实 `RemoteAddr` 为 loopback 的请求，不信任转发头。
 - 公开仓库前已重写 Git 历史，移除旧提交中出现过的 API Key 形态文本和旧 sourcemap 文件；相关真实密钥仍应在服务商控制台轮换。
 
 ## 已知风险

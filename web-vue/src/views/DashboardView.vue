@@ -106,9 +106,17 @@ async function apiFetch<T>(path: string): Promise<T> {
   const response = await fetch(`/api/v1${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  const payload = await response.json();
+  const raw = await response.text();
+  let payload: { code?: number; message?: string; msg?: string; data?: unknown } = {};
+  if (raw.trim()) {
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      throw new Error(`接口返回非 JSON 响应 (${response.status})`);
+    }
+  }
   if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.message || payload.msg || '请求失败');
+    throw new Error(payload.message || payload.msg || response.statusText || `请求失败 (${response.status})`);
   }
   return payload.data as T;
 }
@@ -140,7 +148,8 @@ async function loadDashboard() {
   }
 }
 
-let timer = 0;
+let clockTimer = 0;
+let dashboardTimer = 0;
 
 function tick() {
   state.now = new Date().toLocaleString('zh-CN');
@@ -149,13 +158,14 @@ function tick() {
 onMounted(() => {
   tick();
   loadDashboard();
-  timer = window.setInterval(() => {
-    tick();
-    loadDashboard();
-  }, 30000);
+  clockTimer = window.setInterval(tick, 1000);
+  dashboardTimer = window.setInterval(loadDashboard, 30000);
 });
 
-onUnmounted(() => window.clearInterval(timer));
+onUnmounted(() => {
+  window.clearInterval(clockTimer);
+  window.clearInterval(dashboardTimer);
+});
 </script>
 
 <template>
