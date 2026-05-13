@@ -24,7 +24,7 @@
 
 位置：`web-vue/vite.config.ts:10`、`.gitignore:50`、`.dockerignore:14`
 
-状态：当前版本已关闭前端 sourcemap，当前跟踪文件不包含 `.map` 构建产物；历史中的旧 `.map` 文件仍需要通过历史重写清除后再推送公开仓库。
+状态：当前版本已关闭前端 sourcemap，当前跟踪文件不包含 `.map` 构建产物；历史中的旧 `.map` 文件已通过历史重写清除。
 
 ## 已完成加固
 
@@ -61,7 +61,6 @@
 ## 公开前操作清单
 
 1. 轮换或吊销所有曾写入本地配置或 Git 历史的 DeepSeek、DashScope 等 API Key。
-2. 清理 Git 历史中的旧 sourcemap 文件。
-3. 重跑当前文件与历史密钥扫描。
-4. 使用 `git push --force-with-lease origin master` 推送重写后的历史。
-5. 若远端已被他人克隆，通知协作者重新克隆或按新历史重置本地分支。
+2. 重跑当前文件与历史密钥扫描。
+3. 使用 `git push --force-with-lease origin master` 推送重写后的历史。
+4. 若远端已被他人克隆，通知协作者重新克隆或按新历史重置本地分支。
