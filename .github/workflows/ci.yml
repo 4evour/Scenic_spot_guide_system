@@ -44,6 +44,9 @@ jobs:
         working-directory: web-vue
         run: npm run check:encoding
 
+      - name: Secret scan
+        run: node scripts/check-secrets.mjs
+
       - name: Type check
         working-directory: web-vue
         run: npm run check

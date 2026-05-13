@@ -63,6 +63,12 @@ npm run build
 Set-Location ..
 ```
 
+公开仓库或提交前建议额外运行：
+
+```powershell
+node scripts/check-secrets.mjs
+```
+
 4. 启动服务：
 
 ```powershell

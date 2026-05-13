@@ -10,6 +10,8 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, handlers *Handlers) {
+	r.Use(securityHeaders())
+
 	r.Static("/static", "./static")
 	r.Any("/vtuber-ws/*path", vtuberWebSocketProxy("http://127.0.0.1:12393"))
 
@@ -47,6 +49,16 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 			"message": "scenic guide service is running",
 		})
 	})
+}
+
+func securityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "SAMEORIGIN")
+		c.Header("Referrer-Policy", "no-referrer")
+		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=()")
+		c.Next()
+	}
 }
 
 func vtuberWebSocketProxy(target string) gin.HandlerFunc {

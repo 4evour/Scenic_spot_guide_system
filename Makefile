@@ -1,9 +1,12 @@
-.PHONY: check test build frontend-check frontend-build encoding
+.PHONY: check test build frontend-check frontend-build encoding secrets
 
-check: encoding test frontend-check
+check: encoding secrets test frontend-check
 
 encoding:
 	cd web-vue && npm run check:encoding
+
+secrets:
+	node scripts/check-secrets.mjs
 
 test:
 	go test ./...
