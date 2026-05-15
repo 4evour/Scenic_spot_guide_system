@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -53,8 +54,11 @@ func (h *DigitalHumanHandler) CreateSession(c *gin.Context) {
 	sessionID := uuid.New().String()
 	expiresAt := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
 
-	fmt.Printf("[数字人] 创建会话: session_id=%s, user_present=%t, scene_present=%t\n",
-		sessionID, req.UserID != "", req.Scene != "")
+	slog.Info("创建数字人会话",
+		"session_id", sessionID,
+		"user_present", req.UserID != "",
+		"scene_present", req.Scene != "",
+	)
 
 	pkg.Success(c, SessionCreateResponse{
 		SessionID: sessionID,
@@ -96,8 +100,11 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	}
 
 	traceID := uuid.New().String()
-	fmt.Printf("[数字人] 文本聊天: session_id=%s, trace_id=%s, input_len=%d\n",
-		req.SessionID, traceID, len([]rune(req.InputText)))
+	slog.Info("收到数字人文本聊天",
+		"session_id", req.SessionID,
+		"trace_id", traceID,
+		"input_len", len([]rune(req.InputText)),
+	)
 
 	startTime := time.Now()
 
@@ -108,7 +115,7 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 		response, _, err := h.ragService.QueryWithRAGAndRoute(req.InputText)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
-			fmt.Printf("[数字人] RAG错误: %v\n", err)
+			slog.Error("数字人文本聊天 RAG 查询失败", "error", err, "trace_id", traceID, "elapsed_ms", elapsed)
 			answer = "抱歉，我暂时无法回答这个问题。"
 			emotion = "sadness"
 		} else {
@@ -182,8 +189,12 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	}
 
 	traceID := uuid.New().String()
-	fmt.Printf("[数字人] 语音聊天: session_id=%s, trace_id=%s, transcript_len=%d, confidence=%.2f\n",
-		req.SessionID, traceID, len([]rune(req.Transcript)), req.Confidence)
+	slog.Info("收到数字人语音转写聊天",
+		"session_id", req.SessionID,
+		"trace_id", traceID,
+		"transcript_len", len([]rune(req.Transcript)),
+		"confidence", req.Confidence,
+	)
 
 	startTime := time.Now()
 
@@ -194,7 +205,7 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 		response, _, err := h.ragService.QueryWithRAGAndRoute(req.Transcript)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
-			fmt.Printf("[数字人] RAG错误: %v\n", err)
+			slog.Error("数字人语音聊天 RAG 查询失败", "error", err, "trace_id", traceID, "elapsed_ms", elapsed)
 			answer = "抱歉，我暂时无法回答这个问题。"
 			emotion = "sadness"
 		} else {
@@ -255,8 +266,12 @@ func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("[数字人] 反馈上报: session_id=%s, trace_id=%s, rating=%d, comment_len=%d\n",
-		req.SessionID, req.TraceID, req.Rating, len([]rune(req.Comment)))
+	slog.Info("收到数字人反馈",
+		"session_id", req.SessionID,
+		"trace_id", req.TraceID,
+		"rating", req.Rating,
+		"comment_len", len([]rune(req.Comment)),
+	)
 
 	if h.visitorQueryService != nil {
 		query := &model.VisitorQuery{
@@ -266,7 +281,7 @@ func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 		}
 		err := h.visitorQueryService.CreateQuery(query)
 		if err != nil {
-			fmt.Printf("[数字人] 反馈保存失败: %v\n", err)
+			slog.Error("数字人反馈保存失败", "error", err, "trace_id", req.TraceID)
 		}
 	}
 

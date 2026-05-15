@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -85,21 +85,19 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("\n=== AI Chat请求 ===\n")
-	fmt.Printf("AI chat message length: %d\n", len([]rune(req.Message)))
-	fmt.Printf("RAG服务是否可用: %v\n", h.ragService != nil)
+	slog.Info("收到 AI Chat 请求", "message_len", len([]rune(req.Message)), "rag_available", h.ragService != nil)
 
 	startTime := time.Now()
 
 	if h.ragService != nil {
 		response, route, err := h.ragService.QueryWithRAGAndRoute(req.Message)
 		elapsed := time.Since(startTime).Milliseconds()
-		fmt.Printf("RAG response length: %d\n", len([]rune(response)))
 		if err != nil {
-			fmt.Printf("RAG错误: %v\n", err)
+			slog.Error("AI Chat RAG 查询失败", "error", err, "elapsed_ms", elapsed)
 			pkg.InternalError(c, "调用AI服务失败: "+err.Error())
 			return
 		}
+		slog.Info("AI Chat RAG 查询完成", "response_len", len([]rune(response)), "elapsed_ms", elapsed)
 
 		// 记录交互日志
 		if pkg.StatsService != nil {

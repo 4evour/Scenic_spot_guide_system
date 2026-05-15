@@ -69,7 +69,15 @@ Set-Location ..
 node scripts/check-secrets.mjs
 ```
 
-4. 启动服务：
+4. 可选：初始化演示账号与演示数据：
+
+```powershell
+go run ./cmd/demo-seed
+```
+
+默认演示账号为 `admin / DemoAdmin123456`。该命令会写入管理员、游客、景点、路线、交互日志，并在知识库为空时导入默认知识片段。
+
+5. 启动服务：
 
 ```powershell
 go run .
@@ -98,6 +106,7 @@ go run .
 make check
 go test ./...
 go vet ./...
+go run ./cmd/rag-eval
 
 Set-Location web-vue
 npm run check
@@ -121,6 +130,28 @@ $env:SCENIC_GUIDE_AI_API_KEY="你的服务端密钥"
 - 源码和文档统一使用 UTF-8，规则见 `.editorconfig`。
 - Windows PowerShell 若直接输出中文出现乱码，通常是控制台代码页/宿主解码问题，不代表文件已损坏。排查时优先使用 UTF-8 明确输出或运行 `npm run check:encoding`。
 - `npm run check:encoding` 会扫描源码和文档中的替换字符及常见 mojibake 模式；构建产物和第三方资源不纳入该检查。
+
+## RAG 评估
+
+项目内置 `knowledge/lingshan_eval_qa.json` 作为基础评测集，可用本地 BM25 模式离线验证知识库检索与回答兜底效果：
+
+```powershell
+go run ./cmd/rag-eval -format text
+go run ./cmd/rag-eval -format json
+```
+
+评估报告包含用例总数、通过率、关键词平均覆盖率、缺失关键词和回答预览；如需在 CI 或脚本中失败退出，可追加 `-fail-on-miss`。
+
+## 演示数据初始化
+
+`cmd/demo-seed` 会写入当前配置指向的数据库，适合本地演示或答辩录制前准备数据，不属于只读检查命令：
+
+```powershell
+go run ./cmd/demo-seed
+go run ./cmd/demo-seed -admin-password "替换成本地演示密码"
+```
+
+默认账号 `admin / DemoAdmin123456` 仅用于本地演示，公开部署或生产环境不要使用默认演示密码。
 
 ## 清理与提交约定
 

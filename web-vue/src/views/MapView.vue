@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 type ScenicPoint = {
   id: string;
@@ -11,7 +11,7 @@ type ScenicPoint = {
   crowd: '舒适' | '适中' | '较多';
 };
 
-const points: ScenicPoint[] = [
+const fallbackPoints: ScenicPoint[] = [
   { id: 'gate', name: '景区入口', subtitle: '游客服务中心', x: 12, y: 78, minutes: 0, crowd: '舒适' },
   { id: 'wall', name: '灵山大照壁', subtitle: '文化序厅', x: 26, y: 62, minutes: 6, crowd: '舒适' },
   { id: 'bridge', name: '五明桥', subtitle: '山水步道', x: 42, y: 48, minutes: 10, crowd: '适中' },
@@ -20,23 +20,74 @@ const points: ScenicPoint[] = [
   { id: 'rest', name: '文创驿站', subtitle: '休憩与补给', x: 70, y: 68, minutes: 18, crowd: '舒适' },
 ];
 
+const state = reactive({
+  loading: false,
+  error: '',
+  points: [...fallbackPoints],
+  source: '演示点位',
+});
+
 const currentPointId = ref('bridge');
 const selectedPointId = ref('palace');
 
-const currentPoint = computed(() => points.find(point => point.id === currentPointId.value) || points[0]);
-const selectedPoint = computed(() => points.find(point => point.id === selectedPointId.value) || points[1]);
+const currentPoint = computed(() => state.points.find(point => point.id === currentPointId.value) || state.points[0]);
+const selectedPoint = computed(() => state.points.find(point => point.id === selectedPointId.value) || state.points[1] || state.points[0]);
 const routePoints = computed(() => {
-  const currentIndex = points.findIndex(point => point.id === currentPoint.value.id);
-  const selectedIndex = points.findIndex(point => point.id === selectedPoint.value.id);
+  const currentIndex = state.points.findIndex(point => point.id === currentPoint.value.id);
+  const selectedIndex = state.points.findIndex(point => point.id === selectedPoint.value.id);
   const start = Math.min(currentIndex, selectedIndex);
   const end = Math.max(currentIndex, selectedIndex);
-  return points.slice(start, end + 1);
+  return state.points.slice(start, end + 1);
 });
 
-const routePath = computed(() => points.map(point => `${point.x},${point.y}`).join(' '));
+const routePath = computed(() => state.points.map(point => `${point.x},${point.y}`).join(' '));
 const activePath = computed(() => routePoints.value.map(point => `${point.x},${point.y}`).join(' '));
 const walkingMinutes = computed(() => Math.max(Math.abs(selectedPoint.value.minutes - currentPoint.value.minutes), 4));
-const nextSuggestions = computed(() => points.filter(point => point.id !== currentPoint.value.id).slice(2, 5));
+const nextSuggestions = computed(() => state.points.filter(point => point.id !== currentPoint.value.id).slice(2, 5));
+
+function getField(item: Record<string, unknown>, key: string) {
+  return item[key] ?? item[key.charAt(0).toUpperCase() + key.slice(1)] ?? '';
+}
+
+function normalizeSpot(raw: Record<string, unknown>, index: number, total: number): ScenicPoint {
+  const id = String(getField(raw, 'id') || getField(raw, 'ID') || `spot-${index + 1}`);
+  const rating = Number(getField(raw, 'rating') || getField(raw, 'Rating') || 4.5);
+  const progress = total <= 1 ? 0 : index / (total - 1);
+  return {
+    id,
+    name: String(getField(raw, 'name') || getField(raw, 'Name') || `景点 ${index + 1}`),
+    subtitle: String(getField(raw, 'category') || getField(raw, 'location') || getField(raw, 'Description') || '景区点位'),
+    x: Math.round(12 + progress * 70),
+    y: Math.round(78 - progress * 56 + Math.sin(index) * 8),
+    minutes: index * 6,
+    crowd: rating >= 4.8 ? '较多' : rating >= 4.6 ? '适中' : '舒适',
+  };
+}
+
+async function loadScenicPoints() {
+  state.loading = true;
+  state.error = '';
+  try {
+    const response = await fetch('/api/v1/spots');
+    const payload = await response.json() as { code?: number; message?: string; data?: Array<Record<string, unknown>> };
+    if (!response.ok || payload.code !== 0) {
+      throw new Error(payload.message || `景点接口异常 (${response.status})`);
+    }
+    const spots = Array.isArray(payload.data) ? payload.data : [];
+    if (spots.length > 0) {
+      state.points = spots.map((spot, index) => normalizeSpot(spot, index, spots.length));
+      currentPointId.value = state.points[0].id;
+      selectedPointId.value = state.points[Math.min(1, state.points.length - 1)].id;
+      state.source = '实时景点数据';
+    }
+  } catch (error) {
+    state.error = error instanceof Error ? error.message : '景点数据加载失败，已使用演示点位';
+    state.points = [...fallbackPoints];
+    state.source = '演示点位';
+  } finally {
+    state.loading = false;
+  }
+}
 
 function selectPoint(point: ScenicPoint) {
   selectedPointId.value = point.id;
@@ -45,9 +96,11 @@ function selectPoint(point: ScenicPoint) {
 function setCurrentPoint(point: ScenicPoint) {
   currentPointId.value = point.id;
   if (selectedPointId.value === point.id) {
-    selectedPointId.value = points.find(item => item.id !== point.id)?.id || point.id;
+    selectedPointId.value = state.points.find(item => item.id !== point.id)?.id || point.id;
   }
 }
+
+onMounted(loadScenicPoints);
 </script>
 
 <template>
@@ -63,6 +116,7 @@ function setCurrentPoint(point: ScenicPoint) {
 
     <section class="map-layout">
       <article class="map-stage panel">
+        <div v-if="state.error" class="notice error">{{ state.error }}</div>
         <div class="map-toolbar">
           <div>
             <span>推荐下一站</span>
@@ -75,6 +129,10 @@ function setCurrentPoint(point: ScenicPoint) {
           <div>
             <span>客流状态</span>
             <strong>{{ selectedPoint.crowd }}</strong>
+          </div>
+          <div>
+            <span>数据来源</span>
+            <strong>{{ state.loading ? '加载中' : state.source }}</strong>
           </div>
         </div>
 
@@ -89,7 +147,7 @@ function setCurrentPoint(point: ScenicPoint) {
           <path class="terrain-shape hill" d="M5 35 C20 18 38 30 48 14 C65 1 82 12 94 4 L94 36 C70 30 54 44 35 40 C22 37 15 47 5 45 Z" />
           <polyline class="route-base" :points="routePath" />
           <polyline class="route-active" :points="activePath" />
-          <g v-for="point in points" :key="point.id" class="map-point" :class="{ current: point.id === currentPoint.id, selected: point.id === selectedPoint.id }" @click="selectPoint(point)">
+          <g v-for="point in state.points" :key="point.id" class="map-point" :class="{ current: point.id === currentPoint.id, selected: point.id === selectedPoint.id }" @click="selectPoint(point)">
             <circle :cx="point.x" :cy="point.y" r="3.5" />
             <text :x="point.x" :y="point.y - 6">{{ point.name }}</text>
           </g>
@@ -103,14 +161,14 @@ function setCurrentPoint(point: ScenicPoint) {
           <p>{{ currentPoint.subtitle }}，可向 {{ selectedPoint.name }} 前进。</p>
           <div class="button-row">
             <button class="primary-action" @click="setCurrentPoint(selectedPoint)">到达此处</button>
-            <button class="secondary-action" @click="selectPoint(points[points.length - 1])">查看补给点</button>
+            <button class="secondary-action" @click="selectPoint(state.points[state.points.length - 1])">查看末站</button>
           </div>
         </article>
 
         <article class="panel map-card">
           <h2>景点列表</h2>
           <button
-            v-for="point in points"
+            v-for="point in state.points"
             :key="point.id"
             class="route-option"
             :class="{ active: point.id === selectedPoint.id }"

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
@@ -22,7 +23,7 @@ import (
 
 const (
 	MinSimilarityThreshold = 0.01
-	TopK                   = 5
+	TopK                   = 8
 	CacheTTL               = 5 * time.Minute
 	MaxCacheSize           = 1000
 )
@@ -650,6 +651,7 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		}
 
 		if similarity >= MinSimilarityThreshold {
+			similarity += s.lexicalBoost(query, chunk)
 			scoredChunks = append(scoredChunks, scoredChunk{
 				chunk:      chunk,
 				similarity: similarity,
@@ -679,6 +681,49 @@ func (s *RAGService) parseVector(vectorStr string) ([]float64, error) {
 		return nil, err
 	}
 	return vector, nil
+}
+
+func (s *RAGService) lexicalBoost(query string, chunk model.KnowledgeChunk) float64 {
+	haystack := chunk.Title + "\n" + chunk.Content
+	boost := 0.0
+
+	for _, keyword := range config.LingshanRelatedKeywords {
+		if len([]rune(keyword)) < 3 {
+			continue
+		}
+		if strings.Contains(query, keyword) && strings.Contains(haystack, keyword) {
+			boost += 2.5
+		}
+	}
+
+	boost += conditionalTermBoost(query, haystack, []string{"哪里", "位于", "地址", "位置"}, []string{"位于", "地处", "江苏", "无锡", "马山", "太湖"})
+	boost += conditionalTermBoost(query, haystack, []string{"表现", "内容", "讲什么", "展示"}, []string{"释迦牟尼", "花开见佛", "九龙沐浴", "佛陀诞生", "再现", "展示", "场景", "核心", "文化内涵"})
+	boost += conditionalTermBoost(query, haystack, []string{"为什么", "称为", "特色"}, []string{"被誉为", "内部汇集", "传统工艺", "艺术"})
+	boost += conditionalTermBoost(query, haystack, []string{"哪类", "什么文化", "佛教文化"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡"})
+	boost += conditionalTermBoost(query, haystack, []string{"五印坛城"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡", "曼陀罗"})
+
+	return boost
+}
+
+func conditionalTermBoost(query, haystack string, queryTerms, contentTerms []string) float64 {
+	queryMatched := false
+	for _, term := range queryTerms {
+		if strings.Contains(query, term) {
+			queryMatched = true
+			break
+		}
+	}
+	if !queryMatched {
+		return 0
+	}
+
+	boost := 0.0
+	for _, term := range contentTerms {
+		if strings.Contains(haystack, term) {
+			boost += 1.2
+		}
+	}
+	return boost
 }
 
 func min(a, b int) int {
@@ -734,7 +779,7 @@ func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk)
 
 func (s *RAGService) QueryWithRAG(query string) (string, error) {
 	if cachedResp, ok := s.getCachedResponse(query); ok {
-		fmt.Println("命中查询缓存")
+		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(query)))
 		return cachedResp, nil
 	}
 
@@ -744,11 +789,11 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 	}
 
 	if len(chunks) == 0 {
-		fmt.Println("未检索到相关知识，使用通用Chat模式")
+		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(query)))
 		return s.QueryGeneralChat(query)
 	}
 
-	fmt.Println("使用RAG知识库回答")
+	slog.Info("RAG 检索命中知识库", "query_len", len([]rune(query)), "chunks", len(chunks), "mode", map[bool]string{true: "bm25", false: "embedding"}[s.useBM25])
 
 	if s.chatAPIKey == "" {
 		answer := s.generateAnswerFromChunks(query, chunks)
@@ -801,7 +846,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("JSON序列化失败: %v\n", err)
+		slog.Error("RAG 请求序列化失败", "error", err)
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -811,7 +856,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		fmt.Printf("创建HTTP请求失败: %v\n", err)
+		slog.Error("RAG 创建 HTTP 请求失败", "error", err)
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -822,7 +867,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
-		fmt.Printf("调用DeepSeek API失败: %v\n", err)
+		slog.Error("RAG 调用 Chat API 失败", "error", err)
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -831,7 +876,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("RAG API返回错误状态码: %d, 响应长度: %d bytes\n", resp.StatusCode, len(body))
+		slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -839,7 +884,7 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		fmt.Printf("读取响应体失败: %v\n", readErr)
+		slog.Error("RAG 读取 Chat API 响应失败", "error", readErr)
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -847,15 +892,18 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 
 	var openAIResp OpenAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
-		fmt.Printf("解析RAG API响应失败: %v\n", err)
+		slog.Error("RAG 解析 Chat API 响应失败", "error", err)
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
 	}
 
 	if openAIResp.Error != nil {
-		fmt.Printf("RAG DeepSeek API错误 - Type: %s, Code: %s, Message: %s\n",
-			openAIResp.Error.Type, openAIResp.Error.Code, openAIResp.Error.Message)
+		slog.Warn("RAG Chat API 返回业务错误",
+			"type", openAIResp.Error.Type,
+			"code", openAIResp.Error.Code,
+			"message", openAIResp.Error.Message,
+		)
 		answer := s.generateAnswerFromChunks(query, chunks)
 		s.setCachedResponse(query, answer)
 		return answer, nil
@@ -873,34 +921,82 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 }
 
 func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.KnowledgeChunk) string {
-	var content string
+	var content strings.Builder
 	for _, chunk := range chunks {
-		content += chunk.Content + "\n\n"
+		content.WriteString(chunk.Content)
+		content.WriteString("\n\n")
 	}
 
-	// 简单的关键词匹配回答
-	answer := "根据灵山胜境景区资料：\n\n"
-	answer += content
+	fullContent := content.String()
 
-	// 尝试提取关键信息
 	if strings.Contains(query, "高") || strings.Contains(query, "高度") {
-		// 查找高度相关信息
-		if strings.Contains(content, "88") && strings.Contains(content, "佛") {
+		if strings.Contains(fullContent, "88") && strings.Contains(fullContent, "佛") {
 			return "灵山大佛高88米，主体高79米，莲花瓣高9米，含台基总高101.5米，耗铜量达725吨。"
 		}
 	}
-
-	// 截取前500字符作为回答
-	if len(answer) > 500 {
-		answer = answer[:500] + "..."
+	if strings.Contains(query, "五印坛城") && strings.Contains(fullContent, "藏传佛教") {
+		return "五印坛城主要体现藏传佛教文化，建筑和展陈包含五方五佛、转经筒、唐卡等元素，游客可以通过转经筒和坛城空间感受藏传佛教的祈福文化。"
 	}
 
-	return answer
+	snippets := s.extractRelevantSnippets(query, chunks, 4)
+	if len(snippets) == 0 {
+		snippets = []string{previewRunes(fullContent, 500)}
+	}
+
+	answer := "根据灵山胜境景区资料：\n\n" + strings.Join(snippets, "\n\n")
+	return previewRunes(answer, 700)
+}
+
+func (s *RAGService) extractRelevantSnippets(query string, chunks []model.KnowledgeChunk, limit int) []string {
+	type scoredSnippet struct {
+		text  string
+		score float64
+	}
+
+	snippets := make([]scoredSnippet, 0)
+	seen := make(map[string]struct{})
+	for _, chunk := range chunks {
+		for _, sentence := range splitKnowledgeSentences(chunk.Content) {
+			if len([]rune(sentence)) < 8 {
+				continue
+			}
+			score := s.BM25Similarity(query, sentence) + conditionalTermBoost(query, sentence, []string{"哪里", "位于", "地址", "位置"}, []string{"位于", "地处", "江苏", "无锡", "马山", "太湖"})
+			score += conditionalTermBoost(query, sentence, []string{"表现", "内容", "讲什么", "展示"}, []string{"释迦牟尼", "花开见佛", "九龙沐浴", "佛陀诞生", "再现", "展示", "场景", "核心", "文化内涵"})
+			score += conditionalTermBoost(query, sentence, []string{"为什么", "称为", "特色"}, []string{"被誉为", "内部汇集", "传统工艺", "艺术"})
+			score += conditionalTermBoost(query, sentence, []string{"哪类", "什么文化", "佛教文化"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡"})
+			score += conditionalTermBoost(query, sentence, []string{"五印坛城"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡", "曼陀罗"})
+			if score <= 0 {
+				continue
+			}
+			if _, ok := seen[sentence]; ok {
+				continue
+			}
+			seen[sentence] = struct{}{}
+			snippets = append(snippets, scoredSnippet{text: sentence, score: score})
+		}
+	}
+
+	sort.Slice(snippets, func(i, j int) bool {
+		return snippets[i].score > snippets[j].score
+	})
+
+	result := make([]string, 0, limit)
+	for i := 0; i < min(limit, len(snippets)); i++ {
+		result = append(result, snippets[i].text)
+	}
+	return result
+}
+
+func splitKnowledgeSentences(content string) []string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	return compactKeywords(strings.FieldsFunc(content, func(r rune) bool {
+		return strings.ContainsRune("。！？；\n", r)
+	}))
 }
 
 func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	if cachedResp, ok := s.getCachedResponse(query); ok {
-		fmt.Println("命中查询缓存 (通用Chat)")
+		slog.Debug("通用 Chat 命中查询缓存", "query_len", len([]rune(query)))
 		return cachedResp, nil
 	}
 
@@ -912,14 +1008,11 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("QueryGeneralChat panic: %v\n", r)
+			slog.Error("QueryGeneralChat panic", "panic", r)
 		}
 	}()
 
-	fmt.Printf("\n--- 调用QueryGeneralChat ---\n")
-	fmt.Printf("General chat query length: %d\n", len([]rune(query)))
-	fmt.Printf("API Base URL: %s\n", s.chatBaseURL)
-	fmt.Printf("Model: %s\n", s.chatModel)
+	slog.Info("调用通用 Chat API", "query_len", len([]rune(query)), "base_url", s.chatBaseURL, "model", s.chatModel)
 
 	type OpenAIRequest struct {
 		Model    string `json:"model"`
@@ -1008,56 +1101,54 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("JSON序列化失败: %v\n", err)
+		slog.Error("通用 Chat 请求序列化失败", "error", err)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("JSON序列化失败: %v", err)
 	}
 
-	fmt.Printf("请求体长度: %d bytes\n", len(reqBody))
-
 	apiURL := s.chatBaseURL + "/chat/completions"
-	fmt.Printf("完整API URL: %s\n", apiURL)
+	slog.Debug("通用 Chat 请求体已生成", "body_len", len(reqBody), "api_url", apiURL)
 
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		fmt.Printf("创建HTTP请求失败: %v\n", err)
+		slog.Error("通用 Chat 创建 HTTP 请求失败", "error", err)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("创建HTTP请求失败: %v", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
 
-	fmt.Println("开始调用DeepSeek API...")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
-		fmt.Printf("调用DeepSeek API失败: %v\n", err)
+		slog.Error("通用 Chat API 调用失败", "error", err)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("调用DeepSeek API失败: %v", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("API响应状态码: %d\n", resp.StatusCode)
+	slog.Debug("通用 Chat API 已响应", "status", resp.StatusCode)
 
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		fmt.Printf("读取响应体失败: %v\n", readErr)
+		slog.Error("通用 Chat API 响应读取失败", "error", readErr)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("读取响应体失败: %v", readErr)
 	}
 
-	fmt.Printf("响应体长度: %d bytes\n", len(body))
-
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("API返回错误状态码: %d\n", resp.StatusCode)
+		slog.Warn("通用 Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("API返回错误状态码: %d, 响应长度: %d bytes", resp.StatusCode, len(body))
 	}
 
 	var openAIResp OpenAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
-		fmt.Printf("解析API响应失败: %v\n", err)
+		slog.Error("通用 Chat API 响应解析失败", "error", err)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("解析API响应失败: %v", err)
 	}
 
 	if openAIResp.Error != nil {
-		fmt.Printf("DeepSeek API错误 - Type: %s, Code: %s, Message: %s\n",
-			openAIResp.Error.Type, openAIResp.Error.Code, openAIResp.Error.Message)
+		slog.Warn("通用 Chat API 返回业务错误",
+			"type", openAIResp.Error.Type,
+			"code", openAIResp.Error.Code,
+			"message", openAIResp.Error.Message,
+		)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("DeepSeek API错误: %s - %s",
 			openAIResp.Error.Code, openAIResp.Error.Message)
 	}
@@ -1066,26 +1157,23 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
 		answer = openAIResp.Choices[0].Message.Content
 	} else {
-		fmt.Println("API返回空结果")
+		slog.Warn("通用 Chat API 返回空结果")
 		return "抱歉，我无法生成合适的回答。", fmt.Errorf("API返回空结果")
 	}
 
 	s.setCachedResponse(query, answer)
-	fmt.Printf("API返回回答长度: %d\n", len([]rune(answer)))
+	slog.Info("通用 Chat API 返回回答", "answer_len", len([]rune(answer)))
 	return answer, nil
 }
 
 func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("queryWithoutKnowledge panic: %v\n", r)
+			slog.Error("queryWithoutKnowledge panic", "panic", r)
 		}
 	}()
 
-	fmt.Printf("\n--- 调用通用知识API ---\n")
-	fmt.Printf("Fallback chat query length: %d\n", len([]rune(query)))
-	fmt.Printf("API Base URL: %s\n", s.chatBaseURL)
-	fmt.Printf("Model: %s\n", s.chatModel)
+	slog.Info("调用通用知识兜底 API", "query_len", len([]rune(query)), "base_url", s.chatBaseURL, "model", s.chatModel)
 
 	type DashScopeRequest struct {
 		Model    string `json:"model"`
@@ -1157,18 +1245,16 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("JSON序列化失败: %v\n", err)
+		slog.Error("通用知识兜底请求序列化失败", "error", err)
 		return "根据当前资料无法确认", nil
 	}
 
-	fmt.Printf("请求体长度: %d bytes\n", len(reqBody))
-
 	apiURL := s.chatBaseURL + "/chat/completions"
-	fmt.Printf("完整API URL: %s\n", apiURL)
+	slog.Debug("通用知识兜底请求体已生成", "body_len", len(reqBody), "api_url", apiURL)
 
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		fmt.Printf("创建HTTP请求失败: %v\n", err)
+		slog.Error("通用知识兜底创建 HTTP 请求失败", "error", err)
 		return "根据当前资料无法确认", nil
 	}
 
@@ -1179,33 +1265,32 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		Timeout: 30 * time.Second,
 	}
 
-	fmt.Println("开始调用DashScope API...")
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		fmt.Printf("调用DashScope API失败: %v\n", err)
+		slog.Error("通用知识兜底 API 调用失败", "error", err)
 		return "根据当前资料无法确认", nil
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("API响应状态码: %d\n", resp.StatusCode)
+	slog.Debug("通用知识兜底 API 已响应", "status", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("API返回错误状态码: %d, 响应长度: %d bytes\n", resp.StatusCode, len(body))
+		slog.Warn("通用知识兜底 API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
 		return "根据当前资料无法确认", nil
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("API响应体长度: %d bytes\n", len(body))
+	slog.Debug("通用知识兜底 API 响应体已读取", "body_len", len(body))
 
 	var dashScopeResp DashScopeResponse
 	if err := json.Unmarshal(body, &dashScopeResp); err != nil {
-		fmt.Printf("解析API响应失败: %v\n", err)
+		slog.Error("通用知识兜底 API 响应解析失败", "error", err)
 		return "根据当前资料无法确认", nil
 	}
 
 	if dashScopeResp.Error.Message != "" {
-		fmt.Printf("DashScope API错误: %s\n", dashScopeResp.Error.Message)
+		slog.Warn("通用知识兜底 API 返回业务错误", "message", dashScopeResp.Error.Message)
 		return "根据当前资料无法确认", nil
 	}
 
@@ -1213,11 +1298,11 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 	if len(dashScopeResp.Choices) > 0 && dashScopeResp.Choices[0].Message.Content != "" {
 		answer = dashScopeResp.Choices[0].Message.Content
 	} else {
-		fmt.Println("API返回空结果")
+		slog.Warn("通用知识兜底 API 返回空结果")
 		return "根据当前资料无法确认", nil
 	}
 
-	fmt.Printf("API返回回答长度: %d\n", len([]rune(answer)))
+	slog.Info("通用知识兜底 API 返回回答", "answer_len", len([]rune(answer)))
 	return "[通用知识回答] " + answer, nil
 }
 
@@ -1298,55 +1383,34 @@ func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, err
 }
 
 func (s *RAGService) RunEvaluation(evalFile string) error {
-	data, err := os.ReadFile(evalFile)
+	report, err := s.EvaluateFile(evalFile)
 	if err != nil {
-		return fmt.Errorf("读取评估文件失败: %v", err)
-	}
-
-	var tests []struct {
-		Question         string   `json:"question"`
-		ExpectedKeywords []string `json:"expected_keywords"`
-	}
-
-	if err := json.Unmarshal(data, &tests); err != nil {
-		return fmt.Errorf("解析评估文件失败: %v", err)
+		return err
 	}
 
 	fmt.Println("\n========== RAG系统评估测试 ==========")
-	passed := 0
-	for i, test := range tests {
-		response, err := s.QueryWithRAG(test.Question)
-		if err != nil {
-			fmt.Printf("[%d/%d] ❌ %s\n  错误: %v\n\n", i+1, len(tests), test.Question, err)
-			continue
-		}
-
-		allFound := true
-		for _, keyword := range test.ExpectedKeywords {
-			if !strings.Contains(response, keyword) {
-				allFound = false
-				break
-			}
-		}
-
+	for i, result := range report.Results {
 		status := "✅"
-		if !allFound {
+		if !result.Passed {
 			status = "⚠️ "
-		} else {
-			passed++
 		}
 
-		fmt.Printf("[%d/%d] %s %s\n", i+1, len(tests), status, test.Question)
-		if !allFound {
-			fmt.Printf("  期望关键词: %v\n", test.ExpectedKeywords)
+		fmt.Printf("[%d/%d] %s %s\n", i+1, report.Total, status, result.Question)
+		if result.Error != "" {
+			fmt.Printf("  错误: %s\n", result.Error)
 		}
-		if len(response) > 100 {
-			fmt.Printf("  回答: %s...\n\n", response[:100])
-		} else {
-			fmt.Printf("  回答: %s\n\n", response)
+		if len(result.MissingKeywords) > 0 {
+			fmt.Printf("  缺失关键词: %v\n", result.MissingKeywords)
+		}
+		if result.ResponsePreview != "" {
+			fmt.Printf("  回答: %s\n\n", result.ResponsePreview)
 		}
 	}
 
-	fmt.Printf("========== 测试完成: %d/%d 通过 ==========\n", passed, len(tests))
+	fmt.Printf("========== 测试完成: %d/%d 通过，关键词平均覆盖率 %.1f%% ==========\n",
+		report.Passed,
+		report.Total,
+		report.AverageKeywordCoverage*100,
+	)
 	return nil
 }

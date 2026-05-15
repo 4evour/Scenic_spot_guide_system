@@ -1,4 +1,4 @@
-.PHONY: check test build frontend-check frontend-build encoding secrets
+.PHONY: check test build frontend-check frontend-build encoding secrets rag-eval demo-seed
 
 check: encoding secrets test frontend-check
 
@@ -19,3 +19,9 @@ frontend-build:
 
 build:
 	go build ./...
+
+rag-eval:
+	go run ./cmd/rag-eval -eval knowledge/lingshan_eval_qa.json -knowledge knowledge/lingshan_chunks.jsonl
+
+demo-seed:
+	go run ./cmd/demo-seed

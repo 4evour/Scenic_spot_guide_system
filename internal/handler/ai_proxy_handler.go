@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -122,7 +123,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 
 	var req ChatCompletionRequest
 	if err := json.Unmarshal(rawBody, &req); err != nil {
-		fmt.Printf("[OpenAI Proxy] JSON解析失败: %v, body_len=%d\n", err, len(rawBody))
+		slog.Warn("OpenAI 兼容请求 JSON 解析失败", "error", err, "body_len", len(rawBody))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
@@ -138,12 +139,12 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		}
 	}
 	if query == "" {
-		fmt.Printf("[OpenAI Proxy] 未找到 user 消息, messages count: %d\n", len(req.Messages))
+		slog.Warn("OpenAI 兼容请求缺少 user 消息", "messages_count", len(req.Messages))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no user message found"})
 		return
 	}
 
-	fmt.Printf("[OpenAI Proxy] 收到请求: query_len=%d, stream=%v\n", len([]rune(query)), req.Stream)
+	slog.Info("收到 OpenAI 兼容请求", "query_len", len([]rune(query)), "stream", req.Stream)
 
 	if h.ragService == nil {
 		if req.Stream {
@@ -159,7 +160,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 	response, _, err := h.ragService.QueryWithRAGAndRoute(query)
 	elapsed := time.Since(startTime).Milliseconds()
 	if err != nil {
-		fmt.Printf("[OpenAI Proxy] RAG错误: %v\n", err)
+		slog.Error("OpenAI 兼容请求 RAG 查询失败", "error", err, "elapsed_ms", elapsed)
 		if req.Stream {
 			h.writeStreamError(c, "RAG query failed")
 		} else {
@@ -184,7 +185,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		})
 	}
 
-	fmt.Printf("[OpenAI Proxy] 回答完成: emotion=%s, response_len=%d\n", emotion, len([]rune(response)))
+	slog.Info("OpenAI 兼容请求回答完成", "emotion", emotion, "response_len", len([]rune(response)), "elapsed_ms", elapsed)
 
 	if req.Stream {
 		h.writeStreamResponse(c, req.Model, responseWithEmotion)
@@ -250,7 +251,7 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 	writer := c.Writer
 	flusher, ok := writer.(http.Flusher)
 	if !ok {
-		fmt.Println("[OpenAI Proxy] 错误: ResponseWriter 不支持 Flusher")
+		slog.Error("OpenAI 兼容流式响应失败，ResponseWriter 不支持 Flusher")
 		return
 	}
 
@@ -336,7 +337,7 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 	fmt.Fprintf(writer, "data: [DONE]\n\n")
 	flusher.Flush()
 
-	fmt.Printf("[OpenAI Proxy] SSE 流式响应完成，共 %d 字符\n", len(runes))
+	slog.Info("OpenAI 兼容 SSE 流式响应完成", "chars", len(runes))
 }
 
 // writeStreamError 以 SSE 格式返回错误

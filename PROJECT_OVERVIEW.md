@@ -24,6 +24,8 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - `static`：Go 服务直接托管的静态资源和 Vue 构建产物。
 - `docs`：数字人集成、运行说明和 API 文档。
 - `scripts`：项目辅助脚本，例如编码检查。
+- `cmd/rag-eval`：离线 RAG 评估命令，默认使用 `knowledge/lingshan_chunks.jsonl` 和 `knowledge/lingshan_eval_qa.json` 输出通过率与关键词覆盖率。
+- `cmd/demo-seed`：演示数据初始化命令，向当前配置数据库写入演示账号、景点、路线、交互日志，并在知识库为空时导入默认知识。
 
 ## 核心流程
 
@@ -42,12 +44,16 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - 前端构建：在 `web-vue` 目录运行 `npm install` 和 `npm run build`。
 - 启动服务：仓库根目录运行 `go run .`。
 - 验证命令：`go test ./...`、`go vet ./...`、`npm run check`、`npm run check:encoding`、`npm run build`。
+- RAG 评估：`go run ./cmd/rag-eval`，可加 `-format json` 输出结构化报告，或加 `-fail-on-miss` 用于质量门禁。
+- 演示数据：`go run ./cmd/demo-seed`，默认管理员账号为 `admin / DemoAdmin123456`；演示密码只用于本地演示，不应作为生产凭据。
 
 ## 关键约定
 
 - 不提交 `configs/config.yaml`、数据库、日志、可执行文件、缓存目录和本地环境文件。
 - `static/vue-app` 是 Vue 构建输出，会随 `web-vue` 构建刷新。
 - Vue 应用包含数据看板、管理后台、数字人导览和游客地图四个主要视图。
+- 游客地图优先从 `/api/v1/spots` 读取真实景点数据；接口为空或不可用时才回退到前端内置演示点位。
+- 旧静态 `/static/admin.html` 与 `/static/dashboard.html` 不再承载 mock 管理/大屏页面，仅跳转到 Vue 正式入口；对应旧 mock 脚本已从 `static/js` 移除，避免演示时误用模拟数据。
 - 前端生产构建关闭 sourcemap，避免提交大体积调试映射文件。
 - `static/digital-human/libs/live2dcubismcore.min.js` 被 Vue 入口引用，不能随意删除。
 - 当前 Live2D 主模型使用 `static/live2d-models/mao_pro`。
@@ -62,6 +68,7 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - 静态管理页和 Vue 管理/大屏页面从 `localStorage.authToken` 读取 JWT 并附加到管理请求。
 - 旧静态游客页和大屏中由用户或接口返回的文本插入 HTML 前必须经过 `escapeHtml` 转义。
 - RAG 通用问答日志不得打印 API Key 或其前缀；调试日志应避免输出完整请求体和敏感响应体。
+- 日志使用 Go `slog` 作为默认结构化 logger；AI、RAG、数字人和 OpenAI 兼容代理链路优先记录长度、耗时、状态码、trace/session 等元信息，不记录完整敏感正文。
 - HTTP 服务显式配置读取、写入、空闲和请求头超时，并设置不破坏同源 iframe、语音输入和数字人媒体能力的基础安全响应头。
 - `SCENIC_GUIDE_DEV_ADMIN_BYPASS` 仅用于本机开发调试，且只接受真实 `RemoteAddr` 为 loopback 的请求，不信任转发头。
 - 公开仓库前已重写 Git 历史，移除旧提交中出现过的 API Key 形态文本和旧 sourcemap 文件；相关真实密钥仍应在服务商控制台轮换。
