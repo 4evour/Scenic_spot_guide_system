@@ -3,7 +3,19 @@ server:
   port: "8080"
 
 database:
-  driver: "sqlite"
+  # 默认使用 PostgreSQL 主配置；本地轻量运行可显式改为 sqlite 并设置 path。
+  # SQLite 不是 PostgreSQL 故障后的自动接管方案，不承担高可用或数据同步语义。
+  driver: "postgres"
+  host: "127.0.0.1"
+  port: 5432
+  name: "scenic_guide"
+  user: "scenic"
+  password: "scenic_dev_password"
+  max_open_conns: 25
+  max_idle_conns: 10
+  conn_max_lifetime_minutes: 30
+  # sqlite local/dev profile:
+  # driver: "sqlite"
   path: "./data/scenic_guide.db"
 
 logging:

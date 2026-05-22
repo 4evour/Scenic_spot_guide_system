@@ -10,7 +10,7 @@
 
 系统分为游客侧和管理员侧：游客可以查询景点、路线、导览内容，也可以通过 AI 问答或数字人获取导览服务；管理员可以维护景点、路线、导览内容、知识库、数字人配置，并查看运营数据大屏。
 
-技术上，后端使用 Go + Gin + GORM + SQLite，前端使用 Vue 3 + TypeScript + Vite，AI 部分使用 RAG 检索增强生成，并通过 OpenAI 兼容接口对接数字人服务。
+技术上，后端使用 Go + Gin + GORM，主数据库配置是 PostgreSQL，SQLite 只保留为本地开发和轻量测试配置；前端使用 Vue 3 + TypeScript + Vite，AI 部分使用 RAG 检索增强生成，并通过 OpenAI 兼容接口和 SSE/WebSocket 对接数字人服务。
 
 ### 2. 这个项目解决了什么痛点？
 
@@ -47,7 +47,7 @@
 
 因为项目不只是简单 CRUD，还有 RAG、知识库导入、鉴权、统计、数字人集成等业务。如果把逻辑都写在 Handler 里，会导致接口层臃肿、难测试、难维护。
 
-分层后，Handler 只处理 HTTP，Service 聚合业务规则，Repository 屏蔽数据访问细节。后续如果从 SQLite 换 MySQL，或者把 RAG 检索换成向量数据库，影响范围会更可控。
+分层后，Handler 只处理 HTTP，Service 聚合业务规则，Repository 屏蔽数据访问细节。现在数据库主配置已经支持 PostgreSQL，SQLite 只是本地开发配置；后续如果把 RAG 检索换成 pgvector、Milvus 或 Qdrant，影响范围会更可控。
 
 ### 6. 项目启动流程是什么？
 
@@ -71,7 +71,7 @@ RAG 流程分成知识导入、检索、Prompt 构造和大模型生成四步。
 
 知识导入时，系统支持 JSONL、JSON、Markdown、TXT。JSONL/JSON 可以直接包含 `title`、`content`、`source`、`metadata` 字段；Markdown/TXT 会按段落切成约 1200 字以内的知识片段。每个片段会生成 ID、标题、来源和向量信息，然后存入数据库。
 
-用户提问时，系统先从知识库中取出片段，通过 Embedding 余弦相似度或 BM25 计算相关度，筛选 TopK，当前默认 TopK 是 5。然后把相关知识片段拼进 Prompt，要求模型优先基于景区资料回答，不能编造票价、开放时间等实时敏感信息。如果没有检索到相关知识，就走通用 Chat 模式，并明确提示知识库不足。
+用户提问时，系统先从知识库中取出片段，通过 Embedding 余弦相似度、BM25/词面分和轻量 rerank 思路计算相关度，默认筛选 TopK=8。Embedding 口径写清楚为 DashScope `text-embedding-v2`，1536 维、Cosine、Float32。然后把相关知识片段拼进 Prompt，要求模型优先基于景区资料回答，不能编造票价、开放时间等实时敏感信息。如果没有检索到相关知识，就走通用 Chat 模式，并明确提示知识库不足。
 
 ### 8. 为什么需要 BM25 降级？
 
@@ -91,7 +91,7 @@ Embedding 依赖外部 API，一旦 API Key 没配置、网络异常或服务不
 
 ### 10. 为什么不用真正的向量数据库？
 
-这个项目目前数据规模偏小，用 SQLite 存储知识片段和向量字符串已经能满足演示和中小规模场景。引入 Milvus、Qdrant 或 pgvector 会增加部署复杂度。
+当前项目先用 PostgreSQL/GORM 保存知识片段和业务数据，RAG 检索逻辑封装在服务层；3000 个知识切片和 300 条评测问答是合成闭集实验，用于验证本地检索链路可复现、可评估。引入 Milvus、Qdrant 或 pgvector 会增加部署复杂度，所以目前没有把向量数据库作为默认依赖。
 
 当前设计把检索逻辑封装在 RAGService 里，后续如果知识规模扩大，可以把 Repository 或检索 Provider 替换为真正的向量数据库。
 
@@ -169,11 +169,15 @@ AI/RAG/数字人相关日志避免打印完整用户问题、完整回答、请�
 
 ## 六、数据库和数据模型
 
-### 21. 为什么用 SQLite？
+### 21. 为什么主配置用 PostgreSQL，还保留 SQLite？
 
-SQLite 部署简单，不需要额外数据库服务，适合本地演示、课程项目或中小规模单机应用。这个项目的核心重点是导览业务、RAG 和数字人集成，不是高并发数据库集群。
+之前 SQLite 的优势是部署简单，适合课程项目、本地演示和快速复现。但它不适合高写并发和更接近真实多用户的场景，所以现在项目把 PostgreSQL 作为主数据库配置，并在 Docker Compose 中提供 `postgres:16-alpine` 服务。
 
-后续如果上线到生产，可以把 GORM driver 换成 MySQL 或 PostgreSQL，业务层改动相对有限。
+SQLite 仍然保留为本地开发和轻量测试配置，方便没有数据库服务时快速跑通。它不是 PostgreSQL 故障后的自动接管方案，也没有双写或数据同步语义。正式表达时，我会讲 PostgreSQL + GORM + 索引 + 连接池，而不是把 SQLite 包装成生产数据库。
+
+如果面试官追问“为什么还保留 SQLite”，可以这样答：
+
+> 我保留 SQLite 是为了本地开发和测试便利，不是为了做数据库高可用。这个项目的主数据库配置是 PostgreSQL；真正上线还要补版本化 migration、备份恢复、慢查询监控，并把缓存和限流迁到 Redis。
 
 ### 22. 数据库表大概有哪些？
 
@@ -210,6 +214,7 @@ SQLite 部署简单，不需要额外数据库服务，适合本地演示、课�
 - RAG 查询缓存，避免重复调用大模型。
 - Embedding 缓存，避免重复生成向量。
 - 知识库缓存，减少频繁全表读取。
+- BM25 倒排候选索引，避免 3000 个切片下每次全量排序。
 - HTTP Client 设置连接池、超时和 KeepAlive。
 - 知识库列表接口做数据库分页，避免全量加载后内存分页。
 - 服务端设置 ReadTimeout、WriteTimeout、IdleTimeout 和 ReadHeaderTimeout，避免慢请求拖垮服务。
@@ -218,13 +223,13 @@ SQLite 部署简单，不需要额外数据库服务，适合本地演示、课�
 
 当前项目适合单机中小规模场景。并发高时可能有几个瓶颈：
 
-- SQLite 写并发能力有限。
-- RAG 当前会从缓存中遍历知识片段做相似度计算，知识规模大后会慢。
+- PostgreSQL 主路径能支撑比 SQLite 更可靠的多用户读写，但生产化还需要版本化 migration、备份、慢查询监控和容量评估。
+- 当前 BM25 倒排候选已经覆盖 3000 切片验证，更大规模仍应接 pgvector、Milvus、Qdrant 或专门搜索服务。
 - 内存限流和缓存不能跨实例共享。
 - 大模型接口调用延迟和限额会成为瓶颈。
 - SSE 流式响应会占用连接。
 
-优化方向是换 MySQL/PostgreSQL，加 Redis 缓存和限流，引入向量数据库，异步记录日志，并对 AI 调用做队列、超时、熔断和降级。
+优化方向是继续完善 PostgreSQL 迁移和索引治理，加 Redis 缓存和限流，引入向量数据库或 pgvector，异步记录日志，并对 AI 调用做队列、超时、熔断和降级。
 
 ### 28. 服务如何优雅关闭？
 
@@ -249,6 +254,8 @@ npm run build
 
 项目还有 `make check` 作为全量检查入口，当前会串联编码检查、密钥形态扫描、后端测试和前端类型检查。数字人相关接口可在本地后端启动后用接口文档中的请求示例手动验证。
 
+RAG 还有独立评估命令：基础样例用 `go run ./cmd/rag-eval -k 8 -fail-on-miss` 做 smoke test；真实资料评估用 `go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 3 -retrieval-only -report-env -format json -out docs/eval-results/lingshan-real-rag-eval-bench.json`。当前真实资料集包含 122 个切片、203 条独立评测问答，bench 口径下 repeat 3 共 609 次评估，Recall@8 85.5%、MRR@8 0.749、关键词覆盖率 94.3%、纯检索 p50/p95 约 7ms/10ms。这个结果只代表本地 retrieval-only 检索链路，不包含外部 Embedding、大模型生成、ASR 或 TTS。
+
 ### 30. 遇到过什么问题，怎么解决的？
 
 一个典型问题是中文文档和源码在 Windows PowerShell 里显示乱码。排查后发现很多情况不是文件本身损坏，而是终端编码页问题。所以项目里补了 `.editorconfig` 和编码检查脚本，统一 UTF-8/LF，并通过 `npm run check:encoding` 检查替换字符和常见乱码模式，避免误判和提交脏编码。
@@ -271,33 +278,49 @@ npm run build
 
 - 当前向量检索还不是专业向量数据库，知识规模大后性能会下降。
 - BM25 和 Embedding 混合检索还可以更精细，比如加 rerank。
-- SQLite 更适合演示和单机，不适合高写并发生产场景。
+- PostgreSQL 已作为主数据库配置，但还缺少版本化 migration、备份恢复和真实生产流量验证。
 - 数字人会话当前偏轻量，没有完整的多轮上下文管理。
 - AI 回答还缺少来源引用、置信度和人工审核流程。
 - 限流和缓存是内存级，多实例部署时需要 Redis 等共享组件。
 
 这样回答会显得你清楚项目边界，而不是盲目吹项目。
 
-### 33. 如果继续优化，你会怎么做？
+### 33. 这个项目会不会有过度包装的问题？
+
+这个问题要主动降调回答：
+
+> 我会把它定位为演示系统和作品集项目，而不是已经大规模上线的商业系统。它的价值在于我把景区内容管理、RAG 问答、OpenAI 兼容协议、数字人接入、权限控制和运营统计这些链路跑通，并且知道每一层的边界。
+
+可以继续补充：
+
+当前保留了 32 个知识切片和 5 条评测问答作为 smoke test，同时保留 3000/300 合成规模验证集作为内部回归口径；简历主口径改为真实资料评估：基于官网/政府公开资料清洗 122 个切片，并设计 203 条独立问答覆盖事实问答、游客自然问法和实时信息边界。扩大数据集后 Recall@8 低于合成闭集是预期现象，它能暴露开放问法、相近切片排序和服务边界表达问题。真正落地时，需要继续扩大语料、增加来源引用、独立人工标注、向量数据库、rerank 和监控。
+
+### 34. 哪些是你自己实现的，哪些是接入第三方？
+
+自己实现的部分主要是 Go 后端分层、REST API、GORM 数据模型、JWT 鉴权、知识库管理、RAG 调用链路、BM25 降级、OpenAI 兼容代理、SSE 响应、数字人相关业务接口和 Vue 管理/看板联调。
+
+第三方或外部能力包括 Gin、GORM、PostgreSQL 驱动、SQLite、DashScope Embedding、DeepSeek/OpenAI 兼容模型、Open-LLM-VTuber、Live2D/PixiJS。我的工作不是从零实现大模型或 Live2D 框架，而是完成协议适配、OpenAI 兼容接口、SSE/WebSocket 联调、前端二开、本地检索兜底和工程化封装。
+
+### 35. 如果继续优化，你会怎么做？
 
 我会从四个方向优化：
 
-1. RAG 侧接入向量数据库和 rerank，答案展示引用来源，提高准确性和可解释性。
-2. 工程侧引入 Redis 做缓存、限流和会话状态，数据库升级到 PostgreSQL 或 MySQL。
+1. RAG 侧接入向量数据库或 pgvector 和 rerank，答案展示引用来源，提高准确性和可解释性。
+2. 工程侧完善 PostgreSQL migration、备份、慢查询监控，并引入 Redis 做缓存、限流和会话状态。
 3. 数字人侧完善多轮上下文、打断机制、语音识别和 TTS 链路监控。
 4. 运维侧补充 Docker Compose、CI 检查、结构化日志、指标监控和错误追踪，提升可部署性。
 
 ## 十一、高频追问短答
 
-### 34. Handler、Service、Repository 分别干什么？
+### 36. Handler、Service、Repository 分别干什么？
 
 Handler 处理 HTTP，Service 处理业务规则，Repository 处理数据库访问。这样职责清晰，方便测试和替换实现。
 
-### 35. AutoMigrate 有什么风险？
+### 37. AutoMigrate 有什么风险？
 
 AutoMigrate 适合开发和演示，但生产环境要谨慎，因为复杂字段变更、索引调整、数据迁移不一定可控。生产更适合用版本化 migration 工具。
 
-### 36. 为什么知识库更新后要清缓存？
+### 38. 为什么知识库更新后要清缓存？
 
 因为查询缓存和知识库缓存可能包含旧内容。如果管理员更新知识后不清缓存，用户可能继续拿到过期答案。
 

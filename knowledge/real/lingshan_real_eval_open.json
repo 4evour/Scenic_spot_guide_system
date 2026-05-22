@@ -1,0 +1,2890 @@
+[
+  {
+    "question": "灵山胜境主要是什么类型的景区？",
+    "expected_keywords": [
+      "无锡",
+      "太湖",
+      "佛教文化"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境有哪些核心景点？",
+    "expected_keywords": [
+      "灵山大佛",
+      "九龙灌浴",
+      "灵山梵宫"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境是哪一年开园的？",
+    "expected_keywords": [
+      "1997年"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛有多高？",
+    "expected_keywords": [
+      "88米"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛为什么是标志性景点？",
+    "expected_keywords": [
+      "标志性景观",
+      "太湖",
+      "佛教文化"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛和太湖有什么关系？",
+    "expected_keywords": [
+      "太湖之滨",
+      "88米"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "九龙灌浴是个什么项目？",
+    "expected_keywords": [
+      "动态音乐群雕",
+      "佛陀诞生"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山哪个景点会出现花开见佛？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "花开见佛"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "会喷水的莲花在灵山叫什么？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "喷泉"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001",
+      "real-jiulong-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "九龙灌浴讲的是哪段佛教故事？",
+    "expected_keywords": [
+      "佛陀诞生",
+      "花开见佛"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山梵宫适合看什么？",
+    "expected_keywords": [
+      "佛教艺术",
+      "文化交流"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山梵宫跟世界佛教论坛有什么关系？",
+    "expected_keywords": [
+      "世界佛教论坛",
+      "会址"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "梵宫里面有哪些工艺可以看？",
+    "expected_keywords": [
+      "木雕",
+      "壁画",
+      "琉璃"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "吉祥颂主要讲什么？",
+    "expected_keywords": [
+      "释迦牟尼",
+      "成佛过程"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-002",
+      "real-fangong-003"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "吉祥颂今天几点演？",
+    "expected_keywords": [
+      "以官方最新公告",
+      "现场公示"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-003",
+      "real-negative-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "五印坛城名字是什么意思？",
+    "expected_keywords": [
+      "五种手印",
+      "五种智慧"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "五印坛城展示哪类佛教文化？",
+    "expected_keywords": [
+      "藏传佛教",
+      "民俗艺术"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "想了解藏传佛教文化应该去哪？",
+    "expected_keywords": [
+      "五印坛城",
+      "藏传佛教"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "五印坛城和梵宫、大佛是什么关系？",
+    "expected_keywords": [
+      "灵山大佛",
+      "灵山梵宫",
+      "文化艺术群落"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "祥符禅寺在游览中有什么定位？",
+    "expected_keywords": [
+      "佛教文化节点",
+      "灵山大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "想安静感受寺院氛围去哪儿？",
+    "expected_keywords": [
+      "祥符禅寺",
+      "安静"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山佛手适合什么游客？",
+    "expected_keywords": [
+      "亲子游客",
+      "拍照"
+    ],
+    "expected_chunk_ids": [
+      "real-foshou-mile-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "百子戏弥勒适合带小朋友看吗？",
+    "expected_keywords": [
+      "亲子游客",
+      "百子戏弥勒"
+    ],
+    "expected_chunk_ids": [
+      "real-foshou-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "佛教文化博览馆适合什么人？",
+    "expected_keywords": [
+      "佛教文化",
+      "历史知识"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "万佛殿主要看什么？",
+    "expected_keywords": [
+      "佛教文化",
+      "艺术内容"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "曼飞龙塔属于哪类景观？",
+    "expected_keywords": [
+      "佛教文化景观群",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-manfeilong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "第一次去灵山怎么安排路线？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "祥符禅寺",
+      "灵山大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001",
+      "real-route-004"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "半天游灵山优先看哪些点？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "灵山大佛",
+      "灵山梵宫"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想拍照和看标志景观，路线怎么走？",
+    "expected_keywords": [
+      "佛手广场",
+      "灵山大佛",
+      "九龙灌浴"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001",
+      "real-foshou-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "带孩子去灵山有哪些点比较合适？",
+    "expected_keywords": [
+      "百子戏弥勒",
+      "佛手广场",
+      "九龙灌浴"
+    ],
+    "expected_chunk_ids": [
+      "real-route-002",
+      "real-foshou-mile-001",
+      "real-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "亲子路线可以怎么走？",
+    "expected_keywords": [
+      "百子戏弥勒",
+      "佛手广场",
+      "灵山大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-route-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "我更想看文化内容，重点放哪里？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "五印坛城",
+      "佛教文化博览馆"
+    ],
+    "expected_chunk_ids": [
+      "real-route-003",
+      "real-overview-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "深度了解佛教文化怎么规划？",
+    "expected_keywords": [
+      "万佛殿",
+      "祥符禅寺",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-route-003",
+      "real-route-006",
+      "real-museum-002"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山有没有素食或简餐？",
+    "expected_keywords": [
+      "素食",
+      "简餐",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-food-rest-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "景区里休息点和洗手间信息可靠吗？",
+    "expected_keywords": [
+      "现场指引",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-food-rest-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山胜境在无锡哪里？",
+    "expected_keywords": [
+      "无锡",
+      "太湖之滨"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "从无锡市区怎么去灵山？",
+    "expected_keywords": [
+      "无锡市区",
+      "地图导航",
+      "当日公告"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山停车还有多少空位？",
+    "expected_keywords": [
+      "停车余位",
+      "资料不足",
+      "现场公告"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-parking-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "今天灵山门票多少钱？",
+    "expected_keywords": [
+      "门票",
+      "官方最新公告",
+      "购票页"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-ticket-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山今天几点开门？",
+    "expected_keywords": [
+      "开放时间",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-ticket-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "今天会不会临时闭园？",
+    "expected_keywords": [
+      "临时闭园",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "小灵能回答实时天气吗？",
+    "expected_keywords": [
+      "天气",
+      "资料库没有",
+      "官方最新页面"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-002"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "小灵能告诉我酒店还有没有房吗？",
+    "expected_keywords": [
+      "酒店库存",
+      "资料库没有"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "小灵可以回答哪些导览问题？",
+    "expected_keywords": [
+      "景点介绍",
+      "游览顺序",
+      "文化背景"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "如果资料库没有答案，小灵应该怎么说？",
+    "expected_keywords": [
+      "资料不足",
+      "官方最新页面",
+      "现场公告"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山大佛、梵宫、五印坛城分别代表什么？",
+    "expected_keywords": [
+      "灵山大佛",
+      "灵山梵宫",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-001",
+      "real-dafo-001",
+      "real-fangong-001",
+      "real-wuyin-001"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "景区有哪些适合初次游客先看的点？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "佛手广场",
+      "祥符禅寺"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001",
+      "real-route-004",
+      "real-foshou-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛之外还有哪些文化建筑？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "五印坛城",
+      "曼飞龙塔"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-002",
+      "real-manfeilong-001"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山梵宫为什么适合建筑艺术爱好者？",
+    "expected_keywords": [
+      "文化建筑",
+      "佛教艺术",
+      "木雕"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-001",
+      "real-fangong-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境能不能只说成游乐园？",
+    "expected_keywords": [
+      "佛教文化",
+      "历史知识",
+      "景区"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "景区中轴线大概有哪些点？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "祥符禅寺",
+      "灵山大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001",
+      "real-foshou-mile-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想看佛陀诞生故事应该问哪个景点？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "佛陀诞生"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想看释迦牟尼成佛过程应该关注什么演出？",
+    "expected_keywords": [
+      "吉祥颂",
+      "释迦牟尼",
+      "成佛过程"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-002",
+      "real-fangong-003"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "梵宫的演出场次能直接固定告诉游客吗？",
+    "expected_keywords": [
+      "演出场次",
+      "实时运营信息",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-003",
+      "real-negative-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "票价优惠政策能不能写死在回答里？",
+    "expected_keywords": [
+      "优惠政策",
+      "不能编造",
+      "购票页"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "景区交通信息为什么要提示以导航为准？",
+    "expected_keywords": [
+      "公交",
+      "停车",
+      "当日公告"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "五印坛城和曼飞龙塔都能体现什么？",
+    "expected_keywords": [
+      "佛教文化",
+      "不同佛教文化体系"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-002",
+      "real-manfeilong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "祥符禅寺和灵山大佛可以放在一条游线吗？",
+    "expected_keywords": [
+      "祥符禅寺",
+      "灵山大佛",
+      "主线"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-001",
+      "real-route-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "佛教文化博览馆和万佛殿适合快速打卡还是深度了解？",
+    "expected_keywords": [
+      "系统了解",
+      "佛教文化背景"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山有没有适合拍照的轻松点位？",
+    "expected_keywords": [
+      "灵山佛手",
+      "百子戏弥勒",
+      "拍照"
+    ],
+    "expected_chunk_ids": [
+      "real-foshou-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "如果游客只问“喷水表演在哪”，应该召回哪个知识？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "喷泉"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001",
+      "real-jiulong-002"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "如果游客说“想看木雕壁画琉璃”，应该推荐哪里？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "木雕",
+      "壁画"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境和佛教三大语系文化有关吗？",
+    "expected_keywords": [
+      "佛教三大语系",
+      "灵山大佛",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "初次到访为什么先推荐九龙灌浴到大佛这条线？",
+    "expected_keywords": [
+      "标志景观",
+      "拍照点",
+      "文化理解"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "老人游客想轻松看核心景观怎么安排？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "祥符禅寺",
+      "灵山大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-route-001",
+      "real-route-004"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问餐厅现在开不开，能不能直接回答？",
+    "expected_keywords": [
+      "餐厅营业",
+      "临时调整",
+      "现场指引"
+    ],
+    "expected_chunk_ids": [
+      "real-service-004",
+      "real-food-rest-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "景区内是否所有服务设施都能离线准确回答？",
+    "expected_keywords": [
+      "休息点",
+      "洗手间",
+      "现场指引"
+    ],
+    "expected_chunk_ids": [
+      "real-service-002",
+      "real-service-003",
+      "real-food-rest-001"
+    ],
+    "category": "negative",
+    "difficulty": "hard",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "问到拥堵情况时，小灵应不应该编一个答案？",
+    "expected_keywords": [
+      "拥堵情况",
+      "资料库没有",
+      "现场公告"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "问到今日停车余位时应该怎么兜底？",
+    "expected_keywords": [
+      "停车余位",
+      "资料不足",
+      "现场公告"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-parking-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山胜境的回答里哪些信息最容易过期？",
+    "expected_keywords": [
+      "门票价格",
+      "开放时间",
+      "演出场次"
+    ],
+    "expected_chunk_ids": [
+      "real-risk-001",
+      "real-negative-001",
+      "real-boundary-ticket-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问临时检修项目时怎么回答？",
+    "expected_keywords": [
+      "临时检修",
+      "官方最新公告",
+      "现场公示"
+    ],
+    "expected_chunk_ids": [
+      "real-negative-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "小灵能不能替代官方公告？",
+    "expected_keywords": [
+      "不能编造",
+      "官方最新公告",
+      "现场公示"
+    ],
+    "expected_chunk_ids": [
+      "real-risk-001",
+      "real-risk-002",
+      "real-negative-001",
+      "real-negative-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "真实资料评估和合成闭集有什么不同？",
+    "expected_keywords": [
+      "官方",
+      "资料",
+      "不能外推"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-eval-001"
+    ],
+    "category": "negative",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山有哪些适合文化讲解的关键词？",
+    "expected_keywords": [
+      "佛教文化",
+      "灵山梵宫",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001",
+      "real-fangong-001",
+      "real-wuyin-001"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "导览里为什么要区分官方事实和游客问法？",
+    "expected_keywords": [
+      "官方",
+      "游客",
+      "问法"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-eval-001"
+    ],
+    "category": "negative",
+    "difficulty": "hard",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "从景区概况看，灵山有哪些大类内容？",
+    "expected_keywords": [
+      "园林广场",
+      "佛教文化",
+      "历史知识"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "如果只想看最具代表性的灵山景观，首选哪个？",
+    "expected_keywords": [
+      "灵山大佛",
+      "标志性景观"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-001"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "游客说想看“藏式风格”的内容，应该联想到哪里？",
+    "expected_keywords": [
+      "五印坛城",
+      "藏传佛教"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-001",
+      "real-wuyin-003"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问灵山有什么剧场演艺，应该怎么谨慎回答？",
+    "expected_keywords": [
+      "吉祥颂",
+      "演出场次",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-show-001",
+      "real-fangong-003",
+      "real-boundary-show-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山回答能不能凭第三方评论说今天人多？",
+    "expected_keywords": [
+      "拥堵情况",
+      "资料库没有",
+      "官方最新页面"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-weather-001",
+      "real-negative-002",
+      "real-risk-003"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "如果问“现在买票有优惠吗”，应该召回什么边界？",
+    "expected_keywords": [
+      "优惠",
+      "购票页",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-ticket-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问“有没有导览服务”，可以怎么回答？",
+    "expected_keywords": [
+      "导览服务",
+      "现场指引",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-food-rest-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "路线推荐为什么不能承诺精确耗时？",
+    "expected_keywords": [
+      "停留时间",
+      "当天客流",
+      "变化"
+    ],
+    "expected_chunk_ids": [
+      "real-route-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山梵宫和五印坛城都属于简单拍照点吗？",
+    "expected_keywords": [
+      "佛教艺术",
+      "藏传佛教",
+      "文化"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-001",
+      "real-wuyin-001"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问灵山是不是只看大佛，应该怎么扩展介绍？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "灵山梵宫",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境是不是国家 AAAAA 景区？",
+    "expected_keywords": [
+      "AAAAA",
+      "无锡",
+      "佛教文化"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境在马山还是市中心？",
+    "expected_keywords": [
+      "马山",
+      "太湖"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-002",
+      "real-transport-004"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山的游览空间可以怎么理解？",
+    "expected_keywords": [
+      "山水环境",
+      "广场轴线",
+      "佛教文化建筑"
+    ],
+    "expected_chunk_ids": [
+      "real-overview-003"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛适合只远观吗？",
+    "expected_keywords": [
+      "远观",
+      "朝拜",
+      "88米"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-003",
+      "real-dafo-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "问灵山大佛能不能拍照时要注意什么？",
+    "expected_keywords": [
+      "拍照",
+      "现场秩序"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-003",
+      "real-photo-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "游客问大佛是不是最代表性的点，怎么回答？",
+    "expected_keywords": [
+      "88米",
+      "标志性景观"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-004",
+      "real-dafo-001"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "九龙灌浴表演时间能不能直接说死？",
+    "expected_keywords": [
+      "表演时间",
+      "官方最新公告",
+      "现场公示"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-003",
+      "real-show-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "亲子游客为什么适合看九龙灌浴？",
+    "expected_keywords": [
+      "故事性",
+      "动态视觉",
+      "亲子游客"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-004"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "下雨天灵山梵宫是不是更适合安排？",
+    "expected_keywords": [
+      "室内",
+      "建筑艺术",
+      "佛教艺术"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-004",
+      "real-route-007"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问梵宫值不值得看怎么回答？",
+    "expected_keywords": [
+      "建筑艺术",
+      "文化体验",
+      "实时场次"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-005",
+      "real-fangong-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山有哪些演艺项目要看公告？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "吉祥颂",
+      "官方最新公告"
+    ],
+    "expected_chunk_ids": [
+      "real-show-001",
+      "real-boundary-show-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "五印坛城可以简单说成拍照点吗？",
+    "expected_keywords": [
+      "五种手印",
+      "五种智慧",
+      "藏传佛教"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-003",
+      "real-wuyin-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山怎么看汉传藏传南传文化表达？",
+    "expected_keywords": [
+      "灵山大佛",
+      "五印坛城",
+      "曼飞龙塔"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-004",
+      "real-manfeilong-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "想礼佛祈福应该重点看哪里？",
+    "expected_keywords": [
+      "祥符禅寺",
+      "灵山大佛",
+      "礼佛"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-002",
+      "real-xiangfu-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "在祥符禅寺参观有什么礼仪提醒？",
+    "expected_keywords": [
+      "保持安静",
+      "尊重宗教场所",
+      "现场提示"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-003"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山佛手适合拍照吗？",
+    "expected_keywords": [
+      "拍照",
+      "亲子",
+      "轻松"
+    ],
+    "expected_chunk_ids": [
+      "real-foshou-mile-002",
+      "real-foshou-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "government"
+  },
+  {
+    "question": "百子戏弥勒为什么适合家庭游客？",
+    "expected_keywords": [
+      "亲子",
+      "家庭游客",
+      "轻松"
+    ],
+    "expected_chunk_ids": [
+      "real-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "想系统了解佛教文化，不只拍照，去哪？",
+    "expected_keywords": [
+      "佛教文化博览馆",
+      "万佛殿",
+      "灵山梵宫"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-002",
+      "real-route-003"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "万佛殿和博览馆有什么游览价值？",
+    "expected_keywords": [
+      "佛教造像",
+      "文化展示",
+      "室内参观"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-003",
+      "real-museum-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "曼飞龙塔和南传佛教风格有关吗？",
+    "expected_keywords": [
+      "曼飞龙塔",
+      "南传佛教",
+      "文化群落"
+    ],
+    "expected_chunk_ids": [
+      "real-manfeilong-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "半天游灵山能不能全看完？",
+    "expected_keywords": [
+      "半天游",
+      "取舍",
+      "不要承诺"
+    ],
+    "expected_chunk_ids": [
+      "real-route-005"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "一日深度游可以覆盖哪些文化点？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "五印坛城",
+      "万佛殿"
+    ],
+    "expected_chunk_ids": [
+      "real-route-006"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "雨天或高温去灵山怎么调整路线？",
+    "expected_keywords": [
+      "室内",
+      "灵山梵宫",
+      "万佛殿"
+    ],
+    "expected_chunk_ids": [
+      "real-route-007",
+      "real-fangong-004"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "老人游灵山为什么不能安排太满？",
+    "expected_keywords": [
+      "节奏更慢",
+      "合理休息",
+      "体力"
+    ],
+    "expected_chunk_ids": [
+      "real-route-008"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "想拍照打卡灵山推荐哪些点？",
+    "expected_keywords": [
+      "灵山大佛",
+      "佛手广场",
+      "九龙灌浴"
+    ],
+    "expected_chunk_ids": [
+      "real-route-009",
+      "real-photo-001"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山官方客服电话是多少？",
+    "expected_keywords": [
+      "400-168-0303"
+    ],
+    "expected_chunk_ids": [
+      "real-service-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问现场设施怎么找，应该怎么答？",
+    "expected_keywords": [
+      "现场指引",
+      "服务中心",
+      "官方页面"
+    ],
+    "expected_chunk_ids": [
+      "real-service-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "轮椅租借和母婴室能不能离线保证？",
+    "expected_keywords": [
+      "无障碍设施",
+      "现场咨询",
+      "不能编造"
+    ],
+    "expected_chunk_ids": [
+      "real-service-003"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "素食、简餐和菜单价格怎么回答？",
+    "expected_keywords": [
+      "素食",
+      "简餐",
+      "现场"
+    ],
+    "expected_chunk_ids": [
+      "real-service-004",
+      "real-food-rest-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山精舍能不能直接查实时房态？",
+    "expected_keywords": [
+      "灵山精舍",
+      "实时房态",
+      "官方预订页"
+    ],
+    "expected_chunk_ids": [
+      "real-service-005"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "过堂文化体验是否每天都有？",
+    "expected_keywords": [
+      "过堂",
+      "是否开放",
+      "官方预订"
+    ],
+    "expected_chunk_ids": [
+      "real-service-006"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "自驾游客问停车费和车位，怎么处理？",
+    "expected_keywords": [
+      "停车费",
+      "剩余车位",
+      "地图导航"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-002",
+      "real-boundary-parking-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "从高铁站到灵山的班次能不能固定回答？",
+    "expected_keywords": [
+      "公交线路",
+      "班次",
+      "当日运营"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-003"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山和太湖周边游有什么关系？",
+    "expected_keywords": [
+      "太湖",
+      "马山",
+      "周边游"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-004",
+      "real-nearby-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "天气和实时客流可以靠知识库回答吗？",
+    "expected_keywords": [
+      "天气",
+      "实时客流",
+      "无法确认"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-weather-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "老人票学生票优惠能不能写死？",
+    "expected_keywords": [
+      "老人票",
+      "学生票",
+      "官方购票页"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-ticket-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "九龙灌浴今天检修应该怎么答？",
+    "expected_keywords": [
+      "检修",
+      "官方最新公告",
+      "现场"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-show-002"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "宠物入园和无人机拍摄能不能直接承诺？",
+    "expected_keywords": [
+      "现场规定",
+      "不能替代",
+      "正式规定"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-safety-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "为什么不能把灵山说成只看大佛？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "祥符禅寺",
+      "灵山梵宫"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "佛足坛、五智门这些属于什么内容？",
+    "expected_keywords": [
+      "佛足坛",
+      "五智门",
+      "佛教文化景观"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "佛足坛适合解释什么文化？",
+    "expected_keywords": [
+      "礼佛文化",
+      "佛教象征"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-003"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "五智门是不是初次游客必看重点？",
+    "expected_keywords": [
+      "文化游览线索",
+      "不一定",
+      "初次游客"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-004"
+    ],
+    "category": "open_real",
+    "difficulty": "hard",
+    "source_type": "government"
+  },
+  {
+    "question": "降魔浮雕适合回答哪类问题？",
+    "expected_keywords": [
+      "佛教故事",
+      "浮雕",
+      "文化讲解"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "阿育王柱能不能随便展开历史细节？",
+    "expected_keywords": [
+      "阿育王柱",
+      "避免过度展开",
+      "未经资料确认"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-006"
+    ],
+    "category": "negative",
+    "difficulty": "hard",
+    "source_type": "government"
+  },
+  {
+    "question": "香水海可以怎么讲？",
+    "expected_keywords": [
+      "香水海",
+      "空间",
+      "佛教意象"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-007"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "灵山和普通景区有什么不同？",
+    "expected_keywords": [
+      "太湖山水",
+      "佛教文化",
+      "演艺体验"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-008"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "小灵在项目里是什么定位？",
+    "expected_keywords": [
+      "景区导览助手",
+      "路线建议",
+      "不应冒充官方客服"
+    ],
+    "expected_chunk_ids": [
+      "real-digital-human-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "小灵回答资料不足时应该怎么说？",
+    "expected_keywords": [
+      "知识库不足",
+      "官方最新公告",
+      "现场公示"
+    ],
+    "expected_chunk_ids": [
+      "real-digital-human-002",
+      "real-risk-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "扩展真实资料集的目的是什么？",
+    "expected_keywords": [
+      "作品集评估",
+      "真实游客问法",
+      "不是完整生产知识库"
+    ],
+    "expected_chunk_ids": [
+      "real-eval-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "评估失败时应该先做什么？",
+    "expected_keywords": [
+      "资料是否缺失",
+      "切片是否过粗",
+      "检索排序"
+    ],
+    "expected_chunk_ids": [
+      "real-eval-003"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "出行前为什么要再次确认项目时间？",
+    "expected_keywords": [
+      "季节",
+      "天气",
+      "运营安排"
+    ],
+    "expected_chunk_ids": [
+      "real-schedule-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "文创商品库存和价格能不能回答？",
+    "expected_keywords": [
+      "文创",
+      "库存",
+      "价格"
+    ],
+    "expected_chunk_ids": [
+      "real-shopping-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山和拈花湾联游能不能承诺通勤时间？",
+    "expected_keywords": [
+      "拈花湾",
+      "地图导航",
+      "不应承诺"
+    ],
+    "expected_chunk_ids": [
+      "real-nearby-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "太湖周边游中灵山内部重点是什么？",
+    "expected_keywords": [
+      "灵山大佛",
+      "灵山梵宫",
+      "九龙灌浴"
+    ],
+    "expected_chunk_ids": [
+      "real-nearby-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "节假日游灵山一般要注意什么？",
+    "expected_keywords": [
+      "节假日客流",
+      "预留排队时间"
+    ],
+    "expected_chunk_ids": [
+      "real-season-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "宗教场所拍照要怎么提醒？",
+    "expected_keywords": [
+      "宗教场所",
+      "现场拍照提示",
+      "工作人员要求"
+    ],
+    "expected_chunk_ids": [
+      "real-photo-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "住宿套餐和组合产品应该去哪确认？",
+    "expected_keywords": [
+      "官方购票页",
+      "官方客服",
+      "现场窗口"
+    ],
+    "expected_chunk_ids": [
+      "real-ticket-003"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "哪些事实一定不能编造？",
+    "expected_keywords": [
+      "门票价格",
+      "停车余位",
+      "酒店房态"
+    ],
+    "expected_chunk_ids": [
+      "real-risk-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "资料不足的标准兜底回答是什么？",
+    "expected_keywords": [
+      "当前知识库",
+      "一般导览建议",
+      "官方最新信息"
+    ],
+    "expected_chunk_ids": [
+      "real-risk-002"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "官方资料和第三方攻略冲突时听谁的？",
+    "expected_keywords": [
+      "官方资料",
+      "政府公开介绍",
+      "第三方内容"
+    ],
+    "expected_chunk_ids": [
+      "real-risk-003"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山是否适合无锡周边一日游？",
+    "expected_keywords": [
+      "无锡",
+      "太湖",
+      "周边游"
+    ],
+    "expected_chunk_ids": [
+      "real-nearby-002",
+      "real-overview-002"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "游客只想室内文化点，怎么推荐？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "佛教文化博览馆",
+      "万佛殿"
+    ],
+    "expected_chunk_ids": [
+      "real-route-007",
+      "real-museum-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "问景区客服能不能处理实时问题，怎么说？",
+    "expected_keywords": [
+      "400-168-0303",
+      "实时问题",
+      "官方"
+    ],
+    "expected_chunk_ids": [
+      "real-service-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想看佛教故事相关景观有哪些？",
+    "expected_keywords": [
+      "九龙灌浴",
+      "降魔浮雕",
+      "佛教故事"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-001",
+      "real-culture-005"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "government"
+  },
+  {
+    "question": "问灵山能不能飞无人机，应该怎么兜底？",
+    "expected_keywords": [
+      "无人机",
+      "现场规定",
+      "正式规定"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-safety-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "问景区商品促销活动能不能回答？",
+    "expected_keywords": [
+      "促销活动",
+      "价格",
+      "现场咨询"
+    ],
+    "expected_chunk_ids": [
+      "real-shopping-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "路线里为什么要考虑天气？",
+    "expected_keywords": [
+      "降雨",
+      "高温",
+      "室内点"
+    ],
+    "expected_chunk_ids": [
+      "real-season-001",
+      "real-route-007"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "佛教三大语系文化可以用哪些景点串起来？",
+    "expected_keywords": [
+      "灵山大佛",
+      "五印坛城",
+      "曼飞龙塔"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-004",
+      "real-manfeilong-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "问灵山是不是商业化游乐项目，怎么纠正？",
+    "expected_keywords": [
+      "太湖山水",
+      "佛教文化",
+      "文化建筑"
+    ],
+    "expected_chunk_ids": [
+      "real-culture-008",
+      "real-overview-003"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客问现场排队多久，知识库能回答吗？",
+    "expected_keywords": [
+      "排队时间",
+      "实时客流",
+      "无法确认"
+    ],
+    "expected_chunk_ids": [
+      "real-boundary-weather-001"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "third_party_pattern"
+  },
+  {
+    "question": "灵山胜境的官方地址在哪里？",
+    "expected_keywords": [
+      "无锡市滨湖区",
+      "马山灵山路1号",
+      "400-168-0303"
+    ],
+    "expected_chunk_ids": [
+      "real-address-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山官网停止服务后订单退改问谁？",
+    "expected_keywords": [
+      "2026年2月1日",
+      "停止服务",
+      "400-168-0303"
+    ],
+    "expected_chunk_ids": [
+      "real-official-service-boundary-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山胜境是5A级景区吗？",
+    "expected_keywords": [
+      "2009年",
+      "国家AAAAA级",
+      "旅游景区"
+    ],
+    "expected_chunk_ids": [
+      "real-honor-001",
+      "real-overview-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山和世界佛教论坛有什么关系？",
+    "expected_keywords": [
+      "世界佛教论坛",
+      "永久会址",
+      "2012年"
+    ],
+    "expected_chunk_ids": [
+      "real-honor-001",
+      "real-fangong-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山中轴线上讲了哪几个佛教故事阶段？",
+    "expected_keywords": [
+      "出生",
+      "降魔",
+      "说法",
+      "涅槃"
+    ],
+    "expected_chunk_ids": [
+      "real-axis-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山四大主体景观有哪些？",
+    "expected_keywords": [
+      "灵山大佛",
+      "九龙灌浴",
+      "灵山梵宫",
+      "五印坛城"
+    ],
+    "expected_chunk_ids": [
+      "real-axis-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛佛体和莲花座分别多高？",
+    "expected_keywords": [
+      "佛体",
+      "79米",
+      "莲花瓣",
+      "9米"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客说想抱佛脚，应该关联哪个知识？",
+    "expected_keywords": [
+      "抱佛脚",
+      "莲花座",
+      "灵山大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-005"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛的手势是什么意思？",
+    "expected_keywords": [
+      "施无畏印",
+      "与愿印",
+      "欢乐"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-006"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大佛怎么保证露天展示安全？",
+    "expected_keywords": [
+      "抗风",
+      "防震",
+      "耐腐蚀"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-007"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "五方五佛里灵山大佛和哪些大佛并列？",
+    "expected_keywords": [
+      "天坛大佛",
+      "乐山大佛",
+      "云冈大佛",
+      "龙门大佛"
+    ],
+    "expected_chunk_ids": [
+      "real-dafo-008"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "梵宫建筑本身有哪些特点？",
+    "expected_keywords": [
+      "依山而建",
+      "华塔",
+      "曼陀罗"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-006"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想看东阳木雕和唐卡应该去哪？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "东阳木雕",
+      "唐卡"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-007"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "梵宫里能看到哪些非遗或传统工艺？",
+    "expected_keywords": [
+      "琉璃",
+      "玉雕",
+      "瓯塑",
+      "壁画"
+    ],
+    "expected_chunk_ids": [
+      "real-fangong-007",
+      "real-fangong-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "九龙灌浴有哪些组成元素？",
+    "expected_keywords": [
+      "太子佛",
+      "莲花",
+      "九龙喷泉"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "九龙灌浴今天几点喷泉，能固定答吗？",
+    "expected_keywords": [
+      "具体今天几点",
+      "官方最新公告",
+      "现场公示"
+    ],
+    "expected_chunk_ids": [
+      "real-jiulong-006",
+      "real-boundary-show-002"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "五印坛城内部装饰有哪些藏族艺术元素？",
+    "expected_keywords": [
+      "彩绘",
+      "木雕",
+      "唐卡",
+      "镀金"
+    ],
+    "expected_chunk_ids": [
+      "real-wuyin-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "祥符禅寺是唐代就有的吗？",
+    "expected_keywords": [
+      "唐贞观年间",
+      "祥符禅寺",
+      "官方介绍"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-004"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "三圣殿和世界佛教论坛有什么联系？",
+    "expected_keywords": [
+      "第四届世界佛教论坛",
+      "三圣殿",
+      "落成"
+    ],
+    "expected_chunk_ids": [
+      "real-xiangfu-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山大照壁适合放在路线讲解哪里？",
+    "expected_keywords": [
+      "入口",
+      "照壁",
+      "中轴线"
+    ],
+    "expected_chunk_ids": [
+      "real-dazhaobi-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "佛足坛的佛足印和玄奘有什么关系？",
+    "expected_keywords": [
+      "玄奘",
+      "古印度",
+      "佛足印"
+    ],
+    "expected_chunk_ids": [
+      "real-fozutan-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "降魔浮雕讲的是哪个故事线？",
+    "expected_keywords": [
+      "释迦牟尼",
+      "降伏心魔",
+      "成佛"
+    ],
+    "expected_chunk_ids": [
+      "real-jiangmo-002",
+      "real-culture-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "阿育王柱顶端四只狮子象征什么？",
+    "expected_keywords": [
+      "东南西北",
+      "狮子",
+      "弘扬"
+    ],
+    "expected_chunk_ids": [
+      "real-ashoka-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "天下第一掌和灵山佛手是什么关系？",
+    "expected_keywords": [
+      "灵山大佛右手",
+      "复制件",
+      "佛手"
+    ],
+    "expected_chunk_ids": [
+      "real-foshou-003"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "摸摸佛手为什么会被说成增福添寿？",
+    "expected_keywords": [
+      "佛手",
+      "福寿谐音",
+      "民俗表达"
+    ],
+    "expected_chunk_ids": [
+      "real-foshou-003"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "百子戏弥勒为什么看起来适合亲子？",
+    "expected_keywords": [
+      "大肚能容",
+      "慈颜常笑",
+      "家庭游客"
+    ],
+    "expected_chunk_ids": [
+      "real-mile-002",
+      "real-mile-001"
+    ],
+    "category": "open_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "曼飞龙塔属于什么佛教建筑风格？",
+    "expected_keywords": [
+      "南传佛教",
+      "金刚宝座式群塔",
+      "风铃"
+    ],
+    "expected_chunk_ids": [
+      "real-manfeilong-003",
+      "real-manfeilong-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想在大佛附近找禅意喝茶空间，问哪里？",
+    "expected_keywords": [
+      "佛前半亩茶",
+      "灵山大佛脚下",
+      "祥符禅寺"
+    ],
+    "expected_chunk_ids": [
+      "real-halfmu-tea-001"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "地涌宝塔体验能不能保证每天参与？",
+    "expected_keywords": [
+      "地涌宝塔",
+      "具体开放",
+      "现场安排"
+    ],
+    "expected_chunk_ids": [
+      "real-show-003"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山博物馆是什么时候揭牌开馆的？",
+    "expected_keywords": [
+      "2022年11月15日",
+      "揭牌",
+      "开馆"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-004"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山文博空间包括哪些地方？",
+    "expected_keywords": [
+      "灵山梵宫",
+      "五印坛城",
+      "佛教文化博览馆",
+      "无尽意斋"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-004"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山博物馆藏品有哪些类型？",
+    "expected_keywords": [
+      "佛教造像",
+      "唐卡",
+      "瓷器",
+      "掐丝珐琅"
+    ],
+    "expected_chunk_ids": [
+      "real-museum-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山有哪些素食和轻食选择？",
+    "expected_keywords": [
+      "五观堂",
+      "蔬食馆",
+      "素面",
+      "吉祥食集"
+    ],
+    "expected_chunk_ids": [
+      "real-food-002"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "想吃灵山素面可以查到哪里？",
+    "expected_keywords": [
+      "灵山蔬食馆",
+      "阿育王柱广场东侧",
+      "灵山素面"
+    ],
+    "expected_chunk_ids": [
+      "real-food-003"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "五观堂在梵宫几楼？",
+    "expected_keywords": [
+      "梵宫三楼",
+      "净素自助餐",
+      "灵山斋"
+    ],
+    "expected_chunk_ids": [
+      "real-food-004"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "如一味咖啡附近能看到哪些景观？",
+    "expected_keywords": [
+      "九龙灌浴广场东侧",
+      "大佛",
+      "坛城",
+      "梵宫"
+    ],
+    "expected_chunk_ids": [
+      "real-food-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "景区导游服务费用能不能离线写死？",
+    "expected_keywords": [
+      "导游服务",
+      "收费标准",
+      "官方确认为准"
+    ],
+    "expected_chunk_ids": [
+      "real-service-007"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "老人想省体力，灵山有没有观光车服务？",
+    "expected_keywords": [
+      "观光车",
+      "包车服务",
+      "现场确认"
+    ],
+    "expected_chunk_ids": [
+      "real-service-008"
+    ],
+    "category": "open_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "灵山有哪些免费游客服务？",
+    "expected_keywords": [
+      "免费寄存",
+      "轮椅",
+      "医疗服务",
+      "免费饮水"
+    ],
+    "expected_chunk_ids": [
+      "real-service-009"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "游客服务中心电话是多少？",
+    "expected_keywords": [
+      "0510-85688631",
+      "游客服务中心",
+      "现场问题"
+    ],
+    "expected_chunk_ids": [
+      "real-service-010"
+    ],
+    "category": "closed_real",
+    "difficulty": "easy",
+    "source_type": "official"
+  },
+  {
+    "question": "夏令时灵山售票到几点？",
+    "expected_keywords": [
+      "夏令时",
+      "7:00-17:30",
+      "特殊情况"
+    ],
+    "expected_chunk_ids": [
+      "real-open-time-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "夏令时梵宫和万佛殿开放一样吗？",
+    "expected_keywords": [
+      "梵宫9:00-18:00",
+      "万佛殿8:30-16:30",
+      "夏令时"
+    ],
+    "expected_chunk_ids": [
+      "real-open-time-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "hard",
+    "source_type": "official"
+  },
+  {
+    "question": "冬令时灵山售票和梵宫开放到几点？",
+    "expected_keywords": [
+      "冬令时",
+      "7:00-17:00",
+      "梵宫9:00-17:30"
+    ],
+    "expected_chunk_ids": [
+      "real-open-time-002"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "黄金周开放时间能不能只按普通时间回答？",
+    "expected_keywords": [
+      "黄金周",
+      "特殊情况",
+      "临时调整"
+    ],
+    "expected_chunk_ids": [
+      "real-open-time-002",
+      "real-open-time-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "从无锡火车站怎么坐公共交通去灵山？",
+    "expected_keywords": [
+      "88路",
+      "无锡中央车站",
+      "灵山胜境"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-005"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "从无锡东站去灵山怎么换乘？",
+    "expected_keywords": [
+      "地铁2号线",
+      "梅园开原寺",
+      "88路"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-006"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "自驾到灵山可以导航到哪些地址？",
+    "expected_keywords": [
+      "马山街道灵山路1号",
+      "马山街道古竹路18号",
+      "停车场"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-007",
+      "real-address-001"
+    ],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "official"
+  },
+  {
+    "question": "节假日停车场满了怎么提示游客？",
+    "expected_keywords": [
+      "交警指挥",
+      "2号停车场",
+      "约1.4公里"
+    ],
+    "expected_chunk_ids": [
+      "real-transport-007",
+      "real-boundary-parking-001"
+    ],
+    "category": "negative",
+    "difficulty": "medium",
+    "source_type": "official"
+  }
+]

@@ -1,0 +1,4502 @@
+[
+  {
+    "question": "scale-0001 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0001"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0011 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0011"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0021 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0021"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0031 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0031"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0041 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0041"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0051 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0051"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0061 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0061"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0071 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0071"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0081 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0081"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0091 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0091"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0101 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0101"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0111 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0111"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0121 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0121"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0131 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0131"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0141 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0141"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0151 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0151"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0161 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0161"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0171 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0171"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0181 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0181"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0191 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0191"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0201 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0201"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0211 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0211"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0221 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0221"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0231 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0231"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0241 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0241"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0251 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0251"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0261 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0261"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0271 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0271"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0281 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0281"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0291 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0291"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0301 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0301"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0311 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0311"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0321 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0321"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0331 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0331"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0341 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0341"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0351 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0351"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0361 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0361"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0371 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0371"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0381 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0381"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0391 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0391"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0401 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0401"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0411 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0411"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0421 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0421"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0431 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0431"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0441 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0441"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0451 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0451"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0461 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0461"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0471 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0471"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0481 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0481"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0491 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0491"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0501 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0501"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0511 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0511"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0521 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0521"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0531 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0531"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0541 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0541"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0551 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0551"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0561 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0561"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0571 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0571"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0581 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0581"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0591 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0591"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0601 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0601"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0611 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0611"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0621 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0621"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0631 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0631"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0641 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0641"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0651 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0651"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0661 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0661"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0671 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0671"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0681 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0681"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0691 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0691"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0701 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0701"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0711 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0711"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0721 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0721"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0731 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0731"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0741 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0741"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0751 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0751"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0761 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0761"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0771 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0771"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0781 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0781"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0791 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0791"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0801 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0801"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0811 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0811"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0821 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0821"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0831 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0831"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0841 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0841"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0851 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0851"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0861 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0861"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0871 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0871"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0881 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0881"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0891 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0891"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0901 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0901"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0911 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0911"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0921 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0921"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0931 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0931"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0941 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0941"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0951 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0951"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0961 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0961"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-0971 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0971"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-0981 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0981"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-0991 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-0991"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1001 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1001"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1011 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1011"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1021 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1021"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1031 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1031"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1041 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1041"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1051 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1051"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1061 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1061"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1071 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1071"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1081 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1081"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1091 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1091"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1101 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1101"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1111 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1111"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1121 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1121"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1131 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1131"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1141 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1141"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1151 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1151"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1161 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1161"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1171 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1171"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1181 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1181"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1191 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1191"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1201 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1201"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1211 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1211"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1221 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1221"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1231 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1231"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1241 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1241"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1251 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1251"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1261 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1261"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1271 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1271"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1281 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1281"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1291 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1291"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1301 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1301"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1311 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1311"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1321 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1321"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1331 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1331"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1341 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1341"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1351 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1351"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1361 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1361"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1371 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1371"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1381 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1381"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1391 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1391"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1401 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1401"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1411 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1411"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1421 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1421"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1431 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1431"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1441 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1441"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1451 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1451"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1461 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1461"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1471 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1471"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1481 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1481"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1491 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1491"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1501 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1501"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1511 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1511"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1521 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1521"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1531 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1531"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1541 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1541"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1551 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1551"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1561 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1561"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1571 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1571"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1581 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1581"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1591 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1591"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1601 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1601"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1611 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1611"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1621 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1621"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1631 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1631"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1641 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1641"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1651 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1651"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1661 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1661"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1671 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1671"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1681 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1681"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1691 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1691"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1701 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1701"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1711 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1711"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1721 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1721"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1731 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1731"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1741 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1741"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1751 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1751"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1761 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1761"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1771 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1771"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1781 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1781"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1791 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1791"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1801 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1801"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1811 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1811"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1821 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1821"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1831 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1831"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1841 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1841"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1851 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1851"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1861 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1861"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1871 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1871"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1881 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1881"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1891 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1891"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1901 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1901"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1911 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1911"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1921 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1921"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1931 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1931"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1941 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1941"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1951 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1951"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1961 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1961"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-1971 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1971"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-1981 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1981"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-1991 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-1991"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2001 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2001"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2011 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2011"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2021 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2021"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2031 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2031"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2041 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2041"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2051 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2051"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2061 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2061"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2071 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2071"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2081 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2081"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2091 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2091"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2101 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2101"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2111 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2111"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2121 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2121"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2131 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2131"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2141 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2141"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2151 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2151"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2161 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2161"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2171 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2171"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2181 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2181"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2191 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2191"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2201 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2201"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2211 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2211"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2221 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2221"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2231 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2231"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2241 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2241"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2251 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2251"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2261 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2261"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2271 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2271"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2281 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2281"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2291 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2291"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2301 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2301"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2311 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2311"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2321 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2321"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2331 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2331"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2341 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2341"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2351 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2351"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2361 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2361"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2371 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2371"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2381 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2381"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2391 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2391"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2401 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2401"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2411 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2411"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2421 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2421"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2431 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2431"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2441 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2441"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2451 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2451"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2461 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2461"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2471 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2471"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2481 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2481"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2491 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2491"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2501 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2501"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2511 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2511"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2521 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2521"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2531 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2531"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2541 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2541"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2551 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2551"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2561 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2561"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2571 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2571"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2581 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2581"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2591 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2591"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2601 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2601"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2611 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2611"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2621 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2621"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2631 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2631"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2641 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2641"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2651 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2651"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2661 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2661"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2671 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2671"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2681 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2681"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2691 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2691"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2701 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2701"
+    ],
+    "category": "history",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2711 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2711"
+    ],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2721 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2721"
+    ],
+    "category": "culture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2731 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2731"
+    ],
+    "category": "highlight",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2741 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2741"
+    ],
+    "category": "schedule",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2751 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2751"
+    ],
+    "category": "facility",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2761 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2761"
+    ],
+    "category": "photo",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2771 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2771"
+    ],
+    "category": "family",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2781 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2781"
+    ],
+    "category": "accessible",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2791 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2791"
+    ],
+    "category": "route",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2801 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2801"
+    ],
+    "category": "history",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2811 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2811"
+    ],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2821 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2821"
+    ],
+    "category": "culture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2831 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2831"
+    ],
+    "category": "highlight",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2841 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2841"
+    ],
+    "category": "schedule",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2851 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2851"
+    ],
+    "category": "facility",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2861 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2861"
+    ],
+    "category": "photo",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2871 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2871"
+    ],
+    "category": "family",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2881 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2881"
+    ],
+    "category": "accessible",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2891 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2891"
+    ],
+    "category": "route",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2901 dafo history guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2901"
+    ],
+    "category": "history",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2911 dafo architecture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2911"
+    ],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2921 dafo culture guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2921"
+    ],
+    "category": "culture",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2931 dafo highlight guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2931"
+    ],
+    "category": "highlight",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2941 dafo schedule guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2941"
+    ],
+    "category": "schedule",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2951 dafo facility guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2951"
+    ],
+    "category": "facility",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2961 dafo photo guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2961"
+    ],
+    "category": "photo",
+    "difficulty": "hard"
+  },
+  {
+    "question": "scale-2971 dafo family guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2971"
+    ],
+    "category": "family",
+    "difficulty": "easy"
+  },
+  {
+    "question": "scale-2981 dafo accessible guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2981"
+    ],
+    "category": "accessible",
+    "difficulty": "medium"
+  },
+  {
+    "question": "scale-2991 dafo route guide answer",
+    "answer": "dafo should be introduced with height88, buddhist, and pilgrimage.",
+    "expected_keywords": [
+      "dafo",
+      "height88",
+      "buddhist",
+      "pilgrimage"
+    ],
+    "expected_chunk_ids": [
+      "scale-2991"
+    ],
+    "category": "route",
+    "difficulty": "hard"
+  }
+]

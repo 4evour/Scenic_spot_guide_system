@@ -7,6 +7,20 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: scenic_guide_test
+          POSTGRES_USER: scenic
+          POSTGRES_PASSWORD: scenic_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U scenic -d scenic_guide_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,6 +32,13 @@ jobs:
           cache: true
 
       - name: Test
+        env:
+          SCENIC_GUIDE_DATABASE_DRIVER: postgres
+          SCENIC_GUIDE_DATABASE_HOST: 127.0.0.1
+          SCENIC_GUIDE_DATABASE_PORT: 5432
+          SCENIC_GUIDE_DATABASE_NAME: scenic_guide_test
+          SCENIC_GUIDE_DATABASE_USER: scenic
+          SCENIC_GUIDE_DATABASE_PASSWORD: scenic_test_password
         run: go test ./...
 
       - name: Vet

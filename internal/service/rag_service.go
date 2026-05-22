@@ -74,6 +74,9 @@ type RAGService struct {
 	queryCache     map[string]CacheEntry
 	embeddingCache map[string][]float64
 	knowledgeCache []model.KnowledgeChunk
+	tokenCache     map[string][]string
+	tokenIndex     map[string][]string
+	chunkByID      map[string]model.KnowledgeChunk
 	cacheMutex     sync.RWMutex
 	lastCacheTime  time.Time
 }
@@ -99,6 +102,9 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		queryCache:     make(map[string]CacheEntry),
 		embeddingCache: make(map[string][]float64),
 		knowledgeCache: nil,
+		tokenCache:     make(map[string][]string),
+		tokenIndex:     make(map[string][]string),
+		chunkByID:      make(map[string]model.KnowledgeChunk),
 		lastCacheTime:  time.Now(),
 	}
 }
@@ -142,6 +148,7 @@ func (s *RAGService) getCachedKnowledge() ([]model.KnowledgeChunk, error) {
 	}
 
 	s.knowledgeCache = allChunks
+	s.rebuildBM25IndexLocked(allChunks)
 	s.lastCacheTime = now
 	return allChunks, nil
 }
@@ -223,6 +230,9 @@ func (s *RAGService) invalidateKnowledgeCaches() {
 	defer s.cacheMutex.Unlock()
 	s.queryCache = make(map[string]CacheEntry)
 	s.knowledgeCache = nil
+	s.tokenCache = make(map[string][]string)
+	s.tokenIndex = make(map[string][]string)
+	s.chunkByID = make(map[string]model.KnowledgeChunk)
 	s.lastCacheTime = time.Time{}
 }
 
@@ -629,6 +639,7 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 	scoredChunks := make([]scoredChunk, 0, len(allChunks))
 
 	var queryVec []float64
+	queryTokens := s.bm25.Tokenize(query)
 	if !s.useBM25 {
 		vec, err := s.getCachedEmbedding(query)
 		if err == nil {
@@ -636,22 +647,31 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		}
 	}
 
-	for _, chunk := range allChunks {
+	candidateChunks := allChunks
+	if s.useBM25 || len(queryVec) == 0 {
+		candidateChunks = s.getBM25CandidateChunks(queryTokens, allChunks)
+	}
+
+	for _, chunk := range candidateChunks {
 		var similarity float64
 
 		if s.useBM25 || len(queryVec) == 0 {
-			similarity = s.BM25Similarity(query, chunk.Content)
+			similarity = s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk))
+			similarity += s.lexicalBoost(query, chunk)
 		} else {
 			vec2, err := s.parseVector(chunk.Vector)
 			if err != nil {
-				similarity = s.BM25Similarity(query, chunk.Content)
+				similarity = s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk))
+				similarity += s.lexicalBoost(query, chunk)
 			} else {
-				similarity = s.CosineSimilarity(queryVec, vec2)
+				semanticScore := s.CosineSimilarity(queryVec, vec2)
+				lexicalScore := math.Log1p(s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)))
+				boostScore := math.Log1p(s.lexicalBoost(query, chunk))
+				similarity = semanticScore*0.72 + lexicalScore*0.20 + boostScore*0.08
 			}
 		}
 
 		if similarity >= MinSimilarityThreshold {
-			similarity += s.lexicalBoost(query, chunk)
 			scoredChunks = append(scoredChunks, scoredChunk{
 				chunk:      chunk,
 				similarity: similarity,
@@ -673,6 +693,88 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 	}
 
 	return result, nil
+}
+
+func (s *RAGService) rebuildBM25IndexLocked(chunks []model.KnowledgeChunk) {
+	s.tokenCache = make(map[string][]string, len(chunks))
+	s.tokenIndex = make(map[string][]string)
+	s.chunkByID = make(map[string]model.KnowledgeChunk, len(chunks))
+	for _, chunk := range chunks {
+		tokens := s.bm25.Tokenize(chunk.Title + "\n" + chunk.Content)
+		s.tokenCache[chunk.ID] = tokens
+		s.chunkByID[chunk.ID] = chunk
+		seen := make(map[string]struct{}, len(tokens))
+		for _, token := range tokens {
+			if _, ok := seen[token]; ok {
+				continue
+			}
+			seen[token] = struct{}{}
+			s.tokenIndex[token] = append(s.tokenIndex[token], chunk.ID)
+		}
+	}
+}
+
+func (s *RAGService) getBM25CandidateChunks(queryTokens []string, fallback []model.KnowledgeChunk) []model.KnowledgeChunk {
+	s.cacheMutex.RLock()
+	tokenIndex := s.tokenIndex
+	chunkByID := s.chunkByID
+	s.cacheMutex.RUnlock()
+	if len(tokenIndex) == 0 || len(chunkByID) == 0 {
+		return fallback
+	}
+
+	counts := make(map[string]int)
+	for _, token := range queryTokens {
+		for _, id := range tokenIndex[token] {
+			counts[id]++
+		}
+	}
+	if len(counts) == 0 {
+		return fallback
+	}
+
+	type candidate struct {
+		id    string
+		count int
+	}
+	candidates := make([]candidate, 0, len(counts))
+	for id, count := range counts {
+		candidates = append(candidates, candidate{id: id, count: count})
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].count == candidates[j].count {
+			return candidates[i].id < candidates[j].id
+		}
+		return candidates[i].count > candidates[j].count
+	})
+
+	const maxCandidates = 600
+	limit := min(len(candidates), maxCandidates)
+	chunks := make([]model.KnowledgeChunk, 0, limit)
+	for i := 0; i < limit; i++ {
+		if chunk, ok := chunkByID[candidates[i].id]; ok {
+			chunks = append(chunks, chunk)
+		}
+	}
+	return chunks
+}
+
+func (s *RAGService) getCachedChunkTokens(chunk model.KnowledgeChunk) []string {
+	s.cacheMutex.RLock()
+	tokens, ok := s.tokenCache[chunk.ID]
+	s.cacheMutex.RUnlock()
+	if ok {
+		return tokens
+	}
+
+	tokens = s.bm25.Tokenize(chunk.Title + "\n" + chunk.Content)
+	s.cacheMutex.Lock()
+	if s.tokenCache == nil {
+		s.tokenCache = make(map[string][]string)
+	}
+	s.tokenCache[chunk.ID] = tokens
+	s.cacheMutex.Unlock()
+	return tokens
 }
 
 func (s *RAGService) parseVector(vectorStr string) ([]float64, error) {

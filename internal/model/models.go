@@ -11,12 +11,12 @@ type ScenicSpot struct {
 	Name        string    `gorm:"size:255;not null"`
 	Description string    `gorm:"text"`
 	Location    string    `gorm:"size:500"`
-	Category    string    `gorm:"size:100"`
+	Category    string    `gorm:"size:100;index:idx_scenic_spots_category_updated"`
 	Rating      float64   `gorm:"default:0"`
 	Price       float64   `gorm:"default:0"`
 	ImageURL    string    `gorm:"size:500"`
 	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated"`
 }
 
 type GuideContent struct {
@@ -54,7 +54,7 @@ type VisitorQuery struct {
 
 type User struct {
 	ID        uint      `gorm:"primaryKey"`
-	Username  string    `gorm:"size:100;unique;not null"`
+	Username  string    `gorm:"size:100;uniqueIndex;not null"`
 	Password  string    `gorm:"size:255;not null"`
 	Email     string    `gorm:"size:255"`
 	Role      string    `gorm:"size:50;default:'visitor'"`
@@ -82,15 +82,15 @@ type SystemLog struct {
 type InteractionLog struct {
 	ID             uint      `gorm:"primaryKey"`
 	UserID         uint      `gorm:"default:0"`
-	SessionID      string    `gorm:"size:100"`
+	SessionID      string    `gorm:"size:100;index:idx_interaction_logs_session"`
 	Query          string    `gorm:"text;not null"`
 	Response       string    `gorm:"text"`
 	Emotion        string    `gorm:"size:50"`
 	ResponseTimeMs int64     `gorm:"default:0"` // 响应时间(毫秒)
 	SpotID         uint      `gorm:"default:0"`
-	Category       string    `gorm:"size:100"` // 问题分类
-	Source         string    `gorm:"size:50"`  // 来源: web/voice/digital_human
-	CreatedAt      time.Time `gorm:"autoCreateTime"`
+	Category       string    `gorm:"size:100"`                                          // 问题分类
+	Source         string    `gorm:"size:50;index:idx_interaction_logs_source_created"` // 来源: web/voice/digital_human
+	CreatedAt      time.Time `gorm:"autoCreateTime;index:idx_interaction_logs_source_created;index:idx_interaction_logs_created"`
 }
 
 // SystemSetting 系统设置 - 键值对存储

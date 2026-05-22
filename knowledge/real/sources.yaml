@@ -1,0 +1,106 @@
+sources:
+  - id: official-park-introduction
+    name: 灵山胜境官网景区介绍
+    url: https://www.lingshan.com.cn/web/park/introduction/1.html
+    source_type: official
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 景区定位
+      - 景点组成
+      - 灵山大佛
+      - 九龙灌浴
+      - 灵山梵宫
+      - 五印坛城
+      - 祥符禅寺
+      - 官方地址
+      - 客服电话
+      - 开放时间资料
+      - 交通指南
+      - 餐饮服务
+      - 游客服务
+    notes: 官方事实源，适合作为景区固定介绍和景点知识依据。
+  - id: official-home
+    name: 灵山胜境官网首页/热门推荐
+    url: https://www.lingshan.com.cn/index.html
+    source_type: official
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 热门景点名称
+      - 演艺项目名称
+      - 景区品牌表达
+      - 导游服务
+      - 观光车服务
+      - 游客服务中心
+    notes: 官方事实源，实时运营信息仍需以官网当日公告和购票页为准。
+  - id: wuxi-binhu-government
+    name: 无锡滨湖区政府灵山胜境景区介绍
+    url: https://www.wxbh.gov.cn/doc/2024/03/06/4187725.shtml
+    source_type: government
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 景区概况
+      - 核心景点
+      - 文化定位
+    notes: 政府公开介绍，可作为官方资料交叉校验。
+  - id: visitor-question-patterns
+    name: 第三方公开攻略问法样本
+    url: https://www.ctrip.com/
+    source_type: third_party_pattern
+    authoritative: false
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 游客自然问法
+      - 游玩关注点
+    notes: 只用于设计评测问题，不作为票价、开放时间、演出场次等事实依据。
+  - id: wuxi-archive-lingshan
+    name: 无锡市档案史志馆灵山胜境介绍
+    url: https://daj.wuxi.gov.cn/doc/2013/01/22/2426754.shtml
+    source_type: government
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 灵山文化园景观
+      - 佛足坛
+      - 五智门
+      - 降魔浮雕
+      - 阿育王柱
+      - 曼飞龙塔
+      - 香水海
+    notes: 政府公开介绍，可补充景观名称和空间关系。
+  - id: official-company-profile
+    name: 灵山预订网公司/景区简介
+    url: https://www.lingshan.com.cn/web/shelp/1.html
+    source_type: official
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - AAAAA 景区定位
+      - 马山和太湖位置
+      - 景观群关系
+      - 佛教文化主题园区表述
+    notes: 官方简介源，用于补充景区定位和整体表达。
+  - id: official-topic-ticket
+    name: 灵山官网门票预订/景区专题页
+    url: https://www.lingshan.com.cn/web/index_ls_topic.html
+    source_type: official
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 客服电话
+      - 文化体验主题
+      - 景点图片入口名称
+    notes: 仅记录相对稳定的服务入口和主题，不固化票价或场次。
+  - id: official-hotels
+    name: 灵山官网灵山精舍/住宿产品页
+    url: https://www.lingshan.com.cn/web/hotels.html
+    source_type: official
+    authoritative: true
+    fetched_on: 2026-05-22
+    usable_fields:
+      - 灵山精舍
+      - 住宿与景区门票边界
+      - 过堂文化
+    notes: 仅作为住宿和配套服务知识，不承诺实时房态和价格。

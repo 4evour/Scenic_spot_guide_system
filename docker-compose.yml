@@ -1,11 +1,39 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: "${SCENIC_GUIDE_DATABASE_NAME:-scenic_guide}"
+      POSTGRES_USER: "${SCENIC_GUIDE_DATABASE_USER:-scenic}"
+      POSTGRES_PASSWORD: "${SCENIC_GUIDE_DATABASE_PASSWORD:-scenic_dev_password}"
+    ports:
+      - "5432:5432"
+    volumes:
+      - scenic-guide-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SCENIC_GUIDE_DATABASE_USER:-scenic} -d ${SCENIC_GUIDE_DATABASE_NAME:-scenic_guide}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   scenic-guide:
     build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
       SCENIC_GUIDE_SERVER_HOST: "0.0.0.0"
       SCENIC_GUIDE_SERVER_PORT: "8080"
+      SCENIC_GUIDE_DATABASE_DRIVER: "postgres"
+      SCENIC_GUIDE_DATABASE_HOST: "postgres"
+      SCENIC_GUIDE_DATABASE_PORT: "5432"
+      SCENIC_GUIDE_DATABASE_NAME: "${SCENIC_GUIDE_DATABASE_NAME:-scenic_guide}"
+      SCENIC_GUIDE_DATABASE_USER: "${SCENIC_GUIDE_DATABASE_USER:-scenic}"
+      SCENIC_GUIDE_DATABASE_PASSWORD: "${SCENIC_GUIDE_DATABASE_PASSWORD:-scenic_dev_password}"
+      SCENIC_GUIDE_DATABASE_MAX_OPEN_CONNS: "25"
+      SCENIC_GUIDE_DATABASE_MAX_IDLE_CONNS: "10"
+      SCENIC_GUIDE_DATABASE_CONN_MAX_LIFETIME_MINUTES: "30"
       SCENIC_GUIDE_DATABASE_PATH: "/app/data/scenic_guide.db"
       SCENIC_GUIDE_SECURITY_JWT_SECRET: "${SCENIC_GUIDE_SECURITY_JWT_SECRET:?set a 32+ character JWT secret}"
       SCENIC_GUIDE_SECURITY_TOKEN_EXPIRE_HOURS: "4"
@@ -16,3 +44,4 @@ services:
 
 volumes:
   scenic-guide-data:
+  scenic-guide-postgres:

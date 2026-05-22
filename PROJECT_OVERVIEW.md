@@ -6,10 +6,10 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 
 ## 技术栈
 
-- 后端：Go 1.25.0、Gin、GORM、SQLite。
+- 后端：Go 1.25.0、Gin、GORM、PostgreSQL（主数据库配置）、SQLite（本地开发/轻量测试配置）。
 - 前端：Vue 3、Vite、TypeScript、PixiJS、Live2D。
-- 知识库：本地 JSONL 分块语料，启动时导入到数据库；未配置 Embedding API 时回退到 BM25 检索。
-- AI：DeepSeek 兼容接口；Embedding 示例配置使用 DashScope。
+- 知识库：本地 JSONL 分块语料，启动时导入到数据库；基础 smoke 集为 32 切片/5 问答，合成规模验证集为 3000 切片/300 问答。
+- AI：DeepSeek 兼容接口；Embedding 示例配置使用 DashScope `text-embedding-v2`，口径为 1536 维、Cosine、Float32；未配置 Embedding API 时回退到 BM25/词面检索。
 
 ## 目录结构
 
@@ -19,19 +19,19 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - `internal/service`：业务逻辑、RAG、统计和 AI 相关服务。
 - `internal/repository`：数据库访问层。
 - `internal/model`：GORM 模型与自动迁移。
-- `knowledge`：景区知识库语料、分块文件和评测样例。
+- `knowledge`：景区知识库语料、基础分块/评测样例、`lingshan_scale_3000.jsonl`、`lingshan_eval_300.json` 和 `DATASET.md` 数据边界说明。
 - `web-vue`：Vue 管理端、数据看板和数字人前端源码。
 - `static`：Go 服务直接托管的静态资源和 Vue 构建产物。
-- `docs`：数字人集成、运行说明和 API 文档。
-- `scripts`：项目辅助脚本，例如编码检查。
-- `cmd/rag-eval`：离线 RAG 评估命令，默认使用 `knowledge/lingshan_chunks.jsonl` 和 `knowledge/lingshan_eval_qa.json` 输出通过率与关键词覆盖率。
+- `docs`：数字人集成、可复现评估报告、博客草稿、运行说明和 API 文档。
+- `scripts`：项目辅助脚本，例如编码检查和作品集录屏生成。
+- `cmd/rag-eval`：离线 RAG 评估和基准命令，默认使用 `knowledge/lingshan_chunks.jsonl` 和 `knowledge/lingshan_eval_qa.json`，支持 `-k`、`-bench`、`-concurrency`、`-repeat`、`-retrieval-only`，输出通过率、Recall@K、MRR@K、关键词覆盖率和检索 p50/p95。
 - `cmd/demo-seed`：演示数据初始化命令，向当前配置数据库写入演示账号、景点、路线、交互日志，并在知识库为空时导入默认知识。
 
 ## 核心流程
 
 1. 启动时加载 `configs/config.yaml`，再叠加 `SCENIC_GUIDE_` 环境变量。
-2. 初始化日志、JWT、SQLite 数据库和模型迁移。
-3. 初始化 RAG 服务：优先使用 Embedding 检索，缺少配置时使用 BM25。
+2. 初始化日志、JWT、PostgreSQL 或显式配置的 SQLite 本地数据库和模型迁移；配置未指定 driver 时按 PostgreSQL 主配置处理。
+3. 初始化 RAG 服务：优先使用 Embedding 检索，缺少配置时使用 BM25/词面本地检索；BM25 路径会维护 token cache、倒排候选索引和 chunk ID 映射以支撑 3000 切片实验。
 4. 若知识库表为空，从 `knowledge/lingshan_chunks.jsonl` 导入数据。
 5. Gin 挂载 API、静态页面、Vue 应用入口和 Open-LLM-VTuber 代理。
 6. 服务收到 `SIGINT` 或 `SIGTERM` 后执行优雅关闭。
@@ -42,14 +42,20 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - `security.jwt_secret` 必须替换为至少 32 位的随机字符串，不能使用示例占位值。
 - 后端依赖：`go mod download`。
 - 前端构建：在 `web-vue` 目录运行 `npm install` 和 `npm run build`。
-- 启动服务：仓库根目录运行 `go run .`。
+- 容器启动：仓库根目录运行 `docker compose up --build`，默认启动 PostgreSQL 16 和 Go 服务。
+- 启动服务：仓库根目录运行 `go run .`，本地直启需准备 PostgreSQL 或显式改为 SQLite 本地配置。
 - 验证命令：`go test ./...`、`go vet ./...`、`npm run check`、`npm run check:encoding`、`npm run build`。
-- RAG 评估：`go run ./cmd/rag-eval`，可加 `-format json` 输出结构化报告，或加 `-fail-on-miss` 用于质量门禁。
+- RAG smoke 评估：`go run ./cmd/rag-eval -k 8 -fail-on-miss`。
+- RAG 合成规模实验：`go run ./cmd/rag-eval -knowledge knowledge/lingshan_scale_3000.jsonl -eval knowledge/lingshan_eval_300.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -fail-on-miss`。
 - 演示数据：`go run ./cmd/demo-seed`，默认管理员账号为 `admin / DemoAdmin123456`；演示密码只用于本地演示，不应作为生产凭据。
+- 作品集录屏：服务启动后运行 `node scripts/record_lingshan_demo.js`，会用 Playwright 打开本地页面并输出带中文字幕的灵山项目演示视频到 `tmp/demo-video`；可通过 `SCENIC_DEMO_OUTPUT_DIR` 覆盖输出目录。
 
 ## 关键约定
 
 - 不提交 `configs/config.yaml`、数据库、日志、可执行文件、缓存目录和本地环境文件。
+- 数据库主路径为 PostgreSQL，`database.driver` 支持 `postgres`/`postgresql` 和 `sqlite`；连接池配置包括 `max_open_conns`、`max_idle_conns`、`conn_max_lifetime_minutes`。
+- RAG 评测 JSON 支持 `expected_keywords`、`expected_chunk_ids`、`category`、`difficulty`；3000/300 是合成闭集实验数据，不宣称覆盖真实景区完整知识库。
+- 3000/300 合成实验只作为内部回归口径，不能外推为开放域真实召回率；简历和面试主口径使用 `knowledge/real/` 真实资料评估集。
 - `static/vue-app` 是 Vue 构建输出，会随 `web-vue` 构建刷新。
 - Vue 应用包含数据看板、管理后台、数字人导览和游客地图四个主要视图。
 - 游客地图优先从 `/api/v1/spots` 读取真实景点数据；接口为空或不可用时才回退到前端内置演示点位。
@@ -76,5 +82,7 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 ## 已知风险
 
 - `configs/config.yaml` 本地可能含真实 API Key，必须保持忽略状态。
+- SQLite 仅作为本地开发/轻量测试配置；简历和面试中不要把它说成 PostgreSQL 的高可用接管、故障自动切换或生产数据库能力。
+- 3000/300 RAG 验证集是合成闭集 fixture，适合说明检索链路可评估、可复现；真实景区落地仍需要真实资料、独立人工标注、来源引用、向量数据库/pgvector、监控和运营闭环。
 - `static/digital-human` 保留了旧数字人静态前端及运行库，删除前需确认没有外部入口依赖。
 - 服务启动日志在部分 Windows 终端可能出现编码显示问题，但 Go 编译和测试不受影响。

@@ -22,13 +22,16 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Driver   string `mapstructure:"driver"`
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Name     string `mapstructure:"name"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Path     string `mapstructure:"path"`
+	Driver                 string `mapstructure:"driver"`
+	Host                   string `mapstructure:"host"`
+	Port                   int    `mapstructure:"port"`
+	Name                   string `mapstructure:"name"`
+	User                   string `mapstructure:"user"`
+	Password               string `mapstructure:"password"`
+	Path                   string `mapstructure:"path"`
+	MaxOpenConns           int    `mapstructure:"max_open_conns"`
+	MaxIdleConns           int    `mapstructure:"max_idle_conns"`
+	ConnMaxLifetimeMinutes int    `mapstructure:"conn_max_lifetime_minutes"`
 }
 
 type LoggingConfig struct {
@@ -92,6 +95,9 @@ func bindEnvKeys() {
 		"database.user",
 		"database.password",
 		"database.path",
+		"database.max_open_conns",
+		"database.max_idle_conns",
+		"database.conn_max_lifetime_minutes",
 		"logging.level",
 		"logging.output",
 		"ai.api_key",
