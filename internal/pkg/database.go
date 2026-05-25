@@ -22,7 +22,7 @@ const (
 	defaultMaxIdleConns           = 10
 	defaultConnMaxLifetimeMinutes = 30
 	defaultPostgresPort           = 5432
-	defaultPostgresSSLMode        = "disable"
+	defaultPostgresSSLMode        = "require"
 	defaultSQLitePath             = "./data/scenic_guide.db"
 )
 

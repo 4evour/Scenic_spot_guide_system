@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,12 +13,13 @@ import (
 var jwtSecret []byte
 
 var insecureJWTSecrets = map[string]struct{}{
-	"please-change-this-secret":                  {},
-	"replace-with-at-least-32-random-characters": {},
-	"change-this-to-a-random-32-character-secret": {},
-	"scenic-guide-secret-key":                    {},
-	"your-secret-key":                            {},
-	"your-secret-key-here":                       {},
+	"please-change-this-secret":                    {},
+	"replace-with-at-least-32-random-characters":   {},
+	"change-this-to-a-random-32-character-secret":  {},
+	"scenic-guide-secret-key":                      {},
+	"your-secret-key":                              {},
+	"your-secret-key-here":                         {},
+	"REPLACE_WITH_RANDOM_32_CHAR_SECRET":           {},
 }
 
 func InitJWT(cfg *config.SecurityConfig) error {
@@ -61,6 +63,9 @@ func GenerateToken(userID uint, username, role string, expireHours int) (string,
 
 func ParseToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return jwtSecret, nil
 	})
 

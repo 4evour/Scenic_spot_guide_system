@@ -144,3 +144,28 @@ func AdminMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func WSTokenAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.Query("token")
+		if token == "" {
+			c.AbortWithStatusJSON(401, Response{
+				Code:    401,
+				Message: "missing token",
+			})
+			return
+		}
+		claims, err := ParseToken(token)
+		if err != nil {
+			c.AbortWithStatusJSON(401, Response{
+				Code:    401,
+				Message: "invalid token",
+			})
+			return
+		}
+		c.Set("user_id", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("role", claims.Role)
+		c.Next()
+	}
+}

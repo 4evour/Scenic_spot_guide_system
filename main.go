@@ -43,6 +43,10 @@ func run() error {
 	}
 	slog.Info("JWT 初始化成功")
 
+	if os.Getenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS") != "" {
+		slog.Warn("安全警告: 开发管理员旁路已启用，生产环境请务必禁用!", "env_var", "SCENIC_GUIDE_DEV_ADMIN_BYPASS")
+	}
+
 	slog.Info("初始化数据库")
 	err = pkg.InitDatabase(&cfg.Database)
 	if err != nil {

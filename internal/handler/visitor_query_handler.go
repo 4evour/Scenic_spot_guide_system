@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -20,12 +21,13 @@ func NewVisitorQueryHandler(service service.VisitorQueryService) *VisitorQueryHa
 func (h *VisitorQueryHandler) CreateQuery(c *gin.Context) {
 	var query model.VisitorQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
 	if err := h.service.CreateQuery(&query); err != nil {
-		pkg.InternalError(c, "创建游客问题失败: "+err.Error())
+		slog.Error("创建游客问题失败", "error", err)
+		pkg.InternalError(c, "创建游客问题失败")
 		return
 	}
 
@@ -52,7 +54,8 @@ func (h *VisitorQueryHandler) GetQuery(c *gin.Context) {
 func (h *VisitorQueryHandler) GetAllQueries(c *gin.Context) {
 	queries, err := h.service.GetAllQueries()
 	if err != nil {
-		pkg.InternalError(c, "获取游客问题列表失败: "+err.Error())
+		slog.Error("获取游客问题列表失败", "error", err)
+		pkg.InternalError(c, "获取游客问题列表失败")
 		return
 	}
 
@@ -62,7 +65,8 @@ func (h *VisitorQueryHandler) GetAllQueries(c *gin.Context) {
 func (h *VisitorQueryHandler) GetUnansweredQueries(c *gin.Context) {
 	queries, err := h.service.GetUnansweredQueries()
 	if err != nil {
-		pkg.InternalError(c, "获取未回答问题列表失败: "+err.Error())
+		slog.Error("获取未回答问题列表失败", "error", err)
+		pkg.InternalError(c, "获取未回答问题列表失败")
 		return
 	}
 
@@ -79,13 +83,14 @@ func (h *VisitorQueryHandler) UpdateQuery(c *gin.Context) {
 
 	var query model.VisitorQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
 	query.ID = uint(id)
 	if err := h.service.UpdateQuery(&query); err != nil {
-		pkg.InternalError(c, "更新游客问题失败: "+err.Error())
+		slog.Error("更新游客问题失败", "error", err, "query_id", id)
+		pkg.InternalError(c, "更新游客问题失败")
 		return
 	}
 
@@ -101,7 +106,8 @@ func (h *VisitorQueryHandler) DeleteQuery(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteQuery(uint(id)); err != nil {
-		pkg.InternalError(c, "删除游客问题失败: "+err.Error())
+		slog.Error("删除游客问题失败", "error", err, "query_id", id)
+		pkg.InternalError(c, "删除游客问题失败")
 		return
 	}
 

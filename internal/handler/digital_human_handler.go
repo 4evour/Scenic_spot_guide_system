@@ -47,7 +47,7 @@ type SessionCreateResponse struct {
 func (h *DigitalHumanHandler) CreateSession(c *gin.Context) {
 	var req SessionCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -90,7 +90,7 @@ type RoutePayload struct {
 func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	var req ChatTextRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -179,7 +179,7 @@ type VoiceTranscriptResponse struct {
 func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	var req VoiceTranscriptRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -262,7 +262,7 @@ type FeedbackRequest struct {
 func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 	var req FeedbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -347,6 +347,7 @@ func (h *DigitalHumanHandler) extractStops(route *model.TourRoute) []string {
 
 func (h *DigitalHumanHandler) Routes(r *gin.RouterGroup) {
 	dh := r.Group("/dh")
+	dh.Use(pkg.RateLimitMiddleware(60, time.Minute))
 	{
 		dh.POST("/session/create", h.CreateSession)
 		dh.POST("/chat/text", h.ChatText)

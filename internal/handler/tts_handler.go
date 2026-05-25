@@ -2,9 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/pkg"
@@ -25,7 +27,7 @@ type TTSRequest struct {
 func (h *TTSHandler) TTS(c *gin.Context) {
 	var req TTSRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -75,16 +77,20 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 
 	ttsReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
 	resp, err := client.Do(ttsReq)
 	if err != nil {
-		pkg.InternalError(c, "调用TTS服务失败: "+err.Error())
+		slog.Error("调用TTS服务失败", "error", err)
+		pkg.InternalError(c, "调用TTS服务失败")
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		pkg.InternalError(c, "TTS服务返回错误: "+resp.Status)
+		slog.Error("TTS服务返回错误", "status", resp.StatusCode)
+		pkg.InternalError(c, "TTS服务返回错误")
 		return
 	}
 
@@ -103,7 +109,8 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 		if errMsg == "" {
 			errMsg = "unknown error"
 		}
-		pkg.InternalError(c, "TTS服务错误: "+errMsg)
+		slog.Error("TTS服务业务错误", "err_no", errCode, "err_msg", errMsg)
+		pkg.InternalError(c, "TTS服务错误")
 		return
 	}
 

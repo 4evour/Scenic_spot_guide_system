@@ -1,21 +1,24 @@
+# Scenic Guide - Example Configuration
+# Copy this file to config.yaml and fill in your values.
+# NEVER commit config.yaml with real credentials.
+
 server:
   host: "0.0.0.0"
   port: "8080"
 
 database:
-  # 默认使用 PostgreSQL 主配置；本地轻量运行可显式改为 sqlite 并设置 path。
-  # SQLite 不是 PostgreSQL 故障后的自动接管方案，不承担高可用或数据同步语义。
-  driver: "postgres"
-  host: "127.0.0.1"
-  port: 5432
-  name: "scenic_guide"
-  user: "scenic"
-  password: "scenic_dev_password"
-  max_open_conns: 25
-  max_idle_conns: 10
-  conn_max_lifetime_minutes: 30
-  # sqlite local/dev profile:
-  # driver: "sqlite"
+  # Options: "postgres" (recommended for production), "sqlite" (local dev only)
+  driver: "sqlite"
+  # PostgreSQL settings (uncomment for production):
+  # host: "127.0.0.1"
+  # port: 5432
+  # name: "scenic_guide"
+  # user: "scenic"
+  # password: ""
+  # max_open_conns: 25
+  # max_idle_conns: 10
+  # conn_max_lifetime_minutes: 30
+  # SQLite path (dev only):
   path: "./data/scenic_guide.db"
 
 logging:
@@ -23,11 +26,13 @@ logging:
   output: "console"
 
 ai:
+  # Get your key from https://platform.deepseek.com
   api_key: ""
   model: "deepseek-chat"
   base_url: "https://api.deepseek.com/v1"
 
 embedding:
+  # Get your key from https://dashscope.console.aliyun.com
   api_key: ""
   model: "text-embedding-v2"
   base_url: "https://dashscope.aliyuncs.com/api/v1"
@@ -37,5 +42,8 @@ speech:
   region: ""
 
 security:
-  jwt_secret: "change-this-to-a-random-32-character-secret"
+  # IMPORTANT: Generate a random 32+ character secret.
+  # Example: openssl rand -hex 32
+  # The placeholder below WILL be rejected at startup.
+  jwt_secret: "REPLACE_WITH_RANDOM_32_CHAR_SECRET"
   token_expire_hours: 4

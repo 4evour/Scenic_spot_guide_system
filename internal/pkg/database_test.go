@@ -26,7 +26,7 @@ func TestPostgresDSNIncludesConnectionFields(t *testing.T) {
 		"user=scenic",
 		"password=secret",
 		"dbname=scenic_guide",
-		"sslmode=disable",
+		"sslmode=require",
 	} {
 		if !strings.Contains(dsn, want) {
 			t.Fatalf("postgres dsn missing %q: %s", want, dsn)

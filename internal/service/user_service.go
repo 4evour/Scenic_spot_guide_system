@@ -33,6 +33,10 @@ func (s *userService) Register(user *model.User) error {
 		return errors.New("用户名已存在")
 	}
 
+	if err := validatePassword(user.Password); err != nil {
+		return err
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -42,15 +46,39 @@ func (s *userService) Register(user *model.User) error {
 	return s.repo.Create(user)
 }
 
+func validatePassword(password string) error {
+	if len(password) < 8 {
+		return errors.New("密码长度不能少于8个字符")
+	}
+	if len(password) > 128 {
+		return errors.New("密码长度不能超过128个字符")
+	}
+	var hasUpper, hasLower, hasDigit bool
+	for _, r := range password {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			hasUpper = true
+		case r >= 'a' && r <= 'z':
+			hasLower = true
+		case r >= '0' && r <= '9':
+			hasDigit = true
+		}
+	}
+	if !hasUpper || !hasLower || !hasDigit {
+		return errors.New("密码必须包含大写字母、小写字母和数字")
+	}
+	return nil
+}
+
 func (s *userService) Login(username, password string) (*model.User, error) {
 	user, err := s.repo.FindByUsername(username)
 	if err != nil {
-		return nil, errors.New("用户不存在")
+		return nil, errors.New("用户名或密码错误")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return nil, errors.New("密码错误")
+		return nil, errors.New("用户名或密码错误")
 	}
 
 	return user, nil

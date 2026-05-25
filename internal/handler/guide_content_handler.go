@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -20,12 +21,13 @@ func NewGuideContentHandler(service service.GuideContentService) *GuideContentHa
 func (h *GuideContentHandler) CreateContent(c *gin.Context) {
 	var content model.GuideContent
 	if err := c.ShouldBindJSON(&content); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
 	if err := h.service.CreateContent(&content); err != nil {
-		pkg.InternalError(c, "创建导览内容失败: "+err.Error())
+		slog.Error("创建导览内容失败", "error", err)
+		pkg.InternalError(c, "创建导览内容失败")
 		return
 	}
 
@@ -59,7 +61,8 @@ func (h *GuideContentHandler) GetContentsBySpotID(c *gin.Context) {
 
 	contents, err := h.service.GetContentsBySpotID(uint(spotID))
 	if err != nil {
-		pkg.InternalError(c, "获取导览内容失败: "+err.Error())
+		slog.Error("按景点获取导览内容失败", "error", err, "spot_id", spotID)
+		pkg.InternalError(c, "获取导览内容失败")
 		return
 	}
 
@@ -82,7 +85,8 @@ func (h *GuideContentHandler) GetContentsBySpotIDAndType(c *gin.Context) {
 
 	contents, err := h.service.GetContentsBySpotIDAndType(uint(spotID), contentType)
 	if err != nil {
-		pkg.InternalError(c, "获取导览内容失败: "+err.Error())
+		slog.Error("按类型获取导览内容失败", "error", err, "spot_id", spotID, "type", contentType)
+		pkg.InternalError(c, "获取导览内容失败")
 		return
 	}
 
@@ -99,13 +103,14 @@ func (h *GuideContentHandler) UpdateContent(c *gin.Context) {
 
 	var content model.GuideContent
 	if err := c.ShouldBindJSON(&content); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
 	content.ID = uint(id)
 	if err := h.service.UpdateContent(&content); err != nil {
-		pkg.InternalError(c, "更新导览内容失败: "+err.Error())
+		slog.Error("更新导览内容失败", "error", err, "content_id", id)
+		pkg.InternalError(c, "更新导览内容失败")
 		return
 	}
 
@@ -121,7 +126,8 @@ func (h *GuideContentHandler) DeleteContent(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteContent(uint(id)); err != nil {
-		pkg.InternalError(c, "删除导览内容失败: "+err.Error())
+		slog.Error("删除导览内容失败", "error", err, "content_id", id)
+		pkg.InternalError(c, "删除导览内容失败")
 		return
 	}
 

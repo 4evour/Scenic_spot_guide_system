@@ -15,6 +15,13 @@ func NewKnowledgeRepository(db *gorm.DB) *KnowledgeRepository {
 	return &KnowledgeRepository{db: db}
 }
 
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
+}
+
 func (r *KnowledgeRepository) Create(chunk *model.KnowledgeChunk) error {
 	return r.db.Create(chunk).Error
 }
@@ -42,7 +49,8 @@ func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string)
 	query := r.db.Model(&model.KnowledgeChunk{})
 	keyword = strings.TrimSpace(keyword)
 	if keyword != "" {
-		like := "%" + strings.ToLower(keyword) + "%"
+		escaped := escapeLike(strings.ToLower(keyword))
+		like := "%" + escaped + "%"
 		query = query.Where(
 			"LOWER(title) LIKE ? OR LOWER(source) LIKE ? OR LOWER(content) LIKE ? OR LOWER(metadata) LIKE ?",
 			like, like, like, like,
@@ -51,7 +59,8 @@ func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string)
 
 	category = strings.TrimSpace(category)
 	if category != "" {
-		like := "%" + strings.ToLower(category) + "%"
+		escaped := escapeLike(strings.ToLower(category))
+		like := "%" + escaped + "%"
 		query = query.Where("LOWER(metadata) LIKE ? OR LOWER(source) LIKE ?", like, like)
 	}
 

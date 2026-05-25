@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -20,12 +21,13 @@ func NewScenicSpotHandler(service service.ScenicSpotService) *ScenicSpotHandler 
 func (h *ScenicSpotHandler) CreateSpot(c *gin.Context) {
 	var spot model.ScenicSpot
 	if err := c.ShouldBindJSON(&spot); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
 	if err := h.service.CreateSpot(&spot); err != nil {
-		pkg.InternalError(c, "创建景点失败: "+err.Error())
+		slog.Error("创建景点失败", "error", err)
+		pkg.InternalError(c, "创建景点失败")
 		return
 	}
 
@@ -52,7 +54,8 @@ func (h *ScenicSpotHandler) GetSpot(c *gin.Context) {
 func (h *ScenicSpotHandler) GetAllSpots(c *gin.Context) {
 	spots, err := h.service.GetAllSpots()
 	if err != nil {
-		pkg.InternalError(c, "获取景点列表失败: "+err.Error())
+		slog.Error("获取景点列表失败", "error", err)
+		pkg.InternalError(c, "获取景点列表失败")
 		return
 	}
 
@@ -68,7 +71,8 @@ func (h *ScenicSpotHandler) GetSpotsByCategory(c *gin.Context) {
 
 	spots, err := h.service.GetSpotsByCategory(category)
 	if err != nil {
-		pkg.InternalError(c, "获取景点列表失败: "+err.Error())
+		slog.Error("按分类获取景点失败", "error", err, "category", category)
+		pkg.InternalError(c, "获取景点列表失败")
 		return
 	}
 
@@ -85,13 +89,14 @@ func (h *ScenicSpotHandler) UpdateSpot(c *gin.Context) {
 
 	var spot model.ScenicSpot
 	if err := c.ShouldBindJSON(&spot); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
 	spot.ID = uint(id)
 	if err := h.service.UpdateSpot(&spot); err != nil {
-		pkg.InternalError(c, "更新景点失败: "+err.Error())
+		slog.Error("更新景点失败", "error", err, "spot_id", id)
+		pkg.InternalError(c, "更新景点失败")
 		return
 	}
 
@@ -107,7 +112,8 @@ func (h *ScenicSpotHandler) DeleteSpot(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteSpot(uint(id)); err != nil {
-		pkg.InternalError(c, "删除景点失败: "+err.Error())
+		slog.Error("删除景点失败", "error", err, "spot_id", id)
+		pkg.InternalError(c, "删除景点失败")
 		return
 	}
 

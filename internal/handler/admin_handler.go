@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -118,7 +119,8 @@ func (h *AdminHandler) UpdateDigitalHumanConfig(c *gin.Context) {
 		return
 	}
 	if err := h.statsService.UpdateDigitalHumanConfig(settings); err != nil {
-		pkg.InternalError(c, "保存失败: "+err.Error())
+		slog.Error("更新数字人配置失败", "error", err)
+		pkg.InternalError(c, "保存失败")
 		return
 	}
 	pkg.SuccessWithMessage(c, "保存成功", nil)
@@ -140,7 +142,8 @@ func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
 		return
 	}
 	if err := h.statsService.UpdateSystemSettings(settings); err != nil {
-		pkg.InternalError(c, "保存失败: "+err.Error())
+		slog.Error("更新系统设置失败", "error", err)
+		pkg.InternalError(c, "保存失败")
 		return
 	}
 	pkg.SuccessWithMessage(c, "保存成功", nil)

@@ -16,8 +16,14 @@ import (
 
 func main() {
 	configDir := flag.String("config", "./configs", "配置目录")
-	adminPassword := flag.String("admin-password", "DemoAdmin123456", "演示管理员密码")
+	adminPassword := flag.String("admin-password", "", "演示管理员密码 (必填)")
 	flag.Parse()
+
+	if *adminPassword == "" {
+		fmt.Fprintln(os.Stderr, "ERROR: --admin-password is required. Do not use default passwords.")
+		fmt.Fprintln(os.Stderr, "Example: go run ./cmd/demo-seed --admin-password YourSecurePassword123")
+		os.Exit(1)
+	}
 
 	if err := seedDemoData(*configDir, *adminPassword); err != nil {
 		fmt.Printf("演示数据初始化失败: %v\n", err)
@@ -25,7 +31,6 @@ func main() {
 		return
 	}
 	fmt.Println("演示数据初始化完成")
-	fmt.Println("演示管理员：admin / " + *adminPassword)
 }
 
 func seedDemoData(configDir, adminPassword string) error {

@@ -5,15 +5,18 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/scenic-guide/internal/pkg"
 )
 
 func SetupRoutes(r *gin.Engine, handlers *Handlers) {
+	r.Use(corsMiddleware())
 	r.Use(securityHeaders())
 
 	r.Static("/static", "./static")
-	r.Any("/vtuber-ws/*path", vtuberWebSocketProxy("http://127.0.0.1:12393"))
+	r.Any("/vtuber-ws/*path", pkg.WSTokenAuth(), vtuberWebSocketProxy("http://127.0.0.1:12393"))
 
 	r.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
@@ -41,7 +44,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	handlers.Admin.Routes(api)
 
 	// OpenAI-compatible endpoint for Open-LLM-VTuber.
-	r.POST("/v1/chat/completions", handlers.OpenAIProxy.ChatCompletions)
+	r.POST("/v1/chat/completions", pkg.RateLimitMiddleware(30, time.Minute), handlers.OpenAIProxy.ChatCompletions)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -51,12 +54,34 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	})
 }
 
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin != "" {
+			c.Header("Access-Control-Allow-Origin", origin)
+		} else {
+			c.Header("Access-Control-Allow-Origin", "*")
+		}
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+		c.Header("Access-Control-Max-Age", "86400")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
+}
+
 func securityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "SAMEORIGIN")
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=()")
+		c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; media-src 'self' blob:;")
 		c.Next()
 	}
 }

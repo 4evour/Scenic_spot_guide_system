@@ -76,7 +76,7 @@ func (req KnowledgeRequest) toServiceInput() service.KnowledgeUpsertInput {
 func (h *AIHandler) Chat(c *gin.Context) {
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -94,7 +94,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("AI Chat RAG 查询失败", "error", err, "elapsed_ms", elapsed)
-			pkg.InternalError(c, "调用AI服务失败: "+err.Error())
+			pkg.InternalError(c, "调用AI服务失败")
 			return
 		}
 		slog.Info("AI Chat RAG 查询完成", "response_len", len([]rune(response)), "elapsed_ms", elapsed)
@@ -134,7 +134,7 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		pkg.BadRequest(c, "获取文件失败: "+err.Error())
+		pkg.BadRequest(c, "获取文件失败")
 		return
 	}
 
@@ -149,31 +149,35 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 
 	f, err := file.Open()
 	if err != nil {
-		pkg.BadRequest(c, "打开文件失败: "+err.Error())
+		slog.Error("打开上传文件失败", "error", err)
+		pkg.BadRequest(c, "打开文件失败")
 		return
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		pkg.BadRequest(c, "读取文件失败: "+err.Error())
+		slog.Error("读取上传文件失败", "error", err)
+		pkg.BadRequest(c, "读取文件失败")
 		return
 	}
 
-	savePath, err := h.ragService.SaveUploadedFile(file.Filename, data)
+	_, err = h.ragService.SaveUploadedFile(file.Filename, data)
 	if err != nil {
-		pkg.InternalError(c, "保存文件失败: "+err.Error())
+		slog.Error("保存上传文件失败", "error", err)
+		pkg.InternalError(c, "保存文件失败")
 		return
 	}
 
 	loadedCount, err := h.ragService.LoadKnowledgeDocument(file.Filename, data, c.PostForm("category"))
 	if err != nil {
-		pkg.InternalError(c, "加载知识失败: "+err.Error())
+		slog.Error("加载知识文档失败", "error", err)
+		pkg.InternalError(c, "加载知识失败")
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"file_path":    savePath,
+		"filename":     file.Filename,
 		"loaded_count": loadedCount,
 		"message":      "知识上传并加载成功",
 	})
@@ -199,7 +203,8 @@ func (h *AIHandler) ListKnowledge(c *gin.Context) {
 
 	list, total, err := h.ragService.ListKnowledge(page, pageSize, c.Query("keyword"), c.Query("category"))
 	if err != nil {
-		pkg.InternalError(c, "查询知识失败: "+err.Error())
+		slog.Error("查询知识列表失败", "error", err)
+		pkg.InternalError(c, "查询知识失败")
 		return
 	}
 
@@ -218,7 +223,7 @@ func (h *AIHandler) CreateKnowledge(c *gin.Context) {
 
 	var req KnowledgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
@@ -228,7 +233,8 @@ func (h *AIHandler) CreateKnowledge(c *gin.Context) {
 
 	knowledge, err := h.ragService.CreateKnowledge(req.toServiceInput())
 	if err != nil {
-		pkg.InternalError(c, "保存知识失败: "+err.Error())
+		slog.Error("创建知识失败", "error", err)
+		pkg.InternalError(c, "保存知识失败")
 		return
 	}
 	pkg.Success(c, gin.H{"knowledge": knowledge})
@@ -242,7 +248,7 @@ func (h *AIHandler) UpdateKnowledge(c *gin.Context) {
 	id := c.Param("id")
 	var req KnowledgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误: "+err.Error())
+		pkg.BadRequest(c, "参数错误")
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
@@ -252,7 +258,8 @@ func (h *AIHandler) UpdateKnowledge(c *gin.Context) {
 
 	knowledge, err := h.ragService.UpdateKnowledge(id, req.toServiceInput())
 	if err != nil {
-		pkg.InternalError(c, "更新知识失败: "+err.Error())
+		slog.Error("更新知识失败", "error", err, "id", id)
+		pkg.InternalError(c, "更新知识失败")
 		return
 	}
 	pkg.Success(c, gin.H{"knowledge": knowledge})
@@ -271,7 +278,8 @@ func (h *AIHandler) GetKnowledge(c *gin.Context) {
 
 	knowledge, err := h.ragService.GetKnowledge(id)
 	if err != nil {
-		pkg.InternalError(c, "查询知识失败: "+err.Error())
+		slog.Error("查询知识详情失败", "error", err, "id", id)
+		pkg.InternalError(c, "查询知识失败")
 		return
 	}
 
@@ -297,7 +305,8 @@ func (h *AIHandler) DeleteKnowledge(c *gin.Context) {
 	}
 
 	if err := h.ragService.DeleteKnowledge(id); err != nil {
-		pkg.InternalError(c, "删除知识失败: "+err.Error())
+		slog.Error("删除知识失败", "error", err, "id", id)
+		pkg.InternalError(c, "删除知识失败")
 		return
 	}
 
@@ -317,7 +326,8 @@ func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
 	}
 
 	if err := h.ragService.DeleteAllKnowledge(); err != nil {
-		pkg.InternalError(c, "清空知识失败: "+err.Error())
+		slog.Error("清空知识库失败", "error", err)
+		pkg.InternalError(c, "清空知识失败")
 		return
 	}
 
@@ -327,7 +337,7 @@ func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
 }
 
 func (h *AIHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/ai/chat", h.Chat)
+	r.POST("/ai/chat", pkg.RateLimitMiddleware(30, time.Minute), h.Chat)
 
 	knowledge := r.Group("/knowledge")
 	knowledge.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
