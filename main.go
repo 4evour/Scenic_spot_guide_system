@@ -18,6 +18,7 @@ import (
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/repository"
 	"github.com/scenic-guide/internal/service"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -60,6 +61,8 @@ func run() error {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 	slog.Info("数据库迁移成功")
+
+	ensureAdminUser()
 
 	slog.Info("初始化 RAG 知识库")
 	ragService := initRAG(cfg)
@@ -116,6 +119,42 @@ func run() error {
 	}
 	slog.Info("服务已优雅关闭")
 	return nil
+}
+
+func ensureAdminUser() {
+	username := os.Getenv("SCENIC_GUIDE_ADMIN_USERNAME")
+	password := os.Getenv("SCENIC_GUIDE_ADMIN_PASSWORD")
+
+	if username == "" {
+		username = "admin"
+	}
+	if password == "" {
+		password = "Admin@123456"
+		slog.Warn("使用默认管理员密码，生产环境请设置 SCENIC_GUIDE_ADMIN_PASSWORD 环境变量")
+	}
+
+	userRepo := repository.NewUserRepository(pkg.DB)
+	admins, _ := userRepo.FindByRole("admin")
+	if len(admins) > 0 {
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("生成管理员密码失败", "error", err)
+		return
+	}
+	admin := &model.User{
+		Username: username,
+		Password: string(hashedPassword),
+		Email:    username + "@scenic.local",
+		Role:     "admin",
+	}
+	if err := userRepo.Create(admin); err != nil {
+		slog.Error("自动创建管理员失败", "error", err)
+		return
+	}
+	slog.Info("已自动创建管理员账号", "username", username)
 }
 
 func initRAG(cfg *config.Config) *service.RAGService {
