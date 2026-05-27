@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -36,7 +38,9 @@ func NewAIHandler(ragService *service.RAGService) *AIHandler {
 }
 
 type ChatRequest struct {
-	Message string `json:"message"`
+	Message   string `json:"message"`
+	SessionID string `json:"session_id,omitempty"`
+	Stream    bool   `json:"stream,omitempty"`
 }
 
 type KnowledgeRequest struct {
@@ -85,23 +89,34 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		return
 	}
 
-	slog.Info("收到 AI Chat 请求", "message_len", len([]rune(req.Message)), "rag_available", h.ragService != nil)
+	slog.Info("收到 AI Chat 请求", "message_len", len([]rune(req.Message)), "stream", req.Stream, "rag_available", h.ragService != nil)
 
 	startTime := time.Now()
 
 	if h.ragService != nil {
-		response, route, err := h.ragService.QueryWithRAGAndRoute(req.Message)
+		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Message)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
-			slog.Error("AI Chat RAG 查询失败", "error", err, "elapsed_ms", elapsed)
-			pkg.InternalError(c, "调用AI服务失败")
+			slog.Error("AI Chat RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
+			if req.Stream {
+				h.writeSSEError(c, "调用AI服务失败")
+			} else {
+				pkg.InternalError(c, "调用AI服务失败")
+			}
 			return
 		}
-		slog.Info("AI Chat RAG 查询完成", "response_len", len([]rune(response)), "elapsed_ms", elapsed)
+		slog.Info("AI Chat RAG 查询完成",
+			"trace_id", trace.TraceID,
+			"response_len", len([]rune(response)),
+			"retrieval_ms", trace.RetrievalMs,
+			"generation_ms", trace.GenerationMs,
+			"total_ms", trace.TotalMs,
+			"elapsed_ms", elapsed,
+		)
 
-		// 记录交互日志
 		if pkg.StatsService != nil {
 			pkg.StatsService.RecordInteraction(service.InteractionRecord{
+				SessionID:      req.SessionID,
 				Query:          req.Message,
 				Response:       response,
 				Emotion:        detectEmotion(response),
@@ -111,18 +126,109 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			})
 		}
 
-		responseData := gin.H{
-			"response": response,
+		if req.Stream {
+			h.writeSSEResponse(c, response, route, trace.TraceID)
+		} else {
+			responseData := gin.H{
+				"response": response,
+				"trace_id": trace.TraceID,
+			}
+			if route != nil {
+				responseData["route"] = route
+			}
+			pkg.Success(c, responseData)
 		}
-
-		if route != nil {
-			responseData["route"] = route
-		}
-
-		pkg.Success(c, responseData)
 	} else {
-		pkg.InternalError(c, "RAG服务未初始化")
+		if req.Stream {
+			h.writeSSEError(c, "RAG服务未初始化")
+		} else {
+			pkg.InternalError(c, "RAG服务未初始化")
+		}
 	}
+}
+
+// writeSSEResponse 以 SSE 流式返回 RAG 回答（打字机效果）
+func (h *AIHandler) writeSSEResponse(c *gin.Context, response string, route interface{}, traceID string) {
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+	c.Status(http.StatusOK)
+
+	writer := c.Writer
+	flusher, ok := writer.(http.Flusher)
+	if !ok {
+		slog.Error("SSE 流式响应失败，ResponseWriter 不支持 Flusher")
+		return
+	}
+
+	runes := []rune(response)
+	chunkSize := 3
+	for i := 0; i < len(runes); i += chunkSize {
+		end := i + chunkSize
+		if end > len(runes) {
+			end = len(runes)
+		}
+		chunk := string(runes[i:end])
+		data, _ := json.Marshal(gin.H{"token": chunk, "done": false})
+		fmt.Fprintf(writer, "data: %s\n\n", string(data))
+		flusher.Flush()
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// 发送完成标记（含路由和 trace_id）
+	doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": traceID, "route": route})
+	fmt.Fprintf(writer, "data: %s\n\n", string(doneData))
+	fmt.Fprintf(writer, "data: [DONE]\n\n")
+	flusher.Flush()
+}
+
+// writeSSEError 以 SSE 格式返回错误
+func (h *AIHandler) writeSSEError(c *gin.Context, errMsg string) {
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Status(http.StatusOK)
+	writer := c.Writer
+	if flusher, ok := writer.(http.Flusher); ok {
+		errData, _ := json.Marshal(gin.H{"error": errMsg})
+		fmt.Fprintf(writer, "data: %s\n\n", string(errData))
+		flusher.Flush()
+		fmt.Fprintf(writer, "data: [DONE]\n\n")
+		flusher.Flush()
+	}
+}
+
+type ChatFeedbackRequest struct {
+	Query    string `json:"query"`
+	Response string `json:"response"`
+	Helpful  bool   `json:"helpful"`
+}
+
+func (h *AIHandler) Feedback(c *gin.Context) {
+	var req ChatFeedbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, "参数错误")
+		return
+	}
+
+	rating := 1
+	if req.Helpful {
+		rating = 5
+	}
+
+	if pkg.StatsService != nil {
+		pkg.StatsService.RecordInteraction(service.InteractionRecord{
+			SessionID: "feedback-" + fmt.Sprintf("%d", time.Now().UnixMilli()),
+			Query:     req.Query,
+			Response:  req.Response,
+			Emotion:   "neutral",
+			Category:  "feedback",
+			Source:    "feedback",
+		})
+	}
+
+	slog.Info("收到用户反馈", "helpful", req.Helpful, "rating", rating, "query_len", len([]rune(req.Query)))
+	pkg.SuccessWithMessage(c, "感谢您的反馈", nil)
 }
 
 func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
@@ -338,6 +444,7 @@ func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
 
 func (h *AIHandler) Routes(r *gin.RouterGroup) {
 	r.POST("/ai/chat", pkg.RateLimitMiddleware(30, time.Minute), h.Chat)
+	r.POST("/ai/feedback", h.Feedback)
 
 	knowledge := r.Group("/knowledge")
 	knowledge.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())

@@ -1365,3 +1365,31 @@ body::before {
         padding: 1.25rem;
     }
 }
+
+/* Feedback buttons */
+.feedback-bar {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.fb-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: opacity 0.2s, border-color 0.2s;
+}
+
+.fb-btn:hover {
+    opacity: 1;
+    border-color: rgba(255,255,255,0.3);
+}
+
+.fb-done {
+    font-size: 12px;
+    opacity: 0.5;
+}

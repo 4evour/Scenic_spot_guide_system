@@ -534,6 +534,19 @@ function openLoginFromHash() {
     if (modal) modal.classList.add('show');
 }
 
+function sendFeedback(feedbackId, helpful, query, response) {
+    fetch('/api/v1/ai/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, response, helpful })
+    }).then(() => {
+        const el = document.getElementById(feedbackId);
+        if (el) {
+            el.innerHTML = helpful ? '<span class="fb-done">&#128077; 感谢反馈</span>' : '<span class="fb-done">&#128078; 感谢反馈</span>';
+        }
+    }).catch(() => {});
+}
+
 function sendMessage(message) {
     if (!message.trim()) return;
 
@@ -597,10 +610,15 @@ function sendMessage(message) {
 
         const aiMessage = document.createElement('div');
         aiMessage.className = 'chat-message ai';
+        const feedbackId = 'fb_' + Date.now();
         aiMessage.innerHTML = `
             <div class="message-avatar"></div>
             <div class="message-content">
                 <p>${escapeHtml(displayText)}</p>
+                <div class="feedback-bar" id="${feedbackId}">
+                    <button class="fb-btn" title="有用" onclick="sendFeedback('${feedbackId}', true, '${escapeHtml(message).replace(/'/g, "\\'")}', '${escapeHtml(displayText).replace(/'/g, "\\'")}')">&#128077;</button>
+                    <button class="fb-btn" title="没用" onclick="sendFeedback('${feedbackId}', false, '${escapeHtml(message).replace(/'/g, "\\'")}', '${escapeHtml(displayText).replace(/'/g, "\\'")}')">&#128078;</button>
+                </div>
                 <span class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
         `;
