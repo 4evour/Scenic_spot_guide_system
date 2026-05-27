@@ -112,10 +112,10 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	var emotion string
 
 	if h.ragService != nil {
-		response, _, err := h.ragService.QueryWithRAGAndRoute(req.InputText)
+		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.InputText)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
-			slog.Error("数字人文本聊天 RAG 查询失败", "error", err, "trace_id", traceID, "elapsed_ms", elapsed)
+			slog.Error("数字人文本聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
 			answer = "抱歉，我暂时无法回答这个问题。"
 			emotion = "sadness"
 		} else {
@@ -202,10 +202,10 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	var emotion string
 
 	if h.ragService != nil {
-		response, _, err := h.ragService.QueryWithRAGAndRoute(req.Transcript)
+		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Transcript)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
-			slog.Error("数字人语音聊天 RAG 查询失败", "error", err, "trace_id", traceID, "elapsed_ms", elapsed)
+			slog.Error("数字人语音聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
 			answer = "抱歉，我暂时无法回答这个问题。"
 			emotion = "sadness"
 		} else {

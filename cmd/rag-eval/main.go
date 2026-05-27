@@ -35,6 +35,11 @@ func main() {
 	repeat := flag.Int("repeat", 1, "bench 每条评测重复次数")
 	retrievalOnly := flag.Bool("retrieval-only", false, "只评估检索与本地片段，不调用外部生成")
 	useEmbedding := flag.Bool("embedding", false, "启用配置中的 Embedding Provider 参与检索评估")
+	retrievalMode := flag.String("mode", string(service.RetrievalModeDefault), "检索模式：bm25-local、embedding、hybrid-weighted、rrf-fusion、light-rerank")
+	compareModes := flag.String("compare-modes", "", "逗号分隔的检索模式对比列表，例如 bm25-local,rrf-fusion,light-rerank")
+	embeddingWeight := flag.Float64("embedding-weight", 0.6, "hybrid-weighted 模式中的 Embedding 权重")
+	bm25Weight := flag.Float64("bm25-weight", 0.4, "hybrid-weighted 模式中的 BM25/词面权重")
+	rrfK := flag.Float64("rrf-k", 60, "rrf-fusion 模式中的 RRF k 参数")
 	configDir := flag.String("config", "configs", "配置目录，用于 -embedding 或端到端评估")
 	reportEnv := flag.Bool("report-env", false, "在报告中记录运行环境、数据集和评估口径")
 	outFile := flag.String("out", "", "将 JSON 报告写入指定文件")
@@ -42,54 +47,106 @@ func main() {
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})))
 
-	report, err := runEvaluation(*knowledgeFile, *evalFile, evaluationRunOptions{
-		topK:          *topK,
-		bench:         *bench,
-		concurrency:   *concurrency,
-		repeat:        *repeat,
-		retrievalOnly: *retrievalOnly,
-		useEmbedding:  *useEmbedding,
-		configDir:     *configDir,
-		reportEnv:     *reportEnv,
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "RAG 评估失败: %v\n", err)
-		os.Exit(1)
+	options := evaluationRunOptions{
+		topK:            *topK,
+		bench:           *bench,
+		concurrency:     *concurrency,
+		repeat:          *repeat,
+		retrievalOnly:   *retrievalOnly,
+		useEmbedding:    *useEmbedding,
+		retrievalMode:   service.RetrievalMode(strings.TrimSpace(*retrievalMode)),
+		embeddingWeight: *embeddingWeight,
+		bm25Weight:      *bm25Weight,
+		rrfK:            *rrfK,
+		configDir:       *configDir,
+		reportEnv:       *reportEnv,
+	}
+
+	var output any
+	var passing bool
+	if modes := parseCompareModes(*compareModes); len(modes) > 0 {
+		report, err := runComparison(*knowledgeFile, *evalFile, options, modes)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "RAG 评估失败: %v\n", err)
+			os.Exit(1)
+		}
+		output = report
+		passing = report.IsPassing()
+	} else {
+		report, err := runEvaluation(*knowledgeFile, *evalFile, options)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "RAG 评估失败: %v\n", err)
+			os.Exit(1)
+		}
+		output = report
+		passing = report.IsPassing()
 	}
 
 	switch strings.ToLower(*format) {
 	case "json":
-		data, err := json.MarshalIndent(report, "", "  ")
+		data, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "序列化评估报告失败: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println(string(data))
 	default:
-		printTextReport(report)
+		switch report := output.(type) {
+		case *comparisonReport:
+			printComparisonReport(report)
+		case *service.RAGEvaluationReport:
+			printTextReport(report)
+		}
 	}
 
 	if *outFile != "" {
-		if err := writeJSONReport(*outFile, report); err != nil {
+		if err := writeJSONReport(*outFile, output); err != nil {
 			fmt.Fprintf(os.Stderr, "写入评估报告失败: %v\n", err)
 			os.Exit(1)
 		}
 	}
 
-	if *failOnMiss && !report.IsPassing() {
+	if *failOnMiss && !passing {
 		os.Exit(2)
 	}
 }
 
 type evaluationRunOptions struct {
-	topK          int
-	bench         bool
-	concurrency   int
-	repeat        int
-	retrievalOnly bool
-	useEmbedding  bool
-	configDir     string
-	reportEnv     bool
+	topK            int
+	bench           bool
+	concurrency     int
+	repeat          int
+	retrievalOnly   bool
+	useEmbedding    bool
+	retrievalMode   service.RetrievalMode
+	embeddingWeight float64
+	bm25Weight      float64
+	rrfK            float64
+	configDir       string
+	reportEnv       bool
+}
+
+type comparisonModeReport struct {
+	Name   string                       `json:"name"`
+	Report *service.RAGEvaluationReport `json:"report"`
+}
+
+type comparisonReport struct {
+	Modes      []comparisonModeReport `json:"modes"`
+	StartedAt  time.Time              `json:"started_at"`
+	FinishedAt time.Time              `json:"finished_at"`
+}
+
+func (r comparisonReport) IsPassing() bool {
+	if len(r.Modes) == 0 {
+		return false
+	}
+	for _, mode := range r.Modes {
+		if mode.Report == nil || !mode.Report.IsPassing() {
+			return false
+		}
+	}
+	return true
 }
 
 var registerRAGEvalDriver sync.Once
@@ -133,8 +190,9 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 	var report *service.RAGEvaluationReport
 	if !options.bench {
 		report, err = rag.EvaluateFileWithOptions(evalFile, service.EvaluationOptions{
-			TopK:          options.topK,
-			RetrievalOnly: options.retrievalOnly,
+			TopK:             options.topK,
+			RetrievalOnly:    options.retrievalOnly,
+			RetrievalOptions: options.retrievalOptions(),
 		})
 	} else {
 		report, err = runBench(rag, evalFile, options)
@@ -143,6 +201,37 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 		return nil, err
 	}
 	attachRunInfo(report, knowledgeFile, evalFile, chunkCount, providerName(embeddingProvider), generationProviderName(ragConfig, options), options)
+	return report, nil
+}
+
+func (options evaluationRunOptions) retrievalOptions() service.RetrievalOptions {
+	return service.RetrievalOptions{
+		TopK:            options.topK,
+		Mode:            options.retrievalMode,
+		EmbeddingWeight: options.embeddingWeight,
+		BM25Weight:      options.bm25Weight,
+		RRFK:            options.rrfK,
+	}
+}
+
+func runComparison(knowledgeFile, evalFile string, baseOptions evaluationRunOptions, modes []service.RetrievalMode) (*comparisonReport, error) {
+	report := &comparisonReport{
+		Modes:     make([]comparisonModeReport, 0, len(modes)),
+		StartedAt: time.Now(),
+	}
+	for _, mode := range modes {
+		options := baseOptions
+		options.retrievalMode = mode
+		if mode != service.RetrievalModeBM25Local && mode != service.RetrievalModeLightRerank {
+			options.useEmbedding = true
+		}
+		modeReport, err := runEvaluation(knowledgeFile, evalFile, options)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", mode, err)
+		}
+		report.Modes = append(report.Modes, comparisonModeReport{Name: string(mode), Report: modeReport})
+	}
+	report.FinishedAt = time.Now()
 	return report, nil
 }
 
@@ -211,12 +300,30 @@ func printTextReport(report *service.RAGEvaluationReport) {
 			report.RunInfo.Repeat,
 			report.RunInfo.RetrievalOnly,
 		)
+		if report.RunInfo.RetrievalMode != "" {
+			fmt.Printf("检索模式: %s", report.RunInfo.RetrievalMode)
+			if report.RunInfo.RetrievalMode == string(service.RetrievalModeHybridWeighted) {
+				fmt.Printf(" embedding_weight=%.2f bm25_weight=%.2f", report.RunInfo.EmbeddingWeight, report.RunInfo.BM25Weight)
+			}
+			if report.RunInfo.RetrievalMode == string(service.RetrievalModeRRFFusion) {
+				fmt.Printf(" rrf_k=%.1f", report.RunInfo.RRFK)
+			}
+			fmt.Println()
+			fmt.Println()
+		}
 	}
 	if len(report.GroupStats) > 0 {
 		fmt.Println("分组统计:")
 		for _, stat := range report.GroupStats {
 			fmt.Printf("  %s=%s total=%d pass=%d fail=%d Recall@K=%.1f%% MRR@K=%.3f\n",
 				stat.GroupBy, stat.Name, stat.Total, stat.Passed, stat.Failed, stat.AverageRecallAtK*100, stat.MRRAtK)
+		}
+		fmt.Println()
+	}
+	if len(report.FailureStats) > 0 {
+		fmt.Println("失败原因统计:")
+		for _, stat := range report.FailureStats {
+			fmt.Printf("  %s total=%d\n", stat.Reason, stat.Total)
 		}
 		fmt.Println()
 	}
@@ -253,6 +360,26 @@ func printTextReport(report *service.RAGEvaluationReport) {
 	}
 }
 
+func printComparisonReport(report *comparisonReport) {
+	fmt.Println("========== RAG 多模式对比报告 ==========")
+	for _, mode := range report.Modes {
+		if mode.Report == nil {
+			continue
+		}
+		fmt.Printf("%s: total=%d pass=%d fail=%d pass=%.1f%% Recall@K=%.1f%% MRR@K=%.3f p50/p95=%d/%dms\n",
+			mode.Name,
+			mode.Report.Total,
+			mode.Report.Passed,
+			mode.Report.Failed,
+			mode.Report.PassRate*100,
+			mode.Report.AverageRecallAtK*100,
+			mode.Report.MRRAtK,
+			mode.Report.RetrievalP50Ms,
+			mode.Report.RetrievalP95Ms,
+		)
+	}
+}
+
 func attachRunInfo(report *service.RAGEvaluationReport, knowledgeFile, evalFile string, knowledgeChunks int, embeddingProvider, generationProvider string, options evaluationRunOptions) {
 	concurrency := options.concurrency
 	if concurrency < 1 {
@@ -273,6 +400,10 @@ func attachRunInfo(report *service.RAGEvaluationReport, knowledgeFile, evalFile 
 		RetrievalOnly:      options.retrievalOnly,
 		EmbeddingProvider:  embeddingProvider,
 		GenerationProvider: generationProvider,
+		RetrievalMode:      string(options.retrievalMode),
+		EmbeddingWeight:    options.embeddingWeight,
+		BM25Weight:         options.bm25Weight,
+		RRFK:               options.rrfK,
 	}
 	if options.reportEnv {
 		report.RunInfo.OS = runtime.GOOS
@@ -299,7 +430,7 @@ func countJSONLLines(filePath string) int {
 	return count
 }
 
-func writeJSONReport(outputPath string, report *service.RAGEvaluationReport) error {
+func writeJSONReport(outputPath string, report any) error {
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return err
@@ -308,6 +439,19 @@ func writeJSONReport(outputPath string, report *service.RAGEvaluationReport) err
 		return err
 	}
 	return os.WriteFile(outputPath, append(data, '\n'), 0o644)
+}
+
+func parseCompareModes(raw string) []service.RetrievalMode {
+	parts := strings.Split(raw, ",")
+	modes := make([]service.RetrievalMode, 0, len(parts))
+	for _, part := range parts {
+		mode := service.RetrievalMode(strings.TrimSpace(part))
+		if mode == "" {
+			continue
+		}
+		modes = append(modes, mode)
+	}
+	return modes
 }
 
 func runBench(rag *service.RAGService, evalFile string, options evaluationRunOptions) (*service.RAGEvaluationReport, error) {
@@ -330,7 +474,7 @@ func runBench(rag *service.RAGService, evalFile string, options evaluationRunOpt
 	}
 
 	if len(baseCases) > 0 {
-		_, _ = rag.RetrieveRelevantKnowledge(baseCases[0].Question, options.topK)
+		_, _ = rag.RetrieveRelevantKnowledgeWithOptions(baseCases[0].Question, options.retrievalOptions())
 	}
 
 	concurrency := options.concurrency
@@ -339,8 +483,9 @@ func runBench(rag *service.RAGService, evalFile string, options evaluationRunOpt
 	}
 	if concurrency == 1 {
 		return rag.EvaluateQuestionsWithOptions(cases, service.EvaluationOptions{
-			TopK:          options.topK,
-			RetrievalOnly: options.retrievalOnly,
+			TopK:             options.topK,
+			RetrievalOnly:    options.retrievalOnly,
+			RetrievalOptions: options.retrievalOptions(),
 		})
 	}
 
@@ -357,8 +502,9 @@ func runBench(rag *service.RAGService, evalFile string, options evaluationRunOpt
 			defer wg.Done()
 			for index := range jobs {
 				report, err := rag.EvaluateQuestionsWithOptions([]service.RAGEvaluationCase{cases[index]}, service.EvaluationOptions{
-					TopK:          options.topK,
-					RetrievalOnly: options.retrievalOnly,
+					TopK:             options.topK,
+					RetrievalOnly:    options.retrievalOnly,
+					RetrievalOptions: options.retrievalOptions(),
 				})
 				if err != nil {
 					errMu.Lock()
@@ -434,6 +580,7 @@ func summarizeResults(results []service.RAGEvaluationResult, topK int, retrieval
 		report.RetrievalP95Ms = percentileMs(latencies, 0.95)
 	}
 	report.GroupStats = service.SummarizeEvaluationGroups(results)
+	report.FailureStats = service.SummarizeEvaluationFailures(results)
 	return report
 }
 

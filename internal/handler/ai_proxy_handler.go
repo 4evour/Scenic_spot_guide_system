@@ -28,8 +28,9 @@ func NewOpenAIProxyHandler(ragService *service.RAGService) *OpenAIProxyHandler {
 // ChatCompletionRequest OpenAI 兼容请求
 // Content 使用 json.RawMessage 以同时支持字符串和多模态数组格式
 type ChatCompletionRequest struct {
-	Model    string `json:"model"`
-	Messages []struct {
+	Model     string `json:"model"`
+	SessionID string `json:"session_id,omitempty"`
+	Messages  []struct {
 		Role    string          `json:"role"`
 		Content json.RawMessage `json:"content"` // 兼容 string 和 array 两种格式
 		Name    string          `json:"name,omitempty"`
@@ -157,10 +158,10 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 
 	// 使用 RAG 服务生成回答
 	startTime := time.Now()
-	response, _, err := h.ragService.QueryWithRAGAndRoute(query)
+	response, _, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, query)
 	elapsed := time.Since(startTime).Milliseconds()
 	if err != nil {
-		slog.Error("OpenAI 兼容请求 RAG 查询失败", "error", err, "elapsed_ms", elapsed)
+		slog.Error("OpenAI 兼容请求 RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
 		if req.Stream {
 			h.writeStreamError(c, "RAG query failed")
 		} else {
@@ -176,6 +177,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 	// 记录交互日志
 	if pkg.StatsService != nil {
 		pkg.StatsService.RecordInteraction(service.InteractionRecord{
+			SessionID:      req.SessionID,
 			Query:          query,
 			Response:       response,
 			Emotion:        emotion,
@@ -185,7 +187,15 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		})
 	}
 
-	slog.Info("OpenAI 兼容请求回答完成", "emotion", emotion, "response_len", len([]rune(response)), "elapsed_ms", elapsed)
+	slog.Info("OpenAI 兼容请求回答完成",
+		"trace_id", trace.TraceID,
+		"emotion", emotion,
+		"response_len", len([]rune(response)),
+		"retrieval_ms", trace.RetrievalMs,
+		"generation_ms", trace.GenerationMs,
+		"total_ms", trace.TotalMs,
+		"elapsed_ms", elapsed,
+	)
 
 	if req.Stream {
 		h.writeStreamResponse(c, req.Model, responseWithEmotion)

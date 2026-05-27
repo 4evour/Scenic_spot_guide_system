@@ -129,8 +129,8 @@ func ensureAdminUser() {
 		username = "admin"
 	}
 	if password == "" {
-		password = "Admin@123456"
-		slog.Warn("使用默认管理员密码，生产环境请设置 SCENIC_GUIDE_ADMIN_PASSWORD 环境变量")
+		slog.Warn("未设置管理员密码，跳过自动创建管理员账号；如需启动时创建管理员，请设置 SCENIC_GUIDE_ADMIN_PASSWORD 环境变量")
+		return
 	}
 
 	userRepo := repository.NewUserRepository(pkg.DB)
@@ -185,13 +185,17 @@ func initRAG(cfg *config.Config) *service.RAGService {
 		slog.Info("知识库已有数据，无需重新加载", "count", count)
 	} else {
 		slog.Info("知识库为空，开始加载默认知识库")
-		err := ragService.LoadKnowledgeFromFile("./knowledge/lingshan_chunks.jsonl")
-		if err != nil {
-			slog.Error("加载知识库失败", "error", err)
-		} else {
-			count, _ = knowledgeRepo.Count()
-			slog.Info("知识库加载完成", "count", count)
+		knowledgeFiles := []string{
+			"./knowledge/lingshan_chunks.jsonl",
+			"./knowledge/real/lingshan_real_chunks.jsonl",
 		}
+		for _, file := range knowledgeFiles {
+			if err := ragService.LoadKnowledgeFromFile(file); err != nil {
+				slog.Error("加载知识库文件失败", "file", file, "error", err)
+			}
+		}
+		count, _ = knowledgeRepo.Count()
+		slog.Info("知识库加载完成", "count", count)
 	}
 
 	return ragService

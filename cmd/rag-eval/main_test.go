@@ -12,11 +12,15 @@ import (
 func TestAttachRunInfoRecordsDatasetAndEnvironment(t *testing.T) {
 	report := &service.RAGEvaluationReport{Total: 2, TopK: 8}
 	options := evaluationRunOptions{
-		topK:          8,
-		concurrency:   4,
-		repeat:        3,
-		retrievalOnly: true,
-		reportEnv:     true,
+		topK:            8,
+		concurrency:     4,
+		repeat:          3,
+		retrievalOnly:   true,
+		reportEnv:       true,
+		retrievalMode:   service.RetrievalModeRRFFusion,
+		embeddingWeight: 0.6,
+		bm25Weight:      0.4,
+		rrfK:            60,
 	}
 
 	attachRunInfo(report, "knowledge/real/lingshan_real_chunks.jsonl", "knowledge/real/lingshan_real_eval_open.json", 12, "bm25-local", "disabled", options)
@@ -35,6 +39,9 @@ func TestAttachRunInfoRecordsDatasetAndEnvironment(t *testing.T) {
 	}
 	if report.RunInfo.EmbeddingProvider != "bm25-local" || report.RunInfo.GenerationProvider != "disabled" {
 		t.Fatalf("unexpected providers: %+v", report.RunInfo)
+	}
+	if report.RunInfo.RetrievalMode != string(service.RetrievalModeRRFFusion) || report.RunInfo.RRFK != 60 {
+		t.Fatalf("retrieval mode should be recorded: %+v", report.RunInfo)
 	}
 }
 
@@ -70,6 +77,34 @@ func TestSummarizeResultsIncludesGroupStats(t *testing.T) {
 
 	if len(report.GroupStats) == 0 {
 		t.Fatalf("expected group stats")
+	}
+}
+
+func TestParseCompareModesTrimsAndDefaults(t *testing.T) {
+	modes := parseCompareModes(" bm25-local, rrf-fusion ,, light-rerank ")
+	if len(modes) != 3 {
+		t.Fatalf("modes length = %d, want 3", len(modes))
+	}
+	if modes[0] != service.RetrievalModeBM25Local || modes[1] != service.RetrievalModeRRFFusion || modes[2] != service.RetrievalModeLightRerank {
+		t.Fatalf("unexpected modes: %+v", modes)
+	}
+
+	defaults := parseCompareModes("")
+	if len(defaults) != 0 {
+		t.Fatalf("empty compare modes should return no modes: %+v", defaults)
+	}
+}
+
+func TestComparisonReportIsNotPassingWhenAnyModeFails(t *testing.T) {
+	report := comparisonReport{
+		Modes: []comparisonModeReport{
+			{Name: "bm25-local", Report: &service.RAGEvaluationReport{Total: 1, Passed: 1}},
+			{Name: "rrf-fusion", Report: &service.RAGEvaluationReport{Total: 1, Passed: 0}},
+		},
+	}
+
+	if report.IsPassing() {
+		t.Fatalf("comparison report should fail when any mode fails")
 	}
 }
 

@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,6 +139,274 @@ func TestRAGServiceUsesHybridScoreWhenEmbeddingAvailable(t *testing.T) {
 	}
 }
 
+func TestRAGServiceRetrievesWithRRFMode(t *testing.T) {
+	rag := newTestRAGServiceWithEmbedding(t, staticEmbeddingProvider{
+		vectors: map[string][]float64{
+			"灵山梵宫有什么工艺？": {1, 0},
+		},
+	})
+	data := []byte(`[
+		{"id":"semantic-match","title":"游客服务","source":"test","content":"这里介绍普通游客服务和咨询方式。","vector":"[1,0]"},
+		{"id":"lexical-match","title":"灵山梵宫工艺","source":"test","content":"灵山梵宫汇集东阳木雕、敦煌壁画、扬州漆器等传统工艺。","vector":"[0,1]"},
+		{"id":"irrelevant","title":"交通指南","source":"test","content":"无锡火车站可乘公交前往灵山。","vector":"[0,1]"}
+	]`)
+
+	if _, err := rag.LoadKnowledgeJSON(data); err != nil {
+		t.Fatalf("LoadKnowledgeJSON returned error: %v", err)
+	}
+
+	chunks, err := rag.RetrieveRelevantKnowledgeWithOptions("灵山梵宫有什么工艺？", RetrievalOptions{
+		TopK: 1,
+		Mode: RetrievalModeRRFFusion,
+	})
+	if err != nil {
+		t.Fatalf("RetrieveRelevantKnowledgeWithOptions returned error: %v", err)
+	}
+	if len(chunks) != 1 {
+		t.Fatalf("retrieved chunks = %d, want 1", len(chunks))
+	}
+	if chunks[0].ID != "lexical-match" {
+		t.Fatalf("top chunk id = %q, want lexical-match", chunks[0].ID)
+	}
+}
+
+func TestRAGServiceRetrievesWithWeightedHybridMode(t *testing.T) {
+	rag := newTestRAGServiceWithEmbedding(t, staticEmbeddingProvider{
+		vectors: map[string][]float64{
+			"灵山梵宫有什么工艺？": {1, 0},
+		},
+	})
+	data := []byte(`[
+		{"id":"semantic-match","title":"游客服务","source":"test","content":"这里介绍普通游客服务和咨询方式。","vector":"[1,0]"},
+		{"id":"lexical-match","title":"灵山梵宫工艺","source":"test","content":"灵山梵宫汇集东阳木雕、敦煌壁画、扬州漆器等传统工艺。","vector":"[0,1]"}
+	]`)
+
+	if _, err := rag.LoadKnowledgeJSON(data); err != nil {
+		t.Fatalf("LoadKnowledgeJSON returned error: %v", err)
+	}
+
+	chunks, err := rag.RetrieveRelevantKnowledgeWithOptions("灵山梵宫有什么工艺？", RetrievalOptions{
+		TopK:            1,
+		Mode:            RetrievalModeHybridWeighted,
+		EmbeddingWeight: 0.2,
+		BM25Weight:      0.8,
+	})
+	if err != nil {
+		t.Fatalf("RetrieveRelevantKnowledgeWithOptions returned error: %v", err)
+	}
+	if len(chunks) != 1 {
+		t.Fatalf("retrieved chunks = %d, want 1", len(chunks))
+	}
+	if chunks[0].ID != "lexical-match" {
+		t.Fatalf("top chunk id = %q, want lexical-match", chunks[0].ID)
+	}
+}
+
+func TestRAGServiceLightRerankPromotesTitleAndEntityMatches(t *testing.T) {
+	rag := newTestRAGService(t)
+	data := []byte(`[
+		{"id":"broad-match","title":"景区综合介绍","source":"test","content":"灵山大佛、九龙灌浴、灵山梵宫、五印坛城都是灵山胜境的主体景观。"},
+		{"id":"title-match","title":"九龙灌浴表演","source":"test","content":"九龙灌浴通过音乐、喷泉和群雕动态演绎佛陀诞生时花开见佛的故事。"}
+	]`)
+
+	if _, err := rag.LoadKnowledgeJSON(data); err != nil {
+		t.Fatalf("LoadKnowledgeJSON returned error: %v", err)
+	}
+
+	chunks, err := rag.RetrieveRelevantKnowledgeWithOptions("九龙灌浴讲什么？", RetrievalOptions{
+		TopK: 1,
+		Mode: RetrievalModeLightRerank,
+	})
+	if err != nil {
+		t.Fatalf("RetrieveRelevantKnowledgeWithOptions returned error: %v", err)
+	}
+	if len(chunks) != 1 {
+		t.Fatalf("retrieved chunks = %d, want 1", len(chunks))
+	}
+	if chunks[0].ID != "title-match" {
+		t.Fatalf("top chunk id = %q, want title-match", chunks[0].ID)
+	}
+}
+
+func TestExpandQueryForRetrievalAddsFocusedTerms(t *testing.T) {
+	expanded := expandQueryForRetrieval("带孩子半天游灵山优先看哪些点？")
+	if expanded.Original != "带孩子半天游灵山优先看哪些点？" {
+		t.Fatalf("original query changed: %q", expanded.Original)
+	}
+	for _, term := range []string{"初次到访", "九龙灌浴", "佛手广场", "百子戏弥勒", "亲子游客"} {
+		if !strings.Contains(expanded.RetrievalText, term) {
+			t.Fatalf("retrieval text %q does not contain expanded term %q", expanded.RetrievalText, term)
+		}
+	}
+}
+
+func TestQueryExpansionDoesNotChangePromptQuestion(t *testing.T) {
+	rag := newTestRAGService(t)
+	original := "半天游灵山优先看哪些点？"
+	prompt := rag.BuildRAGPrompt(original, []model.KnowledgeChunk{
+		{ID: "route", Title: "测试路线", Content: "测试内容", Source: "test"},
+	})
+	if !strings.Contains(prompt, original) {
+		t.Fatalf("prompt should contain original query")
+	}
+	if strings.Contains(prompt, "初次到访 主线") {
+		t.Fatalf("prompt leaked retrieval expansion: %s", prompt)
+	}
+}
+
+func TestRAGServiceFocusedFailureRegressionSet(t *testing.T) {
+	rag := newTestRAGService(t)
+	data, err := os.ReadFile(filepath.Join("..", "..", "knowledge", "real", "lingshan_real_chunks.jsonl"))
+	if err != nil {
+		t.Fatalf("read real chunks: %v", err)
+	}
+	if _, err := rag.LoadKnowledgeJSON(data); err != nil {
+		t.Fatalf("load real chunks: %v", err)
+	}
+
+	cases := []struct {
+		name        string
+		query       string
+		expectedIDs []string
+		topN        int
+	}{
+		{name: "half_day_main_route", query: "半天游灵山优先看哪些点？", expectedIDs: []string{"real-route-001"}, topN: 8},
+		{name: "family_route", query: "带孩子去灵山有哪些点比较合适？", expectedIDs: []string{"real-route-002", "real-foshou-mile-001", "real-mile-001"}, topN: 8},
+		{name: "culture_buildings_beyond_buddha", query: "灵山大佛之外还有哪些文化建筑？", expectedIDs: []string{"real-wuyin-002", "real-manfeilong-001"}, topN: 8},
+		{name: "fangong_craft", query: "如果游客说“想看木雕壁画琉璃”，应该推荐哪里？", expectedIDs: []string{"real-fangong-002"}, topN: 8},
+		{name: "tibetan_style", query: "游客说想看“藏式风格”的内容，应该联想到哪里？", expectedIDs: []string{"real-wuyin-001", "real-wuyin-003"}, topN: 8},
+		{name: "water_show", query: "如果游客只问“喷水表演在哪”，应该召回哪个知识？", expectedIDs: []string{"real-jiulong-001", "real-jiulong-002"}, topN: 8},
+		{name: "restaurant_open_now", query: "游客问餐厅现在开不开，能不能直接回答？", expectedIDs: []string{"real-food-rest-001", "real-service-004"}, topN: 8},
+		{name: "official_notice_boundary", query: "小灵能不能替代官方公告？", expectedIDs: []string{"real-negative-001", "real-negative-002", "real-risk-002"}, topN: 8},
+		{name: "pet_drone_boundary", query: "宠物入园和无人机拍摄能不能直接承诺？", expectedIDs: []string{"real-boundary-safety-001"}, topN: 8},
+		{name: "queue_time_boundary", query: "游客问现场排队多久，知识库能回答吗？", expectedIDs: []string{"real-boundary-weather-001"}, topN: 8},
+		{name: "weather_route", query: "路线里为什么要考虑天气？", expectedIDs: []string{"real-season-001", "real-route-007"}, topN: 8},
+		{name: "guide_service_boundary", query: "游客问“有没有导览服务”，可以怎么回答？", expectedIDs: []string{"real-service-002", "real-food-rest-001"}, topN: 8},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			chunks, err := rag.RetrieveRelevantKnowledgeWithOptions(tc.query, RetrievalOptions{
+				TopK: tc.topN,
+				Mode: RetrievalModeLightRerank,
+			})
+			if err != nil {
+				t.Fatalf("RetrieveRelevantKnowledgeWithOptions returned error: %v", err)
+			}
+			got := chunkIDs(chunks)
+			if !hasAnyID(got, tc.expectedIDs) {
+				t.Fatalf("retrieved ids = %v, want one of %v", got, tc.expectedIDs)
+			}
+		})
+	}
+}
+
+func TestRAGServiceRewritesFollowUpWithShortTermContext(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"dafo-height","title":"灵山大佛高度","source":"test","content":"灵山大佛通高88米，是灵山胜境的标志性景观。"},
+		{"id":"jiulong-story","title":"九龙灌浴故事","source":"test","content":"九龙灌浴通过音乐、喷泉和群雕动态演绎佛陀诞生时花开见佛的故事。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	response, err := rag.QueryWithRAGInSession("s1", "灵山大佛是什么？")
+	if err != nil {
+		t.Fatalf("QueryWithRAGInSession returned error: %v", err)
+	}
+	if !strings.Contains(response, "灵山大佛") {
+		t.Fatalf("expected first answer to mention 灵山大佛: %s", response)
+	}
+
+	rewritten := rag.RewriteFollowUpQuery("s1", "它有多高？")
+	if !strings.Contains(rewritten, "灵山大佛") || !strings.Contains(rewritten, "它有多高") {
+		t.Fatalf("rewritten query = %q, want context and original follow-up", rewritten)
+	}
+	if strings.Contains(rewritten, response[:min(len(response), 20)]) {
+		t.Fatalf("rewritten query should use topic metadata instead of raw previous answer: %q", rewritten)
+	}
+}
+
+func TestRAGServiceRewritesRouteFollowUpWithSessionContext(t *testing.T) {
+	rag := newTestRAGService(t)
+	rag.appendSessionTurn("route-session", "半天游灵山怎么走？", "可以先看九龙灌浴、佛手广场、祥符禅寺和灵山大佛。")
+
+	rewritten := rag.RewriteFollowUpQuery("route-session", "下雨呢？")
+	for _, want := range []string{"半天游路线", "雨天路线", "降雨", "室内点"} {
+		if !strings.Contains(rewritten, want) {
+			t.Fatalf("rewritten route follow-up = %q, want %q", rewritten, want)
+		}
+	}
+}
+
+func TestRAGServiceRewritesBoundaryFollowUpWithSessionContext(t *testing.T) {
+	rag := newTestRAGService(t)
+	rag.appendSessionTurn("boundary-session", "九龙灌浴值得看吗？", "九龙灌浴是灵山胜境的重要动态景观。")
+
+	rewritten := rag.RewriteFollowUpQuery("boundary-session", "现在人多吗？")
+	for _, want := range []string{"九龙灌浴", "实时客流", "排队时间", "官方最新公告", "现场公示"} {
+		if !strings.Contains(rewritten, want) {
+			t.Fatalf("rewritten boundary follow-up = %q, want %q", rewritten, want)
+		}
+	}
+}
+
+func TestRAGServiceCapsSessionHistory(t *testing.T) {
+	rag := newTestRAGService(t)
+	for i := 0; i < MaxSessionHistorySize+25; i++ {
+		rag.appendSessionTurn(fmt.Sprintf("session-%04d", i), "灵山大佛是什么？", "灵山大佛是灵山胜境的标志性景观。")
+	}
+
+	rag.cacheMutex.RLock()
+	sessionCount := len(rag.sessionHistory)
+	_, oldestExists := rag.sessionHistory["session-0000"]
+	rag.cacheMutex.RUnlock()
+
+	if sessionCount > MaxSessionHistorySize {
+		t.Fatalf("session history size = %d, want <= %d", sessionCount, MaxSessionHistorySize)
+	}
+	if oldestExists {
+		t.Fatalf("oldest session should be evicted when session history exceeds cap")
+	}
+}
+
+func TestRAGPromptIncludesSessionContextWithoutChangingQuestion(t *testing.T) {
+	rag := newTestRAGService(t)
+	prompt := rag.BuildRAGPromptWithContext("它有多高？", []model.KnowledgeChunk{
+		{ID: "height", Title: "灵山大佛高度", Content: "灵山大佛通高88米。", Source: "test"},
+	}, "上一轮主题：灵山大佛；当前意图：属性追问")
+
+	if !strings.Contains(prompt, "【当前会话上下文】") || !strings.Contains(prompt, "上一轮主题：灵山大佛") {
+		t.Fatalf("prompt should contain concise session context: %s", prompt)
+	}
+	if !strings.Contains(prompt, "【游客问题】\n它有多高？") {
+		t.Fatalf("prompt should keep original user question: %s", prompt)
+	}
+	if strings.Contains(prompt, "灵山大佛 有多高") {
+		t.Fatalf("prompt leaked rewritten retrieval query: %s", prompt)
+	}
+}
+
+func TestFallbackAnswerFormatsRouteAndBoundary(t *testing.T) {
+	rag := newTestRAGService(t)
+	chunks := []model.KnowledgeChunk{
+		{ID: "route", Title: "雨天路线", Source: "test", Content: "雨天可优先安排灵山梵宫、五印坛城等室内或停留更稳的点位，露天点位根据现场天气调整。"},
+		{ID: "boundary", Title: "实时边界", Source: "test", Content: "实时客流、排队时间、开放状态需要以官方最新公告或现场公示为准，小灵不能替代现场确认。"},
+	}
+
+	routeAnswer := rag.generateAnswerFromChunksWithContext("下雨怎么办？", chunks, "上一轮主题：半天游路线；当前意图：天气路线")
+	if !strings.Contains(routeAnswer, "可以按这个思路安排") || !strings.Contains(routeAnswer, "1.") {
+		t.Fatalf("route fallback answer should be structured, got: %s", routeAnswer)
+	}
+
+	boundaryAnswer := rag.generateAnswerFromChunksWithContext("现在人多吗？", chunks, "上一轮主题：九龙灌浴；当前意图：实时信息边界")
+	for _, want := range []string{"不能直接替您确认", "官方最新公告", "现场公示"} {
+		if !strings.Contains(boundaryAnswer, want) {
+			t.Fatalf("boundary fallback answer = %q, want %q", boundaryAnswer, want)
+		}
+	}
+}
+
 func TestRAGServiceEvaluateQuestionsReportsKeywordCoverage(t *testing.T) {
 	rag := newTestRAGService(t)
 	if _, err := rag.LoadKnowledgeJSON([]byte(`[
@@ -259,7 +528,7 @@ func TestRAGServiceEvaluateQuestionsReportsGroupsAndFailureReasons(t *testing.T)
 			Question:         "梵宫能看哪些工艺？",
 			ExpectedKeywords: []string{"东阳木雕"},
 			ExpectedChunkIDs: []string{"missing-palace"},
-			Category:         "open_real",
+			Category:         "closed_real",
 			Difficulty:       "medium",
 			SourceType:       "official",
 		},
@@ -279,12 +548,47 @@ func TestRAGServiceEvaluateQuestionsReportsGroupsAndFailureReasons(t *testing.T)
 	}
 
 	categoryStats := findGroupStat(report.GroupStats, "category", "closed_real")
-	if categoryStats.Total != 1 || categoryStats.Passed != 1 || categoryStats.AverageRecallAtK != 1 {
+	if categoryStats.Total != 2 || categoryStats.Passed != 1 || categoryStats.AverageRecallAtK != 0.5 {
 		t.Fatalf("unexpected category stats: %+v", categoryStats)
+	}
+	difficultyStats := findGroupStat(report.GroupStats, "difficulty", "easy")
+	if difficultyStats.Total != 1 || difficultyStats.Passed != 1 || difficultyStats.AverageRecallAtK != 1 {
+		t.Fatalf("unexpected difficulty stats: %+v", difficultyStats)
 	}
 	sourceStats := findGroupStat(report.GroupStats, "source_type", "official")
 	if sourceStats.Total != 2 || sourceStats.Failed != 1 || len(sourceStats.Failures) != 1 {
 		t.Fatalf("unexpected source stats: %+v", sourceStats)
+	}
+	if len(report.FailureStats) == 0 {
+		t.Fatalf("expected failure stats")
+	}
+}
+
+func TestRAGServiceClassifiesOpenQuestionRetrievalMiss(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"palace","title":"灵山梵宫","source":"test","content":"灵山梵宫汇集东阳木雕、敦煌壁画、扬州漆器等传统工艺。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	report, err := rag.EvaluateQuestionsWithOptions([]RAGEvaluationCase{
+		{
+			Question:         "带孩子去灵山有哪些点比较合适？",
+			ExpectedKeywords: []string{"儿童"},
+			ExpectedChunkIDs: []string{"missing-family-route"},
+			Category:         "open_real",
+		},
+	}, EvaluationOptions{TopK: 1, RetrievalOnly: true})
+	if err != nil {
+		t.Fatalf("EvaluateQuestionsWithOptions returned error: %v", err)
+	}
+
+	if got := report.Results[0].FailureReason; got != "open_question_retrieval_miss" {
+		t.Fatalf("failure reason = %q, want open_question_retrieval_miss", got)
+	}
+	if len(report.FailureStats) != 1 || report.FailureStats[0].Reason != "open_question_retrieval_miss" {
+		t.Fatalf("unexpected failure stats: %+v", report.FailureStats)
 	}
 }
 
@@ -295,6 +599,17 @@ func findGroupStat(stats []RAGEvaluationGroupStats, groupBy, name string) RAGEva
 		}
 	}
 	return RAGEvaluationGroupStats{}
+}
+
+func hasAnyID(got []string, expected []string) bool {
+	for _, id := range got {
+		for _, want := range expected {
+			if id == want {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestPercentileDuration(t *testing.T) {

@@ -1,4 +1,4 @@
-# 灵山胜境智能导览系统面试问答
+﻿# 灵山胜境智能导览系统面试问答
 
 本文档用于面试复习，按“项目整体 -> 架构 -> RAG/AI -> 数字人 -> 安全 -> 数据 -> 前端 -> 性能 -> 测试 -> 优化”的顺序整理常见问题和参考回答。
 
@@ -71,7 +71,9 @@ RAG 流程分成知识导入、检索、Prompt 构造和大模型生成四步。
 
 知识导入时，系统支持 JSONL、JSON、Markdown、TXT。JSONL/JSON 可以直接包含 `title`、`content`、`source`、`metadata` 字段；Markdown/TXT 会按段落切成约 1200 字以内的知识片段。每个片段会生成 ID、标题、来源和向量信息，然后存入数据库。
 
-用户提问时，系统先从知识库中取出片段，通过 Embedding 余弦相似度、BM25/词面分和轻量 rerank 思路计算相关度，默认筛选 TopK=8。Embedding 口径写清楚为 DashScope `text-embedding-v2`，1536 维、Cosine、Float32。然后把相关知识片段拼进 Prompt，要求模型优先基于景区资料回答，不能编造票价、开放时间等实时敏感信息。如果没有检索到相关知识，就走通用 Chat 模式，并明确提示知识库不足。
+用户提问时，系统先从知识库中取出片段，通过 BM25/词面检索、Embedding 余弦相似度、加权混合、RRF 融合或轻量 rerank 计算相关度，默认筛选 TopK=8。Embedding 口径写清楚为 DashScope `text-embedding-v2`，1536 维、Cosine、Float32；没有 Key 时保留 BM25-only 和 light-rerank 作为本地可复现路径。然后把相关知识片段拼进 Prompt，要求模型优先基于景区资料回答，不能编造票价、开放时间等实时敏感信息。如果没有检索到相关知识，就走通用 Chat 模式，并明确提示知识库不足。
+
+评估命令 `cmd/rag-eval` 支持 `bm25-local`、`embedding`、`hybrid-weighted`、`rrf-fusion`、`light-rerank` 多模式对比。RRF 的好处是融合排名而不是直接融合原始分数，所以比加权分数更不依赖归一化；light-rerank 目前用标题命中、查询词覆盖、景区实体词、来源类型等本地规则做可解释重排，不引入 Cross-Encoder。
 
 ### 8. 为什么需要 BM25 降级？
 
@@ -105,9 +107,15 @@ RAGService 里做了几类缓存：
 
 缓存 TTL 是 5 分钟，最大缓存数量 1000。知识库发生增删改时会清理相关缓存，避免旧知识继续影响回答。
 
+### 12. 多轮追问是怎么做的？
+
+用户请求可以带 `session_id`。服务端只保留最近 5 轮短期上下文，每轮回答后提取主题实体、意图类型和实时边界状态，例如“灵山大佛 / 属性追问”或“九龙灌浴 / 实时信息边界”。下一轮如果用户问“它有多高”“门票呢”“下雨呢”“现在人多吗”，系统会用这些元信息补全检索 query，但不会改前端展示的原始问题，也不会把 `rewritten_query` 暴露到公开 API。
+
+接大模型时，prompt 会加入很短的会话上下文，让回答先承接上一轮主题；无 Key 本地 fallback 也按事实、路线、边界三类组织回答。涉及票价、开放、演出、客流、排队、无人机、宠物等实时或现场规则时，回答必须说明不能直接承诺，以官方最新公告或现场公示为准。
+
 ## 四、数字人集成
 
-### 12. 数字人是怎么接入的？
+### 13. 数字人是怎么接入的？
 
 项目里有两条数字人集成路径。
 
@@ -115,19 +123,19 @@ RAGService 里做了几类缓存：
 
 第二条是 OpenAI 兼容接口 `/v1/chat/completions`，用于对接 Open-LLM-VTuber。它兼容普通 OpenAI Chat Completion 请求，也支持 `stream=true` 的 SSE 流式响应。Open-LLM-VTuber 可以像调用 OpenAI 接口一样调用本项目的 RAG 服务。
 
-### 13. 为什么要做 OpenAI 兼容接口？
+### 14. 为什么要做 OpenAI 兼容接口？
 
 因为很多 AI 前端或数字人框架默认支持 OpenAI Chat Completions 协议。如果后端暴露兼容接口，Open-LLM-VTuber 不需要深度改造，只要把 Base URL 指向 Go 服务即可。
 
 这样集成成本低，也方便后续替换模型或接入其他兼容 OpenAI 协议的客户端。
 
-### 14. 情绪和 Live2D 表情怎么关联？
+### 15. 情绪和 Live2D 表情怎么关联？
 
 后端会根据回答内容做简单情绪检测，比如 happy、sadness 等，然后把情绪标签拼到回答开头，例如 `[happy] 回答内容`。前端或数字人服务读取这个标签后，可以映射到 Live2D 表情文件，比如 `exp_01` 等，实现回答内容和表情联动。
 
 Vue 里的 Live2DStage 还会根据音频音量驱动口型参数，实现口型同步。
 
-### 15. WebSocket 代理是做什么的？
+### 16. WebSocket 代理是做什么的？
 
 Go 服务把 `/vtuber-ws/*path` 反向代理到本地 Open-LLM-VTuber 默认端口 `127.0.0.1:12393`。
 
@@ -135,13 +143,13 @@ Go 服务把 `/vtuber-ws/*path` 反向代理到本地 Open-LLM-VTuber 默认端�
 
 ## 五、鉴权和安全
 
-### 16. 项目怎么做登录鉴权？
+### 17. 项目怎么做登录鉴权？
 
 项目使用 JWT。用户登录成功后，后端生成包含 `user_id`、`username`、`role` 的 token。请求需要登录的接口时，客户端通过 `Authorization: Bearer <token>` 传递。中间件解析 token 后把用户信息写入 Gin Context。
 
 管理员接口会额外经过 AdminMiddleware，检查 role 是否为 `admin`。普通用户只能访问自己的基础接口，景点、路线、导览内容、知识库管理、系统设置、数据大屏等写操作或后台接口需要管理员权限。
 
-### 17. 哪些接口是公开的，哪些需要权限？
+### 18. 哪些接口是公开的，哪些需要权限？
 
 公开接口主要包括景点、路线、导览内容的 GET 查询、AI 聊天、TTS、数字人聊天和健康检查。
 
@@ -149,27 +157,27 @@ Go 服务把 `/vtuber-ws/*path` 反向代理到本地 Open-LLM-VTuber 默认端�
 
 需要管理员权限的接口包括景点/路线/内容的新增修改删除、知识库管理、后台数据大屏、系统设置、数字人配置、用户列表管理等。
 
-### 18. JWT 安全上做了哪些处理？
+### 19. JWT 安全上做了哪些处理？
 
-JWT 初始化时会拒绝空密钥、常见默认密钥和小于 32 字符的短密钥。Token 有过期时间，过期时间来自配置。接口层通过 AuthMiddleware 校验 Bearer token，通过 AdminMiddleware 控制管理员权限。
+JWT 初始化时会拒绝空密钥、常见默认密钥和小于 32 字符的短密钥。Token 有过期时间，过期时间来自配置。接口层通过 AuthMiddleware 校验 Bearer token，通过 AdminMiddleware 控制管理员权限。测试里覆盖了过期 token、伪造签名、异常签名算法、普通用户访问管理员接口、知识库高风险删除接口鉴权，以及限流窗口和并发行为。
 
 如果继续强化，可以加刷新 token、退出登录黑名单、密码复杂度策略，以及生产环境强制 HTTPS。
 
-### 19. 注册接口为什么做限流？
+### 20. 注册接口为什么做限流？
 
 注册接口容易被刷账号或爆破，所以加了基于客户端 IP 的轻量限流，默认每分钟 5 次。实现上用内存 map 记录 IP 的请求次数和窗口重置时间。
 
 这个方案简单，适合单机演示；如果部署多实例，应该换成 Redis 之类的集中式限流。
 
-### 20. 日志脱敏怎么做？
+### 21. 日志脱敏怎么做？
 
-AI/RAG/数字人相关日志避免打印完整用户问题、完整回答、请求体和响应体，更多记录长度、状态码、错误类型、trace_id、session_id 等元信息。
+AI/RAG/数字人相关日志避免打印完整用户问题、完整回答、请求体和响应体，更多记录长度、状态码、错误类型、trace_id、session_id 等元信息。RAG trace 会记录 `retrieval_ms`、`embedding_ms`、`generation_ms`、`total_ms`、`provider`、`cache_hit`、`chunk_count` 和 `retrieval_mode`；超过 5 秒的请求会输出结构化 WARN 日志，方便定位是检索、生成还是外部服务慢。
 
 这样既方便排查问题，又减少游客隐私和敏感信息泄露风险。
 
 ## 六、数据库和数据模型
 
-### 21. 为什么主配置用 PostgreSQL，还保留 SQLite？
+### 22. 为什么主配置用 PostgreSQL，还保留 SQLite？
 
 之前 SQLite 的优势是部署简单，适合课程项目、本地演示和快速复现。但它不适合高写并发和更接近真实多用户的场景，所以现在项目把 PostgreSQL 作为主数据库配置，并在 Docker Compose 中提供 `postgres:16-alpine` 服务。
 
@@ -179,13 +187,13 @@ SQLite 仍然保留为本地开发和轻量测试配置，方便没有数据库�
 
 > 我保留 SQLite 是为了本地开发和测试便利，不是为了做数据库高可用。这个项目的主数据库配置是 PostgreSQL；真正上线还要补版本化 migration、备份恢复、慢查询监控，并把缓存和限流迁到 Redis。
 
-### 22. 数据库表大概有哪些？
+### 23. 数据库表大概有哪些？
 
 主要有用户、景点、路线、导览内容、游客问题、知识片段、交互日志、系统设置和数字人配置等。
 
 知识片段表用于 RAG 检索，交互日志用于数据大屏统计，数字人配置用于维护数字人名称、形象、语气、欢迎语、默认表情等运营配置。
 
-### 23. 运营数据大屏的数据从哪来？
+### 24. 运营数据大屏的数据从哪来？
 
 数据大屏的数据来源主要是 `InteractionLog`。数字人聊天和 OpenAI 兼容代理在生成回答后会记录交互，包括问题、回答、情绪、响应耗时、问题类别和来源。
 
@@ -193,13 +201,13 @@ SQLite 仍然保留为本地开发和轻量测试配置，方便没有数据库�
 
 ## 七、前端
 
-### 24. 前端结构是什么？
+### 25. 前端结构是什么？
 
 前端主要是 Vue 3 + TypeScript + Vite。核心页面包括管理后台 AdminView、数据大屏 DashboardView、数字人相关视图 DigitalHumanView，以及 Live2DStage、KpiCard、TrendChart、DonutChart 等组件。
 
 开发时通过 Vite 运行，生产构建输出到 Go 后端的 `static/vue-app/` 目录，由后端托管。
 
-### 25. Vue 前端和 Go 后端如何联调？
+### 26. Vue 前端和 Go 后端如何联调？
 
 开发环境下 Vite 配置代理，把 `/api`、`/v1`、`/static`、`/vtuber-ws` 等路径转发到对应服务。
 
@@ -207,7 +215,7 @@ SQLite 仍然保留为本地开发和轻量测试配置，方便没有数据库�
 
 ## 八、性能和稳定性
 
-### 26. 项目有哪些性能优化？
+### 27. 项目有哪些性能优化？
 
 主要有：
 
@@ -215,11 +223,12 @@ SQLite 仍然保留为本地开发和轻量测试配置，方便没有数据库�
 - Embedding 缓存，避免重复生成向量。
 - 知识库缓存，减少频繁全表读取。
 - BM25 倒排候选索引，避免 3000 个切片下每次全量排序。
+- RAG/AI 链路记录 `trace_id`、`retrieval_ms`、`generation_ms`、`total_ms`、`chunk_count`、`provider` 和 `cache_hit`，慢请求会输出结构化 WARN 日志。
 - HTTP Client 设置连接池、超时和 KeepAlive。
 - 知识库列表接口做数据库分页，避免全量加载后内存分页。
 - 服务端设置 ReadTimeout、WriteTimeout、IdleTimeout 和 ReadHeaderTimeout，避免慢请求拖垮服务。
 
-### 27. 如果并发高了会有什么问题？
+### 28. 如果并发高了会有什么问题？
 
 当前项目适合单机中小规模场景。并发高时可能有几个瓶颈：
 
@@ -231,13 +240,13 @@ SQLite 仍然保留为本地开发和轻量测试配置，方便没有数据库�
 
 优化方向是继续完善 PostgreSQL 迁移和索引治理，加 Redis 缓存和限流，引入向量数据库或 pgvector，异步记录日志，并对 AI 调用做队列、超时、熔断和降级。
 
-### 28. 服务如何优雅关闭？
+### 29. 服务如何优雅关闭？
 
 后端使用 `http.Server` 启动，监听 SIGINT 和 SIGTERM。收到信号后，会创建一个 10 秒超时的 context 调用 `server.Shutdown`，让已有请求尽量处理完再退出，避免直接中断连接或写坏数据。
 
 ## 九、测试和工程化
 
-### 29. 项目怎么测试？
+### 30. 项目怎么测试？
 
 后端可以在 `scenic-guide/` 下运行：
 
@@ -254,9 +263,11 @@ npm run build
 
 项目还有 `make check` 作为全量检查入口，当前会串联编码检查、密钥形态扫描、后端测试和前端类型检查。数字人相关接口可在本地后端启动后用接口文档中的请求示例手动验证。
 
-RAG 还有独立评估命令：基础样例用 `go run ./cmd/rag-eval -k 8 -fail-on-miss` 做 smoke test；真实资料评估用 `go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 3 -retrieval-only -report-env -format json -out docs/eval-results/lingshan-real-rag-eval-bench.json`。当前真实资料集包含 122 个切片、203 条独立评测问答，bench 口径下 repeat 3 共 609 次评估，Recall@8 85.5%、MRR@8 0.749、关键词覆盖率 94.3%、纯检索 p50/p95 约 7ms/10ms。这个结果只代表本地 retrieval-only 检索链路，不包含外部 Embedding、大模型生成、ASR 或 TTS。
+RAG 还有独立评估命令：基础样例用 `go run ./cmd/rag-eval -k 8 -fail-on-miss` 做 smoke test；真实资料评估用 `go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 3 -retrieval-only -report-env -format json -out docs/eval-results/lingshan-real-rag-eval-bench.json`。真实资料集包含 122 个切片、203 条独立评测问答。优化前本地 retrieval-only 基线是 Recall@8 85.5%、MRR@8 0.749、关键词覆盖率 94.3%、纯检索 p50/p95 约 7ms/10ms。这个结果只代表本地检索链路，不包含外部 Embedding、大模型生成、ASR 或 TTS。
 
-### 30. 遇到过什么问题，怎么解决的？
+如果要看多模式对比，可以运行 `go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -compare-modes bm25-local,light-rerank`。失败样例定向优化后，`bm25-local` 单轮结果为通过率 98.5%、Recall@8 94.8%、MRR@8 0.793；`light-rerank` 为通过率 99.5%、Recall@8 95.3%、MRR@8 0.802。这里要强调：提升来自 query expansion、切片问法补强和本地可解释重排，只说明当前真实资料评测集上的问法映射变稳，不能说成线上准确率或大模型能力提升。
+
+### 31. 遇到过什么问题，怎么解决的？
 
 一个典型问题是中文文档和源码在 Windows PowerShell 里显示乱码。排查后发现很多情况不是文件本身损坏，而是终端编码页问题。所以项目里补了 `.editorconfig` 和编码检查脚本，统一 UTF-8/LF，并通过 `npm run check:encoding` 检查替换字符和常见乱码模式，避免误判和提交脏编码。
 
@@ -264,7 +275,7 @@ RAG 还有独立评估命令：基础样例用 `go run ./cmd/rag-eval -k 8 -fail
 
 ## 十、项目亮点和不足
 
-### 31. 这个项目最大的亮点是什么？
+### 32. 这个项目最大的亮点是什么？
 
 亮点主要有三个：
 
@@ -272,20 +283,20 @@ RAG 还有独立评估命令：基础样例用 `go run ./cmd/rag-eval -k 8 -fail
 2. AI 接入做了工程化处理，包括知识导入、检索降级、缓存、Prompt 约束、OpenAI 兼容协议和日志脱敏。
 3. 权限和后台运营能力比较完整，管理员可以维护知识和配置，前台游客可以直接获得智能导览服务。
 
-### 32. 这个项目有哪些不足？
+### 33. 这个项目有哪些不足？
 
 不足也比较明确：
 
 - 当前向量检索还不是专业向量数据库，知识规模大后性能会下降。
-- BM25 和 Embedding 混合检索还可以更精细，比如加 rerank。
+- 目前已经补了 BM25、Embedding、加权混合、RRF 和 light-rerank 评估，但仍未接专业向量数据库或 Cross-Encoder。
 - PostgreSQL 已作为主数据库配置，但还缺少版本化 migration、备份恢复和真实生产流量验证。
-- 数字人会话当前偏轻量，没有完整的多轮上下文管理。
+- 数字人和 AI 问答已支持 session 级短期上下文，会基于最近主题实体、意图类型和边界状态处理“它、那里、门票呢、下雨呢、现在人多吗”等追问，但这不是长期记忆，也没有复杂用户画像。
 - AI 回答还缺少来源引用、置信度和人工审核流程。
 - 限流和缓存是内存级，多实例部署时需要 Redis 等共享组件。
 
 这样回答会显得你清楚项目边界，而不是盲目吹项目。
 
-### 33. 这个项目会不会有过度包装的问题？
+### 34. 这个项目会不会有过度包装的问题？
 
 这个问题要主动降调回答：
 
@@ -293,50 +304,50 @@ RAG 还有独立评估命令：基础样例用 `go run ./cmd/rag-eval -k 8 -fail
 
 可以继续补充：
 
-当前保留了 32 个知识切片和 5 条评测问答作为 smoke test，同时保留 3000/300 合成规模验证集作为内部回归口径；简历主口径改为真实资料评估：基于官网/政府公开资料清洗 122 个切片，并设计 203 条独立问答覆盖事实问答、游客自然问法和实时信息边界。扩大数据集后 Recall@8 低于合成闭集是预期现象，它能暴露开放问法、相近切片排序和服务边界表达问题。真正落地时，需要继续扩大语料、增加来源引用、独立人工标注、向量数据库、rerank 和监控。
+当前保留了 32 个知识切片和 5 条评测问答作为 smoke test，同时保留 3000/300 合成规模验证集作为内部回归口径；主口径改为真实资料评估：基于官网/政府公开资料清洗 122 个切片，并设计 203 条独立问答覆盖事实问答、游客自然问法和实时信息边界。最近一轮优化是失败样例驱动的检索优化，不是删题刷分：半天游、亲子路线、文化建筑、无人机/宠物、排队和导览服务等原失败样例被写进回归集，再通过检索扩展和切片措辞补强解决。真正落地时，仍需要继续扩大语料、增加来源引用、独立人工标注、向量数据库、rerank 和监控。
 
-### 34. 哪些是你自己实现的，哪些是接入第三方？
+### 35. 哪些是你自己实现的，哪些是接入第三方？
 
 自己实现的部分主要是 Go 后端分层、REST API、GORM 数据模型、JWT 鉴权、知识库管理、RAG 调用链路、BM25 降级、OpenAI 兼容代理、SSE 响应、数字人相关业务接口和 Vue 管理/看板联调。
 
 第三方或外部能力包括 Gin、GORM、PostgreSQL 驱动、SQLite、DashScope Embedding、DeepSeek/OpenAI 兼容模型、Open-LLM-VTuber、Live2D/PixiJS。我的工作不是从零实现大模型或 Live2D 框架，而是完成协议适配、OpenAI 兼容接口、SSE/WebSocket 联调、前端二开、本地检索兜底和工程化封装。
 
-### 35. 如果继续优化，你会怎么做？
+### 36. 如果继续优化，你会怎么做？
 
 我会从四个方向优化：
 
-1. RAG 侧接入向量数据库或 pgvector 和 rerank，答案展示引用来源，提高准确性和可解释性。
-2. 工程侧完善 PostgreSQL migration、备份、慢查询监控，并引入 Redis 做缓存、限流和会话状态。
-3. 数字人侧完善多轮上下文、打断机制、语音识别和 TTS 链路监控。
+1. RAG 侧继续扩大真实资料标注，基于失败原因补切片和查询改写；数据规模扩大后再接 pgvector、Milvus、Qdrant 或 Cross-Encoder rerank。
+2. 工程侧完善 PostgreSQL migration、备份、慢查询监控，并引入 Redis 做缓存和限流。
+3. 数字人侧在现有短期 session 追问改写基础上，继续完善打断机制、语音识别和 TTS 链路监控。
 4. 运维侧补充 Docker Compose、CI 检查、结构化日志、指标监控和错误追踪，提升可部署性。
 
 ## 十一、高频追问短答
 
-### 36. Handler、Service、Repository 分别干什么？
+### 37. Handler、Service、Repository 分别干什么？
 
 Handler 处理 HTTP，Service 处理业务规则，Repository 处理数据库访问。这样职责清晰，方便测试和替换实现。
 
-### 37. AutoMigrate 有什么风险？
+### 38. AutoMigrate 有什么风险？
 
 AutoMigrate 适合开发和演示，但生产环境要谨慎，因为复杂字段变更、索引调整、数据迁移不一定可控。生产更适合用版本化 migration 工具。
 
-### 38. 为什么知识库更新后要清缓存？
+### 39. 为什么知识库更新后要清缓存？
 
 因为查询缓存和知识库缓存可能包含旧内容。如果管理员更新知识后不清缓存，用户可能继续拿到过期答案。
 
-### 37. 为什么 `/v1/chat/completions` 不放在 `/api/v1` 下面？
+### 40. 为什么 `/v1/chat/completions` 不放在 `/api/v1` 下面？
 
 因为它是为了兼容 OpenAI 协议和第三方客户端习惯。很多框架默认请求 `/v1/chat/completions`，保持这个路径能减少适配成本。
 
-### 38. TTS 接口要注意什么？
+### 41. TTS 接口要注意什么？
 
 文本参数要正确 URL 编码，避免中文或特殊字符破坏请求参数。同时日志里不要打印完整文本，避免泄露用户输入。
 
-### 39. 如果 AI API 挂了怎么办？
+### 42. 如果 AI API 挂了怎么办？
 
 RAG 检索仍可以拿到知识片段，系统会退回到基于片段的简单回答；如果没有知识或 API Key，也会给出明确提示，而不是让服务整体不可用。
 
-### 40. 怎么证明这不是套壳大模型？
+### 43. 怎么证明这不是套壳大模型？
 
 因为系统有自己的景区知识库、知识导入管理、检索逻辑、Prompt 约束、权限后台、数字人协议适配和交互数据统计。大模型只是生成层，项目核心是围绕景区导览业务做了完整工程链路。
 

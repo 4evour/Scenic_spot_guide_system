@@ -3,10 +3,13 @@ package pkg
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/scenic-guide/internal/config"
 )
 
 func TestRateLimitMiddleware(t *testing.T) {
@@ -38,6 +41,77 @@ func TestRateLimitMiddleware(t *testing.T) {
 	}
 }
 
+func TestRateLimitMiddlewareWindowResets(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.GET("/limited", RateLimitMiddleware(1, 20*time.Millisecond), func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/limited", nil)
+	req.RemoteAddr = "192.0.2.2:1234"
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("first request status = %d, want %d", resp.Code, http.StatusOK)
+	}
+
+	blockedReq := httptest.NewRequest(http.MethodGet, "/limited", nil)
+	blockedReq.RemoteAddr = "192.0.2.2:1234"
+	blockedResp := httptest.NewRecorder()
+	router.ServeHTTP(blockedResp, blockedReq)
+	if blockedResp.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request status = %d, want %d", blockedResp.Code, http.StatusTooManyRequests)
+	}
+
+	time.Sleep(30 * time.Millisecond)
+
+	resetReq := httptest.NewRequest(http.MethodGet, "/limited", nil)
+	resetReq.RemoteAddr = "192.0.2.2:1234"
+	resetResp := httptest.NewRecorder()
+	router.ServeHTTP(resetResp, resetReq)
+	if resetResp.Code != http.StatusOK {
+		t.Fatalf("request after window reset status = %d, want %d", resetResp.Code, http.StatusOK)
+	}
+}
+
+func TestRateLimitMiddlewareConcurrentRequests(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.GET("/limited", RateLimitMiddleware(5, time.Minute), func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+
+	var wg sync.WaitGroup
+	var okCount int32
+	var limitedCount int32
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req := httptest.NewRequest(http.MethodGet, "/limited", nil)
+			req.RemoteAddr = "192.0.2.3:1234"
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+			switch resp.Code {
+			case http.StatusOK:
+				atomic.AddInt32(&okCount, 1)
+			case http.StatusTooManyRequests:
+				atomic.AddInt32(&limitedCount, 1)
+			default:
+				t.Errorf("status = %d, want %d or %d", resp.Code, http.StatusOK, http.StatusTooManyRequests)
+			}
+		}()
+	}
+	wg.Wait()
+
+	if okCount != 5 || limitedCount != 5 {
+		t.Fatalf("ok=%d limited=%d, want ok=5 limited=5", okCount, limitedCount)
+	}
+}
+
 func TestAuthMiddlewareDevAdminBypassRequiresLoopbackAndFlag(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS", "true")
@@ -65,6 +139,80 @@ func TestAuthMiddlewareDevAdminBypassRequiresLoopbackAndFlag(t *testing.T) {
 
 	if remoteResp.Code != http.StatusUnauthorized {
 		t.Fatalf("remote request status = %d, want %d", remoteResp.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestAdminMiddlewareRejectsVisitorToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+		t.Fatalf("InitJWT returned error: %v", err)
+	}
+	token, err := GenerateToken(7, "visitor", "visitor", 1)
+	if err != nil {
+		t.Fatalf("GenerateToken returned error: %v", err)
+	}
+
+	router := gin.New()
+	router.DELETE("/admin/knowledge/all", AuthMiddleware(), AdminMiddleware(), func(c *gin.Context) {
+		Success(c, gin.H{"deleted": true})
+	})
+
+	req := httptest.NewRequest(http.MethodDelete, "/admin/knowledge/all", nil)
+	req.RemoteAddr = "192.0.2.20:1234"
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("visitor admin request status = %d, want %d", resp.Code, http.StatusForbidden)
+	}
+}
+
+func TestKnowledgeDangerousRouteRequiresAdmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+		t.Fatalf("InitJWT returned error: %v", err)
+	}
+	visitorToken, err := GenerateToken(7, "visitor", "visitor", 1)
+	if err != nil {
+		t.Fatalf("GenerateToken visitor returned error: %v", err)
+	}
+	adminToken, err := GenerateToken(1, "admin", "admin", 1)
+	if err != nil {
+		t.Fatalf("GenerateToken admin returned error: %v", err)
+	}
+
+	router := gin.New()
+	knowledge := router.Group("/knowledge")
+	knowledge.Use(AuthMiddleware(), AdminMiddleware())
+	knowledge.DELETE("/all", func(c *gin.Context) {
+		Success(c, gin.H{"deleted": true})
+	})
+
+	tests := []struct {
+		name       string
+		token      string
+		wantStatus int
+	}{
+		{name: "missing token", wantStatus: http.StatusUnauthorized},
+		{name: "visitor token", token: visitorToken, wantStatus: http.StatusForbidden},
+		{name: "admin token", token: adminToken, wantStatus: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodDelete, "/knowledge/all", nil)
+			req.RemoteAddr = "192.0.2.30:1234"
+			if tt.token != "" {
+				req.Header.Set("Authorization", "Bearer "+tt.token)
+			}
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			if resp.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", resp.Code, tt.wantStatus)
+			}
+		})
 	}
 }
 

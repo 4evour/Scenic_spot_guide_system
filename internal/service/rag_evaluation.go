@@ -25,8 +25,9 @@ type RAGEvaluationCase struct {
 }
 
 type EvaluationOptions struct {
-	TopK          int
-	RetrievalOnly bool
+	TopK             int
+	RetrievalOnly    bool
+	RetrievalOptions RetrievalOptions
 }
 
 type RAGEvaluationResult struct {
@@ -62,40 +63,50 @@ type RAGEvaluationGroupStats struct {
 	Failures               []string `json:"failures,omitempty"`
 }
 
+type RAGEvaluationFailureStat struct {
+	Reason string `json:"reason"`
+	Total  int    `json:"total"`
+}
+
 type RAGEvaluationRunInfo struct {
-	KnowledgeFile      string `json:"knowledge_file,omitempty"`
-	EvaluationFile     string `json:"evaluation_file,omitempty"`
-	KnowledgeChunks    int    `json:"knowledge_chunks"`
-	EvaluationCases    int    `json:"evaluation_cases"`
-	TopK               int    `json:"top_k"`
-	Concurrency        int    `json:"concurrency"`
-	Repeat             int    `json:"repeat"`
-	RetrievalOnly      bool   `json:"retrieval_only"`
-	EmbeddingProvider  string `json:"embedding_provider,omitempty"`
-	GenerationProvider string `json:"generation_provider,omitempty"`
-	OS                 string `json:"os,omitempty"`
-	Arch               string `json:"arch,omitempty"`
-	CPU                string `json:"cpu,omitempty"`
-	GoVersion          string `json:"go_version,omitempty"`
+	KnowledgeFile      string  `json:"knowledge_file,omitempty"`
+	EvaluationFile     string  `json:"evaluation_file,omitempty"`
+	KnowledgeChunks    int     `json:"knowledge_chunks"`
+	EvaluationCases    int     `json:"evaluation_cases"`
+	TopK               int     `json:"top_k"`
+	Concurrency        int     `json:"concurrency"`
+	Repeat             int     `json:"repeat"`
+	RetrievalOnly      bool    `json:"retrieval_only"`
+	EmbeddingProvider  string  `json:"embedding_provider,omitempty"`
+	GenerationProvider string  `json:"generation_provider,omitempty"`
+	RetrievalMode      string  `json:"retrieval_mode,omitempty"`
+	EmbeddingWeight    float64 `json:"embedding_weight,omitempty"`
+	BM25Weight         float64 `json:"bm25_weight,omitempty"`
+	RRFK               float64 `json:"rrf_k,omitempty"`
+	OS                 string  `json:"os,omitempty"`
+	Arch               string  `json:"arch,omitempty"`
+	CPU                string  `json:"cpu,omitempty"`
+	GoVersion          string  `json:"go_version,omitempty"`
 }
 
 type RAGEvaluationReport struct {
-	Total                  int                       `json:"total"`
-	Passed                 int                       `json:"passed"`
-	Failed                 int                       `json:"failed"`
-	TopK                   int                       `json:"top_k"`
-	PassRate               float64                   `json:"pass_rate"`
-	AverageKeywordCoverage float64                   `json:"average_keyword_coverage"`
-	AverageRecallAtK       float64                   `json:"average_recall_at_k"`
-	MRRAtK                 float64                   `json:"mrr_at_k"`
-	RetrievalP50Ms         int64                     `json:"retrieval_p50_ms"`
-	RetrievalP95Ms         int64                     `json:"retrieval_p95_ms"`
-	RetrievalOnly          bool                      `json:"retrieval_only"`
-	StartedAt              time.Time                 `json:"started_at"`
-	FinishedAt             time.Time                 `json:"finished_at"`
-	RunInfo                RAGEvaluationRunInfo      `json:"run_info,omitempty"`
-	GroupStats             []RAGEvaluationGroupStats `json:"group_stats,omitempty"`
-	Results                []RAGEvaluationResult     `json:"results"`
+	Total                  int                        `json:"total"`
+	Passed                 int                        `json:"passed"`
+	Failed                 int                        `json:"failed"`
+	TopK                   int                        `json:"top_k"`
+	PassRate               float64                    `json:"pass_rate"`
+	AverageKeywordCoverage float64                    `json:"average_keyword_coverage"`
+	AverageRecallAtK       float64                    `json:"average_recall_at_k"`
+	MRRAtK                 float64                    `json:"mrr_at_k"`
+	RetrievalP50Ms         int64                      `json:"retrieval_p50_ms"`
+	RetrievalP95Ms         int64                      `json:"retrieval_p95_ms"`
+	RetrievalOnly          bool                       `json:"retrieval_only"`
+	StartedAt              time.Time                  `json:"started_at"`
+	FinishedAt             time.Time                  `json:"finished_at"`
+	RunInfo                RAGEvaluationRunInfo       `json:"run_info,omitempty"`
+	GroupStats             []RAGEvaluationGroupStats  `json:"group_stats,omitempty"`
+	FailureStats           []RAGEvaluationFailureStat `json:"failure_stats,omitempty"`
+	Results                []RAGEvaluationResult      `json:"results"`
 }
 
 func (r RAGEvaluationReport) IsPassing() bool {
@@ -162,7 +173,9 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 		}
 
 		start := time.Now()
-		chunks, err := s.RetrieveRelevantKnowledge(item.Question, options.TopK)
+		retrievalOptions := options.RetrievalOptions
+		retrievalOptions.TopK = options.TopK
+		chunks, err := s.RetrieveRelevantKnowledgeWithOptions(item.Question, retrievalOptions)
 		latency := time.Since(start)
 		if latency == 0 {
 			latency = time.Nanosecond
@@ -220,6 +233,7 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 		report.RetrievalP95Ms = durationMillisCeil(percentileDuration(latencies, 0.95))
 	}
 	report.GroupStats = summarizeEvaluationGroups(report.Results)
+	report.FailureStats = summarizeEvaluationFailures(report.Results)
 	report.FinishedAt = time.Now()
 	return report, nil
 }
@@ -228,13 +242,36 @@ func classifyEvaluationFailure(result RAGEvaluationResult, keywordCount int) str
 	if result.Error != "" {
 		return "evaluation_error"
 	}
-	if len(result.ExpectedChunkIDs) > 0 && result.RecallAtK == 0 {
-		return "retrieval_miss"
+	if result.Category == "negative" && len(result.MissingKeywords) > 0 {
+		return "boundary_or_negative_case_miss"
+	}
+	if isRealtimeBoundaryQuestion(result.Question) && len(result.MissingKeywords) > 0 {
+		return "realtime_boundary_miss"
+	}
+	if len(result.ExpectedChunkIDs) > 0 {
+		if result.RecallAtK == 0 {
+			if result.Category == "open_real" {
+				return "open_question_retrieval_miss"
+			}
+			return "retrieval_miss"
+		}
+		if result.FirstRelevantRank > 3 {
+			return "relevant_chunk_ranked_low"
+		}
 	}
 	if keywordCount > 0 && len(result.MissingKeywords) > 0 {
 		return "keyword_miss"
 	}
 	return "not_passed"
+}
+
+func isRealtimeBoundaryQuestion(question string) bool {
+	for _, term := range []string{"今天", "现在", "现场", "实时", "开不开", "排队", "价格", "票价", "黄金周", "无人机", "宠物"} {
+		if strings.Contains(question, term) {
+			return true
+		}
+	}
+	return false
 }
 
 func summarizeEvaluationGroups(results []RAGEvaluationResult) []RAGEvaluationGroupStats {
@@ -253,6 +290,30 @@ func summarizeEvaluationGroups(results []RAGEvaluationResult) []RAGEvaluationGro
 
 func SummarizeEvaluationGroups(results []RAGEvaluationResult) []RAGEvaluationGroupStats {
 	return summarizeEvaluationGroups(results)
+}
+
+func SummarizeEvaluationFailures(results []RAGEvaluationResult) []RAGEvaluationFailureStat {
+	return summarizeEvaluationFailures(results)
+}
+
+func summarizeEvaluationFailures(results []RAGEvaluationResult) []RAGEvaluationFailureStat {
+	counts := make(map[string]int)
+	for _, result := range results {
+		if result.Passed || result.FailureReason == "" {
+			continue
+		}
+		counts[result.FailureReason]++
+	}
+	reasons := make([]string, 0, len(counts))
+	for reason := range counts {
+		reasons = append(reasons, reason)
+	}
+	sort.Strings(reasons)
+	stats := make([]RAGEvaluationFailureStat, 0, len(reasons))
+	for _, reason := range reasons {
+		stats = append(stats, RAGEvaluationFailureStat{Reason: reason, Total: counts[reason]})
+	}
+	return stats
 }
 
 func summarizeEvaluationGroup(results []RAGEvaluationResult, groupBy string, nameOf func(RAGEvaluationResult) string) []RAGEvaluationGroupStats {

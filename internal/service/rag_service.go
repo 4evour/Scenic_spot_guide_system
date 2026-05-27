@@ -26,18 +26,58 @@ const (
 	TopK                   = 8
 	CacheTTL               = 5 * time.Minute
 	MaxCacheSize           = 1000
+	MaxSessionIDLength     = 128
+	MaxSessionHistorySize  = 1000
+	SessionHistoryTTL      = 30 * time.Minute
 )
+
+type RetrievalMode string
+
+const (
+	RetrievalModeDefault        RetrievalMode = ""
+	RetrievalModeBM25Local      RetrievalMode = "bm25-local"
+	RetrievalModeEmbedding      RetrievalMode = "embedding"
+	RetrievalModeHybridWeighted RetrievalMode = "hybrid-weighted"
+	RetrievalModeRRFFusion      RetrievalMode = "rrf-fusion"
+	RetrievalModeLightRerank    RetrievalMode = "light-rerank"
+)
+
+type RetrievalOptions struct {
+	TopK            int
+	Mode            RetrievalMode
+	EmbeddingWeight float64
+	BM25Weight      float64
+	RRFK            float64
+}
+
+type retrievalScoredChunk struct {
+	chunk      model.KnowledgeChunk
+	similarity float64
+}
+
+type retrievalQueryExpansion struct {
+	Original      string
+	RetrievalText string
+	AddedTerms    []string
+}
+
+type RAGTrace struct {
+	TraceID        string
+	Provider       string
+	CacheHit       bool
+	ChunkCount     int
+	RetrievalMs    int64
+	EmbeddingMs    int64
+	GenerationMs   int64
+	TotalMs        int64
+	RetrievalMode  string
+	RewrittenQuery string
+	SlowRequest    bool
+}
 
 type CacheEntry struct {
 	Response   string
 	ExpireTime time.Time
-}
-
-type RAGTrace struct {
-	TraceID      string
-	RetrievalMs  int64
-	GenerationMs int64
-	TotalMs      int64
 }
 
 type TourRouteStep struct {
@@ -84,8 +124,24 @@ type RAGService struct {
 	tokenCache     map[string][]string
 	tokenIndex     map[string][]string
 	chunkByID      map[string]model.KnowledgeChunk
+	sessionHistory map[string][]sessionTurn
 	cacheMutex     sync.RWMutex
 	lastCacheTime  time.Time
+}
+
+type sessionTurn struct {
+	Query    string
+	Answer   string
+	Topic    string
+	Intent   string
+	Boundary bool
+	Updated  time.Time
+}
+
+type conversationContext struct {
+	Topic    string
+	Intent   string
+	Boundary bool
 }
 
 func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, chatBaseURL string, embeddingProvider EmbeddingProvider) *RAGService {
@@ -112,6 +168,7 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		tokenCache:     make(map[string][]string),
 		tokenIndex:     make(map[string][]string),
 		chunkByID:      make(map[string]model.KnowledgeChunk),
+		sessionHistory: make(map[string][]sessionTurn),
 		lastCacheTime:  time.Now(),
 	}
 }
@@ -629,6 +686,22 @@ func (s *RAGService) BM25Similarity(query, content string) float64 {
 }
 
 func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.KnowledgeChunk, error) {
+	return s.RetrieveRelevantKnowledgeWithOptions(query, RetrievalOptions{TopK: topK})
+}
+
+func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options RetrievalOptions) ([]model.KnowledgeChunk, error) {
+	if options.TopK <= 0 {
+		options.TopK = TopK
+	}
+	mode := normalizeRetrievalMode(options.Mode, s.embedding != nil && s.embedding.IsAvailable(), s.useBM25)
+	if options.EmbeddingWeight <= 0 && options.BM25Weight <= 0 {
+		options.EmbeddingWeight = 0.6
+		options.BM25Weight = 0.4
+	}
+	if options.RRFK <= 0 {
+		options.RRFK = 60
+	}
+
 	allChunks, err := s.getCachedKnowledge()
 	if err != nil {
 		return nil, fmt.Errorf("获取所有知识片段失败: %v", err)
@@ -638,51 +711,38 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		return nil, nil
 	}
 
-	type scoredChunk struct {
-		chunk      model.KnowledgeChunk
-		similarity float64
-	}
-
-	scoredChunks := make([]scoredChunk, 0, len(allChunks))
-
+	expandedQuery := expandQueryForRetrieval(query)
+	queryTokens := s.bm25.Tokenize(expandedQuery.RetrievalText)
 	var queryVec []float64
-	queryTokens := s.bm25.Tokenize(query)
-	if !s.useBM25 {
+	if modeUsesEmbedding(mode) {
 		vec, err := s.getCachedEmbedding(query)
 		if err == nil {
 			queryVec = vec
 		}
 	}
 
+	if len(queryVec) == 0 && modeUsesEmbedding(mode) {
+		mode = RetrievalModeBM25Local
+	}
+
 	candidateChunks := allChunks
-	if s.useBM25 || len(queryVec) == 0 {
+	if mode == RetrievalModeBM25Local || mode == RetrievalModeLightRerank {
 		candidateChunks = s.getBM25CandidateChunks(queryTokens, allChunks)
 	}
 
+	scoredChunks := make([]retrievalScoredChunk, 0, len(candidateChunks))
 	for _, chunk := range candidateChunks {
-		var similarity float64
-
-		if s.useBM25 || len(queryVec) == 0 {
-			similarity = s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk))
-			similarity += s.lexicalBoost(query, chunk)
-		} else {
-			vec2, err := s.parseVector(chunk.Vector)
-			if err != nil {
-				similarity = s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk))
-				similarity += s.lexicalBoost(query, chunk)
-			} else {
-				semanticScore := s.CosineSimilarity(queryVec, vec2)
-				lexicalScore := math.Log1p(s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)))
-				boostScore := math.Log1p(s.lexicalBoost(query, chunk))
-				similarity = semanticScore*0.72 + lexicalScore*0.20 + boostScore*0.08
-			}
+		score := s.scoreChunkForMode(query, expandedQuery.RetrievalText, queryTokens, queryVec, chunk, mode, options)
+		if score >= MinSimilarityThreshold {
+			scoredChunks = append(scoredChunks, retrievalScoredChunk{chunk: chunk, similarity: score})
 		}
+	}
 
-		if similarity >= MinSimilarityThreshold {
-			scoredChunks = append(scoredChunks, scoredChunk{
-				chunk:      chunk,
-				similarity: similarity,
-			})
+	if mode == RetrievalModeRRFFusion {
+		scoredChunks = s.rrfFusionScores(query, expandedQuery.RetrievalText, queryTokens, queryVec, allChunks, options.RRFK)
+	} else if mode == RetrievalModeLightRerank {
+		for i := range scoredChunks {
+			scoredChunks[i].similarity += s.lightRerankBoost(query, expandedQuery, queryTokens, scoredChunks[i].chunk)
 		}
 	}
 
@@ -694,12 +754,343 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 		return scoredChunks[i].similarity > scoredChunks[j].similarity
 	})
 
-	result := make([]model.KnowledgeChunk, 0, topK)
-	for i := 0; i < min(topK, len(scoredChunks)); i++ {
+	result := make([]model.KnowledgeChunk, 0, options.TopK)
+	for i := 0; i < min(options.TopK, len(scoredChunks)); i++ {
 		result = append(result, scoredChunks[i].chunk)
 	}
 
 	return result, nil
+}
+
+func normalizeRetrievalMode(mode RetrievalMode, hasEmbedding, useBM25 bool) RetrievalMode {
+	switch mode {
+	case RetrievalModeBM25Local, RetrievalModeEmbedding, RetrievalModeHybridWeighted, RetrievalModeRRFFusion, RetrievalModeLightRerank:
+		if mode != RetrievalModeBM25Local && mode != RetrievalModeLightRerank && !hasEmbedding {
+			return RetrievalModeBM25Local
+		}
+		return mode
+	default:
+		if useBM25 || !hasEmbedding {
+			return RetrievalModeBM25Local
+		}
+		return RetrievalModeEmbedding
+	}
+}
+
+func modeUsesEmbedding(mode RetrievalMode) bool {
+	return mode == RetrievalModeEmbedding || mode == RetrievalModeHybridWeighted || mode == RetrievalModeRRFFusion
+}
+
+func expandQueryForRetrieval(query string) retrievalQueryExpansion {
+	added := make([]string, 0)
+	seen := make(map[string]struct{})
+	addTerms := func(terms string) {
+		for _, term := range strings.Fields(terms) {
+			if _, ok := seen[term]; ok {
+				continue
+			}
+			seen[term] = struct{}{}
+			added = append(added, term)
+		}
+	}
+
+	if containsAny(query, []string{"半天", "优先", "先看"}) {
+		addTerms("初次到访 主线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛")
+	}
+	if containsAny(query, []string{"中轴线"}) {
+		addTerms("初次到访 主线 中轴游览线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛")
+	}
+	if containsAny(query, []string{"带孩子", "小朋友", "亲子"}) {
+		addTerms("百子戏弥勒 佛手广场 九龙灌浴 亲子游客")
+	}
+	if containsAny(query, []string{"拍照", "轻松点位"}) {
+		addTerms("佛手广场 百子戏弥勒 适合拍照")
+	}
+	if containsAny(query, []string{"大佛之外", "文化建筑"}) {
+		addTerms("五印坛城 曼飞龙塔 灵山梵宫 佛教文化建筑")
+	}
+	if containsAny(query, []string{"木雕", "壁画", "琉璃", "工艺"}) {
+		addTerms("灵山梵宫 艺术工艺")
+	}
+	if containsAny(query, []string{"藏式", "藏传"}) {
+		addTerms("五印坛城 藏传佛教")
+	}
+	if containsAny(query, []string{"喷水", "花开见佛", "喷泉"}) {
+		addTerms("九龙灌浴")
+	}
+	if containsAny(query, []string{"演艺", "剧场", "演出"}) {
+		addTerms("九龙灌浴 吉祥颂 演出场次 官方最新公告")
+	}
+	if containsAny(query, []string{"今天", "现在", "现场", "开不开", "排队", "人多", "无人机", "宠物", "能不能替代公告", "替代官方公告"}) {
+		addTerms("实时信息 官方最新公告 现场公示 不能编造")
+	}
+	if containsAny(query, []string{"容易过期", "最容易过期"}) {
+		addTerms("门票价格 开放时间 演出场次 停车余位 临时闭园 临时检修 优惠政策 实时信息")
+	}
+	if containsAny(query, []string{"无人机", "宠物"}) {
+		addTerms("安全禁忌 宠物入园 无人机拍摄 现场规定 正式规定 现场管理 不能替代")
+	}
+	if containsAny(query, []string{"排队", "人多", "客流"}) {
+		addTerms("排队时间 实时客流 今日游客多不多 拥堵程度 天气应用 地图热力")
+	}
+	if containsAny(query, []string{"导览服务", "现场设施", "服务设施"}) {
+		addTerms("导览服务 休息点 洗手间 现场指引 官方最新公告 服务开放情况")
+	}
+	if containsAny(query, []string{"只看大佛", "商业化游乐", "普通景区"}) {
+		addTerms("太湖山水 佛教文化 文化建筑 演艺体验 礼佛空间 九龙灌浴 祥符禅寺 灵山梵宫")
+	}
+	if containsAny(query, []string{"天气", "高温", "雨天", "路线"}) {
+		addTerms("降雨 高温 室内点 雨天路线")
+	}
+
+	retrievalText := strings.TrimSpace(query)
+	if len(added) > 0 {
+		retrievalText = strings.TrimSpace(retrievalText + " " + strings.Join(added, " "))
+	}
+	return retrievalQueryExpansion{
+		Original:      query,
+		RetrievalText: retrievalText,
+		AddedTerms:    added,
+	}
+}
+
+func (s *RAGService) scoreChunkForMode(originalQuery, retrievalQuery string, queryTokens []string, queryVec []float64, chunk model.KnowledgeChunk, mode RetrievalMode, options RetrievalOptions) float64 {
+	bm25Score := s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)) + s.lexicalBoost(retrievalQuery, chunk) + focusedIntentBoost(originalQuery, chunk)*0.35
+	if mode == RetrievalModeBM25Local || mode == RetrievalModeLightRerank || len(queryVec) == 0 {
+		return bm25Score
+	}
+
+	semanticScore, ok := s.semanticSimilarity(queryVec, chunk)
+	if !ok {
+		return bm25Score
+	}
+
+	switch mode {
+	case RetrievalModeEmbedding:
+		return semanticScore*0.72 + math.Log1p(bm25Score)*0.28
+	case RetrievalModeHybridWeighted:
+		total := options.EmbeddingWeight + options.BM25Weight
+		if total <= 0 {
+			total = 1
+		}
+		return semanticScore*(options.EmbeddingWeight/total) + math.Log1p(bm25Score)*(options.BM25Weight/total)
+	default:
+		return semanticScore*0.72 + math.Log1p(bm25Score)*0.28
+	}
+}
+
+func (s *RAGService) semanticSimilarity(queryVec []float64, chunk model.KnowledgeChunk) (float64, bool) {
+	vec, err := s.parseVector(chunk.Vector)
+	if err != nil || len(vec) == 0 {
+		return 0, false
+	}
+	return s.CosineSimilarity(queryVec, vec), true
+}
+
+func (s *RAGService) rrfFusionScores(originalQuery, retrievalQuery string, queryTokens []string, queryVec []float64, chunks []model.KnowledgeChunk, rrfK float64) []retrievalScoredChunk {
+	type fused struct {
+		chunk model.KnowledgeChunk
+		score float64
+	}
+	fusedByID := make(map[string]*fused, len(chunks))
+	addRanking := func(scored []retrievalScoredChunk) {
+		sort.Slice(scored, func(i, j int) bool {
+			if scored[i].similarity == scored[j].similarity {
+				return scored[i].chunk.ID < scored[j].chunk.ID
+			}
+			return scored[i].similarity > scored[j].similarity
+		})
+		for rank, item := range scored {
+			if item.similarity < MinSimilarityThreshold {
+				continue
+			}
+			entry := fusedByID[item.chunk.ID]
+			if entry == nil {
+				entry = &fused{chunk: item.chunk}
+				fusedByID[item.chunk.ID] = entry
+			}
+			entry.score += 1 / (rrfK + float64(rank+1))
+		}
+	}
+
+	bm25Scored := make([]retrievalScoredChunk, 0, len(chunks))
+	embeddingScored := make([]retrievalScoredChunk, 0, len(chunks))
+	for _, chunk := range chunks {
+		bm25Score := s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)) + s.lexicalBoost(retrievalQuery, chunk) + focusedIntentBoost(originalQuery, chunk)*0.35
+		bm25Scored = append(bm25Scored, retrievalScoredChunk{chunk: chunk, similarity: bm25Score})
+		if semanticScore, ok := s.semanticSimilarity(queryVec, chunk); ok {
+			embeddingScored = append(embeddingScored, retrievalScoredChunk{chunk: chunk, similarity: semanticScore})
+		}
+	}
+	addRanking(bm25Scored)
+	addRanking(embeddingScored)
+
+	result := make([]retrievalScoredChunk, 0, len(fusedByID))
+	for _, item := range fusedByID {
+		expandedQuery := retrievalQueryExpansion{Original: originalQuery, RetrievalText: retrievalQuery}
+		result = append(result, retrievalScoredChunk{chunk: item.chunk, similarity: item.score + s.lightRerankBoost(originalQuery, expandedQuery, queryTokens, item.chunk)*0.002})
+	}
+	return result
+}
+
+func (s *RAGService) lightRerankBoost(query string, expandedQuery retrievalQueryExpansion, queryTokens []string, chunk model.KnowledgeChunk) float64 {
+	title := chunk.Title
+	content := chunk.Content
+	haystack := title + "\n" + content
+	boost := 0.0
+
+	for _, token := range queryTokens {
+		if len([]rune(token)) < 2 {
+			continue
+		}
+		if strings.Contains(title, token) {
+			boost += 1.5
+		}
+		if strings.Contains(content, token) {
+			boost += 0.4
+		}
+	}
+	for _, term := range expandedQuery.AddedTerms {
+		if len([]rune(term)) < 2 {
+			continue
+		}
+		if strings.Contains(title, term) {
+			boost += 0.55
+		} else if strings.Contains(content, term) {
+			boost += 0.18
+		}
+	}
+	for _, keyword := range config.LingshanRelatedKeywords {
+		if len([]rune(keyword)) < 3 {
+			continue
+		}
+		if strings.Contains(query, keyword) && strings.Contains(title, keyword) {
+			boost += 2.0
+		} else if strings.Contains(query, keyword) && strings.Contains(haystack, keyword) {
+			boost += 0.8
+		}
+	}
+
+	if sourceType := metadataString(chunk.Metadata, "source_type"); sourceType == "official" || sourceType == "government" {
+		boost += 0.2
+	}
+	boost += focusedIntentBoost(query, chunk)
+	return boost
+}
+
+func focusedIntentBoost(query string, chunk model.KnowledgeChunk) float64 {
+	title := chunk.Title
+	haystack := title + "\n" + chunk.Content
+	topic := metadataString(chunk.Metadata, "topic")
+	boost := 0.0
+
+	if containsAny(query, []string{"半天", "优先", "先看", "路线", "中轴线"}) {
+		if topic == "route" || containsAny(title, []string{"路线", "主线", "初次", "半天", "中轴"}) {
+			boost += 1.6
+		}
+	}
+	if containsAny(query, []string{"带孩子", "小朋友", "亲子", "拍照", "轻松"}) && !containsAny(query, []string{"简单拍照点"}) {
+		if topic == "family" || topic == "route" || containsAny(haystack, []string{"百子戏弥勒", "佛手广场", "亲子", "拍照"}) {
+			boost += 1.4
+		}
+	}
+	if containsAny(query, []string{"今天", "现在", "现场", "开不开", "排队", "人多", "无人机", "宠物", "能不能替代公告", "资料不足"}) {
+		if topic == "boundary" || containsAny(haystack, []string{"实时", "官方最新公告", "现场公示", "不能编造", "资料不足", "正式规定"}) {
+			boost += 2.0
+		}
+	}
+	if containsAny(query, []string{"餐厅", "素食", "简餐", "吃饭", "开不开"}) {
+		if topic == "service" || containsAny(haystack, []string{"餐饮", "餐厅", "素食", "简餐", "菜单", "座位"}) {
+			boost += 5.2
+		}
+	}
+	if containsAny(query, []string{"替代官方公告", "能不能替代公告", "官方公告"}) {
+		if containsAny(haystack, []string{"小灵", "数字人", "资料不足", "官方最新公告", "不能编造", "现场公示"}) {
+			boost += 3.0
+		}
+	}
+	if containsAny(query, []string{"无人机", "宠物"}) {
+		if containsAny(haystack, []string{"无人机", "宠物", "携带物品", "正式规定", "现场管理"}) {
+			boost += 8.0
+		}
+	}
+	if containsAny(query, []string{"排队", "人多", "客流"}) {
+		if containsAny(haystack, []string{"排队时间", "实时客流", "今日游客多不多", "拥堵程度", "天气应用", "地图热力"}) {
+			boost += 4.0
+		}
+	}
+	if containsAny(query, []string{"大佛之外", "文化建筑", "三大语系"}) {
+		if containsAny(haystack, []string{"五印坛城", "曼飞龙塔", "灵山梵宫", "佛教三大语系", "文化建筑"}) {
+			boost += 1.8
+		}
+	}
+	if containsAny(query, []string{"木雕", "壁画", "琉璃", "工艺"}) {
+		if topic == "fangong" || containsAny(haystack, []string{"灵山梵宫", "木雕", "壁画", "琉璃", "漆器", "艺术工艺"}) {
+			boost += 1.8
+		}
+	}
+	if containsAny(query, []string{"藏式", "藏传"}) {
+		if topic == "wuyin" || containsAny(haystack, []string{"五印坛城", "藏传佛教", "藏式"}) {
+			boost += 1.8
+		}
+	}
+	if containsAny(query, []string{"喷水", "花开见佛", "喷泉"}) {
+		if topic == "jiulong" || containsAny(haystack, []string{"九龙灌浴", "喷水", "花开见佛"}) {
+			boost += 1.8
+		}
+	}
+	if containsAny(query, []string{"演艺", "剧场", "演出"}) {
+		if topic == "show" || topic == "boundary" || containsAny(haystack, []string{"吉祥颂", "九龙灌浴", "演出场次", "官方最新公告"}) {
+			boost += 1.4
+		}
+	}
+	if containsAny(query, []string{"天气", "高温", "雨天"}) {
+		if topic == "route" || topic == "boundary" || containsAny(haystack, []string{"天气", "高温", "雨天", "室内点", "实时客流"}) {
+			boost += 1.5
+		}
+	}
+	if containsAny(query, []string{"中轴线"}) {
+		if chunk.ID == "real-route-001" || chunk.ID == "real-foshou-mile-001" {
+			boost += 5.0
+		}
+	}
+	if containsAny(query, []string{"容易过期", "最容易过期"}) {
+		if containsAny(haystack, []string{"门票价格", "开放时间", "演出场次", "停车余位", "临时闭园", "临时检修"}) {
+			boost += 5.0
+		}
+	}
+	if containsAny(query, []string{"导览服务", "现场设施", "服务设施"}) {
+		if topic == "service" || containsAny(haystack, []string{"导览服务", "休息点", "洗手间", "现场指引", "服务中心"}) {
+			boost += 4.0
+		}
+	}
+	if containsAny(query, []string{"简单拍照点"}) {
+		if topic == "fangong" || topic == "wuyin" || containsAny(haystack, []string{"佛教艺术", "文化建筑", "藏传佛教", "民俗艺术"}) {
+			boost += 6.0
+		}
+	}
+	if containsAny(query, []string{"只看大佛", "商业化游乐", "普通景区"}) {
+		if topic == "overview" || topic == "culture" || containsAny(haystack, []string{"太湖山水", "佛教文化", "文化建筑", "演艺体验", "礼佛空间"}) {
+			boost += 5.0
+		}
+	}
+
+	return boost
+}
+
+func metadataString(metadataJSON, key string) string {
+	if strings.TrimSpace(metadataJSON) == "" {
+		return ""
+	}
+	var metadata map[string]interface{}
+	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+		return ""
+	}
+	value, ok := metadata[key]
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
 }
 
 func (s *RAGService) rebuildBM25IndexLocked(chunks []model.KnowledgeChunk) {
@@ -814,6 +1205,15 @@ func (s *RAGService) lexicalBoost(query string, chunk model.KnowledgeChunk) floa
 	return boost
 }
 
+func containsAny(text string, terms []string) bool {
+	for _, term := range terms {
+		if strings.Contains(text, term) {
+			return true
+		}
+	}
+	return false
+}
+
 func conditionalTermBoost(query, haystack string, queryTerms, contentTerms []string) float64 {
 	queryMatched := false
 	for _, term := range queryTerms {
@@ -843,6 +1243,10 @@ func min(a, b int) int {
 }
 
 func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk) string {
+	return s.BuildRAGPromptWithContext(query, chunks, "")
+}
+
+func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.KnowledgeChunk, sessionContext string) string {
 	if len(chunks) == 0 {
 		return ""
 	}
@@ -850,6 +1254,14 @@ func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk)
 	var context strings.Builder
 	for i, chunk := range chunks {
 		context.WriteString(fmt.Sprintf("%d. 【%s】\n%s\n来源：%s\n\n", i+1, chunk.Title, chunk.Content, chunk.Source))
+	}
+
+	var conversation strings.Builder
+	if strings.TrimSpace(sessionContext) != "" {
+		conversation.WriteString("【当前会话上下文】\n")
+		conversation.WriteString(sessionContext)
+		conversation.WriteString("\n- 回答时先自然承接上一轮主题，再回答游客当前问题。\n")
+		conversation.WriteString("- 如果涉及票价、开放、演出、客流、排队、无人机、宠物等实时或现场规则，必须说明不能直接承诺，以官方最新公告或现场公示为准。\n\n")
 	}
 
 	prompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员”小灵”，负责为游客提供专业、热情的导览服务。
@@ -878,10 +1290,11 @@ func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk)
 【知识库资料】
 %s
 
+%s
 【游客问题】
 %s
 
-请以灵山景区数字人导览员的身份，基于以上资料回答：`, context.String(), query)
+请以灵山景区数字人导览员的身份，基于以上资料回答：`, context.String(), conversation.String(), query)
 
 	return prompt
 }
@@ -892,43 +1305,88 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 }
 
 func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTrace, err error) {
+	return s.queryWithRAGTraceInternal(query, query, "")
+}
+
+func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sessionContext string) (answer string, trace RAGTrace, err error) {
+	retrievalQuery = strings.TrimSpace(retrievalQuery)
+	promptQuery = strings.TrimSpace(promptQuery)
+	if promptQuery == "" {
+		promptQuery = retrievalQuery
+	}
 	totalStart := time.Now()
-	trace.TraceID = fmt.Sprintf("rag-%d", time.Now().UnixNano())
+	trace = RAGTrace{
+		TraceID:       fmt.Sprintf("rag-%d", time.Now().UnixNano()),
+		Provider:      map[bool]string{true: "bm25-local", false: "embedding"}[s.useBM25],
+		RetrievalMode: string(normalizeRetrievalMode(RetrievalModeDefault, s.embedding != nil && s.embedding.IsAvailable(), s.useBM25)),
+	}
+	if retrievalQuery != promptQuery {
+		trace.RewrittenQuery = retrievalQuery
+	}
 	defer func() {
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
+		trace.SlowRequest = trace.TotalMs > 5000
+		logAttrs := []any{
+			"trace_id", trace.TraceID,
+			"provider", trace.Provider,
+			"retrieval_mode", trace.RetrievalMode,
+			"cache_hit", trace.CacheHit,
+			"chunk_count", trace.ChunkCount,
+			"retrieval_ms", trace.RetrievalMs,
+			"embedding_ms", trace.EmbeddingMs,
+			"generation_ms", trace.GenerationMs,
+			"total_ms", trace.TotalMs,
+			"query_len", len([]rune(promptQuery)),
+		}
+		if trace.RewrittenQuery != "" {
+			logAttrs = append(logAttrs, "rewritten_query_len", len([]rune(trace.RewrittenQuery)))
+		}
+		if trace.SlowRequest {
+			slog.Warn("RAG 查询慢请求", logAttrs...)
+		} else {
+			slog.Info("RAG 查询完成", logAttrs...)
+		}
 	}()
 
-	if cachedResp, ok := s.getCachedResponse(query); ok {
-		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(query)))
+	cacheKey := retrievalQuery
+	if sessionContext != "" {
+		cacheKey = "prompt:" + promptQuery + "\nretrieval:" + retrievalQuery + "\nctx:" + sessionContext
+	}
+	if cachedResp, ok := s.getCachedResponse(cacheKey); ok {
+		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(promptQuery)))
+		trace.CacheHit = true
+		trace.TotalMs = time.Since(totalStart).Milliseconds()
+		trace.SlowRequest = trace.TotalMs > 5000
 		return cachedResp, trace, nil
 	}
 
 	retrievalStart := time.Now()
-	chunks, err := s.RetrieveRelevantKnowledge(query, TopK)
+	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
+	trace.ChunkCount = len(chunks)
 	if err != nil {
 		return "", trace, fmt.Errorf("检索相关知识失败: %v", err)
 	}
 
 	if len(chunks) == 0 {
-		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(query)))
+		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(promptQuery)))
 		generationStart := time.Now()
-		answer, err := s.QueryGeneralChat(query)
+		answer, err := s.QueryGeneralChat(promptQuery)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
 		return answer, trace, err
 	}
 
-	slog.Info("RAG 检索命中知识库", "query_len", len([]rune(query)), "chunks", len(chunks), "mode", map[bool]string{true: "bm25", false: "embedding"}[s.useBM25])
+	slog.Info("RAG 检索命中知识库", "query_len", len([]rune(promptQuery)), "chunks", len(chunks), "mode", map[bool]string{true: "bm25", false: "embedding"}[s.useBM25])
 
 	if s.chatAPIKey == "" {
 		generationStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
-	prompt := s.BuildRAGPrompt(query, chunks)
+	prompt := s.BuildRAGPromptWithContext(promptQuery, chunks, sessionContext)
 
 	type OpenAIRequest struct {
 		Model    string `json:"model"`
@@ -975,9 +1433,9 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 	if err != nil {
 		slog.Error("RAG 请求序列化失败", "error", err)
 		generationStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
@@ -987,9 +1445,9 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 	if err != nil {
 		slog.Error("RAG 创建 HTTP 请求失败", "error", err)
 		generationStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
@@ -1002,9 +1460,9 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 	if err != nil {
 		slog.Error("RAG 调用 Chat API 失败", "error", err)
 		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 	defer resp.Body.Close()
@@ -1013,9 +1471,9 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 		body, _ := io.ReadAll(resp.Body)
 		slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
 		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
@@ -1023,9 +1481,9 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 	if readErr != nil {
 		slog.Error("RAG 读取 Chat API 响应失败", "error", readErr)
 		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
@@ -1033,9 +1491,9 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
 		slog.Error("RAG 解析 Chat API 响应失败", "error", err)
 		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
@@ -1046,26 +1504,315 @@ func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTr
 			"message", openAIResp.Error.Message,
 		)
 		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunks(query, chunks)
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
 	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
 		answer := openAIResp.Choices[0].Message.Content
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(cacheKey, answer)
 		return answer, trace, nil
 	}
 
 	fallbackStart := time.Now()
-	answer = s.generateAnswerFromChunks(query, chunks)
+	answer = s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 	trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-	s.setCachedResponse(query, answer)
+	s.setCachedResponse(cacheKey, answer)
 	return answer, trace, nil
 }
 
+func (s *RAGService) QueryWithRAGInSession(sessionID, query string) (string, error) {
+	answer, _, err := s.QueryWithRAGTraceInSession(sessionID, query)
+	return answer, err
+}
+
+func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query string) (string, RAGTrace, error) {
+	sessionID = normalizeSessionID(sessionID)
+	if sessionID == "" {
+		return s.QueryWithRAGTrace(query)
+	}
+	rewritten := s.RewriteFollowUpQuery(sessionID, query)
+	sessionContext := s.buildSessionContextText(sessionID, query)
+	answer, trace, err := s.queryWithRAGTraceInternal(rewritten, query, sessionContext)
+	if rewritten != query {
+		trace.RewrittenQuery = rewritten
+	}
+	if err != nil {
+		return "", trace, err
+	}
+	s.appendSessionTurn(sessionID, query, answer)
+	return answer, trace, nil
+}
+
+func (s *RAGService) RewriteFollowUpQuery(sessionID, query string) string {
+	sessionID = normalizeSessionID(sessionID)
+	query = strings.TrimSpace(query)
+	if query == "" || sessionID == "" {
+		return query
+	}
+	if !isFollowUpQuery(query) {
+		return query
+	}
+
+	s.cacheMutex.RLock()
+	history := append([]sessionTurn(nil), s.sessionHistory[sessionID]...)
+	s.cacheMutex.RUnlock()
+	if len(history) == 0 {
+		return query
+	}
+
+	return buildFollowUpRewrite(query, history)
+}
+
+func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
+	sessionID = normalizeSessionID(sessionID)
+	if sessionID == "" {
+		return
+	}
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+	now := time.Now()
+	ctx := inferConversationContext(query, answer)
+	turns := append(s.sessionHistory[sessionID], sessionTurn{
+		Query:    strings.TrimSpace(query),
+		Answer:   strings.TrimSpace(answer),
+		Topic:    ctx.Topic,
+		Intent:   ctx.Intent,
+		Boundary: ctx.Boundary,
+		Updated:  now,
+	})
+	if len(turns) > 5 {
+		turns = turns[len(turns)-5:]
+	}
+	s.sessionHistory[sessionID] = turns
+	s.cleanupSessionHistoryLocked(now)
+}
+
+func normalizeSessionID(sessionID string) string {
+	sessionID = strings.TrimSpace(sessionID)
+	if len(sessionID) > MaxSessionIDLength {
+		return sessionID[:MaxSessionIDLength]
+	}
+	return sessionID
+}
+
+func (s *RAGService) cleanupSessionHistoryLocked(now time.Time) {
+	type candidate struct {
+		id      string
+		updated time.Time
+	}
+	candidates := make([]candidate, 0, len(s.sessionHistory))
+	for id, turns := range s.sessionHistory {
+		if len(turns) == 0 {
+			delete(s.sessionHistory, id)
+			continue
+		}
+		updated := turns[len(turns)-1].Updated
+		if now.Sub(updated) > SessionHistoryTTL {
+			delete(s.sessionHistory, id)
+			continue
+		}
+		candidates = append(candidates, candidate{id: id, updated: updated})
+	}
+	if len(s.sessionHistory) <= MaxSessionHistorySize {
+		return
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].updated.Equal(candidates[j].updated) {
+			return candidates[i].id < candidates[j].id
+		}
+		return candidates[i].updated.Before(candidates[j].updated)
+	})
+	for _, item := range candidates {
+		if len(s.sessionHistory) <= MaxSessionHistorySize {
+			return
+		}
+		delete(s.sessionHistory, item.id)
+	}
+}
+
+func isFollowUpQuery(query string) bool {
+	return containsAny(query, []string{
+		"它", "那里", "刚才", "那个", "这个", "呢", "还有", "别的", "多少", "几点", "门票", "怎么去", "哪里", "在哪", "多高", "要多久",
+		"半天够吗", "先看什么", "下雨", "雨天", "带孩子", "小朋友", "老人", "今天", "现在", "开不开", "人多", "排队", "无人机", "宠物",
+	})
+}
+
+func (s *RAGService) buildSessionContextText(sessionID, query string) string {
+	s.cacheMutex.RLock()
+	history := append([]sessionTurn(nil), s.sessionHistory[sessionID]...)
+	s.cacheMutex.RUnlock()
+	if len(history) == 0 {
+		return ""
+	}
+	currentIntent := detectQuestionIntent(query)
+	last := latestContextTurn(history)
+	parts := make([]string, 0, 3)
+	if last.Topic != "" {
+		parts = append(parts, "上一轮主题："+last.Topic)
+	}
+	if currentIntent != "" {
+		parts = append(parts, "当前意图："+currentIntent)
+	} else if last.Intent != "" {
+		parts = append(parts, "上一轮意图："+last.Intent)
+	}
+	if isBoundaryIntent(query) || last.Boundary {
+		parts = append(parts, "边界状态：涉及实时信息或现场规则时不能直接承诺")
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "- " + strings.Join(parts, "\n- ")
+}
+
+func inferConversationContext(query, answer string) conversationContext {
+	text := query + "\n" + answer
+	intent := detectQuestionIntent(query)
+	if intent == "" {
+		intent = detectQuestionIntent(answer)
+	}
+	return conversationContext{
+		Topic:    detectTopicEntity(text),
+		Intent:   intent,
+		Boundary: isBoundaryIntent(query) || isBoundaryIntent(answer),
+	}
+}
+
+func detectQuestionIntent(query string) string {
+	switch {
+	case containsAny(query, []string{"今天", "现在", "开不开", "开放", "几点", "门票", "票价", "演出", "场次", "人多", "排队", "无人机", "宠物", "公告", "现场"}):
+		return "实时信息边界"
+	case containsAny(query, []string{"下雨", "雨天", "天气", "高温"}):
+		return "天气路线"
+	case containsAny(query, []string{"半天", "路线", "怎么走", "先看", "够吗"}):
+		return "路线规划"
+	case containsAny(query, []string{"带孩子", "小朋友", "亲子"}):
+		return "亲子路线"
+	case containsAny(query, []string{"老人", "长辈", "腿脚"}):
+		return "老人路线"
+	case containsAny(query, []string{"多高", "在哪", "哪里", "怎么去", "适合谁", "要多久", "讲什么", "是什么"}):
+		return "属性追问"
+	case containsAny(query, []string{"还有", "别的"}):
+		return "补充推荐"
+	default:
+		return ""
+	}
+}
+
+func detectTopicEntity(text string) string {
+	for _, topic := range []string{"灵山大佛", "九龙灌浴", "灵山梵宫", "五印坛城", "曼飞龙塔", "佛手广场", "百子戏弥勒", "祥符禅寺"} {
+		if strings.Contains(text, topic) {
+			return topic
+		}
+	}
+	switch {
+	case containsAny(text, []string{"半天", "主线", "中轴线", "先看", "路线"}):
+		return "半天游路线"
+	case containsAny(text, []string{"下雨", "雨天", "天气", "高温"}):
+		return "雨天路线"
+	case containsAny(text, []string{"带孩子", "小朋友", "亲子"}):
+		return "亲子路线"
+	case containsAny(text, []string{"老人", "长辈", "腿脚"}):
+		return "老人轻松路线"
+	case containsAny(text, []string{"导览服务", "服务中心", "洗手间", "休息点"}):
+		return "导览服务"
+	case isBoundaryIntent(text):
+		return "实时信息边界"
+	default:
+		return ""
+	}
+}
+
+func isBoundaryIntent(query string) bool {
+	return containsAny(query, []string{"今天", "现在", "现场", "开不开", "开放", "几点", "门票", "票价", "演出", "场次", "人多", "排队", "无人机", "宠物", "公告", "实时", "不能替代", "不能编造"})
+}
+
+func buildFollowUpRewrite(query string, history []sessionTurn) string {
+	last := latestContextTurn(history)
+	topic := last.Topic
+	if topic == "" {
+		topic = detectTopicEntity(last.Query + "\n" + last.Answer)
+	}
+	intent := detectQuestionIntent(query)
+	if intent == "" {
+		intent = last.Intent
+	}
+
+	terms := []string{topic, query}
+	switch intent {
+	case "实时信息边界":
+		terms = append(terms, boundaryRewriteTerms(query)...)
+	case "天气路线":
+		terms = append(terms, "雨天路线", "降雨", "高温", "室内点", "现场天气调整")
+		if topic == "半天游路线" || last.Intent == "路线规划" {
+			terms = append(terms, "半天游路线")
+		}
+	case "路线规划":
+		terms = append(terms, "初次到访", "主线", "九龙灌浴", "佛手广场", "祥符禅寺", "灵山大佛")
+	case "亲子路线":
+		terms = append(terms, "亲子游客", "百子戏弥勒", "佛手广场", "九龙灌浴")
+	case "老人路线":
+		terms = append(terms, "老人游客", "轻松路线", "休息点", "不要安排太满")
+	case "补充推荐":
+		terms = append(terms, "补充推荐", "大佛之外", "文化建筑", "灵山梵宫", "五印坛城")
+	case "属性追问":
+		terms = append(terms, attributeRewriteTerms(query)...)
+	}
+
+	terms = compactKeywords(terms)
+	if len(terms) == 0 {
+		return query
+	}
+	return strings.Join(terms, " ")
+}
+
+func latestContextTurn(history []sessionTurn) sessionTurn {
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].Topic != "" || history[i].Intent != "" || strings.TrimSpace(history[i].Query) != "" {
+			return history[i]
+		}
+	}
+	return sessionTurn{}
+}
+
+func boundaryRewriteTerms(query string) []string {
+	terms := []string{"官方最新公告", "现场公示", "实时信息", "不能编造"}
+	if containsAny(query, []string{"人多", "排队"}) {
+		terms = append(terms, "实时客流", "排队时间", "无法确认")
+	}
+	if containsAny(query, []string{"无人机", "宠物"}) {
+		terms = append(terms, "无人机", "宠物", "现场规定", "正式规定")
+	}
+	if containsAny(query, []string{"门票", "票价", "几点", "开不开", "开放"}) {
+		terms = append(terms, "门票", "开放时间", "以官方为准")
+	}
+	return terms
+}
+
+func attributeRewriteTerms(query string) []string {
+	terms := make([]string, 0, 4)
+	if containsAny(query, []string{"多高", "高度"}) {
+		terms = append(terms, "高度", "通高")
+	}
+	if containsAny(query, []string{"在哪", "哪里", "怎么去"}) {
+		terms = append(terms, "位置", "怎么去", "路线")
+	}
+	if containsAny(query, []string{"适合谁"}) {
+		terms = append(terms, "适合游客", "游览建议")
+	}
+	if containsAny(query, []string{"要多久"}) {
+		terms = append(terms, "游览时长", "停留时间")
+	}
+	return terms
+}
+
 func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.KnowledgeChunk) string {
+	return s.generateAnswerFromChunksWithContext(query, chunks, "")
+}
+
+func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []model.KnowledgeChunk, sessionContext string) string {
 	var content strings.Builder
 	for _, chunk := range chunks {
 		content.WriteString(chunk.Content)
@@ -1073,6 +1820,28 @@ func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.Knowl
 	}
 
 	fullContent := content.String()
+	intentText := query + "\n" + sessionContext
+
+	if isBoundaryIntent(intentText) {
+		snippets := s.extractRelevantSnippets(query+" 官方最新公告 现场公示 不能编造", chunks, 3)
+		if len(snippets) == 0 {
+			snippets = []string{previewRunes(fullContent, 260)}
+		}
+		answer := "这个不能直接替您确认或承诺。根据当前资料，可以先参考：\n\n" + formatNumberedLines(snippets, 3) + "\n\n涉及开放状态、票价、演出场次、实时客流、排队时间、无人机或宠物等现场规则时，请以景区官方最新公告或现场公示为准。"
+		return previewRunes(answer, 700)
+	}
+
+	if isRouteIntent(intentText) {
+		snippets := s.extractRelevantSnippets(query+" 路线 游览 雨天 亲子 老人 休息点", chunks, 4)
+		if len(snippets) == 0 {
+			snippets = splitKnowledgeSentences(fullContent)
+		}
+		answer := "可以按这个思路安排：\n\n" + formatNumberedLines(snippets, 4)
+		if containsAny(intentText, []string{"下雨", "雨天", "天气", "高温"}) {
+			answer += "\n\n如果现场降雨、高温或排队变化明显，建议优先选择室内点和休息点，并按景区现场指引调整。"
+		}
+		return previewRunes(answer, 700)
+	}
 
 	if strings.Contains(query, "高") || strings.Contains(query, "高度") {
 		if strings.Contains(fullContent, "88") && strings.Contains(fullContent, "佛") {
@@ -1090,6 +1859,26 @@ func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.Knowl
 
 	answer := "根据灵山胜境景区资料：\n\n" + strings.Join(snippets, "\n\n")
 	return previewRunes(answer, 700)
+}
+
+func isRouteIntent(text string) bool {
+	return containsAny(text, []string{"路线", "半天", "怎么走", "先看", "下雨", "雨天", "天气", "高温", "带孩子", "亲子", "小朋友", "老人", "长辈"})
+}
+
+func formatNumberedLines(lines []string, limit int) string {
+	lines = compactKeywords(lines)
+	if len(lines) == 0 {
+		return "1. 根据当前资料，建议先咨询景区服务中心确认更合适的安排。"
+	}
+	var b strings.Builder
+	for i := 0; i < min(limit, len(lines)); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("%d. %s\n", i+1, line))
+	}
+	return strings.TrimSpace(b.String())
 }
 
 func (s *RAGService) extractRelevantSnippets(query string, chunks []model.KnowledgeChunk, limit int) []string {
@@ -1525,15 +2314,6 @@ func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, err
 
 	route := s.GenerateTourRoute(query)
 	return response, route, nil
-}
-
-func (s *RAGService) QueryWithRAGInSession(sessionID, query string) (string, error) {
-	answer, _, err := s.QueryWithRAGTraceInSession(sessionID, query)
-	return answer, err
-}
-
-func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query string) (string, RAGTrace, error) {
-	return s.QueryWithRAGTrace(query)
 }
 
 func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query string) (string, *TourRoute, error) {

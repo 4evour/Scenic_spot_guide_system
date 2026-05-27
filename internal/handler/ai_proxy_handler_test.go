@@ -102,10 +102,49 @@ func TestOpenAIProxyChatCompletionsStream(t *testing.T) {
 	}
 }
 
-func TestAIChatUsesSessionTraceResponseShape(t *testing.T) {
+func TestOpenAIProxyChatCompletionsUsesSessionContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/api/v1/ai/chat", NewAIHandler(newProxyTestRAGService(t)).Chat)
+	handler := NewOpenAIProxyHandler(newProxyTestRAGService(t))
+	router.POST("/v1/chat/completions", handler.ChatCompletions)
+
+	firstBody := bytes.NewBufferString(`{"model":"test-model","session_id":"s1","messages":[{"role":"user","content":"灵山大佛是什么？"}]}`)
+	firstReq := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", firstBody)
+	firstReq.Header.Set("Content-Type", "application/json")
+	firstResp := httptest.NewRecorder()
+	router.ServeHTTP(firstResp, firstReq)
+	if firstResp.Code != http.StatusOK {
+		t.Fatalf("first status = %d, body=%s", firstResp.Code, firstResp.Body.String())
+	}
+
+	secondBody := bytes.NewBufferString(`{"model":"test-model","session_id":"s1","messages":[{"role":"user","content":"它有多高？"}]}`)
+	secondReq := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", secondBody)
+	secondReq.Header.Set("Content-Type", "application/json")
+	secondResp := httptest.NewRecorder()
+	router.ServeHTTP(secondResp, secondReq)
+
+	if secondResp.Code != http.StatusOK {
+		t.Fatalf("second status = %d, body=%s", secondResp.Code, secondResp.Body.String())
+	}
+
+	var payload ChatCompletionResponse
+	if err := json.Unmarshal(secondResp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if len(payload.Choices) != 1 {
+		t.Fatalf("choices length = %d, want 1", len(payload.Choices))
+	}
+	content := payload.Choices[0].Message.Content
+	if !strings.Contains(content, "88米") {
+		t.Fatalf("follow-up content %q does not contain expected contextual answer", content)
+	}
+}
+
+func TestAIChatResponseDoesNotExposeInternalRewriteContext(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	handler := NewAIHandler(newProxyTestRAGService(t))
+	router.POST("/api/v1/ai/chat", handler.Chat)
 
 	body := bytes.NewBufferString(`{"session_id":"s1","message":"灵山大佛有多高？"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/chat", body)
@@ -117,10 +156,19 @@ func TestAIChatUsesSessionTraceResponseShape(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
 	}
-	if !strings.Contains(resp.Body.String(), "trace_id") {
-		t.Fatalf("response should include trace_id: %s", resp.Body.String())
-	}
 	if strings.Contains(resp.Body.String(), "rewritten_query") || strings.Contains(resp.Body.String(), "context_topic") {
-		t.Fatalf("response leaked internal context fields: %s", resp.Body.String())
+		t.Fatalf("response leaked internal rewrite context: %s", resp.Body.String())
+	}
+
+	var payload struct {
+		Data map[string]json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	for _, want := range []string{"response", "trace_id"} {
+		if _, ok := payload.Data[want]; !ok {
+			t.Fatalf("response data missing %q: %s", want, resp.Body.String())
+		}
 	}
 }
