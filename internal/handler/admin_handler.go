@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"log/slog"
+	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -44,6 +46,9 @@ func (h *AdminHandler) Routes(api *gin.RouterGroup) {
 
 		// 知识库统计
 		admin.GET("/knowledge/stats", h.GetKnowledgeStats)
+
+		// RAG 评估指标
+		admin.GET("/knowledge/eval-stats", h.GetEvalStats)
 	}
 }
 
@@ -155,4 +160,24 @@ func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
 func (h *AdminHandler) GetKnowledgeStats(c *gin.Context) {
 	stats := h.statsService.GetKnowledgeStats()
 	pkg.Success(c, stats)
+}
+
+// GetEvalStats 获取 RAG 评估指标
+func (h *AdminHandler) GetEvalStats(c *gin.Context) {
+	evalFile := "docs/eval-results/lingshan-real-rag-eval-targeted-improvement.json"
+	data, err := os.ReadFile(evalFile)
+	if err != nil {
+		slog.Warn("读取评估结果文件失败", "file", evalFile, "error", err)
+		pkg.Success(c, gin.H{"available": false, "message": "暂无评估数据"})
+		return
+	}
+
+	var result json.RawMessage
+	if err := json.Unmarshal(data, &result); err != nil {
+		slog.Error("解析评估结果失败", "error", err)
+		pkg.InternalError(c, "评估数据格式错误")
+		return
+	}
+
+	pkg.Success(c, gin.H{"available": true, "data": result})
 }
