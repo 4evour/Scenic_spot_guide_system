@@ -64,18 +64,21 @@ flowchart LR
 
 ## 功能概览
 
-- 游客问答：基于景区知识库进行检索增强问答；无 Embedding Key 时使用本地 BM25/词面检索，保证无 Key 可复现。
-- 景点与导览管理：维护景点、导览内容、游览路线等基础数据。
-- 管理后台：提供内容、路线、数字人配置和系统设置管理入口。
-- 数据看板：展示访问量、问答趋势、热门问题、满意度和数字人交互数据。
-- 数字人导览：通过 OpenAI 兼容接口、SSE 流式响应和 `/vtuber-ws/*` 代理对接 Open-LLM-VTuber，并提供景区定制前端二开层。
-- OpenAI 兼容接口：提供 `/v1/chat/completions`，便于外部数字人服务调用。
+- **游客问答（RAG）**：基于景区知识库进行检索增强问答，支持 5 种检索模式（BM25、Embedding、加权混合、RRF 融合、可解释重排），SSE 流式回答（打字机效果），多轮对话上下文追问改写。
+- **用户反馈闭环**：每个 AI 回答支持 👍👎 反馈，数据自动进入统计大屏。
+- **数字人导览**：Live2D 虚拟形象 + 情绪检测 + 语音合成，通过 OpenAI 兼容接口和 `/vtuber-ws/*` 代理对接 Open-LLM-VTuber。
+- **数据大屏**：5 个 KPI 卡片 + 24h 趋势 + 热门问答 + 满意度 + RAG 评估指标可视化，30 秒自动刷新。
+- **管理后台**：知识库在线编辑/文件上传、数字人形象配置、游客感受度报告、系统设置。
+- **Prometheus 监控**：`/metrics` 端点暴露请求量、延迟 P50/P95/P99、RAG 查询耗时、缓存命中率等指标。
+- **安全加固**：JWT 算法混淆防护、IDOR 权限校验、密码策略、全局限流、CSP/HSTS 安全头、登录统一错误防枚举。
+- **RAG 评估框架**：203 条真实问答评测集，Recall@8 99.5%，支持 5 种模式对比、分组统计、失败分析。
 
 ## 技术栈
 
 - 后端：Go 1.25.0、Gin、GORM、PostgreSQL、SQLite local/dev profile
 - 前端：Vue 3、Vite、TypeScript、PixiJS、Live2D
-- AI/RAG：DeepSeek 兼容接口、DashScope `text-embedding-v2` 示例配置、本地 JSONL 知识库、BM25/词面本地检索
+- AI/RAG：DeepSeek 兼容接口、DashScope `text-embedding-v2`、本地 JSONL 知识库、BM25 + Embedding 双路召回 + RRF 融合
+- 监控：Prometheus（`/metrics` 端点：请求量、延迟直方图、RAG 查询耗时、缓存命中率）
 - 静态资源：Go 服务托管 `static` 目录，Vue 构建产物输出到 `static/vue-app`
 
 ## 目录结构
