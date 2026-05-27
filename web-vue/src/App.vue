@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { appState, openDigitalHuman, type AppRoute } from './router';
+import { appState, isAuthenticated, logout, openDigitalHuman, type AppRoute } from './router';
+import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
 import AdminView from './views/AdminView.vue';
 import DigitalHumanView from './views/DigitalHumanView.vue';
 import MapView from './views/MapView.vue';
+
+const showLogin = computed(() => !isAuthenticated() || appState.route === 'login');
 
 const currentView = computed(() => {
   if (appState.route === 'admin') return AdminView;
@@ -18,13 +21,17 @@ function navigate(route: AppRoute) {
     openDigitalHuman();
     return;
   }
-
   window.location.hash = `/${route}`;
+}
+
+function onLoginSuccess() {
+  window.location.hash = '/dashboard';
 }
 </script>
 
 <template>
-  <div class="app-shell">
+  <LoginView v-if="showLogin" @login-success="onLoginSuccess" />
+  <div v-else class="app-shell">
     <nav class="top-nav" aria-label="主导航">
       <button :class="{ active: appState.route === 'dashboard' }" @click="navigate('dashboard')">
         <span class="nav-icon">▣</span>
@@ -43,8 +50,26 @@ function navigate(route: AppRoute) {
         游客地图
       </button>
       <a href="/" class="nav-link">返回游客端</a>
+      <button class="nav-link logout-btn" @click="logout">退出登录</button>
     </nav>
 
     <component :is="currentView" />
   </div>
 </template>
+
+<style scoped>
+.logout-btn {
+  margin-left: auto;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+.logout-btn:hover {
+  color: #ff8b8b;
+}
+</style>

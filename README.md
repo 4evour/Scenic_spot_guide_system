@@ -1,6 +1,66 @@
 # Scenic Spot Guide System
 
+[![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
+
 景区智能导览系统，面向景区游客问答、导览内容管理、路线推荐、运营数据看板和数字人导览场景。项目采用 Go/Gin 提供后端 API，PostgreSQL/GORM 作为主数据库配置，SQLite 仅作为本地开发和轻量测试配置，Vue 3 + Vite 构建前端页面，并集成本地知识库 RAG 与 Open-LLM-VTuber 数字人联调能力。
+
+## 系统架构
+
+```mermaid
+graph TB
+    subgraph 前端层
+        A[Vue 3 SPA<br/>数据大屏/管理后台/数字人/地图]
+        B[传统 HTML/JS<br/>游客首页/AI 聊天]
+    end
+
+    subgraph 后端层 Go/Gin
+        C[API 网关<br/>JWT认证/限流/安全头/CORS]
+        D[RAG 检索引擎<br/>BM25 + Embedding + RRF融合]
+        E[数字人服务<br/>会话管理/情绪检测/多轮对话]
+        F[管理后台 API<br/>数据统计/知识库CRUD/配置管理]
+        G[TTS 语音合成]
+    end
+
+    subgraph 数据层
+        H[(PostgreSQL/SQLite)]
+        I[知识库 JSONL<br/>154 条真实资料]
+    end
+
+    subgraph 外部服务
+        J[DeepSeek LLM]
+        K[DashScope Embedding]
+        L[百度 TTS]
+        M[Open-LLM-VTuber<br/>Live2D 数字人]
+    end
+
+    A & B --> C
+    C --> D & E & F & G
+    D --> H & I
+    D --> J & K
+    E --> D
+    G --> L
+    E --> M
+    F --> H
+```
+
+## RAG 检索流程
+
+```mermaid
+flowchart LR
+    A[用户提问] --> B[查询扩展<br/>17种意图场景]
+    B --> C{检索模式}
+    C -->|bm25-local| D[BM25 倒排索引]
+    C -->|embedding| E[DashScope 语义检索]
+    C -->|hybrid| F[加权融合 0.6E+0.4B]
+    C -->|rrf-fusion| G[RRF 排名融合]
+    C -->|light-rerank| H[BM25 + 可解释重排]
+    D & E & F & G & H --> I[Top-K 候选]
+    I --> J[实体聚焦加分]
+    J --> K{LLM 可用?}
+    K -->|是| L[DeepSeek 生成回答]
+    K -->|否| M[本地规则 Fallback]
+    L & M --> N[回答 + 来源]
+```
 
 ## 功能概览
 
@@ -143,11 +203,12 @@ go test ./...
 go vet ./...
 go run ./cmd/rag-eval -k 8 -format text
 go run ./cmd/rag-eval -knowledge knowledge/lingshan_scale_3000.jsonl -eval knowledge/lingshan_eval_300.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -fail-on-miss
+go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -compare-modes bm25-local,light-rerank
 
 Set-Location web-vue
-npm run check
-npm run check:encoding
-npm run build
+npm.cmd run check
+npm.cmd run check:encoding
+npm.cmd run build
 Set-Location ..
 ```
 
@@ -181,11 +242,20 @@ $env:SCENIC_GUIDE_AI_API_KEY="你的服务端密钥"
 go run ./cmd/rag-eval -k 8 -format text
 go run ./cmd/rag-eval -k 8 -format json
 go run ./cmd/rag-eval -knowledge knowledge/lingshan_scale_3000.jsonl -eval knowledge/lingshan_eval_300.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -fail-on-miss
+go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -compare-modes bm25-local,light-rerank
+go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -mode light-rerank -report-env -format json -out docs/eval-results/lingshan-real-rag-eval-light-rerank.json
+go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -compare-modes bm25-local,light-rerank -format json -out docs/eval-results/lingshan-real-rag-eval-targeted-improvement.json
 ```
 
-评估数据格式包含 `question`、`expected_keywords`、`expected_chunk_ids`、`category`、`difficulty`。评估报告包含用例总数、通过率、Recall@K、MRR@K、关键词平均覆盖率、失败样例和检索耗时 p50/p95；如需在 CI 或脚本中失败退出，可追加 `-fail-on-miss`。
+`cmd/rag-eval` 支持 `-mode` 指定检索模式：`bm25-local`、`embedding`、`hybrid-weighted`、`rrf-fusion`、`light-rerank`；也支持 `-compare-modes` 做多模式对比。`hybrid-weighted` 可通过 `-embedding-weight` 和 `-bm25-weight` 调整权重，`rrf-fusion` 可通过 `-rrf-k` 调整融合参数。无外部 Key 的本地可复现路径优先使用 `bm25-local` 和 `light-rerank`；`embedding`、`hybrid-weighted`、`rrf-fusion` 需要配置可用 Embedding Provider。
 
-3000/300 合成闭集实验仅作为内部回归数据集，不能作为简历主卖点，也不能外推为开放域真实问答召回率。简历主口径使用 `knowledge/real/` 真实资料评估集：122 个真实资料切片、203 条独立评测问答，并发 16、repeat 3 的 retrieval-only bench 结果为 Recall@8 85.5%、MRR@8 0.749、关键词覆盖率 94.3%、纯检索 p50/p95 约 7ms/10ms；该结果不包含外部 Embedding、大模型生成、ASR 或 TTS。
+评估数据格式包含 `question`、`expected_keywords`、`expected_chunk_ids`、`category`、`difficulty`。评估报告包含用例总数、通过率、Recall@K、MRR@K、关键词平均覆盖率、分类统计、失败原因、失败样例和检索耗时 p50/p95；如需在 CI 或脚本中失败退出，可追加 `-fail-on-miss`。
+
+3000/300 合成闭集实验仅作为内部回归数据集，不能作为简历主卖点，也不能外推为开放域真实问答召回率。简历主口径使用 `knowledge/real/` 真实资料评估集：122 个真实资料切片、203 条独立评测问答。优化前本地 retrieval-only 基线为 BM25 `pass 88.2% / Recall@8 85.5% / MRR@8 0.749`，`light-rerank pass 88.2% / Recall@8 86.0% / MRR@8 0.761`；该结果不包含外部 Embedding、大模型生成、ASR 或 TTS。
+
+当前轻量 rerank 是本地规则实现，不引入重型 Cross-Encoder。2026-05-26 按失败样例做定向优化后，检索链路增加了只用于召回和打分的查询扩展，并补强少量真实资料切片中的游客问法与边界词；用户原始问题和生成 prompt 不会被扩展词改写。真实资料 retrieval-only 单轮对比结果为：`bm25-local` 通过率 98.5%、Recall@8 94.8%、MRR@8 0.793、p50/p95 约 9ms/16-19ms；`light-rerank` 通过率 99.5%、Recall@8 95.3%、MRR@8 0.802、p50/p95 约 10ms/20-21ms。这个提升来自“语料与问法映射增强 + 可解释重排”，不代表生成质量、开放域泛化能力或线上 SLA。
+
+运行时问答接口支持传入 `session_id` 做短期多轮承接。后端只保留最近 5 轮，并在内部提取主题实体、意图类型和实时边界状态，用于把“它有多高”“下雨呢”“现在人多吗”等追问改写成更明确的检索 query。公开 API 响应结构不暴露 `rewritten_query` 或上下文主题；本地无 Key fallback 会按事实、路线、边界三类组织回答，涉及票价、开放、客流、排队、无人机、宠物等实时问题时提示以官方最新公告或现场公示为准。
 
 数据边界和评估口径见 `knowledge/DATASET.md` 与 `docs/rag-eval-report.md`。
 

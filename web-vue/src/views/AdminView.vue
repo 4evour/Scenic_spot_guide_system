@@ -68,6 +68,28 @@ const defaultAvatarConfig: AvatarConfig = {
   emotion_level: 3,
 };
 
+type SystemSettings = {
+  scenic_name: string;
+  scenic_desc: string;
+  service_hotline: string;
+  enable_login: boolean;
+  enable_voice: boolean;
+  enable_filter: boolean;
+  backup_frequency: string;
+  data_retention: string;
+};
+
+const defaultSettings: SystemSettings = {
+  scenic_name: '灵山胜境',
+  scenic_desc: '灵山胜境是著名的佛教文化景区，集自然风光与人文景观于一体。',
+  service_hotline: '400-168-0303',
+  enable_login: true,
+  enable_voice: true,
+  enable_filter: true,
+  backup_frequency: '每日',
+  data_retention: '30',
+};
+
 const defaultVisitorReport: VisitorReport = {
   attention_analysis: [],
   emotion_distribution: [],
@@ -106,6 +128,11 @@ const state = reactive({
   reportLoading: false,
   reportError: '',
   report: { ...defaultVisitorReport } as VisitorReport,
+  settingsLoading: false,
+  settingsSaving: false,
+  settingsMessage: '',
+  settingsError: '',
+  settings: { ...defaultSettings } as SystemSettings,
 });
 
 const tabs = [
@@ -289,6 +316,36 @@ async function saveAvatarConfig() {
   }
 }
 
+async function loadSettings() {
+  state.settingsLoading = true;
+  state.settingsError = '';
+  try {
+    const data = await apiFetch<Partial<SystemSettings>>('/admin/settings');
+    state.settings = { ...defaultSettings, ...data };
+  } catch (error) {
+    state.settingsError = error instanceof Error ? error.message : '系统设置加载失败';
+  } finally {
+    state.settingsLoading = false;
+  }
+}
+
+async function saveSettings() {
+  state.settingsSaving = true;
+  state.settingsError = '';
+  state.settingsMessage = '';
+  try {
+    await apiFetch('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify(state.settings),
+    });
+    state.settingsMessage = '系统设置已保存。';
+  } catch (error) {
+    state.settingsError = error instanceof Error ? error.message : '保存失败';
+  } finally {
+    state.settingsSaving = false;
+  }
+}
+
 function resetEditor() {
   state.editingID = '';
   state.editor = { ...emptyEditor };
@@ -368,6 +425,7 @@ onMounted(() => {
   loadKnowledge();
   loadAvatarConfig();
   loadVisitorReport();
+  loadSettings();
 });
 </script>
 
@@ -548,11 +606,22 @@ onMounted(() => {
       </section>
 
       <section v-if="state.tab === 'settings'" class="panel form-panel">
-        <label>景区名称<input value="灵山景区" /></label>
-        <label>服务热线<input value="400-168-0303" /></label>
-        <label>系统提示词<textarea rows="5">你是灵山景区 AI 导游，请基于本地知识库回答游客问题，优先保证事实准确、语气自然、路线建议可执行。</textarea></label>
-        <label class="toggle-row"><input type="checkbox" checked /> 启用知识库检索增强</label>
-        <label class="toggle-row"><input type="checkbox" checked /> 启用游客感受度分析</label>
+        <p v-if="state.settingsError" class="msg err">{{ state.settingsError }}</p>
+        <p v-if="state.settingsMessage" class="msg ok">{{ state.settingsMessage }}</p>
+        <label>景区名称<input v-model="state.settings.scenic_name" /></label>
+        <label>景区简介<textarea v-model="state.settings.scenic_desc" rows="3"></textarea></label>
+        <label>服务热线<input v-model="state.settings.service_hotline" /></label>
+        <label>数据保留天数<input v-model="state.settings.data_retention" /></label>
+        <label>备份频率<input v-model="state.settings.backup_frequency" /></label>
+        <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_login" /> 启用用户登录</label>
+        <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_voice" /> 启用语音服务</label>
+        <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_filter" /> 启用游客感受度分析</label>
+        <div class="action-row">
+          <button class="btn primary" :disabled="state.settingsSaving" @click="saveSettings">
+            {{ state.settingsSaving ? '保存中...' : '保存设置' }}
+          </button>
+          <button class="btn" @click="loadSettings">重置</button>
+        </div>
       </section>
     </section>
   </main>
