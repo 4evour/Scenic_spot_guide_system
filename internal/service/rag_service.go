@@ -33,6 +33,13 @@ type CacheEntry struct {
 	ExpireTime time.Time
 }
 
+type RAGTrace struct {
+	TraceID      string
+	RetrievalMs  int64
+	GenerationMs int64
+	TotalMs      int64
+}
+
 type TourRouteStep struct {
 	Number int    `json:"number"`
 	Name   string `json:"name"`
@@ -880,27 +887,45 @@ func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk)
 }
 
 func (s *RAGService) QueryWithRAG(query string) (string, error) {
+	answer, _, err := s.QueryWithRAGTrace(query)
+	return answer, err
+}
+
+func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTrace, err error) {
+	totalStart := time.Now()
+	trace.TraceID = fmt.Sprintf("rag-%d", time.Now().UnixNano())
+	defer func() {
+		trace.TotalMs = time.Since(totalStart).Milliseconds()
+	}()
+
 	if cachedResp, ok := s.getCachedResponse(query); ok {
 		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(query)))
-		return cachedResp, nil
+		return cachedResp, trace, nil
 	}
 
+	retrievalStart := time.Now()
 	chunks, err := s.RetrieveRelevantKnowledge(query, TopK)
+	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
 	if err != nil {
-		return "", fmt.Errorf("检索相关知识失败: %v", err)
+		return "", trace, fmt.Errorf("检索相关知识失败: %v", err)
 	}
 
 	if len(chunks) == 0 {
 		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(query)))
-		return s.QueryGeneralChat(query)
+		generationStart := time.Now()
+		answer, err := s.QueryGeneralChat(query)
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
+		return answer, trace, err
 	}
 
 	slog.Info("RAG 检索命中知识库", "query_len", len([]rune(query)), "chunks", len(chunks), "mode", map[bool]string{true: "bm25", false: "embedding"}[s.useBM25])
 
 	if s.chatAPIKey == "" {
+		generationStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	prompt := s.BuildRAGPrompt(query, chunks)
@@ -949,9 +974,11 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		slog.Error("RAG 请求序列化失败", "error", err)
+		generationStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	apiURL := s.chatBaseURL + "/chat/completions"
@@ -959,45 +986,57 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		slog.Error("RAG 创建 HTTP 请求失败", "error", err)
+		generationStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
 
+	generationStart := time.Now()
 	resp, err := s.httpClient.Do(httpReq)
+	trace.GenerationMs = time.Since(generationStart).Milliseconds()
 	if err != nil {
 		slog.Error("RAG 调用 Chat API 失败", "error", err)
+		fallbackStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
+		fallbackStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		slog.Error("RAG 读取 Chat API 响应失败", "error", readErr)
+		fallbackStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	var openAIResp OpenAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
 		slog.Error("RAG 解析 Chat API 响应失败", "error", err)
+		fallbackStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	if openAIResp.Error != nil {
@@ -1006,20 +1045,24 @@ func (s *RAGService) QueryWithRAG(query string) (string, error) {
 			"code", openAIResp.Error.Code,
 			"message", openAIResp.Error.Message,
 		)
+		fallbackStart := time.Now()
 		answer := s.generateAnswerFromChunks(query, chunks)
+		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
 	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
 		answer := openAIResp.Choices[0].Message.Content
 		s.setCachedResponse(query, answer)
-		return answer, nil
+		return answer, trace, nil
 	}
 
-	answer := s.generateAnswerFromChunks(query, chunks)
+	fallbackStart := time.Now()
+	answer = s.generateAnswerFromChunks(query, chunks)
+	trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 	s.setCachedResponse(query, answer)
-	return answer, nil
+	return answer, trace, nil
 }
 
 func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.KnowledgeChunk) string {
@@ -1482,6 +1525,35 @@ func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, err
 
 	route := s.GenerateTourRoute(query)
 	return response, route, nil
+}
+
+func (s *RAGService) QueryWithRAGInSession(sessionID, query string) (string, error) {
+	answer, _, err := s.QueryWithRAGTraceInSession(sessionID, query)
+	return answer, err
+}
+
+func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query string) (string, RAGTrace, error) {
+	return s.QueryWithRAGTrace(query)
+}
+
+func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query string) (string, *TourRoute, error) {
+	response, _, err := s.QueryWithRAGTraceInSession(sessionID, query)
+	if err != nil {
+		return "", nil, err
+	}
+
+	route := s.GenerateTourRoute(query)
+	return response, route, nil
+}
+
+func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query string) (string, *TourRoute, RAGTrace, error) {
+	response, trace, err := s.QueryWithRAGTraceInSession(sessionID, query)
+	if err != nil {
+		return "", nil, trace, err
+	}
+
+	route := s.GenerateTourRoute(query)
+	return response, route, trace, nil
 }
 
 func (s *RAGService) RunEvaluation(evalFile string) error {

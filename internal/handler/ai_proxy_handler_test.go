@@ -101,3 +101,26 @@ func TestOpenAIProxyChatCompletionsStream(t *testing.T) {
 		t.Fatalf("stream body missing SSE markers: %s", bodyText)
 	}
 }
+
+func TestAIChatUsesSessionTraceResponseShape(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.POST("/api/v1/ai/chat", NewAIHandler(newProxyTestRAGService(t)).Chat)
+
+	body := bytes.NewBufferString(`{"session_id":"s1","message":"灵山大佛有多高？"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/chat", body)
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+	if !strings.Contains(resp.Body.String(), "trace_id") {
+		t.Fatalf("response should include trace_id: %s", resp.Body.String())
+	}
+	if strings.Contains(resp.Body.String(), "rewritten_query") || strings.Contains(resp.Body.String(), "context_topic") {
+		t.Fatalf("response leaked internal context fields: %s", resp.Body.String())
+	}
+}
