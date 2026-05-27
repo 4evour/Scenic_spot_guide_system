@@ -14,6 +14,9 @@ import (
 func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	r.Use(corsMiddleware())
 	r.Use(securityHeaders())
+	r.Use(pkg.MetricsMiddleware())
+
+	r.GET("/metrics", pkg.PrometheusHandler())
 
 	r.Static("/static", "./static")
 	r.Any("/vtuber-ws/*path", pkg.WSTokenAuth(), vtuberWebSocketProxy("http://127.0.0.1:12393"))
