@@ -15,6 +15,9 @@ type ScenicSpot struct {
 	Rating      float64   `gorm:"default:0"`
 	Price       float64   `gorm:"default:0"`
 	ImageURL    string    `gorm:"size:500"`
+	Latitude    float64   `gorm:"column:latitude;default:0"`
+	Longitude   float64   `gorm:"column:longitude;default:0"`
+	SortOrder   int       `gorm:"column:sort_order;default:0"`
 	CreatedAt   time.Time `gorm:"autoCreateTime"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated"`
 }
