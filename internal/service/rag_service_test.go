@@ -40,7 +40,7 @@ func newTestRAGService(t *testing.T) *RAGService {
 	}
 
 	repo := repository.NewKnowledgeRepository(db)
-	return NewRAGService(repo, "", "", "", nil)
+	return NewRAGService(repo, "", "", "", nil, nil)
 }
 
 type staticEmbeddingProvider struct {
@@ -82,7 +82,7 @@ func newTestRAGServiceWithEmbedding(t *testing.T, provider EmbeddingProvider) *R
 	}
 
 	repo := repository.NewKnowledgeRepository(db)
-	return NewRAGService(repo, "", "", "", provider)
+	return NewRAGService(repo, "", "", "", provider, nil)
 }
 
 func TestRAGServiceLoadsJSONAndRetrievesWithBM25(t *testing.T) {

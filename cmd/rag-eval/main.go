@@ -182,7 +182,7 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 		chatBaseURL = ragConfig.AI.BaseURL
 	}
 
-	rag := service.NewRAGService(repository.NewKnowledgeRepository(db), chatAPIKey, chatModel, chatBaseURL, embeddingProvider)
+	rag := service.NewRAGService(repository.NewKnowledgeRepository(db), chatAPIKey, chatModel, chatBaseURL, embeddingProvider, nil)
 	if err := rag.LoadKnowledgeFromFile(knowledgeFile); err != nil {
 		return nil, err
 	}

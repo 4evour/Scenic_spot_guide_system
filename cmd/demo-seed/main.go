@@ -64,7 +64,7 @@ func seedDemoData(configDir, adminPassword string) error {
 		return fmt.Errorf("统计知识库失败: %w", err)
 	}
 	if count == 0 {
-		rag := service.NewRAGService(knowledgeRepo, "", "", "", nil)
+		rag := service.NewRAGService(knowledgeRepo, "", "", "", nil, nil)
 		if err := rag.LoadKnowledgeFromFile("./knowledge/lingshan_chunks.jsonl"); err != nil {
 			return fmt.Errorf("导入演示知识库失败: %w", err)
 		}

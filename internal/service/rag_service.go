@@ -19,6 +19,8 @@ import (
 	"github.com/scenic-guide/config"
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/repository"
+
+	iconfig "github.com/scenic-guide/internal/config"
 )
 
 const (
@@ -127,6 +129,7 @@ type RAGService struct {
 	sessionHistory map[string][]sessionTurn
 	cacheMutex     sync.RWMutex
 	lastCacheTime  time.Time
+	profile        *iconfig.ScenicProfile // 景区配置
 }
 
 type sessionTurn struct {
@@ -144,7 +147,7 @@ type conversationContext struct {
 	Boundary bool
 }
 
-func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, chatBaseURL string, embeddingProvider EmbeddingProvider) *RAGService {
+func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, chatBaseURL string, embeddingProvider EmbeddingProvider, profile *iconfig.ScenicProfile) *RAGService {
 	bm25 := NewBM25FallbackProvider()
 	useBM25 := true
 
@@ -168,6 +171,7 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		tokenCache:     make(map[string][]string),
 		tokenIndex:     make(map[string][]string),
 		chunkByID:      make(map[string]model.KnowledgeChunk),
+		profile:        profile,
 		sessionHistory: make(map[string][]sessionTurn),
 		lastCacheTime:  time.Now(),
 	}

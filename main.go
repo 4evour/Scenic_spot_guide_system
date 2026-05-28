@@ -64,8 +64,20 @@ func run() error {
 
 	ensureAdminUser()
 
+	// 加载景区配置
+	scenicID := os.Getenv("SCENIC_GUIDE_SCENIC_ID")
+	if scenicID == "" {
+		scenicID = "lingshan"
+	}
+	scenicProfile, err := config.LoadScenicProfile(scenicID)
+	if err != nil {
+		slog.Warn("加载景区配置失败，使用默认配置", "scenic_id", scenicID, "error", err)
+	} else {
+		slog.Info("景区配置加载成功", "scenic_id", scenicID, "name", scenicProfile.Name)
+	}
+
 	slog.Info("初始化 RAG 知识库")
-	ragService := initRAG(cfg)
+	ragService := initRAG(cfg, scenicProfile)
 	if ragService != nil {
 		slog.Info("RAG 知识库初始化成功")
 	} else {
@@ -157,7 +169,7 @@ func ensureAdminUser() {
 	slog.Info("已自动创建管理员账号", "username", username)
 }
 
-func initRAG(cfg *config.Config) *service.RAGService {
+func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGService {
 	if cfg.AI.APIKey == "" {
 		slog.Warn("AI API Key 未配置，RAG 将使用本地检索和规则兜底")
 	}
@@ -177,7 +189,7 @@ func initRAG(cfg *config.Config) *service.RAGService {
 		slog.Info("未配置 Embedding API Key，将使用 BM25")
 	}
 
-	ragService := service.NewRAGService(knowledgeRepo, cfg.AI.APIKey, cfg.AI.Model, cfg.AI.BaseURL, embeddingProvider)
+	ragService := service.NewRAGService(knowledgeRepo, cfg.AI.APIKey, cfg.AI.Model, cfg.AI.BaseURL, embeddingProvider, profile)
 
 	// 检查现有知识库
 	count, _ := knowledgeRepo.Count()
@@ -185,9 +197,19 @@ func initRAG(cfg *config.Config) *service.RAGService {
 		slog.Info("知识库已有数据，无需重新加载", "count", count)
 	} else {
 		slog.Info("知识库为空，开始加载默认知识库")
+		// 从景区配置读取知识库路径，无配置时使用默认路径
 		knowledgeFiles := []string{
 			"./knowledge/lingshan_chunks.jsonl",
 			"./knowledge/real/lingshan_real_chunks.jsonl",
+		}
+		if profile != nil {
+			knowledgeFiles = nil
+			if profile.Knowledge.ChunksFile != "" {
+				knowledgeFiles = append(knowledgeFiles, profile.Knowledge.ChunksFile)
+			}
+			if profile.Knowledge.RealChunksFile != "" {
+				knowledgeFiles = append(knowledgeFiles, profile.Knowledge.RealChunksFile)
+			}
 		}
 		for _, file := range knowledgeFiles {
 			if err := ragService.LoadKnowledgeFromFile(file); err != nil {

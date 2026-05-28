@@ -40,7 +40,7 @@ func newProxyTestRAGService(t *testing.T) *service.RAGService {
 		t.Fatalf("migrate test database: %v", err)
 	}
 
-	rag := service.NewRAGService(repository.NewKnowledgeRepository(db), "", "", "", nil)
+	rag := service.NewRAGService(repository.NewKnowledgeRepository(db), "", "", "", nil, nil)
 	if _, err := rag.LoadKnowledgeJSON([]byte(`[
 		{"id":"buddha-height","title":"灵山大佛高度","source":"test","content":"灵山大佛高88米，主体高79米，莲花瓣高9米。"}
 	]`)); err != nil {
