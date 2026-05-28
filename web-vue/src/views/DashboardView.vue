@@ -1,237 +1,222 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive } from 'vue';
-import KpiCard from '../components/KpiCard.vue';
-import TrendChart from '../components/TrendChart.vue';
-import BarList from '../components/BarList.vue';
-import DonutChart from '../components/DonutChart.vue';
+import { onMounted, onUnmounted, ref, nextTick } from 'vue';
+import { NGrid, NGi, NCard, NSpin, NStatistic, NTbody, NTable, NTr, NTd, NTh, NTag } from 'naive-ui';
+import * as echarts from 'echarts';
 
-type Overview = {
-  total_visitors: string;
-  weekly_visitors: string;
-  total_chats: string;
-  weekly_chats: string;
-  satisfaction_rate: string;
-  avg_response_time: string;
-  visitors_trend: number;
-  chats_trend: number;
-  satisfaction_trend: number;
-  response_trend: number;
+const token = localStorage.getItem('authToken');
+const headers: HeadersInit = {
+  'Content-Type': 'application/json',
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
 };
 
-type HourlyTrend = { hour: string; count: number };
-type TopQuestion = { question: string; count: number };
-type CategoryItem = { category: string; count: number; percent: number };
-type ResponseTimeItem = { bucket: string; count: number; percent: number };
-type SatisfactionTrend = { date: string; rate: number; total: number };
-type Conversation = {
-  user_query: string;
-  ai_response: string;
-  emotion: string;
-  response_time: string;
-  time: string;
+const loading = ref(true);
+const overview = ref({ total_visitors: 0, week_visitors: 0, total_queries: 0, week_queries: 0, satisfaction: 0, avg_response_ms: 0 });
+const recentConversations = ref<Array<{ session_id: string; query: string; response: string; emotion: string; source: string; created_at: string }>>([]);
+
+let trendChart: echarts.ECharts | null = null;
+let pieChart: echarts.ECharts | null = null;
+
+const emotionColor: Record<string, string> = {
+  joy: '#63e2b7', surprise: '#f8be52', neutral: '#7eb8da', sadness: '#e88080', fear: '#b8a0dc',
+};
+const emotionLabel: Record<string, string> = {
+  joy: '😊 正面', surprise: '😮 惊喜', neutral: '😐 中性', sadness: '😢 负面', fear: '😨 恐惧',
 };
 
-const state = reactive({
-  now: '',
-  loading: false,
-  error: '',
-  overview: {
-    total_visitors: '0',
-    weekly_visitors: '0',
-    total_chats: '0',
-    weekly_chats: '0',
-    satisfaction_rate: '0.0%',
-    avg_response_time: '0.0s',
-    visitors_trend: 0,
-    chats_trend: 0,
-    satisfaction_trend: 0,
-    response_trend: 0,
-  } as Overview,
-  hourlyTrend: [] as HourlyTrend[],
-  topQuestions: [] as TopQuestion[],
-  categories: [] as CategoryItem[],
-  responseTimes: [] as ResponseTimeItem[],
-  satisfactionTrend: [] as SatisfactionTrend[],
-  conversations: [] as Conversation[],
-});
-
-const categoryColors = ['#52f0ee', '#f4c765', '#7ef2a0', '#8aa4ff', '#ff8b8b', '#c792ea'];
-
-const kpis = computed(() => [
-  { label: '今日服务人次', value: state.overview.total_visitors, note: trendText(state.overview.visitors_trend, '较昨日'), tone: 'cyan' as const },
-  { label: '本周服务人次', value: state.overview.weekly_visitors, note: '近 7 天去重会话', tone: 'gold' as const },
-  { label: '今日问答次数', value: state.overview.total_chats, note: trendText(state.overview.chats_trend, '较昨日'), tone: 'gold' as const },
-  { label: '游客满意度', value: state.overview.satisfaction_rate, note: trendText(state.overview.satisfaction_trend, '较昨日'), tone: 'green' as const },
-  { label: '平均响应延迟', value: state.overview.avg_response_time, note: trendText(state.overview.response_trend, '响应改善'), tone: 'cyan' as const },
-]);
-
-const trendValues = computed(() => {
-  const values = state.hourlyTrend.map(item => item.count);
-  return values.length ? values : Array.from({ length: 24 }, () => 0);
-});
-
-const topQuestionBars = computed(() => {
-  const max = Math.max(...state.topQuestions.map(item => item.count), 1);
-  return state.topQuestions.map(item => ({
-    label: item.question,
-    value: Math.round(item.count / max * 100),
-    suffix: ` / ${item.count}`,
-  }));
-});
-
-const categoryDonut = computed(() => state.categories.map((item, index) => ({
-  label: item.category,
-  value: Math.round(item.percent),
-  color: categoryColors[index % categoryColors.length],
-})));
-
-const responseBars = computed(() => state.responseTimes.map(item => ({
-  label: item.bucket,
-  value: Math.max(Math.round(item.percent), 2),
-  raw: item.count,
-})));
-
-const satisfactionTrendValues = computed(() => {
-  const values = state.satisfactionTrend.map(item => item.rate);
-  return values.length ? values : Array.from({ length: 7 }, () => 0);
-});
-
-function trendText(value: number, label: string) {
-  const sign = value > 0 ? '+' : '';
-  return `${label} ${sign}${value.toFixed(1)}%`;
+async function fetchJSON<T>(path: string): Promise<T> {
+  const res = await fetch(`/api/v1${path}`, { headers });
+  const data = await res.json();
+  return data.data as T;
 }
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`/api/v1${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  const raw = await response.text();
-  let payload: { code?: number; message?: string; msg?: string; data?: unknown } = {};
-  if (raw.trim()) {
-    try {
-      payload = JSON.parse(raw);
-    } catch {
-      throw new Error(`接口返回非 JSON 响应 (${response.status})`);
-    }
-  }
-  if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.message || payload.msg || response.statusText || `请求失败 (${response.status})`);
-  }
-  return payload.data as T;
-}
-
-async function loadDashboard() {
-  state.loading = true;
-  state.error = '';
+async function loadData() {
+  loading.value = true;
   try {
-    const [overview, hourly, questions, categories, responseTimes, satisfactionTrend, conversations] = await Promise.all([
-      apiFetch<Overview>('/admin/dashboard/overview'),
-      apiFetch<HourlyTrend[]>('/admin/dashboard/hourly-trend'),
-      apiFetch<TopQuestion[]>('/admin/dashboard/top-questions?limit=5'),
-      apiFetch<CategoryItem[]>('/admin/dashboard/category-distribution'),
-      apiFetch<ResponseTimeItem[]>('/admin/dashboard/response-time-distribution'),
-      apiFetch<SatisfactionTrend[]>('/admin/dashboard/satisfaction-trend'),
-      apiFetch<Conversation[]>('/admin/dashboard/recent-conversations?limit=6'),
+    const [ov, trend, cats, recent] = await Promise.all([
+      fetchJSON<{ total_visitors: number; week_visitors: number; total_queries: number; week_queries: number; satisfaction: number; avg_response_ms: number }>('/admin/dashboard/overview'),
+      fetchJSON<Array<{ hour: string; count: number }>>('/admin/dashboard/hourly-trend'),
+      fetchJSON<Array<{ label: string; value: number }>>('/admin/dashboard/category-distribution'),
+      fetchJSON<Array<{ session_id: string; query: string; response: string; emotion: string; source: string; created_at: string }>>('/admin/dashboard/recent-conversations?limit=6'),
     ]);
-    state.overview = overview;
-    state.hourlyTrend = hourly;
-    state.topQuestions = questions;
-    state.categories = categories;
-    state.responseTimes = responseTimes;
-    state.satisfactionTrend = satisfactionTrend;
-    state.conversations = conversations;
-  } catch (error) {
-    state.error = error instanceof Error ? error.message : '数据大屏加载失败';
+    overview.value = ov;
+    recentConversations.value = recent || [];
+
+    await nextTick();
+    renderTrendChart(trend || []);
+    renderPieChart(cats || []);
+  } catch (e) {
+    console.error('Dashboard load error:', e);
   } finally {
-    state.loading = false;
+    loading.value = false;
   }
 }
 
-let clockTimer = 0;
-let dashboardTimer = 0;
+function renderTrendChart(data: Array<{ hour: string; count: number }>) {
+  const el = document.getElementById('trendChart');
+  if (!el) return;
+  if (trendChart) trendChart.dispose();
+  trendChart = echarts.init(el);
+  trendChart.setOption({
+    backgroundColor: 'transparent',
+    grid: { top: 30, right: 16, bottom: 30, left: 50 },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.hour),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+      axisLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 11 },
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { color: '#63e2b7', width: 2 },
+      itemStyle: { color: '#63e2b7' },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(99,226,183,0.25)' },
+          { offset: 1, color: 'rgba(99,226,183,0)' },
+        ]),
+      },
+      data: data.map(d => d.count),
+    }],
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(20,20,30,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#fff', fontSize: 12 },
+    },
+  });
+}
 
-function tick() {
-  state.now = new Date().toLocaleString('zh-CN');
+function renderPieChart(data: Array<{ label: string; value: number }>) {
+  const el = document.getElementById('pieChart');
+  if (!el) return;
+  if (pieChart) pieChart.dispose();
+  pieChart = echarts.init(el);
+  const colors = ['#63e2b7', '#f8be52', '#7eb8da', '#b8a0dc', '#e88080', '#a5d6a7'];
+  pieChart.setOption({
+    backgroundColor: 'transparent',
+    series: [{
+      type: 'pie',
+      radius: ['42%', '70%'],
+      center: ['50%', '50%'],
+      label: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
+      labelLine: { lineStyle: { color: 'rgba(255,255,255,0.15)' } },
+      data: data.map((d, i) => ({ value: d.value, name: d.label, itemStyle: { color: colors[i % colors.length] } })),
+    }],
+    tooltip: {
+      backgroundColor: 'rgba(20,20,30,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#fff', fontSize: 12 },
+    },
+  });
+}
+
+function handleResize() {
+  trendChart?.resize();
+  pieChart?.resize();
 }
 
 onMounted(() => {
-  tick();
-  loadDashboard();
-  clockTimer = window.setInterval(tick, 1000);
-  dashboardTimer = window.setInterval(loadDashboard, 30000);
+  loadData();
+  window.addEventListener('resize', handleResize);
 });
-
 onUnmounted(() => {
-  window.clearInterval(clockTimer);
-  window.clearInterval(dashboardTimer);
+  window.removeEventListener('resize', handleResize);
+  trendChart?.dispose();
+  pieChart?.dispose();
 });
 </script>
 
 <template>
-  <main class="dashboard-view">
-    <header class="hero-console">
-      <div>
-        <p class="eyebrow">LingShan Scenic AI Operation Center</p>
-        <h1>景区导览 AI 数字人数据大屏</h1>
-        <p>展示当日/本周服务人次、热门问答、满意度趋势与响应效率等核心运营数据。</p>
-      </div>
-      <div class="clock-chip">{{ state.now }}</div>
-    </header>
+  <div class="dashboard">
+    <div class="page-header">
+      <h1>数据大屏</h1>
+      <p>实时运营数据概览</p>
+    </div>
 
-    <div v-if="state.error" class="notice error">{{ state.error }}</div>
+    <NSpin :show="loading">
+      <NGrid :cols="4" :x-gap="16" :y-gap="16" style="margin-bottom: 24px;">
+        <NGi>
+          <NCard size="small" class="kpi-card">
+            <NStatistic label="今日服务人次" :value="overview.total_visitors">
+              <template #suffix><span style="font-size:12px;color:rgba(255,255,255,0.35);">人次</span></template>
+            </NStatistic>
+          </NCard>
+        </NGi>
+        <NGi>
+          <NCard size="small" class="kpi-card">
+            <NStatistic label="本周问答次数" :value="overview.week_queries">
+              <template #suffix><span style="font-size:12px;color:rgba(255,255,255,0.35);">次</span></template>
+            </NStatistic>
+          </NCard>
+        </NGi>
+        <NGi>
+          <NCard size="small" class="kpi-card">
+            <NStatistic label="用户满意度">
+              <template #default><span style="font-size:28px;font-weight:700;color:#63e2b7;">{{ overview.satisfaction.toFixed(1) }}%</span></template>
+            </NStatistic>
+          </NCard>
+        </NGi>
+        <NGi>
+          <NCard size="small" class="kpi-card">
+            <NStatistic label="平均响应延迟">
+              <template #default><span style="font-size:28px;font-weight:700;color:#f8be52;">{{ (overview.avg_response_ms / 1000).toFixed(1) }}s</span></template>
+            </NStatistic>
+          </NCard>
+        </NGi>
+      </NGrid>
 
-    <section class="kpi-grid">
-      <KpiCard v-for="item in kpis" :key="item.label" v-bind="item" />
-    </section>
+      <NGrid :cols="3" :x-gap="16" :y-gap="16" style="margin-bottom: 24px;">
+        <NGi :span="2">
+          <NCard size="small" class="chart-card">
+            <template #header><span class="card-title">📈 24 小时流量趋势</span></template>
+            <div id="trendChart" style="height: 300px;"></div>
+          </NCard>
+        </NGi>
+        <NGi>
+          <NCard size="small" class="chart-card">
+            <template #header><span class="card-title">🎯 关注点分布</span></template>
+            <div id="pieChart" style="height: 300px;"></div>
+          </NCard>
+        </NGi>
+      </NGrid>
 
-    <section class="dashboard-grid">
-      <article class="panel span-2">
-        <h2>今日服务流量趋势</h2>
-        <TrendChart :values="trendValues" />
-      </article>
-
-      <article class="panel">
-        <h2>热门问答 Top5</h2>
-        <BarList v-if="topQuestionBars.length" :items="topQuestionBars" />
-        <p v-else class="muted-center">暂无问答记录</p>
-      </article>
-
-      <article class="panel">
-        <h2>游客关注点分布</h2>
-        <DonutChart v-if="categoryDonut.length" :items="categoryDonut" center="关注" />
-        <p v-else class="muted-center">暂无分类数据</p>
-      </article>
-
-      <article class="panel">
-        <h2>响应延迟分布</h2>
-        <div class="response-bars">
-          <div v-for="item in responseBars" :key="item.label" class="response-col" :style="{ height: `${Math.max(item.value, 8)}%` }">
-            <strong>{{ item.value }}%</strong>
-            <span>{{ item.label }}</span>
-          </div>
-        </div>
-      </article>
-
-      <article class="panel">
-        <h2>满意度趋势</h2>
-        <TrendChart :values="satisfactionTrendValues" />
-      </article>
-
-      <article class="panel span-2">
-        <h2>实时交互片段</h2>
-        <div class="chat-log">
-          <div v-for="item in state.conversations" :key="`${item.time}-${item.user_query}`" class="log-line">
-            <span>客</span>
-            <div>
-              <strong>{{ item.user_query }}</strong>
-              <p>{{ item.ai_response }}</p>
-            </div>
-            <small>{{ item.response_time }} / {{ item.time }}</small>
-          </div>
-        </div>
-        <p v-if="!state.conversations.length" class="muted-center">暂无实时交互记录</p>
-      </article>
-    </section>
-  </main>
+      <NCard size="small" class="chart-card">
+        <template #header><span class="card-title">💬 最近对话</span></template>
+        <NTable :bordered="false" size="small">
+          <thead>
+            <NTr>
+              <NTh>时间</NTh><NTh>游客问题</NTh><NTh>AI 回答</NTh><NTh>情绪</NTh><NTh>来源</NTh>
+            </NTr>
+          </thead>
+          <NTbody>
+            <NTr v-for="item in recentConversations" :key="item.session_id + item.query">
+              <NTd style="color:rgba(255,255,255,0.35);font-size:12px;white-space:nowrap;">{{ new Date(item.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }}</NTd>
+              <NTd style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.query }}</NTd>
+              <NTd style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.response }}</NTd>
+              <NTd><NTag :color="{ color: emotionColor[item.emotion] + '20', textColor: emotionColor[item.emotion], borderColor: emotionColor[item.emotion] + '40' }" size="small" :bordered="true">{{ emotionLabel[item.emotion] || item.emotion }}</NTag></NTd>
+              <NTd style="font-size:12px;">{{ item.source }}</NTd>
+            </NTr>
+          </NTbody>
+        </NTable>
+      </NCard>
+    </NSpin>
+  </div>
 </template>
+
+<style scoped>
+.dashboard { padding: 24px; background: #0a0a0f; min-height: 100%; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.88); margin-bottom: 4px; }
+.page-header p { font-size: 13px; color: rgba(255,255,255,0.35); }
+.kpi-card { background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 12px !important; }
+.chart-card { background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 12px !important; }
+.card-title { font-size: 14px; color: rgba(255,255,255,0.65); }
+</style>
