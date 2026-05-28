@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灵山胜境 - 数字人导览</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; background: #f7f8fa; color: #1a1a2e; height: 100vh; overflow: hidden; }
+
+/* 顶部导航 */
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.nav .brand { display: flex; align-items: center; gap: 8px; }
+.nav .brand .logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #43a047, #2e7d32); display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
+.nav .brand h1 { font-size: 16px; color: #2e7d32; font-weight: 700; }
+.nav-links { display: flex; gap: 4px; }
+.nav-links a { padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; color: #888; }
+.nav-links a:hover { background: #e8f5e9; color: #2e7d32; }
+.nav-links a.active { background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+
+/* 主体布局：左侧数字人 + 右侧聊天 */
+.main { display: flex; height: calc(100vh - 56px); }
+
+/* 左侧：数字人区域 */
+.digital-human-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #e8f5e9, #f7f8fa); position: relative; overflow: hidden; }
+.digital-human-area::before { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; background: rgba(67,160,71,0.06); top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* Live2D 占位（实际项目中会替换为真实的 Live2D 渲染） */
+.live2d-placeholder { width: 320px; height: 440px; position: relative; z-index: 1; }
+.character { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.character .body { width: 180px; height: 280px; background: linear-gradient(180deg, #c8e6c9, #a5d6a7, #81c784); border-radius: 90px 90px 60px 60px; position: relative; }
+.character .body::before { content: ''; position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #fff, #f5f5f5); border: 3px solid #c8e6c9; }
+.character .body::after { content: '😊'; position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-size: 28px; }
+.character .name-tag { margin-top: 16px; padding: 6px 16px; background: white; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-size: 14px; font-weight: 600; color: #2e7d32; }
+
+/* 表情指示器 */
+.emotion-indicator { display: flex; gap: 8px; margin-top: 16px; position: relative; z-index: 1; }
+.emotion-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #e0e0e0; background: white; font-size: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.emotion-btn:hover { border-color: #43a047; transform: scale(1.1); }
+.emotion-btn.active { border-color: #43a047; background: #e8f5e9; }
+
+/* 状态指示 */
+.status-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; position: relative; z-index: 1; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.status-text { font-size: 12px; color: #888; }
+
+/* 字幕区 */
+.subtitle-area { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); max-width: 400px; z-index: 2; }
+.subtitle-bubble { background: rgba(255,255,255,0.95); padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; color: #333; text-align: center; backdrop-filter: blur(10px); }
+.subtitle-bubble .typing { display: inline-block; }
+.subtitle-bubble .typing::after { content: '|'; animation: blink 0.8s infinite; color: #43a047; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* 右侧：聊天面板 */
+.chat-area { width: 420px; display: flex; flex-direction: column; background: white; border-left: 1px solid #f0f0f0; }
+.chat-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+.chat-header h2 { font-size: 15px; color: #333; margin-bottom: 2px; }
+.chat-header p { font-size: 12px; color: #999; }
+
+.chat-quick { display: flex; gap: 6px; padding: 12px 16px; overflow-x: auto; border-bottom: 1px solid #f5f5f5; }
+.chat-quick button { white-space: nowrap; padding: 6px 14px; border-radius: 20px; border: 1px solid #c8e6c9; background: #f1f8e9; font-size: 12px; color: #2e7d32; cursor: pointer; transition: all 0.2s; }
+.chat-quick button:hover { background: #c8e6c9; }
+
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 85%; }
+.msg.ai { align-self: flex-start; }
+.msg.user { align-self: flex-end; }
+.msg .bubble { padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; }
+.msg.ai .bubble { background: #f5f5f5; color: #333; border-bottom-left-radius: 4px; }
+.msg.user .bubble { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; border-bottom-right-radius: 4px; }
+.msg .route-tip { margin-top: 6px; padding: 8px 10px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; font-size: 12px; color: #f57f17; }
+.msg .source { margin-top: 6px; font-size: 11px; color: #bbb; }
+.msg .feedback { display: flex; gap: 4px; margin-top: 6px; }
+.msg .feedback button { padding: 3px 8px; border-radius: 4px; border: 1px solid #e0e0e0; background: white; font-size: 11px; cursor: pointer; color: #999; }
+.msg .feedback button:hover { background: #e8f5e9; border-color: #43a047; color: #43a047; }
+
+/* 输入区 */
+.chat-input-area { padding: 12px 16px; border-top: 1px solid #f0f0f0; }
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row input { flex: 1; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 13px; outline: none; transition: border 0.2s; }
+.chat-input-row input:focus { border-color: #43a047; }
+.chat-input-row .send-btn { padding: 10px 20px; background: linear-gradient(135deg, #43a047, #2e7d32); border: none; border-radius: 10px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
+.chat-input-row .voice-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #c8e6c9; background: #f1f8e9; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.chat-input-row .voice-btn:hover { background: #c8e6c9; }
+.chat-input-row .voice-btn.recording { background: #ffcdd2; border-color: #ef9a9a; animation: pulse 1s infinite; }
+
+/* 底部控制栏 */
+.control-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #fafafa; border-top: 1px solid #f0f0f0; font-size: 11px; color: #999; }
+.control-bar .controls { display: flex; gap: 12px; }
+.control-bar .controls button { background: none; border: none; color: #888; font-size: 11px; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+.control-bar .controls button:hover { background: #f0f0f0; color: #333; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand">
+    <div class="logo">🏔</div>
+    <h1>灵山胜境</h1>
+  </div>
+  <div class="nav-links">
+    <a href="#">首页</a>
+    <a href="#">景点</a>
+    <a href="#">路线</a>
+    <a href="#">地图</a>
+    <a class="active" href="#">数字人导览</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:12px;color:#999;">Web Speech API · 语音识别就绪</span>
+  </div>
+</nav>
+
+<div class="main">
+  <!-- 左侧：数字人 -->
+  <div class="digital-human-area">
+    <div class="live2d-placeholder">
+      <div class="character">
+        <div class="body"></div>
+        <div class="name-tag">🤖 小灵 · AI 导览员</div>
+      </div>
+    </div>
+
+    <div class="emotion-indicator">
+      <button class="emotion-btn" title="开心">😊</button>
+      <button class="emotion-btn active" title="自然">😐</button>
+      <button class="emotion-btn" title="思考">🤔</button>
+      <button class="emotion-btn" title="惊喜">😮</button>
+    </div>
+
+    <div class="status-bar">
+      <span class="status-dot"></span>
+      <span class="status-text">Live2D 已连接 · 口型同步中</span>
+    </div>
+
+    <div class="subtitle-area">
+      <div class="subtitle-bubble">
+        推荐您走<span style="color:#43a047;font-weight:600;">亲子欢乐路线</span>：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站，全程约 2.5 小时。
+        <span class="typing"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧：聊天 -->
+  <div class="chat-area">
+    <div class="chat-header">
+      <h2>💬 与小灵对话</h2>
+      <p>支持文字和语音输入 · 基于 RAG 检索增强生成</p>
+    </div>
+
+    <div class="chat-quick">
+      <button>灵山大佛有多高？</button>
+      <button>带孩子怎么玩？</button>
+      <button>推荐路线</button>
+      <button>开放时间</button>
+      <button>附近餐厅</button>
+    </div>
+
+    <div class="chat-messages">
+      <div class="msg ai">
+        <div class="bubble">欢迎来到灵山胜境！我是您的数字导览员小灵 😊 有什么可以帮您的吗？</div>
+      </div>
+
+      <div class="msg user">
+        <div class="bubble">灵山大佛有多高？</div>
+      </div>
+
+      <div class="msg ai">
+        <div class="bubble">灵山大佛高<strong style="color:#43a047">88米</strong>，主体高79米，是世界上最高的青铜立佛之一。大佛面向太湖，背靠灵山，气势恢宏。<br><br>建议您从佛足坛出发，沿中轴线步行前往，沿途还能欣赏九龙灌浴表演。</div>
+        <div class="source">📚 来源：灵山大佛总体介绍（official）</div>
+        <div class="feedback"><button>👍 有用</button><button>👎</button></div>
+      </div>
+
+      <div class="msg user">
+        <div class="bubble">带孩子去有什么推荐？</div>
+      </div>
+
+      <div class="msg ai">
+        <div class="bubble">推荐您走<strong style="color:#f9a825">亲子欢乐路线</strong>：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站，全程约 2.5 小时。<br><br>百子戏弥勒非常适合小朋友拍照互动，九龙灌浴的喷泉表演孩子们也会很喜欢！</div>
+        <div class="route-tip">📍 路线：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站（约 2.5 小时）</div>
+        <div class="source">📚 来源：亲子欢乐路线推荐（official）</div>
+        <div class="feedback"><button>👍 有用</button><button>👎</button><button>🔄 换路线</button></div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <button class="voice-btn" title="按住说话">🎤</button>
+        <input placeholder="输入您的问题..." />
+        <button class="send-btn">发送</button>
+      </div>
+    </div>
+
+    <div class="control-bar">
+      <div class="controls">
+        <button>🔄 新对话</button>
+        <button>📜 历史</button>
+        <button>🔇 静音</button>
+        <button>⚙️ 设置</button>
+      </div>
+      <span>Session: abc123</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

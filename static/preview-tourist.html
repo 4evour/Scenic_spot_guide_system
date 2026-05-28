@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灵山胜境 - 游客端预览</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; background: #f7f8fa; color: #1a1a2e; }
+
+/* 顶部导航 */
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 64px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
+.nav .brand { display: flex; align-items: center; gap: 10px; }
+.nav .brand .logo { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #43a047, #2e7d32); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+.nav .brand h1 { font-size: 18px; color: #2e7d32; font-weight: 700; }
+.nav .brand p { font-size: 11px; color: #999; }
+.nav-links { display: flex; gap: 4px; }
+.nav-links a { padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; color: #666; transition: all 0.2s; }
+.nav-links a:hover { background: #e8f5e9; color: #2e7d32; }
+.nav-links a.active { background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+.nav-user { display: flex; align-items: center; gap: 8px; }
+.nav-user .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+
+/* Hero 区域 */
+.hero { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 30%, #a5d6a7 60%, #81c784 100%); padding: 60px 32px; text-align: center; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+.hero::after { content: ''; position: absolute; bottom: -30%; left: -10%; width: 400px; height: 400px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+.hero h2 { font-size: 36px; color: #1b5e20; margin-bottom: 8px; position: relative; z-index: 1; }
+.hero p { font-size: 16px; color: #388e3c; margin-bottom: 24px; position: relative; z-index: 1; }
+.hero .search-bar { display: flex; max-width: 560px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; position: relative; z-index: 1; }
+.hero .search-bar input { flex: 1; padding: 16px 20px; border: none; font-size: 15px; outline: none; }
+.hero .search-bar button { padding: 16px 28px; background: linear-gradient(135deg, #43a047, #2e7d32); border: none; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.hero .search-bar button:hover { opacity: 0.9; }
+
+/* 快捷入口 */
+.shortcuts { display: flex; justify-content: center; gap: 16px; margin-top: 24px; position: relative; z-index: 1; }
+.shortcut { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 20px; background: rgba(255,255,255,0.8); border-radius: 12px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); }
+.shortcut:hover { background: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.shortcut .icon { font-size: 24px; }
+.shortcut span { font-size: 12px; color: #555; font-weight: 500; }
+
+/* 主体内容 */
+.container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+/* 景点卡片 */
+.section-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: #1a1a2e; }
+.section-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; }
+.spot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+.spot-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s; cursor: pointer; }
+.spot-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.spot-card .img { height: 160px; background: linear-gradient(135deg, #c8e6c9, #a5d6a7); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
+.spot-card .img .badge { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.9); padding: 4px 10px; border-radius: 20px; font-size: 12px; color: #43a047; font-weight: 600; backdrop-filter: blur(4px); }
+.spot-card .info { padding: 16px; }
+.spot-card .info h3 { font-size: 16px; margin-bottom: 4px; color: #1a1a2e; }
+.spot-card .info p { font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 8px; }
+.spot-card .info .meta { display: flex; justify-content: space-between; align-items: center; }
+.spot-card .info .meta .rating { color: #f9a825; font-size: 13px; font-weight: 600; }
+.spot-card .info .meta .price { color: #43a047; font-size: 13px; font-weight: 600; }
+
+/* 路线推荐 */
+.route-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px; }
+.route-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s; cursor: pointer; border-left: 4px solid; }
+.route-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+.route-card:nth-child(1) { border-left-color: #43a047; }
+.route-card:nth-child(2) { border-left-color: #f9a825; }
+.route-card:nth-child(3) { border-left-color: #1e88e5; }
+.route-card:nth-child(4) { border-left-color: #8e24aa; }
+.route-card h3 { font-size: 16px; margin-bottom: 6px; }
+.route-card p { font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 12px; }
+.route-card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.route-card .tag { padding: 4px 10px; border-radius: 20px; font-size: 11px; background: #f1f8e9; color: #558b2f; }
+.route-card .tag.time { background: #fff3e0; color: #e65100; }
+.route-card .tag.diff { background: #e3f2fd; color: #1565c0; }
+
+/* AI 聊天入口 */
+.chat-banner { background: linear-gradient(135deg, #e8f5e9, #f1f8e9); border-radius: 16px; padding: 32px; display: flex; align-items: center; gap: 24px; margin-bottom: 40px; }
+.chat-banner .icon { font-size: 56px; }
+.chat-banner .text h3 { font-size: 20px; color: #2e7d32; margin-bottom: 4px; }
+.chat-banner .text p { font-size: 14px; color: #689f38; margin-bottom: 12px; }
+.chat-banner .text button { padding: 10px 24px; background: linear-gradient(135deg, #43a047, #2e7d32); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+/* 聊天面板 */
+.chat-panel { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 40px; }
+.chat-header { padding: 16px 20px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); display: flex; align-items: center; gap: 12px; }
+.chat-header .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #43a047, #2e7d32); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+.chat-header .info h3 { font-size: 15px; color: #2e7d32; }
+.chat-header .info p { font-size: 12px; color: #689f38; }
+.chat-body { padding: 20px; min-height: 300px; display: flex; flex-direction: column; gap: 16px; }
+.msg { max-width: 80%; }
+.msg.ai { align-self: flex-start; }
+.msg.user { align-self: flex-end; }
+.msg .bubble { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
+.msg.ai .bubble { background: #f5f5f5; color: #333; border-bottom-left-radius: 4px; }
+.msg.user .bubble { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; border-bottom-right-radius: 4px; }
+.msg .route-tip { margin-top: 8px; padding: 10px 12px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; font-size: 13px; color: #f57f17; }
+.msg .feedback { display: flex; gap: 6px; margin-top: 8px; }
+.msg .feedback button { padding: 4px 10px; border-radius: 6px; border: 1px solid #e0e0e0; background: white; font-size: 12px; cursor: pointer; color: #666; transition: all 0.2s; }
+.msg .feedback button:hover { background: #e8f5e9; border-color: #43a047; color: #43a047; }
+.chat-input { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid #f0f0f0; }
+.chat-input input { flex: 1; padding: 12px 16px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 14px; outline: none; transition: border 0.2s; }
+.chat-input input:focus { border-color: #43a047; }
+.chat-input button { padding: 12px 24px; background: linear-gradient(135deg, #43a047, #2e7d32); border: none; border-radius: 10px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; }
+.chat-quick { display: flex; gap: 8px; padding: 0 20px 12px; flex-wrap: wrap; }
+.chat-quick button { padding: 6px 14px; border-radius: 20px; border: 1px solid #c8e6c9; background: #f1f8e9; font-size: 12px; color: #2e7d32; cursor: pointer; transition: all 0.2s; }
+.chat-quick button:hover { background: #c8e6c9; }
+
+/* 底部 */
+.footer { background: #2e7d32; color: rgba(255,255,255,0.8); padding: 32px; text-align: center; }
+.footer p { font-size: 13px; margin-bottom: 4px; }
+.footer .links { display: flex; justify-content: center; gap: 24px; margin-top: 12px; }
+.footer .links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- 导航 -->
+<nav class="nav">
+  <div class="brand">
+    <div class="logo">🏔</div>
+    <div><h1>灵山胜境</h1><p>太湖明珠 · 智能导览</p></div>
+  </div>
+  <div class="nav-links">
+    <a class="active" href="#">首页</a>
+    <a href="#">景点</a>
+    <a href="#">路线</a>
+    <a href="#">地图</a>
+    <a href="#">数字人</a>
+  </div>
+  <div class="nav-user">
+    <span style="font-size:13px;color:#666;">游客</span>
+    <div class="avatar">游</div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <h2>探索灵山胜境</h2>
+  <p>基于 AI 的智能导览，为您定制专属游览体验</p>
+  <div class="search-bar">
+    <input placeholder="问我任何关于灵山的问题，例如：灵山大佛有多高？" />
+    <button>🔍 智能问答</button>
+  </div>
+  <div class="shortcuts">
+    <div class="shortcut"><span class="icon">🗺️</span><span>路线推荐</span></div>
+    <div class="shortcut"><span class="icon">🏛️</span><span>景点介绍</span></div>
+    <div class="shortcut"><span class="icon">🤖</span><span>AI 导游</span></div>
+    <div class="shortcut"><span class="icon">👤</span><span>数字人</span></div>
+    <div class="shortcut"><span class="icon">📍</span><span>地图导航</span></div>
+  </div>
+</section>
+
+<div class="container">
+  <!-- 热门景点 -->
+  <h2 class="section-title">热门景点</h2>
+  <p class="section-subtitle">灵山胜境核心景点推荐</p>
+  <div class="spot-grid">
+    <div class="spot-card">
+      <div class="img" style="background:linear-gradient(135deg,#fff8e1,#ffe0b2);">🗽<span class="badge">⭐ 4.9</span></div>
+      <div class="info">
+        <h3>灵山大佛</h3>
+        <p>高88米的青铜立佛，是灵山胜境的标志性景点，世界最高青铜佛像之一。</p>
+        <div class="meta"><span class="rating">⭐ 4.9</span><span class="price">免费</span></div>
+      </div>
+    </div>
+    <div class="spot-card">
+      <div class="img" style="background:linear-gradient(135deg,#e3f2fd,#bbdefb);">⛲<span class="badge">⭐ 4.8</span></div>
+      <div class="info">
+        <h3>九龙灌浴</h3>
+        <p>再现释迦牟尼诞生时九龙沐浴的动态音乐喷泉演出，震撼壮观。</p>
+        <div class="meta"><span class="rating">⭐ 4.8</span><span class="price">免费</span></div>
+      </div>
+    </div>
+    <div class="spot-card">
+      <div class="img" style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);">🏛️<span class="badge">⭐ 4.9</span></div>
+      <div class="info">
+        <h3>灵山梵宫</h3>
+        <p>汇集东阳木雕、琉璃、油画等传统工艺的佛教艺术殿堂。</p>
+        <div class="meta"><span class="rating">⭐ 4.9</span><span class="price">免费</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 路线推荐 -->
+  <h2 class="section-title">路线推荐</h2>
+  <p class="section-subtitle">为您量身定制的游览路线</p>
+  <div class="route-cards">
+    <div class="route-card">
+      <h3>🎯 经典文化路线</h3>
+      <p>灵山大照壁 → 五明桥 → 佛足坛 → 九龙灌浴 → 灵山梵宫 → 灵山大佛</p>
+      <div class="tags"><span class="tag time">⏱ 4 小时</span><span class="tag diff">🟢 轻松</span><span class="tag">首次推荐</span></div>
+    </div>
+    <div class="route-card">
+      <h3>🧘 禅意体验路线</h3>
+      <p>五印坛城 → 灵山梵宫 → 祥符禅寺，重点体验佛教建筑和艺术</p>
+      <div class="tags"><span class="tag time">⏱ 3 小时</span><span class="tag diff">🟡 适中</span><span class="tag">文化爱好者</span></div>
+    </div>
+    <div class="route-card">
+      <h3>👨‍👩‍👧 亲子欢乐路线</h3>
+      <p>百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站</p>
+      <div class="tags"><span class="tag time">⏱ 2.5 小时</span><span class="tag diff">🟢 轻松</span><span class="tag">亲子家庭</span></div>
+    </div>
+    <div class="route-card">
+      <h3>📚 深度历史路线</h3>
+      <p>灵山大照壁 → 祥符禅寺 → 灵山梵宫 → 五印坛城 → 灵山大佛</p>
+      <div class="tags"><span class="tag time">⏱ 5 小时</span><span class="tag diff">🟡 适中</span><span class="tag">深度游</span></div>
+    </div>
+  </div>
+
+  <!-- AI 导游入口 -->
+  <div class="chat-banner">
+    <div class="icon">🤖</div>
+    <div class="text">
+      <h3>AI 智能导游</h3>
+      <p>有任何关于灵山的问题？AI 导游小灵随时为您解答，支持语音和文字交流。</p>
+      <button>开始对话 →</button>
+    </div>
+  </div>
+
+  <!-- AI 聊天演示 -->
+  <h2 class="section-title">AI 导览对话</h2>
+  <p class="section-subtitle">基于 RAG 检索增强生成，回答准确、有据可查</p>
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="avatar">🤖</div>
+      <div class="info"><h3>小灵 · AI 导游</h3><p>在线 · 基于 154 条知识切片</p></div>
+    </div>
+    <div class="chat-quick">
+      <button>灵山大佛有多高？</button>
+      <button>带孩子怎么玩？</button>
+      <button>推荐一条路线</button>
+      <button>现在人多吗？</button>
+    </div>
+    <div class="chat-body">
+      <div class="msg ai">
+        <div class="bubble">欢迎来到灵山胜境！我是您的数字导览员小灵，有什么可以帮您的吗？ 😊</div>
+      </div>
+      <div class="msg user">
+        <div class="bubble">带孩子去有什么推荐？</div>
+      </div>
+      <div class="msg ai">
+        <div class="bubble">推荐您走<strong>亲子欢乐路线</strong>：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站，全程约 2.5 小时。<br><br>百子戏弥勒非常适合小朋友拍照互动，九龙灌浴的喷泉表演孩子们也会很喜欢！文创驿站有各种纪念品和饮品，适合休息补给。</div>
+        <div class="route-tip">📍 路线推荐：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站（约 2.5 小时）</div>
+        <div class="feedback">
+          <button>👍 有用</button>
+          <button>👎</button>
+          <button>🔄 换一条路线</button>
+        </div>
+      </div>
+    </div>
+    <div class="chat-input">
+      <input placeholder="输入您的问题..." />
+      <button>发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- 底部 -->
+<footer class="footer">
+  <p>灵山胜境 · 智能导览系统</p>
+  <p style="font-size:12px;opacity:0.6;">服务热线：400-168-0303 | 基于 RAG 检索增强生成技术</p>
+  <div class="links">
+    <a href="#">景区官网</a>
+    <a href="#">门票购买</a>
+    <a href="#">交通指南</a>
+    <a href="#">联系我们</a>
+  </div>
+</footer>
+
+</body>
+</html>

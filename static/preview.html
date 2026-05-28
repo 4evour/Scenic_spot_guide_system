@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenic Guide - UI Preview</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/naive-ui@2/dist/index.prod.js"></script>
+<script src="https://unpkg.com/echarts@5/dist/echarts.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: rgba(255,255,255,0.88); font-family: -apple-system, 'Segoe UI', 'PingFang SC', sans-serif; }
+.page { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* 顶部导航 */
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.top-bar .brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.top-bar .brand span { background: linear-gradient(135deg, #63e2b7, #18a058); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.top-bar nav { display: flex; gap: 4px; }
+.top-bar nav button { background: none; border: none; color: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.top-bar nav button:hover { color: rgba(255,255,255,0.88); background: rgba(255,255,255,0.06); }
+.top-bar nav button.active { color: #63e2b7; background: rgba(99,226,183,0.1); }
+
+/* 主体布局 */
+.main { display: flex; flex: 1; }
+.sidebar { width: 240px; padding: 16px; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); }
+.content { flex: 1; padding: 24px; overflow-y: auto; }
+
+/* 卡片 */
+.card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; }
+.card-title { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+/* KPI */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; }
+.kpi .label { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
+.kpi .value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.kpi .trend { font-size: 12px; margin-top: 6px; }
+.kpi .trend.up { color: #63e2b7; }
+.kpi .trend.down { color: #e88080; }
+
+/* 图表区 */
+.charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-box { height: 300px; }
+
+/* 聊天预览 */
+.chat-preview { display: flex; flex-direction: column; height: 400px; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
+.msg.user { align-self: flex-end; background: rgba(99,226,183,0.15); border: 1px solid rgba(99,226,183,0.3); color: #63e2b7; }
+.msg.ai { align-self: flex-start; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
+.msg .avatar { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 4px; }
+.chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+.chat-input input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: white; font-size: 14px; outline: none; }
+.chat-input input:focus { border-color: #63e2b7; }
+.chat-input button { background: linear-gradient(135deg, #63e2b7, #18a058); border: none; border-radius: 8px; padding: 10px 20px; color: #0a0a0f; font-weight: 600; cursor: pointer; font-size: 14px; }
+
+/* 表格 */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: left; padding: 10px 12px; color: rgba(255,255,255,0.45); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 12px; }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.badge.green { background: rgba(99,226,183,0.15); color: #63e2b7; }
+.badge.yellow { background: rgba(248,190,82,0.15); color: #f8be52; }
+.badge.red { background: rgba(232,128,128,0.15); color: #e88080; }
+
+/* 按钮 */
+.btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.btn-primary { background: #63e2b7; color: #0a0a0f; font-weight: 600; }
+.btn-primary:hover { background: #4fd1a0; }
+.btn-ghost { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.88); border: 1px solid rgba(255,255,255,0.12); }
+.btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+/* 侧边栏菜单 */
+.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.5); transition: all 0.2s; margin-bottom: 2px; }
+.menu-item:hover { color: rgba(255,255,255,0.88); background: rgba(255,255,255,0.04); }
+.menu-item.active { color: #63e2b7; background: rgba(99,226,183,0.08); }
+.menu-item .icon { width: 18px; text-align: center; font-size: 15px; }
+.menu-group { font-size: 11px; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 1px; padding: 16px 12px 6px; }
+
+/* 页面标题 */
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.page-header p { font-size: 13px; color: rgba(255,255,255,0.4); }
+
+/* 搜索框 */
+.search-box { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; }
+.search-box input { background: none; border: none; color: white; outline: none; flex: 1; font-size: 13px; }
+.search-box input::placeholder { color: rgba(255,255,255,0.25); }
+</style>
+</head>
+<body>
+<div id="app" class="page">
+  <!-- 顶部导航 -->
+  <header class="top-bar">
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#63e2b7" opacity="0.8"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#63e2b7" stroke-width="1.5" fill="none" opacity="0.5"/></svg>
+      <span>Scenic Guide</span>
+    </div>
+    <nav>
+      <button :class="{ active: page === 'dashboard' }" @click="page = 'dashboard'">数据大屏</button>
+      <button :class="{ active: page === 'admin' }" @click="page = 'admin'">管理后台</button>
+      <button :class="{ active: page === 'chat' }" @click="page = 'chat'">AI 导览</button>
+      <button :class="{ active: page === 'knowledge' }" @click="page = 'knowledge'">知识库</button>
+    </nav>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:12px;color:rgba(255,255,255,0.35);">admin</span>
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#63e2b7,#18a058);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0a0a0f;">A</div>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- 侧边栏 -->
+    <aside class="sidebar" v-if="page !== 'chat'">
+      <div class="menu-group">导航</div>
+      <div class="menu-item" :class="{ active: page === 'dashboard' }" @click="page = 'dashboard'">
+        <span class="icon">📊</span> 数据大屏
+      </div>
+      <div class="menu-item" :class="{ active: page === 'admin' }" @click="page = 'admin'">
+        <span class="icon">⚙️</span> 管理后台
+      </div>
+      <div class="menu-item" :class="{ active: page === 'knowledge' }" @click="page = 'knowledge'">
+        <span class="icon">📚</span> 知识库
+      </div>
+      <div class="menu-group">工具</div>
+      <div class="menu-item" @click="page = 'chat'">
+        <span class="icon">🤖</span> AI 导览
+      </div>
+      <div class="menu-item">
+        <span class="icon">🗺️</span> 游客地图
+      </div>
+      <div class="menu-item">
+        <span class="icon">👤</span> 数字人
+      </div>
+      <div class="menu-group">系统</div>
+      <div class="menu-item">
+        <span class="icon">📈</span> RAG 评估
+      </div>
+      <div class="menu-item">
+        <span class="icon">🔒</span> 安全设置
+      </div>
+    </aside>
+
+    <!-- 数据大屏 -->
+    <div class="content" v-if="page === 'dashboard'">
+      <div class="page-header">
+        <h1>数据大屏</h1>
+        <p>实时运营数据概览 · 每 30 秒自动刷新</p>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="label">今日服务人次</div>
+          <div class="value" style="color:#63e2b7">1,284</div>
+          <div class="trend up">↑ 12.3% 较昨日</div>
+        </div>
+        <div class="kpi">
+          <div class="label">本周问答次数</div>
+          <div class="value" style="color:#f8be52">8,562</div>
+          <div class="trend up">↑ 8.7% 较上周</div>
+        </div>
+        <div class="kpi">
+          <div class="label">用户满意度</div>
+          <div class="value" style="color:#7eb8da">94.2%</div>
+          <div class="trend up">↑ 1.5%</div>
+        </div>
+        <div class="kpi">
+          <div class="label">平均响应延迟</div>
+          <div class="value" style="color:#b8a0dc">1.2s</div>
+          <div class="trend down">↓ 0.3s</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-title">📈 24 小时流量趋势</div>
+          <div id="trendChart" class="chart-box"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎯 游客关注点分布</div>
+          <div id="pieChart" class="chart-box"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💬 最近对话</div>
+        <table class="data-table">
+          <thead><tr><th>时间</th><th>游客问题</th><th>AI 回答摘要</th><th>情绪</th><th>来源</th></tr></thead>
+          <tbody>
+            <tr><td>14:32</td><td>灵山大佛有多高？</td><td>灵山大佛高88米，主体高79米...</td><td><span class="badge green">😊 正面</span></td><td>Web</td></tr>
+            <tr><td>14:28</td><td>亲子游怎么安排？</td><td>建议选择九龙灌浴、梵宫和文创驿站...</td><td><span class="badge green">😊 正面</span></td><td>数字人</td></tr>
+            <tr><td>14:15</td><td>现在人多吗？</td><td>实时客流信息请以官方公告为准...</td><td><span class="badge yellow">😐 中性</span></td><td>Web</td></tr>
+            <tr><td>14:02</td><td>梵宫有什么特色？</td><td>梵宫汇集东阳木雕、琉璃和油画等艺术...</td><td><span class="badge green">😍 惊喜</span></td><td>语音</td></tr>
+            <tr><td>13:55</td><td>门票多少钱？</td><td>门票价格请以官方最新公告为准...</td><td><span class="badge yellow">😐 中性</span></td><td>Web</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 管理后台 -->
+    <div class="content" v-if="page === 'admin'">
+      <div class="page-header">
+        <h1>管理后台</h1>
+        <p>景区内容管理 · 数字人配置 · 系统设置</p>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button class="btn btn-primary" v-for="t in ['知识库','数字人形象','感受度报告','系统设置']" :key="t"
+          :class="tab === t ? 'btn-primary' : 'btn-ghost'" @click="tab = t" style="font-size:12px;">{{ t }}</button>
+      </div>
+
+      <!-- 知识库 Tab -->
+      <div v-if="tab === '知识库'">
+        <div class="search-box">
+          <span>🔍</span>
+          <input placeholder="搜索知识条目..." />
+          <button class="btn btn-primary" style="padding:6px 12px;font-size:12px;">上传文件</button>
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">新增</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <table class="data-table">
+            <thead><tr><th>标题</th><th>来源</th><th>分类</th><th>更新时间</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="item in knowledgeItems" :key="item.title">
+                <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.title }}</td>
+                <td><span class="badge green">{{ item.source }}</span></td>
+                <td>{{ item.category }}</td>
+                <td style="color:rgba(255,255,255,0.35);">{{ item.date }}</td>
+                <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;">编辑</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RAG 评估 Tab -->
+      <div v-if="tab === '感受度报告'">
+        <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
+          <div class="kpi">
+            <div class="label">RAG 通过率</div>
+            <div class="value" style="color:#63e2b7">99.5%</div>
+            <div class="trend">light-rerank 模式</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Recall@8</div>
+            <div class="value" style="color:#f8be52">95.3%</div>
+            <div class="trend">203 条评测问答</div>
+          </div>
+          <div class="kpi">
+            <div class="label">MRR@8</div>
+            <div class="value" style="color:#7eb8da">0.802</div>
+            <div class="trend">p95 延迟 21ms</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 5 种检索模式对比</div>
+          <div id="ragChart" class="chart-box"></div>
+        </div>
+      </div>
+
+      <div v-if="tab === '系统设置'">
+        <div class="card" style="max-width:600px;">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">景区名称</span>
+              <input value="灵山胜境" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 12px;color:white;font-size:14px;outline:none;" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">服务热线</span>
+              <input value="400-168-0303" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 12px;color:white;font-size:14px;outline:none;" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">系统提示词</span>
+              <textarea rows="4" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 12px;color:white;font-size:14px;outline:none;resize:vertical;font-family:inherit;">你是灵山胜境景区的AI数字人导览员，负责为游客提供专业、热情的导览服务。</textarea>
+            </label>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary">保存设置</button>
+              <button class="btn btn-ghost">重置</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="tab === '数字人形象'">
+        <div class="card" style="max-width:600px;">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">数字人名称</span>
+              <input value="小灵" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 12px;color:white;font-size:14px;outline:none;" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">外观描述</span>
+              <input value="亲和型国风讲解员" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 12px;color:white;font-size:14px;outline:none;" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">声音类型</span>
+              <select style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 12px;color:white;font-size:14px;outline:none;">
+                <option>温柔自然女声</option>
+                <option>沉稳专业女声</option>
+                <option>活力亲切女声</option>
+              </select>
+            </label>
+            <button class="btn btn-primary" style="align-self:flex-start;">保存配置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 聊天 -->
+    <div class="content" v-if="page === 'chat'" style="display:flex;flex-direction:column;height:calc(100vh - 56px);">
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:20px;margin-bottom:4px;">🏔 灵山胜境 AI 导览</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.35);">基于 RAG 检索增强生成 · 支持多轮对话</div>
+      </div>
+      <div class="card chat-preview" style="flex:1;display:flex;flex-direction:column;">
+        <div class="chat-messages">
+          <div class="msg ai">
+            <div class="avatar">🤖 小灵</div>
+            欢迎来到灵山胜境！我是您的数字导览员小灵，有什么可以帮您的吗？
+          </div>
+          <div class="msg user">灵山大佛有多高？</div>
+          <div class="msg ai">
+            <div class="avatar">🤖 小灵</div>
+            灵山大佛高<strong style="color:#63e2b7">88米</strong>，主体高79米，是世界上最高的青铜立佛之一。大佛面向太湖，背靠灵山，气势恢宏。建议您从佛足坛出发，沿中轴线步行前往，沿途还能欣赏九龙灌浴表演。
+            <div style="margin-top:8px;display:flex;gap:6px;">
+              <button style="background:rgba(99,226,183,0.1);border:1px solid rgba(99,226,183,0.2);border-radius:4px;padding:2px 8px;color:#63e2b7;font-size:11px;cursor:pointer;">👍 有用</button>
+              <button style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 8px;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;">👎</button>
+            </div>
+          </div>
+          <div class="msg user">带孩子去有什么推荐？</div>
+          <div class="msg ai">
+            <div class="avatar">🤖 小灵</div>
+            推荐您走<strong style="color:#f8be52">亲子欢乐路线</strong>：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站，全程约 2.5 小时。百子戏弥勒非常适合小朋友拍照互动，九龙灌浴的喷泉表演孩子们也会很喜欢！
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(248,190,82,0.08);border:1px solid rgba(248,190,82,0.15);border-radius:6px;font-size:12px;color:rgba(255,255,255,0.6);">
+              📍 路线推荐：百子戏弥勒 → 佛手广场 → 九龙灌浴 → 文创驿站（约 2.5 小时）
+            </div>
+          </div>
+        </div>
+        <div class="chat-input">
+          <input placeholder="输入您的问题..." />
+          <button>发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 知识库 -->
+    <div class="content" v-if="page === 'knowledge'">
+      <div class="page-header">
+        <h1>知识库管理</h1>
+        <p>154 条知识切片 · 覆盖 12 个景点 · 203 条评测问答</p>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="label">总切片数</div><div class="value" style="color:#63e2b7">154</div></div>
+        <div class="kpi"><div class="label">评测问答</div><div class="value" style="color:#f8be52">203</div></div>
+        <div class="kpi"><div class="label">Recall@8</div><div class="value" style="color:#7eb8da">99.5%</div></div>
+        <div class="kpi"><div class="label">覆盖景点</div><div class="value" style="color:#b8a0dc">12</div></div>
+      </div>
+      <div class="search-box" style="max-width:500px;">
+        <span>🔍</span>
+        <input placeholder="搜索知识库..." />
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>标题</th><th>来源</th><th>内容摘要</th></tr></thead>
+          <tbody>
+            <tr><td style="color:rgba(255,255,255,0.3);">real-dafo-001</td><td>灵山大佛总体介绍</td><td><span class="badge green">official</span></td><td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">灵山大佛是灵山胜境的核心景点，高88米的青铜释迦牟尼立像...</td></tr>
+            <tr><td style="color:rgba(255,255,255,0.3);">real-jiulong-001</td><td>九龙灌浴演出</td><td><span class="badge green">official</span></td><td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">九龙灌浴再现释迦牟尼诞生时九龙沐浴的场景，是动态音乐喷泉...</td></tr>
+            <tr><td style="color:rgba(255,255,255,0.3);">real-fangong-001</td><td>灵山梵宫建筑艺术</td><td><span class="badge green">official</span></td><td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">灵山梵宫汇集东阳木雕、敦煌壁画、扬州漆器等传统工艺...</td></tr>
+            <tr><td style="color:rgba(255,255,255,0.3);">real-wuyin-001</td><td>五印坛城文化</td><td><span class="badge yellow">government</span></td><td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">五印坛城以藏传佛教文化为主题，展示五方五佛、转经筒...</td></tr>
+            <tr><td style="color:rgba(255,255,255,0.3);">real-route-001</td><td>经典半日路线</td><td><span class="badge green">official</span></td><td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">推荐首次到访游客走中轴主线：灵山大照壁 → 五明桥 → 佛足坛...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, onMounted, nextTick } = Vue;
+
+createApp({
+  setup() {
+    const page = ref('dashboard');
+    const tab = ref('知识库');
+
+    const knowledgeItems = [
+      { title: '灵山大佛总体介绍', source: 'official', category: '核心景点', date: '2026-05-22' },
+      { title: '九龙灌浴演出介绍', source: 'official', category: '演艺体验', date: '2026-05-22' },
+      { title: '灵山梵宫建筑艺术', source: 'official', category: '文化建筑', date: '2026-05-22' },
+      { title: '五印坛城藏传佛教文化', source: 'government', category: '文化建筑', date: '2026-05-22' },
+      { title: '经典半日游览路线', source: 'official', category: '路线推荐', date: '2026-05-22' },
+      { title: '亲子欢乐路线推荐', source: 'official', category: '路线推荐', date: '2026-05-22' },
+    ];
+
+    function initCharts() {
+      // 趋势图
+      const trendChart = echarts.init(document.getElementById('trendChart'));
+      trendChart.setOption({
+        backgroundColor: 'transparent',
+        grid: { top: 30, right: 20, bottom: 30, left: 50 },
+        xAxis: { type: 'category', data: Array.from({length:24}, (_,i) => `${i}:00`), axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}}, axisLabel:{color:'rgba(255,255,255,0.35)',fontSize:11} },
+        yAxis: { type: 'value', splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}, axisLabel:{color:'rgba(255,255,255,0.35)',fontSize:11} },
+        series: [{
+          type: 'line', smooth: true, symbol: 'none',
+          lineStyle: { color: '#63e2b7', width: 2 },
+          areaStyle: { color: { type:'linear', x:0, y:0, x2:0, y2:1, colorStops:[{offset:0,color:'rgba(99,226,183,0.3)'},{offset:1,color:'rgba(99,226,183,0)'}] }},
+          data: [5,8,12,8,6,4,3,5,15,45,78,95,88,92,85,72,65,58,42,35,28,20,15,10]
+        }],
+        tooltip: { trigger:'axis', backgroundColor:'rgba(20,20,30,0.95)', borderColor:'rgba(255,255,255,0.1)', textStyle:{color:'white'} }
+      });
+
+      // 环形图
+      const pieChart = echarts.init(document.getElementById('pieChart'));
+      pieChart.setOption({
+        backgroundColor: 'transparent',
+        series: [{
+          type: 'pie', radius: ['45%', '70%'], center: ['50%', '50%'],
+          label: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
+          data: [
+            { value: 35, name: '景点介绍', itemStyle:{color:'#63e2b7'} },
+            { value: 25, name: '路线推荐', itemStyle:{color:'#f8be52'} },
+            { value: 20, name: '文化历史', itemStyle:{color:'#7eb8da'} },
+            { value: 12, name: '服务设施', itemStyle:{color:'#b8a0dc'} },
+            { value: 8, name: '票务交通', itemStyle:{color:'#e88080'} },
+          ]
+        }],
+        tooltip: { backgroundColor:'rgba(20,20,30,0.95)', borderColor:'rgba(255,255,255,0.1)', textStyle:{color:'white'} }
+      });
+
+      window.addEventListener('resize', () => { trendChart.resize(); pieChart.resize(); });
+    }
+
+    function initRAGChart() {
+      const el = document.getElementById('ragChart');
+      if (!el) return;
+      const chart = echarts.init(el);
+      chart.setOption({
+        backgroundColor: 'transparent',
+        grid: { top: 30, right: 20, bottom: 40, left: 80 },
+        xAxis: { type: 'value', max: 100, splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}, axisLabel:{color:'rgba(255,255,255,0.35)',formatter:'{value}%'} },
+        yAxis: { type: 'category', data: ['bm25-local','light-rerank','hybrid','rrf-fusion','embedding'], axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}}, axisLabel:{color:'rgba(255,255,255,0.5)'} },
+        series: [
+          { name:'通过率', type:'bar', data:[98.5,99.5,97,96,94], barWidth:14, itemStyle:{color:'#63e2b7',borderRadius:[0,4,4,0]} },
+          { name:'Recall@8', type:'bar', data:[94.8,95.3,93,92,89], barWidth:14, itemStyle:{color:'#f8be52',borderRadius:[0,4,4,0]} },
+        ],
+        legend: { textStyle:{color:'rgba(255,255,255,0.5)',fontSize:11}, top:0, right:0 },
+        tooltip: { backgroundColor:'rgba(20,20,30,0.95)', borderColor:'rgba(255,255,255,0.1)', textStyle:{color:'white'} }
+      });
+      window.addEventListener('resize', () => chart.resize());
+    }
+
+    onMounted(() => {
+      nextTick(initCharts);
+    });
+
+    // Watch page changes to init charts when needed
+    const origPage = page;
+    const pageProxy = new Proxy(origPage, { set(target, key, value) {
+      target[key] = value;
+      if (value === 'dashboard') nextTick(initCharts);
+      if (value === 'knowledge' || tab.value === '感受度报告') nextTick(initRAGChart);
+      return true;
+    }});
+
+    return { page, tab, knowledgeItems };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

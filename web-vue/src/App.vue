@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme } from 'naive-ui';
 import { appState, isAuthenticated, logout, openDigitalHuman, type AppRoute } from './router';
 import { adminThemeOverrides } from './theme';
@@ -9,7 +9,8 @@ import AdminView from './views/AdminView.vue';
 import DigitalHumanView from './views/DigitalHumanView.vue';
 import MapView from './views/MapView.vue';
 
-const showLogin = computed(() => !isAuthenticated() || appState.route === 'login');
+const authState = ref(isAuthenticated());
+const showLogin = computed(() => !authState.value || appState.route === 'login');
 const isDarkRoute = computed(() => ['dashboard', 'admin'].includes(appState.route));
 
 const currentView = computed(() => {
@@ -35,7 +36,13 @@ function navigate(route: AppRoute) {
 }
 
 function onLoginSuccess() {
+  authState.value = true;
   window.location.hash = '/dashboard';
+}
+
+function handleLogout() {
+  authState.value = false;
+  logout();
 }
 </script>
 
@@ -71,7 +78,7 @@ function onLoginSuccess() {
 
             <div class="nav-actions">
               <a href="/" class="nav-link">返回游客端</a>
-              <button class="nav-link logout" @click="logout">退出</button>
+              <button class="nav-link logout" @click="handleLogout">退出</button>
               <div class="nav-avatar">A</div>
             </div>
           </header>
