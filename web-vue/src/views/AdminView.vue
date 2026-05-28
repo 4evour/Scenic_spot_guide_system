@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive } from 'vue';
+import { NTabs, NTabPane, NCard, NGrid, NGi, NStatistic, NButton, NInput, NSelect, NSpace, NForm, NFormItem, NDataTable, NTag, NPopconfirm, NSwitch, NSpin, NEmpty, useMessage } from 'naive-ui';
 import KpiCard from '../components/KpiCard.vue';
 import BarList from '../components/BarList.vue';
 import DonutChart from '../components/DonutChart.vue';
+
+const message = useMessage();
 
 type KnowledgeItem = {
   id: string;
@@ -430,28 +433,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="admin-view">
-    <aside class="side-console">
-      <div class="brand-block">
-        <span>AI</span>
-        <div>
-          <strong>灵山智慧导览</strong>
-          <small>Management Console</small>
-        </div>
-      </div>
-      <button v-for="[key, label] in tabs" :key="key" :class="{ active: state.tab === key }" @click="state.tab = key">
-        {{ label }}
-      </button>
-    </aside>
+  <div class="admin-view">
+    <div class="admin-header">
+      <h1>管理后台</h1>
+      <p>维护景区知识、数字人配置和系统设置</p>
+    </div>
 
-    <section class="admin-content">
-      <header class="hero-console compact">
-        <div>
-          <p class="eyebrow">Admin Console</p>
-          <h1>{{ currentTitle }}</h1>
-          <p>维护景区讲解词、文史资料、常见问答和路线资料，作为数字人回答游客问题的知识基础。</p>
-        </div>
-      </header>
+    <NTabs v-model:value="state.tab" type="line" animated>
+      <NTabPane v-for="[key, label] in tabs" :key="key" :name="key" :tab="label">
+      </NTabPane>
+    </NTabs>
+
+    <div class="admin-content">
 
       <section class="kpi-grid four">
         <KpiCard label="知识条目" :value="String(state.total)" note="来自 RAG 知识库" />
@@ -623,6 +616,155 @@ onMounted(() => {
           <button class="btn" @click="loadSettings">重置</button>
         </div>
       </section>
-    </section>
-  </main>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.admin-view {
+  padding: 24px;
+  background: #0a0a0f;
+  min-height: 100%;
+}
+.admin-header {
+  margin-bottom: 16px;
+}
+.admin-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  margin-bottom: 4px;
+}
+.admin-header p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+}
+.admin-content {
+  margin-top: 16px;
+}
+
+/* 保留原有子组件样式 */
+.panel {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.panel h2 {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.88);
+  margin-bottom: 16px;
+}
+
+.form-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.form-panel input,
+.form-panel select,
+.form-panel textarea {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: white;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.form-panel input:focus,
+.form-panel select:focus,
+.form-panel textarea:focus {
+  border-color: #63e2b7;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.btn.primary {
+  background: #63e2b7;
+  color: #0a0a0f;
+  font-weight: 600;
+}
+.btn.primary:hover { background: #4fd1a0; }
+.btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.primary-action {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #63e2b7, #18a058);
+  border: none;
+  border-radius: 8px;
+  color: #0a0a0f;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.primary-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.secondary-action {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.msg { padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
+.msg.ok { background: rgba(99, 226, 183, 0.1); color: #63e2b7; border: 1px solid rgba(99, 226, 183, 0.2); }
+.msg.err { background: rgba(232, 128, 128, 0.1); color: #e88080; border: 1px solid rgba(232, 128, 128, 0.2); }
+
+.knowledge-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.knowledge-table th {
+  text-align: left;
+  padding: 10px 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+}
+.knowledge-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.75);
+}
+.knowledge-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 8px;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+</style>
