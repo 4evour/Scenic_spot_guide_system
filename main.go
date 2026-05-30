@@ -88,7 +88,7 @@ func run() error {
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
-	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours)
+	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours, cfg.Security.AllowedOrigins)
 	handler.SetupRoutes(r, setupHandlers)
 	slog.Info("路由设置成功")
 
@@ -223,7 +223,7 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 	return ragService
 }
 
-func setupDI(ragService *service.RAGService, tokenExpireHours int) *handler.Handlers {
+func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigins []string) *handler.Handlers {
 	scenicSpotRepo := repository.NewScenicSpotRepository(pkg.DB)
 	scenicSpotService := service.NewScenicSpotService(scenicSpotRepo)
 	scenicSpotHandler := handler.NewScenicSpotHandler(scenicSpotService)
@@ -258,16 +258,28 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int) *handler.Hand
 	pkg.StatsService = statsService
 	adminHandler := handler.NewAdminHandler(statsService)
 
+	// Default allowed origins for local development
+	origins := allowedOrigins
+	if len(origins) == 0 {
+		origins = []string{
+			"http://127.0.0.1:8080",
+			"http://localhost:8080",
+			"http://127.0.0.1:5173",
+			"http://localhost:5173",
+		}
+	}
+
 	return &handler.Handlers{
-		ScenicSpot:   scenicSpotHandler,
-		GuideContent: guideContentHandler,
-		TourRoute:    tourRouteHandler,
-		VisitorQuery: visitorQueryHandler,
-		User:         userHandler,
-		AI:           aiHandler,
-		TTS:          ttsHandler,
-		DigitalHuman: digitalHumanHandler,
-		OpenAIProxy:  openAIProxyHandler,
-		Admin:        adminHandler,
+		ScenicSpot:    scenicSpotHandler,
+		GuideContent:  guideContentHandler,
+		TourRoute:     tourRouteHandler,
+		VisitorQuery:  visitorQueryHandler,
+		User:          userHandler,
+		AI:            aiHandler,
+		TTS:           ttsHandler,
+		DigitalHuman:  digitalHumanHandler,
+		OpenAIProxy:   openAIProxyHandler,
+		Admin:         adminHandler,
+		AllowedOrigins: origins,
 	}
 }

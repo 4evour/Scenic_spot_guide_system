@@ -47,3 +47,7 @@ security:
   # The placeholder below WILL be rejected at startup.
   jwt_secret: "REPLACE_WITH_RANDOM_32_CHAR_SECRET"
   token_expire_hours: 4
+  # CORS allowed origins. If empty, defaults to localhost:8080 and localhost:5173.
+  # Add your production domain here.
+  # allowed_origins:
+  #   - "https://your-domain.com"

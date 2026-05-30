@@ -592,7 +592,10 @@ func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
 func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) error {
 	config, err := s.dhConfigRepo.Get()
 	if err != nil {
-		return err
+		// 获取失败时构造默认记录并创建
+		config = &model.DigitalHumanConfig{
+			Name: "小灵", Appearance: "亲和型国风讲解员", Costume: "古典汉服",
+		}
 	}
 	config.Name = settings.Name
 	config.Appearance = settings.Appearance
@@ -634,6 +637,13 @@ type SystemSettings struct {
 	DataRetention  string `json:"data_retention"`
 }
 
+func parseBoolOrDefault(val string, def bool) bool {
+	if val == "" {
+		return def
+	}
+	return val == "true"
+}
+
 func (s *StatsService) GetSystemSettings() SystemSettings {
 	settings := SystemSettings{
 		ScenicName:     "灵山胜境",
@@ -645,7 +655,6 @@ func (s *StatsService) GetSystemSettings() SystemSettings {
 		BackupFreq:     "每日",
 		DataRetention:  "30",
 	}
-	// 从数据库加载
 	if val, err := s.settingRepo.Get("scenic_name"); err == nil {
 		settings.ScenicName = val
 	}
@@ -655,6 +664,21 @@ func (s *StatsService) GetSystemSettings() SystemSettings {
 	if val, err := s.settingRepo.Get("service_hotline"); err == nil {
 		settings.ServiceHotline = val
 	}
+	if val, err := s.settingRepo.Get("enable_login"); err == nil {
+		settings.EnableLogin = parseBoolOrDefault(val, true)
+	}
+	if val, err := s.settingRepo.Get("enable_voice"); err == nil {
+		settings.EnableVoice = parseBoolOrDefault(val, true)
+	}
+	if val, err := s.settingRepo.Get("enable_filter"); err == nil {
+		settings.EnableFilter = parseBoolOrDefault(val, false)
+	}
+	if val, err := s.settingRepo.Get("backup_frequency"); err == nil {
+		settings.BackupFreq = val
+	}
+	if val, err := s.settingRepo.Get("data_retention"); err == nil {
+		settings.DataRetention = val
+	}
 	return settings
 }
 
@@ -662,6 +686,11 @@ func (s *StatsService) UpdateSystemSettings(settings SystemSettings) error {
 	s.settingRepo.Set("scenic_name", settings.ScenicName)
 	s.settingRepo.Set("scenic_desc", settings.ScenicDesc)
 	s.settingRepo.Set("service_hotline", settings.ServiceHotline)
+	s.settingRepo.Set("enable_login", fmt.Sprintf("%t", settings.EnableLogin))
+	s.settingRepo.Set("enable_voice", fmt.Sprintf("%t", settings.EnableVoice))
+	s.settingRepo.Set("enable_filter", fmt.Sprintf("%t", settings.EnableFilter))
+	s.settingRepo.Set("backup_frequency", settings.BackupFreq)
+	s.settingRepo.Set("data_retention", settings.DataRetention)
 	return nil
 }
 
@@ -697,10 +726,18 @@ func (s *StatsService) RecordInteraction(record InteractionRecord) {
 // ==================== 辅助函数 ====================
 
 func formatNumber(n int64) string {
-	if n >= 10000 {
-		return fmt.Sprintf("%d,%d", n/1000, n%1000)
+	s := fmt.Sprintf("%d", n)
+	if len(s) <= 3 {
+		return s
 	}
-	return fmt.Sprintf("%d", n)
+	var result []byte
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result = append(result, ',')
+		}
+		result = append(result, byte(c))
+	}
+	return string(result)
 }
 
 func formatDuration(ms int64) string {

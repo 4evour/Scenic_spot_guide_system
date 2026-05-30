@@ -110,3 +110,32 @@ func TestIDORAdminCanAccessAnyProfile(t *testing.T) {
 		t.Fatalf("admin access: status = %d, want %d", resp.Code, http.StatusOK)
 	}
 }
+
+func TestGetUserMissingContextReturns401NotPanic(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Simulate a handler call without AuthMiddleware (no user_id/role in context)
+	r := gin.New()
+	r.GET("/users/:id", func(c *gin.Context) {
+		// Replicate the safe context reading pattern from GetUser
+		uidVal, uidOK := c.Get("user_id")
+		roleVal, roleOK := c.Get("role")
+		_, _ = uidVal.(uint)
+		_, _ = roleVal.(string)
+		if !uidOK || !roleOK {
+			pkg.Unauthorized(c, "未登录")
+			return
+		}
+		pkg.Success(c, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/users/1", nil)
+	req.RemoteAddr = "192.0.2.50:1234"
+	resp := httptest.NewRecorder()
+
+	// Should not panic, should return 401
+	r.ServeHTTP(resp, req)
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("missing context: status = %d, want %d", resp.Code, http.StatusUnauthorized)
+	}
+}

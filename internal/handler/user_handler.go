@@ -93,9 +93,15 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	currentUserID, _ := c.Get("user_id")
-	currentRole, _ := c.Get("role")
-	if currentUserID.(uint) != uint(id) && currentRole.(string) != "admin" {
+	uidVal, uidOK := c.Get("user_id")
+	roleVal, roleOK := c.Get("role")
+	uid, _ := uidVal.(uint)
+	role, _ := roleVal.(string)
+	if !uidOK || !roleOK {
+		pkg.Unauthorized(c, "未登录")
+		return
+	}
+	if uid != uint(id) && role != "admin" {
 		pkg.Forbidden(c, "无权访问该用户信息")
 		return
 	}
@@ -122,9 +128,15 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	currentUserID, _ := c.Get("user_id")
-	currentRole, _ := c.Get("role")
-	if currentUserID.(uint) != uint(id) && currentRole.(string) != "admin" {
+	uidVal, uidOK := c.Get("user_id")
+	roleVal, roleOK := c.Get("role")
+	uid, _ := uidVal.(uint)
+	role, _ := roleVal.(string)
+	if !uidOK || !roleOK {
+		pkg.Unauthorized(c, "未登录")
+		return
+	}
+	if uid != uint(id) && role != "admin" {
 		pkg.Forbidden(c, "无权修改该用户信息")
 		return
 	}
@@ -173,9 +185,15 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	currentUserID, _ := c.Get("user_id")
-	currentRole, _ := c.Get("role")
-	if currentUserID.(uint) != uint(id) && currentRole.(string) != "admin" {
+	uidVal, uidOK := c.Get("user_id")
+	roleVal, roleOK := c.Get("role")
+	uid, _ := uidVal.(uint)
+	role, _ := roleVal.(string)
+	if !uidOK || !roleOK {
+		pkg.Unauthorized(c, "未登录")
+		return
+	}
+	if uid != uint(id) && role != "admin" {
 		pkg.Forbidden(c, "无权删除该用户")
 		return
 	}

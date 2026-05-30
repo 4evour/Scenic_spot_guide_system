@@ -12,7 +12,7 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, handlers *Handlers) {
-	r.Use(corsMiddleware())
+	r.Use(corsMiddleware(handlers.AllowedOrigins))
 	r.Use(securityHeaders())
 	r.Use(pkg.MetricsMiddleware())
 
@@ -57,13 +57,22 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	})
 }
 
-func corsMiddleware() gin.HandlerFunc {
+func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
+	// Build lookup set
+	allowed := make(map[string]bool, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		allowed[o] = true
+	}
+
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		if origin != "" {
+		if origin == "" {
+			// Same-origin request, no CORS header needed
+		} else if allowed[origin] {
 			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
 		} else {
-			c.Header("Access-Control-Allow-Origin", "*")
+			// Origin not in whitelist — do not set ACAO header
 		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
@@ -114,14 +123,15 @@ func vtuberWebSocketProxy(target string) gin.HandlerFunc {
 }
 
 type Handlers struct {
-	ScenicSpot   *ScenicSpotHandler
-	GuideContent *GuideContentHandler
-	TourRoute    *TourRouteHandler
-	VisitorQuery *VisitorQueryHandler
-	User         *UserHandler
-	AI           *AIHandler
-	TTS          *TTSHandler
-	DigitalHuman *DigitalHumanHandler
-	OpenAIProxy  *OpenAIProxyHandler
-	Admin        *AdminHandler
+	ScenicSpot    *ScenicSpotHandler
+	GuideContent  *GuideContentHandler
+	TourRoute     *TourRouteHandler
+	VisitorQuery  *VisitorQueryHandler
+	User          *UserHandler
+	AI            *AIHandler
+	TTS           *TTSHandler
+	DigitalHuman  *DigitalHumanHandler
+	OpenAIProxy   *OpenAIProxyHandler
+	Admin         *AdminHandler
+	AllowedOrigins []string
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme } from 'naive-ui';
-import { appState, isAuthenticated, logout, openDigitalHuman, type AppRoute } from './router';
+import { appState, isAuthenticated, isAdmin, logout, openDigitalHuman, type AppRoute } from './router';
 import { adminThemeOverrides } from './theme';
 import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
@@ -20,12 +20,16 @@ const currentView = computed(() => {
   return DashboardView;
 });
 
-const navItems: { key: AppRoute; label: string; icon: string }[] = [
-  { key: 'dashboard', label: '数据大屏', icon: '📊' },
-  { key: 'admin', label: '管理后台', icon: '⚙️' },
+const allNavItems: { key: AppRoute; label: string; icon: string; adminOnly?: boolean }[] = [
+  { key: 'dashboard', label: '数据大屏', icon: '📊', adminOnly: true },
+  { key: 'admin', label: '管理后台', icon: '⚙️', adminOnly: true },
   { key: 'digital-human', label: '数字人导览', icon: '🤖' },
   { key: 'map', label: '游客地图', icon: '🗺️' },
 ];
+
+const navItems = computed(() =>
+  allNavItems.filter(item => !item.adminOnly || isAdmin())
+);
 
 function navigate(route: AppRoute) {
   if (route === 'digital-human') {
@@ -37,7 +41,7 @@ function navigate(route: AppRoute) {
 
 function onLoginSuccess() {
   authState.value = true;
-  window.location.hash = '/dashboard';
+  window.location.hash = isAdmin() ? '/dashboard' : '/map';
 }
 
 function handleLogout() {
@@ -55,7 +59,7 @@ function handleLogout() {
         <div v-else class="app-layout">
           <!-- 顶部导航 -->
           <header class="app-nav">
-            <div class="nav-brand" @click="navigate('dashboard')">
+            <div class="nav-brand" @click="navigate(isAdmin() ? 'dashboard' : 'map')">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#63e2b7" opacity="0.8"/>
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#63e2b7" stroke-width="1.5" fill="none" opacity="0.5"/>

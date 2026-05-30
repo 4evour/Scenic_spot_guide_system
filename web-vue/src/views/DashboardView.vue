@@ -9,9 +9,40 @@ const headers: HeadersInit = {
   ...(token ? { Authorization: `Bearer ${token}` } : {}),
 };
 
+interface Overview {
+  total_visitors: string;
+  weekly_visitors: string;
+  total_chats: string;
+  weekly_chats: string;
+  satisfaction_rate: string;
+  avg_response_time: string;
+  visitors_trend: number;
+  chats_trend: number;
+  satisfaction_trend: number;
+  response_trend: number;
+}
+
+interface CategoryItem {
+  category: string;
+  count: number;
+  percent: number;
+}
+
+interface Conversation {
+  user_query: string;
+  ai_response: string;
+  emotion: string;
+  response_time: string;
+  time: string;
+}
+
 const loading = ref(true);
-const overview = ref({ total_visitors: 0, week_visitors: 0, total_queries: 0, week_queries: 0, satisfaction: 0, avg_response_ms: 0 });
-const recentConversations = ref<Array<{ session_id: string; query: string; response: string; emotion: string; source: string; created_at: string }>>([]);
+const overview = ref<Overview>({
+  total_visitors: '0', weekly_visitors: '0', total_chats: '0', weekly_chats: '0',
+  satisfaction_rate: '0%', avg_response_time: '0s',
+  visitors_trend: 0, chats_trend: 0, satisfaction_trend: 0, response_trend: 0,
+});
+const recentConversations = ref<Conversation[]>([]);
 
 let trendChart: echarts.ECharts | null = null;
 let pieChart: echarts.ECharts | null = null;
@@ -33,12 +64,12 @@ async function loadData() {
   loading.value = true;
   try {
     const [ov, trend, cats, recent] = await Promise.all([
-      fetchJSON<{ total_visitors: number; week_visitors: number; total_queries: number; week_queries: number; satisfaction: number; avg_response_ms: number }>('/admin/dashboard/overview'),
+      fetchJSON<Overview>('/admin/dashboard/overview'),
       fetchJSON<Array<{ hour: string; count: number }>>('/admin/dashboard/hourly-trend'),
-      fetchJSON<Array<{ label: string; value: number }>>('/admin/dashboard/category-distribution'),
-      fetchJSON<Array<{ session_id: string; query: string; response: string; emotion: string; source: string; created_at: string }>>('/admin/dashboard/recent-conversations?limit=6'),
+      fetchJSON<CategoryItem[]>('/admin/dashboard/category-distribution'),
+      fetchJSON<Conversation[]>('/admin/dashboard/recent-conversations?limit=6'),
     ]);
-    overview.value = ov;
+    if (ov) overview.value = ov;
     recentConversations.value = recent || [];
 
     await nextTick();
@@ -71,30 +102,20 @@ function renderTrendChart(data: Array<{ hour: string; count: number }>) {
       axisLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 11 },
     },
     series: [{
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 6,
+      type: 'line', smooth: true, symbol: 'circle', symbolSize: 6,
       lineStyle: { color: '#63e2b7', width: 2 },
       itemStyle: { color: '#63e2b7' },
-      areaStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(99,226,183,0.25)' },
-          { offset: 1, color: 'rgba(99,226,183,0)' },
-        ]),
-      },
+      areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: 'rgba(99,226,183,0.25)' },
+        { offset: 1, color: 'rgba(99,226,183,0)' },
+      ])},
       data: data.map(d => d.count),
     }],
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(20,20,30,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#fff', fontSize: 12 },
-    },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,20,30,0.95)', borderColor: 'rgba(255,255,255,0.08)', textStyle: { color: '#fff', fontSize: 12 } },
   });
 }
 
-function renderPieChart(data: Array<{ label: string; value: number }>) {
+function renderPieChart(data: CategoryItem[]) {
   const el = document.getElementById('pieChart');
   if (!el) return;
   if (pieChart) pieChart.dispose();
@@ -103,35 +124,19 @@ function renderPieChart(data: Array<{ label: string; value: number }>) {
   pieChart.setOption({
     backgroundColor: 'transparent',
     series: [{
-      type: 'pie',
-      radius: ['42%', '70%'],
-      center: ['50%', '50%'],
+      type: 'pie', radius: ['42%', '70%'], center: ['50%', '50%'],
       label: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
       labelLine: { lineStyle: { color: 'rgba(255,255,255,0.15)' } },
-      data: data.map((d, i) => ({ value: d.value, name: d.label, itemStyle: { color: colors[i % colors.length] } })),
+      data: data.map((d, i) => ({ value: d.count, name: d.category, itemStyle: { color: colors[i % colors.length] } })),
     }],
-    tooltip: {
-      backgroundColor: 'rgba(20,20,30,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#fff', fontSize: 12 },
-    },
+    tooltip: { backgroundColor: 'rgba(20,20,30,0.95)', borderColor: 'rgba(255,255,255,0.08)', textStyle: { color: '#fff', fontSize: 12 } },
   });
 }
 
-function handleResize() {
-  trendChart?.resize();
-  pieChart?.resize();
-}
+function handleResize() { trendChart?.resize(); pieChart?.resize(); }
 
-onMounted(() => {
-  loadData();
-  window.addEventListener('resize', handleResize);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-  trendChart?.dispose();
-  pieChart?.dispose();
-});
+onMounted(() => { loadData(); window.addEventListener('resize', handleResize); });
+onUnmounted(() => { window.removeEventListener('resize', handleResize); trendChart?.dispose(); pieChart?.dispose(); });
 </script>
 
 <template>
@@ -152,7 +157,7 @@ onUnmounted(() => {
         </NGi>
         <NGi>
           <NCard size="small" class="kpi-card">
-            <NStatistic label="本周问答次数" :value="overview.week_queries">
+            <NStatistic label="本周问答次数" :value="overview.weekly_chats">
               <template #suffix><span style="font-size:12px;color:rgba(255,255,255,0.35);">次</span></template>
             </NStatistic>
           </NCard>
@@ -160,14 +165,14 @@ onUnmounted(() => {
         <NGi>
           <NCard size="small" class="kpi-card">
             <NStatistic label="用户满意度">
-              <template #default><span style="font-size:28px;font-weight:700;color:#63e2b7;">{{ overview.satisfaction.toFixed(1) }}%</span></template>
+              <template #default><span style="font-size:28px;font-weight:700;color:#63e2b7;">{{ overview.satisfaction_rate }}</span></template>
             </NStatistic>
           </NCard>
         </NGi>
         <NGi>
           <NCard size="small" class="kpi-card">
             <NStatistic label="平均响应延迟">
-              <template #default><span style="font-size:28px;font-weight:700;color:#f8be52;">{{ (overview.avg_response_ms / 1000).toFixed(1) }}s</span></template>
+              <template #default><span style="font-size:28px;font-weight:700;color:#f8be52;">{{ overview.avg_response_time }}</span></template>
             </NStatistic>
           </NCard>
         </NGi>
@@ -193,16 +198,15 @@ onUnmounted(() => {
         <NTable :bordered="false" size="small">
           <thead>
             <NTr>
-              <NTh>时间</NTh><NTh>游客问题</NTh><NTh>AI 回答</NTh><NTh>情绪</NTh><NTh>来源</NTh>
+              <NTh>时间</NTh><NTh>游客问题</NTh><NTh>AI 回答</NTh><NTh>情绪</NTh>
             </NTr>
           </thead>
           <NTbody>
-            <NTr v-for="item in recentConversations" :key="item.session_id + item.query">
-              <NTd style="color:rgba(255,255,255,0.35);font-size:12px;white-space:nowrap;">{{ new Date(item.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }}</NTd>
-              <NTd style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.query }}</NTd>
-              <NTd style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.response }}</NTd>
-              <NTd><NTag :color="{ color: emotionColor[item.emotion] + '20', textColor: emotionColor[item.emotion], borderColor: emotionColor[item.emotion] + '40' }" size="small" :bordered="true">{{ emotionLabel[item.emotion] || item.emotion }}</NTag></NTd>
-              <NTd style="font-size:12px;">{{ item.source }}</NTd>
+            <NTr v-for="(item, idx) in recentConversations" :key="idx">
+              <NTd style="color:rgba(255,255,255,0.35);font-size:12px;white-space:nowrap;">{{ item.time }}</NTd>
+              <NTd style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.user_query }}</NTd>
+              <NTd style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.ai_response }}</NTd>
+              <NTd><NTag :color="{ color: (emotionColor[item.emotion] || '#7eb8da') + '20', textColor: emotionColor[item.emotion] || '#7eb8da', borderColor: (emotionColor[item.emotion] || '#7eb8da') + '40' }" size="small" :bordered="true">{{ emotionLabel[item.emotion] || item.emotion }}</NTag></NTd>
             </NTr>
           </NTbody>
         </NTable>

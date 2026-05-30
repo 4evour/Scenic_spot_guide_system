@@ -57,8 +57,9 @@ type SpeechConfig struct {
 }
 
 type SecurityConfig struct {
-	JWTSecret        string `mapstructure:"jwt_secret"`
-	TokenExpireHours int    `mapstructure:"token_expire_hours"`
+	JWTSecret        string   `mapstructure:"jwt_secret"`
+	TokenExpireHours int      `mapstructure:"token_expire_hours"`
+	AllowedOrigins   []string `mapstructure:"allowed_origins"`
 }
 
 func LoadConfig(path string) (*Config, error) {

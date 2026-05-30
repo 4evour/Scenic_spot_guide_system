@@ -12,6 +12,21 @@ export function isAuthenticated(): boolean {
   return !!localStorage.getItem('authToken');
 }
 
+export function getCurrentUserRole(): string {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return '';
+    const user = JSON.parse(raw);
+    return user?.role || '';
+  } catch {
+    return '';
+  }
+}
+
+export function isAdmin(): boolean {
+  return getCurrentUserRole() === 'admin';
+}
+
 export function logout() {
   localStorage.removeItem('authToken');
   localStorage.removeItem('user');
@@ -24,9 +39,22 @@ export const appState = reactive({
 
 export function resolveRoute(): AppRoute {
   const hash = window.location.hash.replace('#/', '').replace('#', '');
+
   if (hash === 'login') return 'login';
-  if (hash === 'admin' || hash === 'digital-human' || hash === 'dashboard' || hash === 'map') return hash;
-  return 'dashboard';
+
+  // Admin-only routes: gate by role
+  if (hash === 'dashboard' || hash === 'admin') {
+    if (!isAuthenticated()) return 'login';
+    if (!isAdmin()) return 'map';
+    return hash;
+  }
+
+  if (hash === 'digital-human' || hash === 'map') return hash;
+
+  // Default route
+  if (!isAuthenticated()) return 'login';
+  if (isAdmin()) return 'dashboard';
+  return 'map';
 }
 
 export function startHashRouter() {
