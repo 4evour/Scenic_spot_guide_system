@@ -1,0 +1,155 @@
+# 新景区接入模板
+# 使用方法：复制此文件，重命名为 your-scenic-id.yaml，填入对应配置即可
+# 启动方式：SCENIC_GUIDE_SCENIC_ID=your-scenic-id ./scenic-guide
+
+id: your-scenic-id
+name: "景区全称"
+short_name: "简称"
+slogan: "景区口号"
+description: "景区简介"
+hotline: "客服电话"
+
+digital_human:
+  name: "数字人名称"
+  greeting: "欢迎来到{name}，我是您的数字导览员{name}。有什么可以帮您的吗？"
+  personality: "性格特点描述"
+  live2d_model: "/static/live2d-models/xxx.model3.json"
+  live2d_expressions:
+    happy: "exp_01"
+    neutral: "exp_02"
+    thinking: "exp_04"
+  tts_voice: "zh-CN-XiaoxiaoNeural"
+  tts_speed: 0.8
+  fallback_avatar: "字"
+
+knowledge:
+  chunks_file: "knowledge/your_scenic_chunks.jsonl"
+  eval_qa_file: "knowledge/your_scenic_eval_qa.json"
+  real_chunks_file: "knowledge/real/your_scenic_real_chunks.jsonl"
+  real_eval_file: "knowledge/real/your_scenic_real_eval_open.json"
+
+keywords:
+  # 景点列表（用于 Prompt 渲染和话题检测）
+  spots:
+    - "景点1"
+    - "景点2"
+    - "景点3"
+
+  # 景点别名（简称→全称）
+  spot_aliases:
+    "简称1": "景点全称1"
+    "简称2": "景点全称2"
+
+  # 景区相关关键词（用于判断问题是否与景区相关、检索打分）
+  related_keywords:
+    - "景区名"
+    - "景点1"
+    - "景点2"
+    - "门票"
+    - "票价"
+    - "开放时间"
+    - "景点"
+    - "景区"
+    - "导览"
+    - "路线"
+    - "交通"
+    - "停车场"
+
+  # 核心模式词（用于快速匹配景区相关问题）
+  related_patterns:
+    - "景区名"
+    - "核心景点名"
+
+  # 景点实体列表（用于多轮对话中的话题检测）
+  topic_entities:
+    - "景点1"
+    - "景点2"
+    - "景点3"
+
+  # 条件加分规则（检索时的加分逻辑）
+  conditional_boosts:
+    - query_terms: ["哪里", "位于", "地址", "位置"]
+      content_terms: ["位于", "地处", "省份", "城市"]
+    - query_terms: ["怎么去", "交通", "路线"]
+      content_terms: ["公交", "地铁", "自驾", "停车"]
+
+  # 查询扩展规则（用户问题→扩展检索关键词）
+  query_expansion:
+    - trigger: ["半天", "优先", "先看"]
+      expand: "主线 核心景点1 核心景点2"
+    - trigger: ["带孩子", "亲子"]
+      expand: "亲子 适合儿童"
+    - trigger: ["今天", "现在", "开不开"]
+      expand: "实时信息 官方最新公告 现场公示 不能编造"
+
+  # 意图加分规则（检索排序时的意图识别加分）
+  intent_boosts:
+    - query_contains: ["路线", "怎么走"]
+      topic: "route"
+      chunk_contains: ["路线", "游览"]
+      boost: 1.6
+    - query_contains: ["今天", "现在", "开不开"]
+      topic: "boundary"
+      chunk_contains: ["实时", "官方最新公告"]
+      boost: 2.0
+
+prompts:
+  # 系统角色 Prompt（LLM 的 system message）
+  system_role: |
+    你是{scenic.name}景区的AI数字人导览员"{digital_human.name}"，负责为游客提供专业、热情的导览服务。
+    你的性格特点：{digital_human.personality}
+    你熟悉{spots_list}等所有景点。
+    你基于提供的景区知识回答，保持事实准确，不编造信息。
+    涉及实时信息时，提醒游客以官方最新公告为准。
+    不回答与景区完全无关的问题。
+
+  # RAG 回答 Prompt（知识库命中时使用）
+  rag_prompt: |
+    你是{scenic.name}景区的AI数字人导览员"{digital_human.name}"。
+
+    【知识库资料】
+    {knowledge_context}
+
+    {session_context}
+    【游客问题】
+    {query}
+
+    请基于以上资料回答：
+
+  # 通用 Chat Prompt（知识库未命中时使用）
+  general_chat_prompt: |
+    你是{scenic.name}景区的AI数字人导览员"{digital_human.name}"。
+    如果问题与{scenic.name}无关，请礼貌引导回景区话题。
+    不要提到"RAG""向量数据库"等技术词。
+
+    【游客问题】
+    {query}
+
+    请回答：
+
+  # 兜底答案（特定问题的硬编码回答）
+  fallback_answers:
+    "开放时间": "开放时间请以官方最新公告为准。"
+    "门票价格": "门票价格请以官方最新公告为准。"
+
+  # Follow-up 追问改写规则（意图→追加检索关键词）
+  follow_up_rewrite:
+    "路线规划": "初次到访 主线"
+    "天气路线": "雨天路线 室内点"
+    "亲子路线": "亲子游客"
+    "老人路线": "老人游客 轻松路线 休息点"
+
+routes:
+  - name: "经典路线"
+    description: "适合首次来访"
+    spots: "景点1,景点2,景点3"
+    duration: 180
+    difficulty: "easy"
+    rating: 4.8
+
+map:
+  provider: "amap"
+  api_key: "${AMAP_API_KEY}"
+  center: [120.0, 30.0]
+  zoom: 15
+  style: "amap://styles/normal"

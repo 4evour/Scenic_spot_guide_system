@@ -406,46 +406,301 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="digital-human-view">
-    <section class="digital-main">
-      <header class="hero-console compact">
-        <div>
-          <p class="eyebrow">Live2D Scenic Guide</p>
-          <h1>灵山景区 AI 数字人导览</h1>
-          <p>保留 Live2D 生动展示，语音播放、口型动画和打断控制全部由当前前端链路接管。</p>
-        </div>
-        <div class="status-badge" :class="{ connected: state.connected }">{{ statusLabel }}</div>
-      </header>
+  <main class="dh-view">
+    <!-- 左侧：数字人展示区 -->
+    <section class="dh-stage">
+      <div class="dh-status">
+        <span class="status-dot" :class="{ online: state.connected }"></span>
+        <span class="status-text">{{ statusLabel }}</span>
+      </div>
 
       <Live2DStage :state="state.conversation" :mouth-open="mouthOpen" :expression="state.expression" />
 
-      <div class="subtitle-panel">{{ state.subtitle }}</div>
+      <!-- 表情指示器 -->
+      <div class="emotion-bar">
+        <button v-for="expr in (['happy', 'neutral', 'thinking', 'surprised'] as const)" :key="expr"
+          class="emotion-btn" :class="{ active: state.expression === expr }"
+          @click="state.expression = expr">
+          {{ { happy: '😊', neutral: '😐', thinking: '🤔', surprised: '😮' }[expr] }}
+        </button>
+      </div>
 
-      <div class="control-strip">
-        <button class="danger-action" :disabled="!canInterrupt" @click="interruptAnswer">打断回答</button>
-        <button class="secondary-action" @click="connectSocket">重连数字人服务</button>
-        <button class="secondary-action" @click="quickAsk('请推荐一条适合历史爱好者的游览路线')">历史路线</button>
-        <button class="secondary-action" @click="quickAsk('景区开放时间是什么时候')">开放时间</button>
-        <span class="mini-stat">已打断 {{ state.interruptCount }} 次</span>
+      <!-- 字幕气泡 -->
+      <div class="subtitle-bubble">
+        {{ state.subtitle }}
+      </div>
+
+      <!-- 控制栏 -->
+      <div class="dh-controls">
+        <button class="ctrl-btn danger" :disabled="!canInterrupt" @click="interruptAnswer">打断</button>
+        <button class="ctrl-btn" @click="connectSocket">重连</button>
+        <span class="interrupt-count">打断 {{ state.interruptCount }} 次</span>
       </div>
     </section>
 
-    <aside class="chat-console">
-      <h2>游客交互记录</h2>
+    <!-- 右侧：聊天面板 -->
+    <aside class="dh-chat">
+      <div class="chat-header">
+        <h2>💬 与小灵对话</h2>
+        <p>支持文字和语音输入</p>
+      </div>
+
+      <!-- 快捷提问 -->
+      <div class="quick-asks">
+        <button @click="quickAsk('灵山大佛有多高？')">灵山大佛有多高？</button>
+        <button @click="quickAsk('带孩子怎么玩？')">带孩子怎么玩？</button>
+        <button @click="quickAsk('请推荐一条适合历史爱好者的游览路线')">推荐路线</button>
+        <button @click="quickAsk('景区开放时间是什么时候')">开放时间</button>
+      </div>
+
+      <!-- 消息列表 -->
       <div class="message-list">
-        <article v-for="message in state.messages" :key="message.id" :class="['message-card', message.role]">
-          <strong>{{ message.role === 'user' ? '游客' : message.role === 'assistant' ? '小灵' : '系统' }}</strong>
-          <p>{{ message.text }}</p>
-          <small>{{ message.time }}</small>
+        <article v-for="msg in state.messages" :key="msg.id" :class="['msg', msg.role]">
+          <div class="msg-label">{{ msg.role === 'user' ? '游客' : msg.role === 'assistant' ? '🤖 小灵' : '⚙ 系统' }}</div>
+          <div class="msg-bubble">{{ msg.text }}</div>
+          <div class="msg-time">{{ msg.time }}</div>
         </article>
       </div>
-      <div class="input-row">
-        <input v-model="input" placeholder="请输入景点、路线、开放时间等问题..." @keydown.enter="sendText" />
-        <button class="primary-action" @click="sendText">发送</button>
-        <button class="voice-action" :class="{ active: isVoiceListening || isVoiceStarting }" @click="toggleVoice">
-          {{ isVoiceListening || isVoiceStarting ? '停止' : '语音' }}
+
+      <!-- 输入区 -->
+      <div class="chat-input">
+        <button class="voice-btn" :class="{ recording: isVoiceListening || isVoiceStarting }" @click="toggleVoice">
+          🎤
         </button>
+        <input v-model="input" placeholder="输入您的问题..." @keydown.enter="sendText" />
+        <button class="send-btn" @click="sendText">发送</button>
       </div>
     </aside>
   </main>
 </template>
+
+<style scoped>
+.dh-view {
+  display: flex;
+  height: calc(100vh - 56px);
+  background: #0a0a0f;
+}
+
+/* 左侧数字人区域 */
+.dh-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(99, 226, 183, 0.06) 0%, transparent 60%),
+    #0a0a0f;
+}
+
+.dh-status {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #666;
+}
+.status-dot.online {
+  background: #63e2b7;
+  box-shadow: 0 0 8px rgba(99, 226, 183, 0.5);
+}
+.status-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.emotion-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.emotion-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.emotion-btn:hover { border-color: #63e2b7; transform: scale(1.1); }
+.emotion-btn.active { border-color: #63e2b7; background: rgba(99, 226, 183, 0.15); }
+
+.subtitle-bubble {
+  max-width: 400px;
+  margin-top: 20px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.dh-controls {
+  position: absolute;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ctrl-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ctrl-btn:hover { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.88); }
+.ctrl-btn.danger { border-color: rgba(232, 128, 128, 0.3); color: #e88080; }
+.ctrl-btn.danger:hover { background: rgba(232, 128, 128, 0.1); }
+.ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.interrupt-count { font-size: 11px; color: rgba(255, 255, 255, 0.25); }
+
+/* 右侧聊天面板 */
+.dh-chat {
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.chat-header h2 { font-size: 15px; color: rgba(255, 255, 255, 0.88); margin-bottom: 2px; }
+.chat-header p { font-size: 12px; color: rgba(255, 255, 255, 0.35); }
+
+.quick-asks {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.quick-asks button {
+  white-space: nowrap;
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(99, 226, 183, 0.2);
+  background: rgba(99, 226, 183, 0.06);
+  font-size: 11px;
+  color: #63e2b7;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.quick-asks button:hover { background: rgba(99, 226, 183, 0.15); }
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.msg { max-width: 85%; }
+.msg.user { align-self: flex-end; }
+.msg.assistant { align-self: flex-start; }
+.msg.system { align-self: center; max-width: 100%; }
+.msg-label { font-size: 11px; color: rgba(255, 255, 255, 0.3); margin-bottom: 4px; }
+.msg-bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.msg.user .msg-bubble {
+  background: rgba(99, 226, 183, 0.12);
+  border: 1px solid rgba(99, 226, 183, 0.2);
+  color: rgba(255, 255, 255, 0.88);
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant .msg-bubble {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  border-bottom-left-radius: 4px;
+}
+.msg.system .msg-bubble {
+  background: rgba(248, 190, 82, 0.06);
+  border: 1px solid rgba(248, 190, 82, 0.15);
+  color: rgba(248, 190, 82, 0.7);
+  font-size: 12px;
+  text-align: center;
+  border-radius: 8px;
+}
+.msg-time { font-size: 10px; color: rgba(255, 255, 255, 0.2); margin-top: 4px; }
+
+.chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.chat-input input {
+  flex: 1;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.chat-input input:focus { border-color: #63e2b7; }
+.send-btn {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #63e2b7, #18a058);
+  border: none;
+  border-radius: 8px;
+  color: #0a0a0f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.voice-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(99, 226, 183, 0.3);
+  background: rgba(99, 226, 183, 0.06);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.voice-btn:hover { background: rgba(99, 226, 183, 0.15); }
+.voice-btn.recording {
+  background: rgba(232, 128, 128, 0.15);
+  border-color: rgba(232, 128, 128, 0.4);
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+</style>

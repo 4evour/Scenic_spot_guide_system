@@ -45,10 +45,20 @@ type KnowledgePaths struct {
 }
 
 type KeywordConfig struct {
-	Spots          []string          `yaml:"spots"`
-	SpotAliases    map[string]string `yaml:"spot_aliases"`
-	QueryExpansion []ExpansionRule   `yaml:"query_expansion"`
-	IntentBoosts   []IntentBoostRule `yaml:"intent_boosts"`
+	Spots             []string           `yaml:"spots"`
+	SpotAliases       map[string]string  `yaml:"spot_aliases"`
+	RelatedKeywords   []string           `yaml:"related_keywords"`
+	RelatedPatterns   []string           `yaml:"related_patterns"`
+	TopicEntities     []string           `yaml:"topic_entities"`
+	QueryExpansion    []ExpansionRule    `yaml:"query_expansion"`
+	IntentBoosts      []IntentBoostRule  `yaml:"intent_boosts"`
+	ConditionalBoosts []ConditionalBoost `yaml:"conditional_boosts"`
+}
+
+type ConditionalBoost struct {
+	QueryTerms   []string `yaml:"query_terms"`
+	ContentTerms []string `yaml:"content_terms"`
+	Boost        float64  `yaml:"boost"`
 }
 
 type ExpansionRule struct {
@@ -64,10 +74,14 @@ type IntentBoostRule struct {
 }
 
 type PromptConfig struct {
-	SystemRole       string            `yaml:"system_role"`
-	ChatInstructions string            `yaml:"chat_instructions"`
-	GeneralChat      string            `yaml:"general_chat"`
-	FallbackAnswers  map[string]string `yaml:"fallback_answers"`
+	SystemRole        string            `yaml:"system_role"`
+	ChatInstructions  string            `yaml:"chat_instructions"`
+	GeneralChat       string            `yaml:"general_chat"`
+	RAGPrompt         string            `yaml:"rag_prompt"`
+	GeneralChatPrompt string            `yaml:"general_chat_prompt"`
+	NoKnowledgePrompt string            `yaml:"no_knowledge_prompt"`
+	FollowUpRewrite   map[string]string `yaml:"follow_up_rewrite"`
+	FallbackAnswers   map[string]string `yaml:"fallback_answers"`
 }
 
 type RouteConfig struct {
@@ -152,4 +166,36 @@ func (p *ScenicProfile) GetChatInstructions() string {
 // GetGeneralChatPrefix 获取渲染后的通用对话前缀
 func (p *ScenicProfile) GetGeneralChatPrefix() string {
 	return p.RenderPrompt(p.Prompts.GeneralChat)
+}
+
+// GetRAGPrompt 获取渲染后的 RAG Prompt 模板
+func (p *ScenicProfile) GetRAGPrompt() string {
+	return p.Prompts.RAGPrompt
+}
+
+// GetGeneralChatPrompt 获取渲染后的通用 Chat Prompt
+func (p *ScenicProfile) GetGeneralChatPrompt() string {
+	return p.Prompts.GeneralChatPrompt
+}
+
+// GetNoKnowledgePrompt 获取渲染后的无知识兜底 Prompt
+// 若未配置则 fallback 到 GeneralChatPrompt
+func (p *ScenicProfile) GetNoKnowledgePrompt() string {
+	if p.Prompts.NoKnowledgePrompt != "" {
+		return p.Prompts.NoKnowledgePrompt
+	}
+	return p.Prompts.GeneralChatPrompt
+}
+
+// GetFallbackAnswer 根据问题关键词查找兜底答案
+func (p *ScenicProfile) GetFallbackAnswer(query string) (string, bool) {
+	if p.Prompts.FallbackAnswers == nil {
+		return "", false
+	}
+	for key, answer := range p.Prompts.FallbackAnswers {
+		if strings.Contains(query, key) {
+			return p.RenderPrompt(answer), true
+		}
+	}
+	return "", false
 }

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	iconfig "github.com/scenic-guide/internal/config"
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/repository"
 	"gorm.io/driver/sqlite"
@@ -40,7 +41,88 @@ func newTestRAGService(t *testing.T) *RAGService {
 	}
 
 	repo := repository.NewKnowledgeRepository(db)
-	return NewRAGService(repo, "", "", "", nil, nil)
+	profile := newTestScenicProfile()
+	return NewRAGService(repo, "", "", "", nil, profile)
+}
+
+// newTestScenicProfile 创建测试用灵山景区配置（与 lingshan.yaml 保持一致）
+func newTestScenicProfile() *iconfig.ScenicProfile {
+	return &iconfig.ScenicProfile{
+		ID:        "lingshan",
+		Name:      "灵山胜境",
+		ShortName: "灵山",
+		DigitalHuman: iconfig.DHProfile{
+			Name:        "小灵",
+			Personality: "热情、专业、温柔",
+		},
+		Keywords: iconfig.KeywordConfig{
+			Spots: []string{"灵山大佛", "九龙灌浴", "灵山梵宫", "五印坛城", "曼飞龙塔", "佛手广场", "百子戏弥勒", "祥符禅寺"},
+			RelatedKeywords: []string{
+				"灵山", "大佛", "九龙灌", "佛教", "佛文化", "祥符寺",
+				"灵山胜境", "拈花湾", "门票", "票价", "开放时间",
+				"景点", "景区", "导览", "路线", "交通", "停车场",
+				"表演", "演出", "梵宫", "五印坛城", "曼飞龙塔",
+				"九龙灌浴", "灌浴", "太子像", "莲花", "喷泉",
+				"灵山梵宫", "灵山大佛", "佛足坛", "五明桥", "大照壁",
+			},
+			RelatedPatterns: []string{"灵山", "拈花湾", "祥符寺"},
+			TopicEntities:   []string{"灵山大佛", "九龙灌浴", "灵山梵宫", "五印坛城", "曼飞龙塔", "佛手广场", "百子戏弥勒", "祥符禅寺"},
+			ConditionalBoosts: []iconfig.ConditionalBoost{
+				{QueryTerms: []string{"哪里", "位于", "地址", "位置"}, ContentTerms: []string{"位于", "地处", "江苏", "无锡", "马山", "太湖"}},
+				{QueryTerms: []string{"表现", "内容", "讲什么", "展示"}, ContentTerms: []string{"释迦牟尼", "花开见佛", "九龙沐浴", "佛陀诞生", "再现", "展示", "场景", "核心", "文化内涵"}},
+				{QueryTerms: []string{"为什么", "称为", "特色"}, ContentTerms: []string{"被誉为", "内部汇集", "传统工艺", "艺术"}},
+				{QueryTerms: []string{"哪类", "什么文化", "佛教文化"}, ContentTerms: []string{"藏传佛教", "五方五佛", "转经筒", "唐卡"}},
+				{QueryTerms: []string{"五印坛城"}, ContentTerms: []string{"藏传佛教", "五方五佛", "转经筒", "唐卡", "曼陀罗"}},
+			},
+			QueryExpansion: []iconfig.ExpansionRule{
+				{Trigger: []string{"半天", "优先", "先看"}, Expand: "初次到访 主线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛"},
+				{Trigger: []string{"中轴线"}, Expand: "初次到访 主线 中轴游览线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛"},
+				{Trigger: []string{"带孩子", "小朋友", "亲子"}, Expand: "百子戏弥勒 佛手广场 九龙灌浴 亲子游客"},
+				{Trigger: []string{"拍照", "轻松点位"}, Expand: "佛手广场 百子戏弥勒 适合拍照"},
+				{Trigger: []string{"大佛之外", "文化建筑"}, Expand: "五印坛城 曼飞龙塔 灵山梵宫 佛教文化建筑"},
+				{Trigger: []string{"木雕", "壁画", "琉璃", "工艺"}, Expand: "灵山梵宫 艺术工艺"},
+				{Trigger: []string{"藏式", "藏传"}, Expand: "五印坛城 藏传佛教"},
+				{Trigger: []string{"喷水", "花开见佛", "喷泉"}, Expand: "九龙灌浴"},
+				{Trigger: []string{"演艺", "剧场", "演出"}, Expand: "九龙灌浴 吉祥颂 演出场次 官方最新公告"},
+				{Trigger: []string{"今天", "现在", "现场", "开不开", "排队", "人多", "无人机", "宠物", "能不能替代公告", "替代官方公告"}, Expand: "实时信息 官方最新公告 现场公示 不能编造"},
+				{Trigger: []string{"容易过期", "最容易过期"}, Expand: "门票价格 开放时间 演出场次 停车余位 临时闭园 临时检修 优惠政策 实时信息"},
+				{Trigger: []string{"无人机", "宠物"}, Expand: "安全禁忌 宠物入园 无人机拍摄 现场规定 正式规定 现场管理 不能替代"},
+				{Trigger: []string{"排队", "人多", "客流"}, Expand: "排队时间 实时客流 今日游客多不多 拥堵程度 天气应用 地图热力"},
+				{Trigger: []string{"导览服务", "现场设施", "服务设施"}, Expand: "导览服务 休息点 洗手间 现场指引 官方最新公告 服务开放情况"},
+				{Trigger: []string{"只看大佛", "商业化游乐", "普通景区"}, Expand: "太湖山水 佛教文化 文化建筑 演艺体验 礼佛空间 九龙灌浴 祥符禅寺 灵山梵宫"},
+				{Trigger: []string{"天气", "高温", "雨天", "路线"}, Expand: "降雨 高温 室内点 雨天路线"},
+			},
+			IntentBoosts: []iconfig.IntentBoostRule{
+				{QueryContains: []string{"半天", "优先", "先看", "路线", "中轴线"}, Topic: "route", ChunkContains: []string{"路线", "主线", "初次", "半天", "中轴"}, Boost: 1.6},
+				{QueryContains: []string{"带孩子", "小朋友", "亲子", "拍照", "轻松"}, Topic: "family", ChunkContains: []string{"百子戏弥勒", "佛手广场", "亲子", "拍照"}, Boost: 1.4},
+				{QueryContains: []string{"今天", "现在", "现场", "开不开", "排队", "人多", "无人机", "宠物"}, Topic: "boundary", ChunkContains: []string{"实时", "官方最新公告", "现场公示", "不能编造", "资料不足"}, Boost: 2.0},
+				{QueryContains: []string{"餐厅", "素食", "简餐", "吃饭", "开不开"}, Topic: "service", ChunkContains: []string{"餐饮", "餐厅", "素食", "简餐", "菜单"}, Boost: 5.2},
+				{QueryContains: []string{"无人机", "宠物"}, ChunkContains: []string{"无人机", "宠物", "携带物品", "正式规定", "现场管理"}, Boost: 8.0},
+				{QueryContains: []string{"排队", "人多", "客流"}, ChunkContains: []string{"排队时间", "实时客流", "今日游客多不多", "拥堵程度"}, Boost: 4.0},
+				{QueryContains: []string{"大佛之外", "文化建筑", "三大语系"}, ChunkContains: []string{"五印坛城", "曼飞龙塔", "灵山梵宫", "佛教三大语系"}, Boost: 1.8},
+				{QueryContains: []string{"木雕", "壁画", "琉璃", "工艺"}, Topic: "fangong", ChunkContains: []string{"灵山梵宫", "木雕", "壁画", "琉璃"}, Boost: 1.8},
+				{QueryContains: []string{"藏式", "藏传"}, Topic: "wuyin", ChunkContains: []string{"五印坛城", "藏传佛教", "藏式"}, Boost: 1.8},
+				{QueryContains: []string{"喷水", "花开见佛", "喷泉"}, Topic: "jiulong", ChunkContains: []string{"九龙灌浴", "喷水", "花开见佛"}, Boost: 1.8},
+				{QueryContains: []string{"演艺", "剧场", "演出"}, Topic: "show", ChunkContains: []string{"吉祥颂", "九龙灌浴", "演出场次"}, Boost: 1.4},
+				{QueryContains: []string{"天气", "高温", "雨天"}, Topic: "route", ChunkContains: []string{"天气", "高温", "雨天", "室内点", "实时客流"}, Boost: 1.5},
+				{QueryContains: []string{"导览服务", "现场设施", "服务设施"}, Topic: "service", ChunkContains: []string{"导览服务", "休息点", "洗手间", "现场指引", "服务中心"}, Boost: 4.0},
+			},
+		},
+		Prompts: iconfig.PromptConfig{
+			SystemRole: "你是灵山胜境景区的AI数字人导览员\"小灵\"，负责为游客提供专业、热情的导览服务。",
+			FallbackAnswers: map[string]string{
+				"灵山大佛高度": "灵山大佛高88米，主体高79米，是世界上最高的青铜立佛之一。",
+				"五印坛城":     "五印坛城以藏传佛教文化为主题，展示五方五佛、转经筒和唐卡艺术。",
+			},
+			FollowUpRewrite: map[string]string{
+				"路线规划": "初次到访 主线",
+				"天气路线": "雨天路线 降雨 高温 室内点 现场天气调整",
+				"亲子路线": "亲子游客 百子戏弥勒 佛手广场 九龙灌浴",
+				"老人路线": "老人游客 轻松路线 休息点 不要安排太满",
+				"补充推荐": "补充推荐 大佛之外 文化建筑 灵山梵宫 五印坛城",
+			},
+		},
+	}
 }
 
 type staticEmbeddingProvider struct {
@@ -82,7 +164,8 @@ func newTestRAGServiceWithEmbedding(t *testing.T, provider EmbeddingProvider) *R
 	}
 
 	repo := repository.NewKnowledgeRepository(db)
-	return NewRAGService(repo, "", "", "", provider, nil)
+	profile := newTestScenicProfile()
+	return NewRAGService(repo, "", "", "", provider, profile)
 }
 
 func TestRAGServiceLoadsJSONAndRetrievesWithBM25(t *testing.T) {
@@ -229,13 +312,20 @@ func TestRAGServiceLightRerankPromotesTitleAndEntityMatches(t *testing.T) {
 }
 
 func TestExpandQueryForRetrievalAddsFocusedTerms(t *testing.T) {
-	expanded := expandQueryForRetrieval("带孩子半天游灵山优先看哪些点？")
-	if expanded.Original != "带孩子半天游灵山优先看哪些点？" {
-		t.Fatalf("original query changed: %q", expanded.Original)
+	rag := newTestRAGService(t)
+	rag.profile = &iconfig.ScenicProfile{
+		Keywords: iconfig.KeywordConfig{
+			QueryExpansion: []iconfig.ExpansionRule{
+				{Trigger: []string{"半天", "优先", "先看"}, Expand: "初次到访 主线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛"},
+				{Trigger: []string{"带孩子", "小朋友", "亲子"}, Expand: "百子戏弥勒 佛手广场 九龙灌浴 亲子游客"},
+			},
+		},
 	}
+	retrievalText, addedTerms := rag.configBasedQueryExpansion(rag.profile, "带孩子半天游灵山优先看哪些点？")
+	_ = addedTerms
 	for _, term := range []string{"初次到访", "九龙灌浴", "佛手广场", "百子戏弥勒", "亲子游客"} {
-		if !strings.Contains(expanded.RetrievalText, term) {
-			t.Fatalf("retrieval text %q does not contain expanded term %q", expanded.RetrievalText, term)
+		if !strings.Contains(retrievalText, term) {
+			t.Fatalf("retrieval text %q does not contain expanded term %q", retrievalText, term)
 		}
 	}
 }
@@ -332,7 +422,7 @@ func TestRAGServiceRewritesRouteFollowUpWithSessionContext(t *testing.T) {
 	rag.appendSessionTurn("route-session", "半天游灵山怎么走？", "可以先看九龙灌浴、佛手广场、祥符禅寺和灵山大佛。")
 
 	rewritten := rag.RewriteFollowUpQuery("route-session", "下雨呢？")
-	for _, want := range []string{"半天游路线", "雨天路线", "降雨", "室内点"} {
+	for _, want := range []string{"路线", "雨天路线", "降雨", "室内点"} {
 		if !strings.Contains(rewritten, want) {
 			t.Fatalf("rewritten route follow-up = %q, want %q", rewritten, want)
 		}

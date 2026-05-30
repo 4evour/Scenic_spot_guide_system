@@ -1,4 +1,4 @@
-package service
+﻿package service
 
 import (
 	"bytes"
@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/scenic-guide/config"
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/repository"
 
@@ -95,14 +94,18 @@ type TourRoute struct {
 	Duration    string          `json:"duration"`
 }
 
-func isLingshanRelatedQuestion(query string) bool {
+// isScenicRelatedQuestion 判断问题是否与当前景区相关（配置化，支持任意景区）
+func (s *RAGService) isScenicRelatedQuestion(query string) bool {
+	if s.profile == nil {
+		return false
+	}
 	queryLower := strings.ToLower(query)
-	for _, keyword := range config.LingshanRelatedKeywords {
+	for _, keyword := range s.profile.Keywords.RelatedKeywords {
 		if strings.Contains(queryLower, strings.ToLower(keyword)) {
 			return true
 		}
 	}
-	for _, pattern := range config.LingshanRelatedPatterns {
+	for _, pattern := range s.profile.Keywords.RelatedPatterns {
 		if strings.Contains(query, pattern) {
 			return true
 		}
@@ -715,7 +718,8 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 		return nil, nil
 	}
 
-	expandedQuery := expandQueryForRetrieval(query)
+	retrievalText, addedTerms := s.configBasedQueryExpansion(s.profile, query)
+	expandedQuery := retrievalQueryExpansion{Original: query, RetrievalText: retrievalText, AddedTerms: addedTerms}
 	queryTokens := s.bm25.Tokenize(expandedQuery.RetrievalText)
 	var queryVec []float64
 	if modeUsesEmbedding(mode) {
@@ -785,81 +789,8 @@ func modeUsesEmbedding(mode RetrievalMode) bool {
 	return mode == RetrievalModeEmbedding || mode == RetrievalModeHybridWeighted || mode == RetrievalModeRRFFusion
 }
 
-func expandQueryForRetrieval(query string) retrievalQueryExpansion {
-	added := make([]string, 0)
-	seen := make(map[string]struct{})
-	addTerms := func(terms string) {
-		for _, term := range strings.Fields(terms) {
-			if _, ok := seen[term]; ok {
-				continue
-			}
-			seen[term] = struct{}{}
-			added = append(added, term)
-		}
-	}
-
-	if containsAny(query, []string{"半天", "优先", "先看"}) {
-		addTerms("初次到访 主线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛")
-	}
-	if containsAny(query, []string{"中轴线"}) {
-		addTerms("初次到访 主线 中轴游览线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛")
-	}
-	if containsAny(query, []string{"带孩子", "小朋友", "亲子"}) {
-		addTerms("百子戏弥勒 佛手广场 九龙灌浴 亲子游客")
-	}
-	if containsAny(query, []string{"拍照", "轻松点位"}) {
-		addTerms("佛手广场 百子戏弥勒 适合拍照")
-	}
-	if containsAny(query, []string{"大佛之外", "文化建筑"}) {
-		addTerms("五印坛城 曼飞龙塔 灵山梵宫 佛教文化建筑")
-	}
-	if containsAny(query, []string{"木雕", "壁画", "琉璃", "工艺"}) {
-		addTerms("灵山梵宫 艺术工艺")
-	}
-	if containsAny(query, []string{"藏式", "藏传"}) {
-		addTerms("五印坛城 藏传佛教")
-	}
-	if containsAny(query, []string{"喷水", "花开见佛", "喷泉"}) {
-		addTerms("九龙灌浴")
-	}
-	if containsAny(query, []string{"演艺", "剧场", "演出"}) {
-		addTerms("九龙灌浴 吉祥颂 演出场次 官方最新公告")
-	}
-	if containsAny(query, []string{"今天", "现在", "现场", "开不开", "排队", "人多", "无人机", "宠物", "能不能替代公告", "替代官方公告"}) {
-		addTerms("实时信息 官方最新公告 现场公示 不能编造")
-	}
-	if containsAny(query, []string{"容易过期", "最容易过期"}) {
-		addTerms("门票价格 开放时间 演出场次 停车余位 临时闭园 临时检修 优惠政策 实时信息")
-	}
-	if containsAny(query, []string{"无人机", "宠物"}) {
-		addTerms("安全禁忌 宠物入园 无人机拍摄 现场规定 正式规定 现场管理 不能替代")
-	}
-	if containsAny(query, []string{"排队", "人多", "客流"}) {
-		addTerms("排队时间 实时客流 今日游客多不多 拥堵程度 天气应用 地图热力")
-	}
-	if containsAny(query, []string{"导览服务", "现场设施", "服务设施"}) {
-		addTerms("导览服务 休息点 洗手间 现场指引 官方最新公告 服务开放情况")
-	}
-	if containsAny(query, []string{"只看大佛", "商业化游乐", "普通景区"}) {
-		addTerms("太湖山水 佛教文化 文化建筑 演艺体验 礼佛空间 九龙灌浴 祥符禅寺 灵山梵宫")
-	}
-	if containsAny(query, []string{"天气", "高温", "雨天", "路线"}) {
-		addTerms("降雨 高温 室内点 雨天路线")
-	}
-
-	retrievalText := strings.TrimSpace(query)
-	if len(added) > 0 {
-		retrievalText = strings.TrimSpace(retrievalText + " " + strings.Join(added, " "))
-	}
-	return retrievalQueryExpansion{
-		Original:      query,
-		RetrievalText: retrievalText,
-		AddedTerms:    added,
-	}
-}
-
 func (s *RAGService) scoreChunkForMode(originalQuery, retrievalQuery string, queryTokens []string, queryVec []float64, chunk model.KnowledgeChunk, mode RetrievalMode, options RetrievalOptions) float64 {
-	bm25Score := s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)) + s.lexicalBoost(retrievalQuery, chunk) + focusedIntentBoost(originalQuery, chunk)*0.35
+	bm25Score := s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)) + s.lexicalBoost(retrievalQuery, chunk) + s.ProfileBasedIntentBoost(s.profile, originalQuery, chunk)*0.35
 	if mode == RetrievalModeBM25Local || mode == RetrievalModeLightRerank || len(queryVec) == 0 {
 		return bm25Score
 	}
@@ -920,7 +851,7 @@ func (s *RAGService) rrfFusionScores(originalQuery, retrievalQuery string, query
 	bm25Scored := make([]retrievalScoredChunk, 0, len(chunks))
 	embeddingScored := make([]retrievalScoredChunk, 0, len(chunks))
 	for _, chunk := range chunks {
-		bm25Score := s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)) + s.lexicalBoost(retrievalQuery, chunk) + focusedIntentBoost(originalQuery, chunk)*0.35
+		bm25Score := s.bm25.CalculateSimilarity(queryTokens, s.getCachedChunkTokens(chunk)) + s.lexicalBoost(retrievalQuery, chunk) + s.ProfileBasedIntentBoost(s.profile, originalQuery, chunk)*0.35
 		bm25Scored = append(bm25Scored, retrievalScoredChunk{chunk: chunk, similarity: bm25Score})
 		if semanticScore, ok := s.semanticSimilarity(queryVec, chunk); ok {
 			embeddingScored = append(embeddingScored, retrievalScoredChunk{chunk: chunk, similarity: semanticScore})
@@ -964,7 +895,7 @@ func (s *RAGService) lightRerankBoost(query string, expandedQuery retrievalQuery
 			boost += 0.18
 		}
 	}
-	for _, keyword := range config.LingshanRelatedKeywords {
+	for _, keyword := range s.getRelatedKeywords() {
 		if len([]rune(keyword)) < 3 {
 			continue
 		}
@@ -978,107 +909,7 @@ func (s *RAGService) lightRerankBoost(query string, expandedQuery retrievalQuery
 	if sourceType := metadataString(chunk.Metadata, "source_type"); sourceType == "official" || sourceType == "government" {
 		boost += 0.2
 	}
-	boost += focusedIntentBoost(query, chunk)
-	return boost
-}
-
-func focusedIntentBoost(query string, chunk model.KnowledgeChunk) float64 {
-	title := chunk.Title
-	haystack := title + "\n" + chunk.Content
-	topic := metadataString(chunk.Metadata, "topic")
-	boost := 0.0
-
-	if containsAny(query, []string{"半天", "优先", "先看", "路线", "中轴线"}) {
-		if topic == "route" || containsAny(title, []string{"路线", "主线", "初次", "半天", "中轴"}) {
-			boost += 1.6
-		}
-	}
-	if containsAny(query, []string{"带孩子", "小朋友", "亲子", "拍照", "轻松"}) && !containsAny(query, []string{"简单拍照点"}) {
-		if topic == "family" || topic == "route" || containsAny(haystack, []string{"百子戏弥勒", "佛手广场", "亲子", "拍照"}) {
-			boost += 1.4
-		}
-	}
-	if containsAny(query, []string{"今天", "现在", "现场", "开不开", "排队", "人多", "无人机", "宠物", "能不能替代公告", "资料不足"}) {
-		if topic == "boundary" || containsAny(haystack, []string{"实时", "官方最新公告", "现场公示", "不能编造", "资料不足", "正式规定"}) {
-			boost += 2.0
-		}
-	}
-	if containsAny(query, []string{"餐厅", "素食", "简餐", "吃饭", "开不开"}) {
-		if topic == "service" || containsAny(haystack, []string{"餐饮", "餐厅", "素食", "简餐", "菜单", "座位"}) {
-			boost += 5.2
-		}
-	}
-	if containsAny(query, []string{"替代官方公告", "能不能替代公告", "官方公告"}) {
-		if containsAny(haystack, []string{"小灵", "数字人", "资料不足", "官方最新公告", "不能编造", "现场公示"}) {
-			boost += 3.0
-		}
-	}
-	if containsAny(query, []string{"无人机", "宠物"}) {
-		if containsAny(haystack, []string{"无人机", "宠物", "携带物品", "正式规定", "现场管理"}) {
-			boost += 8.0
-		}
-	}
-	if containsAny(query, []string{"排队", "人多", "客流"}) {
-		if containsAny(haystack, []string{"排队时间", "实时客流", "今日游客多不多", "拥堵程度", "天气应用", "地图热力"}) {
-			boost += 4.0
-		}
-	}
-	if containsAny(query, []string{"大佛之外", "文化建筑", "三大语系"}) {
-		if containsAny(haystack, []string{"五印坛城", "曼飞龙塔", "灵山梵宫", "佛教三大语系", "文化建筑"}) {
-			boost += 1.8
-		}
-	}
-	if containsAny(query, []string{"木雕", "壁画", "琉璃", "工艺"}) {
-		if topic == "fangong" || containsAny(haystack, []string{"灵山梵宫", "木雕", "壁画", "琉璃", "漆器", "艺术工艺"}) {
-			boost += 1.8
-		}
-	}
-	if containsAny(query, []string{"藏式", "藏传"}) {
-		if topic == "wuyin" || containsAny(haystack, []string{"五印坛城", "藏传佛教", "藏式"}) {
-			boost += 1.8
-		}
-	}
-	if containsAny(query, []string{"喷水", "花开见佛", "喷泉"}) {
-		if topic == "jiulong" || containsAny(haystack, []string{"九龙灌浴", "喷水", "花开见佛"}) {
-			boost += 1.8
-		}
-	}
-	if containsAny(query, []string{"演艺", "剧场", "演出"}) {
-		if topic == "show" || topic == "boundary" || containsAny(haystack, []string{"吉祥颂", "九龙灌浴", "演出场次", "官方最新公告"}) {
-			boost += 1.4
-		}
-	}
-	if containsAny(query, []string{"天气", "高温", "雨天"}) {
-		if topic == "route" || topic == "boundary" || containsAny(haystack, []string{"天气", "高温", "雨天", "室内点", "实时客流"}) {
-			boost += 1.5
-		}
-	}
-	if containsAny(query, []string{"中轴线"}) {
-		if chunk.ID == "real-route-001" || chunk.ID == "real-foshou-mile-001" {
-			boost += 5.0
-		}
-	}
-	if containsAny(query, []string{"容易过期", "最容易过期"}) {
-		if containsAny(haystack, []string{"门票价格", "开放时间", "演出场次", "停车余位", "临时闭园", "临时检修"}) {
-			boost += 5.0
-		}
-	}
-	if containsAny(query, []string{"导览服务", "现场设施", "服务设施"}) {
-		if topic == "service" || containsAny(haystack, []string{"导览服务", "休息点", "洗手间", "现场指引", "服务中心"}) {
-			boost += 4.0
-		}
-	}
-	if containsAny(query, []string{"简单拍照点"}) {
-		if topic == "fangong" || topic == "wuyin" || containsAny(haystack, []string{"佛教艺术", "文化建筑", "藏传佛教", "民俗艺术"}) {
-			boost += 6.0
-		}
-	}
-	if containsAny(query, []string{"只看大佛", "商业化游乐", "普通景区"}) {
-		if topic == "overview" || topic == "culture" || containsAny(haystack, []string{"太湖山水", "佛教文化", "文化建筑", "演艺体验", "礼佛空间"}) {
-			boost += 5.0
-		}
-	}
-
+	boost += s.ProfileBasedIntentBoost(s.profile, query, chunk)
 	return boost
 }
 
@@ -1191,7 +1022,7 @@ func (s *RAGService) lexicalBoost(query string, chunk model.KnowledgeChunk) floa
 	haystack := chunk.Title + "\n" + chunk.Content
 	boost := 0.0
 
-	for _, keyword := range config.LingshanRelatedKeywords {
+	for _, keyword := range s.getRelatedKeywords() {
 		if len([]rune(keyword)) < 3 {
 			continue
 		}
@@ -1200,11 +1031,10 @@ func (s *RAGService) lexicalBoost(query string, chunk model.KnowledgeChunk) floa
 		}
 	}
 
-	boost += conditionalTermBoost(query, haystack, []string{"哪里", "位于", "地址", "位置"}, []string{"位于", "地处", "江苏", "无锡", "马山", "太湖"})
-	boost += conditionalTermBoost(query, haystack, []string{"表现", "内容", "讲什么", "展示"}, []string{"释迦牟尼", "花开见佛", "九龙沐浴", "佛陀诞生", "再现", "展示", "场景", "核心", "文化内涵"})
-	boost += conditionalTermBoost(query, haystack, []string{"为什么", "称为", "特色"}, []string{"被誉为", "内部汇集", "传统工艺", "艺术"})
-	boost += conditionalTermBoost(query, haystack, []string{"哪类", "什么文化", "佛教文化"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡"})
-	boost += conditionalTermBoost(query, haystack, []string{"五印坛城"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡", "曼陀罗"})
+	// 配置化条件加分（替代硬编码）
+	for _, cb := range s.getConditionalBoosts() {
+		boost += conditionalTermBoost(query, haystack, cb.QueryTerms, cb.ContentTerms)
+	}
 
 	return boost
 }
@@ -1246,6 +1076,38 @@ func min(a, b int) int {
 	return b
 }
 
+// getRelatedKeywords 从 profile 获取景区相关关键词，nil-safe
+func (s *RAGService) getRelatedKeywords() []string {
+	if s.profile == nil {
+		return nil
+	}
+	return s.profile.Keywords.RelatedKeywords
+}
+
+// getTopicEntities 从 profile 获取景点实体列表，nil-safe
+func (s *RAGService) getTopicEntities() []string {
+	if s.profile == nil {
+		return nil
+	}
+	return s.profile.Keywords.TopicEntities
+}
+
+// getConditionalBoosts 从 profile 获取条件加分规则，nil-safe
+func (s *RAGService) getConditionalBoosts() []iconfig.ConditionalBoost {
+	if s.profile == nil {
+		return nil
+	}
+	return s.profile.Keywords.ConditionalBoosts
+}
+
+// getSystemPromptOrDefault 获取系统 prompt，优先使用 profile 配置
+func (s *RAGService) getSystemPromptOrDefault() string {
+	if s.profile != nil && s.profile.Prompts.SystemRole != "" {
+		return s.profile.GetSystemPrompt()
+	}
+	return "你是一位专业的景区数字人导览员，负责为游客提供导览服务。回答要热情友好、准确专业。"
+}
+
 func (s *RAGService) BuildRAGPrompt(query string, chunks []model.KnowledgeChunk) string {
 	return s.BuildRAGPromptWithContext(query, chunks, "")
 }
@@ -1268,28 +1130,17 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 		conversation.WriteString("- 如果涉及票价、开放、演出、客流、排队、无人机、宠物等实时或现场规则，必须说明不能直接承诺，以官方最新公告或现场公示为准。\n\n")
 	}
 
-	prompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员”小灵”，负责为游客提供专业、热情的导览服务。
+	// 使用 profile 配置的 prompt 模板（支持任意景区）
+	if s.profile != nil && s.profile.Prompts.RAGPrompt != "" {
+		prompt := s.profile.RenderPrompt(s.profile.Prompts.RAGPrompt)
+		prompt = strings.ReplaceAll(prompt, "{knowledge_context}", context.String())
+		prompt = strings.ReplaceAll(prompt, "{session_context}", conversation.String())
+		prompt = strings.ReplaceAll(prompt, "{query}", query)
+		return prompt
+	}
 
-【身份设定】
-- 你是灵山胜境景区的官方数字人导览员
-- 你熟悉灵山大佛、九龙灌浴、梵宫等所有景点
-- 你的职责是帮助游客了解景区、规划行程、解答疑问
-
-【回答策略】
-1. 优先使用知识库资料中的内容回答
-2. 不要编造资料中没有的信息，尤其是门票价格、开放时间、演出时间、路线安排、交通方式等
-3. 如果资料中有多个相关信息，请整理成清晰、自然的中文回答
-4. 如果用户问题适合分点回答，请使用简洁列表
-5. 如果资料中只包含部分答案，请说明”根据当前资料，可以确认的是……”
-6. 如果资料中完全没有相关答案，请回答”这个问题我暂时无法确认，建议您咨询景区服务中心”
-7. 不要提到”RAG””向量数据库””知识片段”等技术词
-
-【语言风格】
-- 称呼游客为”您”，保持礼貌尊重
-- 使用温暖、亲切的语气，像真人导游一样自然
-- 适当使用”欢迎来到灵山胜境”、”祝您游览愉快”等礼貌用语
-- 主动提供相关建议（如游览路线、最佳时间、注意事项等）
-- 回答要简洁明了，突出重点
+	// fallback: 无 profile 时使用通用模板
+	prompt := fmt.Sprintf(`你是一位专业的景区数字人导览员，负责为游客提供导览服务。
 
 【知识库资料】
 %s
@@ -1298,8 +1149,7 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 【游客问题】
 %s
 
-请以灵山景区数字人导览员的身份，基于以上资料回答：`, context.String(), conversation.String(), query)
-
+请基于以上资料回答：`, context.String(), conversation.String(), query)
 	return prompt
 }
 
@@ -1424,7 +1274,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 		}{
 			{
 				Role:    "system",
-				Content: "你是灵山胜境景区的AI数字人导览员「小灵」，负责为游客提供专业、热情的导览服务。你熟悉灵山大佛、九龙灌浴、梵宫等所有景点。回答要热情友好、准确专业，像真人导游一样自然亲切。",
+				Content: s.getSystemPromptOrDefault(),
 			},
 			{
 				Role:    "user",
@@ -1567,7 +1417,7 @@ func (s *RAGService) RewriteFollowUpQuery(sessionID, query string) string {
 		return query
 	}
 
-	return buildFollowUpRewrite(query, history)
+	return s.buildFollowUpRewrite(query, history)
 }
 
 func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
@@ -1578,7 +1428,7 @@ func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 	now := time.Now()
-	ctx := inferConversationContext(query, answer)
+	ctx := s.inferConversationContext(query, answer)
 	turns := append(s.sessionHistory[sessionID], sessionTurn{
 		Query:    strings.TrimSpace(query),
 		Answer:   strings.TrimSpace(answer),
@@ -1671,14 +1521,14 @@ func (s *RAGService) buildSessionContextText(sessionID, query string) string {
 	return "- " + strings.Join(parts, "\n- ")
 }
 
-func inferConversationContext(query, answer string) conversationContext {
+func (s *RAGService) inferConversationContext(query, answer string) conversationContext {
 	text := query + "\n" + answer
 	intent := detectQuestionIntent(query)
 	if intent == "" {
 		intent = detectQuestionIntent(answer)
 	}
 	return conversationContext{
-		Topic:    detectTopicEntity(text),
+		Topic:    s.detectTopicEntity(text),
 		Intent:   intent,
 		Boundary: isBoundaryIntent(query) || isBoundaryIntent(answer),
 	}
@@ -1705,21 +1555,22 @@ func detectQuestionIntent(query string) string {
 	}
 }
 
-func detectTopicEntity(text string) string {
-	for _, topic := range []string{"灵山大佛", "九龙灌浴", "灵山梵宫", "五印坛城", "曼飞龙塔", "佛手广场", "百子戏弥勒", "祥符禅寺"} {
+// detectTopicEntity 从文本中检测话题实体（配置化，支持任意景区）
+func (s *RAGService) detectTopicEntity(text string) string {
+	for _, topic := range s.getTopicEntities() {
 		if strings.Contains(text, topic) {
 			return topic
 		}
 	}
 	switch {
 	case containsAny(text, []string{"半天", "主线", "中轴线", "先看", "路线"}):
-		return "半天游路线"
+		return "路线"
 	case containsAny(text, []string{"下雨", "雨天", "天气", "高温"}):
-		return "雨天路线"
+		return "天气路线"
 	case containsAny(text, []string{"带孩子", "小朋友", "亲子"}):
 		return "亲子路线"
 	case containsAny(text, []string{"老人", "长辈", "腿脚"}):
-		return "老人轻松路线"
+		return "老人路线"
 	case containsAny(text, []string{"导览服务", "服务中心", "洗手间", "休息点"}):
 		return "导览服务"
 	case isBoundaryIntent(text):
@@ -1733,11 +1584,12 @@ func isBoundaryIntent(query string) bool {
 	return containsAny(query, []string{"今天", "现在", "现场", "开不开", "开放", "几点", "门票", "票价", "演出", "场次", "人多", "排队", "无人机", "宠物", "公告", "实时", "不能替代", "不能编造"})
 }
 
-func buildFollowUpRewrite(query string, history []sessionTurn) string {
+// buildFollowUpRewrite 构建追问改写查询（配置化，支持任意景区）
+func (s *RAGService) buildFollowUpRewrite(query string, history []sessionTurn) string {
 	last := latestContextTurn(history)
 	topic := last.Topic
 	if topic == "" {
-		topic = detectTopicEntity(last.Query + "\n" + last.Answer)
+		topic = s.detectTopicEntity(last.Query + "\n" + last.Answer)
 	}
 	intent := detectQuestionIntent(query)
 	if intent == "" {
@@ -1745,24 +1597,21 @@ func buildFollowUpRewrite(query string, history []sessionTurn) string {
 	}
 
 	terms := []string{topic, query}
-	switch intent {
-	case "实时信息边界":
+
+	// 实时信息和属性追问使用通用规则
+	if intent == "实时信息边界" {
 		terms = append(terms, boundaryRewriteTerms(query)...)
-	case "天气路线":
-		terms = append(terms, "雨天路线", "降雨", "高温", "室内点", "现场天气调整")
-		if topic == "半天游路线" || last.Intent == "路线规划" {
-			terms = append(terms, "半天游路线")
-		}
-	case "路线规划":
-		terms = append(terms, "初次到访", "主线", "九龙灌浴", "佛手广场", "祥符禅寺", "灵山大佛")
-	case "亲子路线":
-		terms = append(terms, "亲子游客", "百子戏弥勒", "佛手广场", "九龙灌浴")
-	case "老人路线":
-		terms = append(terms, "老人游客", "轻松路线", "休息点", "不要安排太满")
-	case "补充推荐":
-		terms = append(terms, "补充推荐", "大佛之外", "文化建筑", "灵山梵宫", "五印坛城")
-	case "属性追问":
+	} else if intent == "属性追问" {
 		terms = append(terms, attributeRewriteTerms(query)...)
+	} else if s.profile != nil && s.profile.Prompts.FollowUpRewrite != nil {
+		// 从 profile 配置读取意图→关键词映射
+		if termsStr, ok := s.profile.Prompts.FollowUpRewrite[intent]; ok {
+			terms = append(terms, strings.Fields(termsStr)...)
+		}
+		// 天气路线：如果上一轮是路线规划，补充路线关键词
+		if intent == "天气路线" && (topic == "路线" || last.Intent == "路线规划") {
+			terms = append(terms, "路线")
+		}
 	}
 
 	terms = compactKeywords(terms)
@@ -1847,13 +1696,11 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 		return previewRunes(answer, 700)
 	}
 
-	if strings.Contains(query, "高") || strings.Contains(query, "高度") {
-		if strings.Contains(fullContent, "88") && strings.Contains(fullContent, "佛") {
-			return "灵山大佛高88米，主体高79米，莲花瓣高9米，含台基总高101.5米，耗铜量达725吨。"
+	// 使用 profile 配置的兜底答案（支持任意景区）
+	if s.profile != nil {
+		if fallbackAnswer, ok := s.profile.GetFallbackAnswer(query); ok {
+			return fallbackAnswer
 		}
-	}
-	if strings.Contains(query, "五印坛城") && strings.Contains(fullContent, "藏传佛教") {
-		return "五印坛城主要体现藏传佛教文化，建筑和展陈包含五方五佛、转经筒、唐卡等元素，游客可以通过转经筒和坛城空间感受藏传佛教的祈福文化。"
 	}
 
 	snippets := s.extractRelevantSnippets(query, chunks, 4)
@@ -1861,7 +1708,11 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 		snippets = []string{previewRunes(fullContent, 500)}
 	}
 
-	answer := "根据灵山胜境景区资料：\n\n" + strings.Join(snippets, "\n\n")
+	scenicName := "景区"
+	if s.profile != nil {
+		scenicName = s.profile.Name
+	}
+	answer := fmt.Sprintf("根据%s景区资料：\n\n", scenicName) + strings.Join(snippets, "\n\n")
 	return previewRunes(answer, 700)
 }
 
@@ -1898,11 +1749,10 @@ func (s *RAGService) extractRelevantSnippets(query string, chunks []model.Knowle
 			if len([]rune(sentence)) < 8 {
 				continue
 			}
-			score := s.BM25Similarity(query, sentence) + conditionalTermBoost(query, sentence, []string{"哪里", "位于", "地址", "位置"}, []string{"位于", "地处", "江苏", "无锡", "马山", "太湖"})
-			score += conditionalTermBoost(query, sentence, []string{"表现", "内容", "讲什么", "展示"}, []string{"释迦牟尼", "花开见佛", "九龙沐浴", "佛陀诞生", "再现", "展示", "场景", "核心", "文化内涵"})
-			score += conditionalTermBoost(query, sentence, []string{"为什么", "称为", "特色"}, []string{"被誉为", "内部汇集", "传统工艺", "艺术"})
-			score += conditionalTermBoost(query, sentence, []string{"哪类", "什么文化", "佛教文化"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡"})
-			score += conditionalTermBoost(query, sentence, []string{"五印坛城"}, []string{"藏传佛教", "五方五佛", "转经筒", "唐卡", "曼陀罗"})
+			score := s.BM25Similarity(query, sentence)
+			for _, cb := range s.getConditionalBoosts() {
+				score += conditionalTermBoost(query, sentence, cb.QueryTerms, cb.ContentTerms)
+			}
 			if score <= 0 {
 				continue
 			}
@@ -1988,37 +1838,14 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		Error *OpenAIError `json:"error"`
 	}
 
-	userPrompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员「小灵」。
-
-【身份设定】
-- 你是灵山胜境景区的官方数字人导览员
-- 你熟悉灵山大佛、九龙灌浴、梵宫等所有景点
-- 你的职责是帮助游客了解景区、规划行程、解答疑问
-
-【回答策略】
-1. 首先判断问题类型：
-   - 如果问题与灵山胜境、无锡旅游、佛教文化直接相关，但当前知识库没有资料，请明确说明："当前灵山胜境知识库中没有检索到相关资料，不过我可以为您提供一些一般性的参考信息..."
-   - 如果问题与灵山胜境无关，而是询问其他景点，请礼貌说明："我主要负责灵山胜境的导览服务。关于其他景区，建议您咨询相关景区的导览服务。"
-   - 如果是完全无关的问题，礼貌地引导回到景区话题
-
-2. 回答灵山相关问题时：
-   - 重点介绍灵山大佛（88米高，世界著名青铜立佛）
-   - 推荐九龙灌浴表演（精彩的佛教文化演出）
-   - 介绍灵山梵宫（佛教艺术殿堂）
-   - 提供游览建议和注意事项
-   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
-
-3. 语言风格：
-   - 称呼游客为"您"，保持礼貌尊重
-   - 使用温暖、亲切的语气
-   - 适当使用"欢迎来到灵山胜境"、"祝您游览愉快"等礼貌用语
-   - 像真人导游一样自然、专业
-   - 不要提到"RAG""向量数据库""知识片段"等技术词
-
-【游客问题】
-%s
-
-请以灵山景区数字人导览员的身份回答：`, query)
+	// 使用 profile 配置的通用 Chat Prompt（支持任意景区）
+	var userPrompt string
+	if s.profile != nil && s.profile.Prompts.GeneralChatPrompt != "" {
+		userPrompt = s.profile.RenderPrompt(s.profile.Prompts.GeneralChatPrompt)
+		userPrompt = strings.ReplaceAll(userPrompt, "{query}", query)
+	} else {
+		userPrompt = fmt.Sprintf("你是一位专业的景区数字人导览员。\n\n【游客问题】\n%s\n\n请回答：", query)
+	}
 
 	req := OpenAIRequest{
 		Model: s.chatModel,
@@ -2028,7 +1855,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是灵山胜境景区的AI数字人导览员「小灵」，熟悉灵山大佛、九龙灌浴、梵宫等所有景点。回答问题时要热情友好、专业准确，像真人导游一样自然亲切。",
+				Content: s.getSystemPromptOrDefault(),
 			},
 			{
 				Role:    "user",
@@ -2132,37 +1959,17 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		} `json:"error"`
 	}
 
-	userPrompt := fmt.Sprintf(`你是灵山胜境景区的AI数字人导览员「小灵」。
-
-【身份设定】
-- 你是灵山胜境景区的官方数字人导览员
-- 你熟悉灵山大佛、九龙灌浴、梵宫等所有景点
-- 你的职责是帮助游客了解景区、规划行程、解答疑问
-
-【回答策略】
-1. 首先判断问题类型：
-   - 如果问题与灵山胜境、无锡旅游、佛教文化直接相关，但当前知识库没有资料，请明确说明："当前灵山胜境知识库中没有检索到相关资料，不过我可以为您提供一些一般性的参考信息..."
-   - 如果问题与灵山胜境无关，而是询问其他景点，请礼貌说明："我主要负责灵山胜境的导览服务。关于其他景区，建议您咨询相关景区的导览服务。"
-   - 如果是完全无关的问题，礼貌地引导回到景区话题
-
-2. 回答灵山相关问题时：
-   - 重点介绍灵山大佛（88米高，世界著名青铜立佛）
-   - 推荐九龙灌浴表演（精彩的佛教文化演出）
-   - 介绍灵山梵宫（佛教艺术殿堂）
-   - 提供游览建议和注意事项
-   - 对于实时性信息（票价、营业时间等），请说明"具体信息请以景区官方公告为准"
-
-3. 语言风格：
-   - 称呼游客为"您"，保持礼貌尊重
-   - 使用温暖、亲切的语气
-   - 适当使用"欢迎来到灵山胜境"、"祝您游览愉快"等礼貌用语
-   - 像真人导游一样自然、专业
-   - 不要提到"RAG""向量数据库""知识片段"等技术词
-
-【游客问题】
-%s
-
-请以灵山景区数字人导览员的身份回答：`, query)
+	// 使用 profile 配置的无知识兜底 Prompt（支持任意景区）
+	var userPrompt string
+	if s.profile != nil && s.profile.GetNoKnowledgePrompt() != "" {
+		userPrompt = s.profile.RenderPrompt(s.profile.GetNoKnowledgePrompt())
+		userPrompt = strings.ReplaceAll(userPrompt, "{query}", query)
+	} else if s.profile != nil && s.profile.Prompts.GeneralChatPrompt != "" {
+		userPrompt = s.profile.RenderPrompt(s.profile.Prompts.GeneralChatPrompt)
+		userPrompt = strings.ReplaceAll(userPrompt, "{query}", query)
+	} else {
+		userPrompt = fmt.Sprintf("你是一位专业的景区数字人导览员。\n\n【游客问题】\n%s\n\n请回答：", query)
+	}
 
 	req := DashScopeRequest{
 		Model: s.chatModel,
@@ -2172,7 +1979,7 @@ func (s *RAGService) queryWithoutKnowledge(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: "你是灵山胜境景区的AI数字人导览员「小灵」，熟悉灵山大佛、九龙灌浴、梵宫等所有景点。回答问题时要热情友好、专业准确，像真人导游一样自然亲切。",
+				Content: s.getSystemPromptOrDefault(),
 			},
 			{
 				Role:    "user",
@@ -2372,3 +2179,4 @@ func (s *RAGService) RunEvaluation(evalFile string) error {
 	)
 	return nil
 }
+
