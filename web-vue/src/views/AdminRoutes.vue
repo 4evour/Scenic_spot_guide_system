@@ -46,12 +46,12 @@ const {
   handleDelete,
   fetchData,
 } = useCrudTable<TourRoute>({
-  listApi: '/tour-routes',
+  listApi: '/routes',
   saveApi: (data, edit) => ({
-    path: edit ? `/tour-routes/${data.id}` : '/tour-routes',
+    path: edit ? `/routes/${data.id}` : '/routes',
     method: edit ? 'PUT' : 'POST',
   }),
-  deleteApi: (id) => ({ path: `/tour-routes/${id}` }),
+  deleteApi: (id) => ({ path: `/routes/${id}` }),
   idField: 'id',
   defaultForm: () => ({
     name: '',

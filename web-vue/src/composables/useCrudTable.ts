@@ -50,9 +50,15 @@ export function useCrudTable<T extends Record<string, unknown>>(options: CrudOpt
     loading.value = true
     try {
       const params: ListParams = { page: pagination.page, pageSize: pagination.pageSize }
-      const data = await apiFetch<ListResult<T>>(`${options.listApi}?page=${params.page}&page_size=${params.pageSize}`)
-      tableData.value = data.list || []
-      total.value = data.total || 0
+      const data = await apiFetch<ListResult<T> | T[]>(`${options.listApi}?page=${params.page}&page_size=${params.pageSize}`)
+      // 兼容两种后端返回格式：分页对象 {list, total} 或普通数组 [...]
+      if (Array.isArray(data)) {
+        tableData.value = data
+        total.value = data.length
+      } else {
+        tableData.value = data.list || []
+        total.value = data.total || 0
+      }
       pagination.page = params.page
     } catch (error) {
       message.error(error instanceof Error ? error.message : '加载失败')

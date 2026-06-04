@@ -44,7 +44,7 @@ const {
   handleDelete,
   fetchData,
 } = useCrudTable<GuideContent>({
-  listApi: '/guide-content',
+  listApi: '/contents',
   idField: 'id',
   defaultForm: () => ({
     title: '',
@@ -54,10 +54,10 @@ const {
     audio_url: '',
   }),
   saveApi: (data, editing) => ({
-    path: editing ? `/guide-content/${data.id}` : '/guide-content',
+    path: editing ? `/contents/${data.id}` : '/contents',
     method: editing ? 'PUT' : 'POST',
   }),
-  deleteApi: (id) => ({ path: `/guide-content/${id}` }),
+  deleteApi: (id) => ({ path: `/contents/${id}` }),
 })
 
 const contentTypeOptions = [
