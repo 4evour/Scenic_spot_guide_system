@@ -245,3 +245,81 @@ watch(() => [props.state, props.mouthOpen, props.expression], () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.live2d-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  overflow: hidden;
+}
+
+.stage-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(82, 240, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(82, 240, 238, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.live2d-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.live2d-host :deep(canvas) {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.live2d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+.live2d-canvas.hidden {
+  display: none;
+}
+
+.model-status {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.status-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #666;
+}
+.state-speaking .status-pulse { background: var(--sg-jade-bright, #63e2b7); animation: pulse 1s infinite; }
+.state-thinking .status-pulse { background: var(--sg-gold, #f4c765); animation: pulse 1.5s infinite; }
+.state-listening .status-pulse { background: var(--sg-cyan, #52f0ee); }
+.state-error .status-pulse { background: var(--sg-red-bright, #e88080); }
+
+.live2d-note {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+  z-index: 2;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+</style>

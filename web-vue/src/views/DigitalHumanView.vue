@@ -492,7 +492,7 @@ onUnmounted(() => {
 <style scoped>
 .dh-view {
   display: flex;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 44px);
   background: var(--sg-bg-ink, #0a0a0f);
 }
 
@@ -501,7 +501,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   position: relative;
   background:
