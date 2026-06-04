@@ -247,8 +247,13 @@ function handleSocketMessage(message: VtuberMessage) {
   }
 
   if (message.type === 'error') {
-    addMessage('system', message.message || '数字人服务返回异常。');
-    state.conversation = 'error';
+    const errMsg = message.message || ''
+    // 忽略 VTuber 的瞬态错误（TTS 完成时 WebSocket 已关闭导致的 AssertionError）
+    if (errMsg.startsWith('Conversation error')) {
+      return
+    }
+    addMessage('system', errMsg || '数字人服务返回异常。')
+    state.conversation = 'error'
   }
 }
 
