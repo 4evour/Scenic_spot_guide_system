@@ -1,22 +1,25 @@
 <script setup lang="ts">
-import { NLayoutContent } from 'naive-ui'
 </script>
 
 <template>
-  <NLayoutContent
-    content-style="padding: 20px;"
-    :native-scrollbar="false"
-    style="flex: 1; overflow: auto;"
-  >
+  <div class="global-content">
     <router-view v-slot="{ Component }">
       <Transition name="fade" mode="out-in">
         <component :is="Component" />
       </Transition>
     </router-view>
-  </NLayoutContent>
+  </div>
 </template>
 
 <style scoped>
+.global-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  min-height: 0;
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.15s ease;
