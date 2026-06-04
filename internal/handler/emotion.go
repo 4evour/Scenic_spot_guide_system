@@ -2,23 +2,29 @@ package handler
 
 import "strings"
 
+// detectEmotion 基于关键词的简单情绪检测
+// 注意：中文关键词无需 ToLower，因为中文没有大小写之分
 func detectEmotion(text string) string {
-	textLower := strings.ToLower(text)
-
-	if strings.Contains(textLower, "抱歉") || strings.Contains(textLower, "对不起") || strings.Contains(textLower, "无法") {
-		return "sadness"
+	// 负面情绪
+	negativeWords := []string{"抱歉", "对不起", "无法", "遗憾", "不好", "糟糕", "失望", "难过"}
+	for _, w := range negativeWords {
+		if strings.Contains(text, w) {
+			return "sadness"
+		}
 	}
-	if strings.Contains(textLower, "欢迎") || strings.Contains(textLower, "您好") || strings.Contains(textLower, "很高兴") {
-		return "joy"
+	// 惊喜/注意
+	surpriseWords := []string{"哇", "惊喜", "注意", "提醒", "警告", "竟然", "居然"}
+	for _, w := range surpriseWords {
+		if strings.Contains(text, w) {
+			return "surprise"
+		}
 	}
-	if strings.Contains(textLower, "推荐") || strings.Contains(textLower, "建议") || strings.Contains(textLower, "最佳") {
-		return "joy"
-	}
-	if strings.Contains(textLower, "注意") || strings.Contains(textLower, "提醒") || strings.Contains(textLower, "警告") {
-		return "surprise"
-	}
-	if strings.Contains(textLower, "不好") || strings.Contains(textLower, "糟糕") || strings.Contains(textLower, "问题") {
-		return "fear"
+	// 正面情绪
+	positiveWords := []string{"欢迎", "您好", "很高兴", "推荐", "建议", "最佳", "精彩", "美丽", "壮观", "开心"}
+	for _, w := range positiveWords {
+		if strings.Contains(text, w) {
+			return "joy"
+		}
 	}
 	return "neutral"
 }

@@ -115,6 +115,7 @@ type ChatCompletionChunk struct {
 // ==================== 主处理函数 ====================
 
 func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20) // 1MB
 	// 先用 json.RawMessage 读取原始请求体进行灵活解析
 	rawBody, err := c.GetRawData()
 	if err != nil {
@@ -359,7 +360,8 @@ func (h *OpenAIProxyHandler) writeStreamError(c *gin.Context, errMsg string) {
 	writer := c.Writer
 	flusher, ok := writer.(http.Flusher)
 	if ok {
-		fmt.Fprintf(writer, "data: {\"error\": \"%s\"}\n\n", errMsg)
+		errPayload, _ := json.Marshal(gin.H{"error": errMsg})
+		fmt.Fprintf(writer, "data: %s\n\n", string(errPayload))
 		flusher.Flush()
 		fmt.Fprintf(writer, "data: [DONE]\n\n")
 		flusher.Flush()

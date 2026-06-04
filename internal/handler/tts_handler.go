@@ -12,10 +12,14 @@ import (
 	"github.com/scenic-guide/internal/pkg"
 )
 
-type TTSHandler struct{}
+type TTSHandler struct {
+	client *http.Client
+}
 
 func NewTTSHandler() *TTSHandler {
-	return &TTSHandler{}
+	return &TTSHandler{
+		client: &http.Client{Timeout: 15 * time.Second},
+	}
 }
 
 type TTSRequest struct {
@@ -77,10 +81,7 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 
 	ttsReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	client := &http.Client{
-		Timeout: 15 * time.Second,
-	}
-	resp, err := client.Do(ttsReq)
+	resp, err := h.client.Do(ttsReq)
 	if err != nil {
 		slog.Error("调用TTS服务失败", "error", err)
 		pkg.InternalError(c, "调用TTS服务失败")
@@ -122,5 +123,5 @@ func (h *TTSHandler) TTS(c *gin.Context) {
 }
 
 func (h *TTSHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/ai/tts", h.TTS)
+	r.POST("/ai/tts", pkg.RateLimitMiddleware(30, time.Minute), h.TTS)
 }

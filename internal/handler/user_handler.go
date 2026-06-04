@@ -2,7 +2,10 @@ package handler
 
 import (
 	"log/slog"
+	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +31,17 @@ func (h *UserHandler) Register(c *gin.Context) {
 	if err := c.ShouldBindJSON(&user); err != nil {
 		pkg.BadRequest(c, "参数错误")
 		return
+	}
+
+	if matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]{3,32}$`, user.Username); !matched {
+		pkg.BadRequest(c, "用户名须为3-32位字母、数字或下划线")
+		return
+	}
+	if user.Email != "" {
+		if !strings.Contains(user.Email, "@") || len(user.Email) > 254 {
+			pkg.BadRequest(c, "邮箱格式不正确")
+			return
+		}
 	}
 
 	user.Role = "visitor"
@@ -64,13 +78,20 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("auth_token", token, h.tokenExpireHours*3600, "/", "", false, true)
+
 	pkg.Success(c, gin.H{
 		"id":       user.ID,
 		"username": user.Username,
 		"email":    user.Email,
 		"role":     user.Role,
-		"token":    token,
 	})
+}
+
+func (h *UserHandler) Logout(c *gin.Context) {
+	c.SetCookie("auth_token", "", -1, "/", "", false, true)
+	pkg.SuccessWithMessage(c, "已退出登录", nil)
 }
 
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
@@ -156,14 +177,20 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	newUsername := user.Username
+	newEmail := user.Email
 	if updateData.Username != "" {
-		user.Username = updateData.Username
+		if matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]{3,32}$`, updateData.Username); !matched {
+			pkg.BadRequest(c, "用户名须为3-32位字母、数字或下划线")
+			return
+		}
+		newUsername = updateData.Username
 	}
 	if updateData.Email != "" {
-		user.Email = updateData.Email
+		newEmail = updateData.Email
 	}
 
-	if err := h.service.UpdateUser(user); err != nil {
+	if err := h.service.UpdateProfile(uint(id), newUsername, newEmail); err != nil {
 		slog.Error("更新用户失败", "error", err, "user_id", id)
 		pkg.InternalError(c, "更新用户信息失败")
 		return
@@ -171,8 +198,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	pkg.Success(c, gin.H{
 		"id":       user.ID,
-		"username": user.Username,
-		"email":    user.Email,
+		"username": newUsername,
+		"email":    newEmail,
 		"role":     user.Role,
 	})
 }
@@ -208,7 +235,18 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 }
 
 func (h *UserHandler) GetAllUsers(c *gin.Context) {
-	users, err := h.service.GetAllUsers()
+	pageStr := c.DefaultQuery("page", "1")
+	pageSizeStr := c.DefaultQuery("page_size", "20")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	users, total, err := h.service.GetAllUsersPaginated(page, pageSize)
 	if err != nil {
 		slog.Error("获取用户列表失败", "error", err)
 		pkg.InternalError(c, "获取用户列表失败")
@@ -225,7 +263,12 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 		})
 	}
 
-	pkg.Success(c, result)
+	pkg.Success(c, gin.H{
+		"list":      result,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 func (h *UserHandler) GetUsersByRole(c *gin.Context) {
@@ -258,6 +301,7 @@ func (h *UserHandler) GetUsersByRole(c *gin.Context) {
 func (h *UserHandler) Routes(r *gin.RouterGroup) {
 	r.POST("/register", pkg.RateLimitMiddleware(5, time.Minute), h.Register)
 	r.POST("/login", pkg.RateLimitMiddleware(10, time.Minute), h.Login)
+	r.POST("/logout", h.Logout)
 
 	auth := r.Group("")
 	auth.Use(pkg.AuthMiddleware())

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import type { ConversationState } from '../types/digitalHuman';
+import type { ConversationState, PixiAppLike, Live2DModelLike } from '../types/digitalHuman';
 
 const props = defineProps<{
   state: ConversationState;
@@ -15,8 +15,8 @@ const live2dError = ref('');
 
 let frame = 0;
 let raf = 0;
-let pixiApp: any = null;
-let live2dModel: any = null;
+let pixiApp: PixiAppLike | null = null;
+let live2dModel: Live2DModelLike | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let appliedExpression = '';
 let expressionSeq = 0;
@@ -118,24 +118,24 @@ async function loadLive2DModel() {
       transparent: true,
       antialias: true,
       autoStart: true,
-    });
+    }) as unknown as PixiAppLike;
     live2dHost.value.appendChild(pixiApp.view);
 
-    live2dModel = await Live2DModel.from('/static/live2d-models/mao_pro/runtime/mao_pro.model3.json');
-    live2dModel.autoUpdate = false;
-    live2dModel.anchor.set(0.5, 0.5);
+    live2dModel = await Live2DModel.from('/static/live2d-models/mao_pro/runtime/mao_pro.model3.json') as unknown as Live2DModelLike;
+    live2dModel!.autoUpdate = false;
+    live2dModel!.anchor.set(0.5, 0.5);
     syncLive2DLayout();
-    pixiApp.stage.addChild(live2dModel);
-    pixiApp.ticker.add(syncLive2DFrame);
-    live2dModel.internalModel?.on?.('beforeModelUpdate', applyLipSyncParameters);
+    pixiApp!.stage.addChild(live2dModel!);
+    pixiApp!.ticker.add(syncLive2DFrame);
+    live2dModel!.internalModel?.on?.('beforeModelUpdate', applyLipSyncParameters);
     live2dLoaded.value = true;
     live2dError.value = '';
     cancelAnimationFrame(raf);
     window.addEventListener('resize', syncLive2DLayout);
     resizeObserver = new ResizeObserver(syncLive2DLayout);
-    resizeObserver.observe(live2dHost.value);
+    resizeObserver.observe(live2dHost.value!);
 
-    live2dModel.motion?.('Idle');
+    live2dModel!.motion?.('Idle');
     applyLive2DState();
   } catch (error) {
     live2dLoaded.value = false;
@@ -160,7 +160,7 @@ function syncLive2DLayout() {
 }
 
 function applyExpression() {
-  if (!live2dModel?.expression) return;
+  if (!live2dModel || typeof live2dModel.expression !== 'function') return;
   const map = {
     neutral: 'exp_02',
     happy: 'exp_01',

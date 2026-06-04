@@ -14,8 +14,10 @@ type UserService interface {
 	GetUserByID(id uint) (*model.User, error)
 	GetUserByUsername(username string) (*model.User, error)
 	UpdateUser(user *model.User) error
+	UpdateProfile(id uint, username, email string) error
 	DeleteUser(id uint) error
 	GetAllUsers() ([]model.User, error)
+	GetAllUsersPaginated(page, pageSize int) ([]model.User, int64, error)
 	GetUsersByRole(role string) ([]model.User, error)
 }
 
@@ -96,12 +98,23 @@ func (s *userService) UpdateUser(user *model.User) error {
 	return s.repo.Update(user)
 }
 
+func (s *userService) UpdateProfile(id uint, username, email string) error {
+	return s.repo.UpdateFields(id, map[string]interface{}{
+		"username": username,
+		"email":    email,
+	})
+}
+
 func (s *userService) DeleteUser(id uint) error {
 	return s.repo.Delete(id)
 }
 
 func (s *userService) GetAllUsers() ([]model.User, error) {
 	return s.repo.FindAll()
+}
+
+func (s *userService) GetAllUsersPaginated(page, pageSize int) ([]model.User, int64, error) {
+	return s.repo.FindAllPaginated(page, pageSize)
 }
 
 func (s *userService) GetUsersByRole(role string) ([]model.User, error) {

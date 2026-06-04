@@ -8,12 +8,32 @@ export default defineConfig(({ command }) => ({
     outDir: '../static/vue-app',
     emptyOutDir: true,
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'naive-ui': ['naive-ui'],
+          'echarts': ['echarts'],
+        },
+      },
+    },
   },
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:8080',
-      '/static': 'http://127.0.0.1:8080',
-      '/v1': 'http://127.0.0.1:8080',
+      '/api': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/static': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/v1': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+        secure: false,
+      },
       '/vtuber-ws': {
         target: 'ws://127.0.0.1:12393',
         ws: true,

@@ -442,65 +442,6 @@ textarea:focus-visible {
   color: var(--muted);
 }
 
-.admin-view {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 270px minmax(0, 1fr);
-  min-height: calc(100vh - 63px);
-}
-
-.side-console {
-  padding: 18px;
-  border-top: 0;
-  border-bottom: 0;
-  border-left: 0;
-  border-radius: 0;
-}
-
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.brand-block > span {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  place-items: center;
-  border-radius: 8px;
-  color: #031012;
-  background: linear-gradient(135deg, var(--cyan), var(--green));
-  font-weight: 900;
-}
-
-.brand-block strong,
-.brand-block small {
-  display: block;
-}
-
-.brand-block small {
-  color: var(--muted);
-}
-
-.side-console button {
-  width: 100%;
-  min-height: 42px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(82, 240, 238, 0.18);
-  border-radius: 8px;
-  color: var(--text);
-  background: rgba(8, 28, 32, 0.62);
-}
-
-.side-console button.active,
-.side-console button:hover {
-  border-color: var(--line-strong);
-  background: rgba(82, 240, 238, 0.12);
-}
-
 .admin-content {
   min-width: 0;
   padding: 18px;

@@ -392,11 +392,11 @@ function showTab(tabName) {
     }
 }
 
-function switchTab(tab) {
+function switchTab(tab, evt) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.form-container').forEach(form => form.classList.add('hidden'));
 
-    event.target.classList.add('active');
+    if (evt && evt.target) evt.target.classList.add('active');
     document.getElementById(`${tab}Form`).classList.remove('hidden');
 }
 
@@ -616,13 +616,18 @@ function sendMessage(message) {
             <div class="message-content">
                 <p>${escapeHtml(displayText)}</p>
                 <div class="feedback-bar" id="${feedbackId}">
-                    <button class="fb-btn" title="有用" onclick="sendFeedback('${feedbackId}', true, '${escapeHtml(message).replace(/'/g, "\\'")}', '${escapeHtml(displayText).replace(/'/g, "\\'")}')">&#128077;</button>
-                    <button class="fb-btn" title="没用" onclick="sendFeedback('${feedbackId}', false, '${escapeHtml(message).replace(/'/g, "\\'")}', '${escapeHtml(displayText).replace(/'/g, "\\'")}')">&#128078;</button>
+                    <button class="fb-btn fb-helpful" title="有用">&#128077;</button>
+                    <button class="fb-btn fb-not-helpful" title="没用">&#128078;</button>
                 </div>
                 <span class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
         `;
         chatContainer.appendChild(aiMessage);
+        const fbBar = document.getElementById(feedbackId);
+        if (fbBar) {
+            fbBar.querySelector('.fb-helpful')?.addEventListener('click', () => sendFeedback(feedbackId, true, message, displayText));
+            fbBar.querySelector('.fb-not-helpful')?.addEventListener('click', () => sendFeedback(feedbackId, false, message, displayText));
+        }
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         // Update digital human emotion
@@ -708,9 +713,9 @@ function updateRoutePanel(route) {
     });
 }
 
-function switchRoute(type) {
+function switchRoute(type, evt) {
     document.querySelectorAll('.route-tab').forEach(tab => tab.classList.remove('active'));
-    event.target.classList.add('active');
+    if (evt && evt.target) evt.target.classList.add('active');
     updateRoutePanel(routes[type]);
 }
 

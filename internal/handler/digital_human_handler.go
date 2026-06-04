@@ -349,10 +349,15 @@ func (h *DigitalHumanHandler) Routes(r *gin.RouterGroup) {
 	dh := r.Group("/dh")
 	dh.Use(pkg.RateLimitMiddleware(60, time.Minute))
 	{
-		dh.POST("/session/create", h.CreateSession)
-		dh.POST("/chat/text", h.ChatText)
-		dh.POST("/chat/voice-transcript", h.ChatVoiceTranscript)
-		dh.POST("/feedback", h.SubmitFeedback)
 		dh.GET("/health", h.Health)
+	}
+
+	auth := dh.Group("")
+	auth.Use(pkg.AuthMiddleware())
+	{
+		auth.POST("/session/create", h.CreateSession)
+		auth.POST("/chat/text", h.ChatText)
+		auth.POST("/chat/voice-transcript", h.ChatVoiceTranscript)
+		auth.POST("/feedback", h.SubmitFeedback)
 	}
 }

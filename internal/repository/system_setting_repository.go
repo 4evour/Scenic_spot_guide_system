@@ -81,7 +81,9 @@ func (r *DigitalHumanConfigRepository) Get() (*model.DigitalHumanConfig, error) 
 			DefaultEmotion: "joy",
 			EmotionLevel:   3,
 		}
-		r.db.Create(&config)
+		if createErr := r.db.Create(&config).Error; createErr != nil {
+			return nil, createErr
+		}
 		return &config, nil
 	}
 	return &config, err

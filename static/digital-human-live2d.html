@@ -443,7 +443,7 @@
 
     <script>
         // 配置
-        const API_BASE_URL = 'http://127.0.0.1:8080/api/v1';
+        const API_BASE_URL = '/api/v1';
         let sessionId = null;
         let isRecording = false;
         let recognition = null;
@@ -587,7 +587,7 @@
                     type: 'speak',
                     text: text,
                     emotion: emotion
-                }, '*');
+                }, window.location.origin);
             }
         }
 

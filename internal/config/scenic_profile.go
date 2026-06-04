@@ -111,8 +111,13 @@ func LoadScenicProfile(scenicID string) (*ScenicProfile, error) {
 		return nil, fmt.Errorf("加载景区配置失败 %s: %w", path, err)
 	}
 
-	// 支持环境变量替换 ${VAR}
-	content := os.ExpandEnv(string(data))
+	// 仅替换白名单中的景区相关环境变量，避免泄露敏感信息
+	content := os.Expand(string(data), func(key string) string {
+		if strings.HasPrefix(key, "SCENIC_") {
+			return os.Getenv(key)
+		}
+		return ""
+	})
 
 	var profile ScenicProfile
 	if err := yaml.Unmarshal([]byte(content), &profile); err != nil {

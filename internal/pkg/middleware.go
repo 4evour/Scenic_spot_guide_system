@@ -1,8 +1,7 @@
 package pkg
 
 import (
-	"net"
-	"os"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +25,22 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	var mu sync.Mutex
 	entries := make(map[string]rateLimitEntry)
 
+	// 后台清理过期条目，避免在请求热路径中遍历全量 map
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			mu.Lock()
+			now := time.Now()
+			for ip, item := range entries {
+				if now.After(item.resetAt) {
+					delete(entries, ip)
+				}
+			}
+			mu.Unlock()
+		}
+	}()
+
 	return func(c *gin.Context) {
 		now := time.Now()
 		key := c.ClientIP()
@@ -37,12 +52,6 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 		}
 		entry.count++
 		entries[key] = entry
-
-		for ip, item := range entries {
-			if now.After(item.resetAt) {
-				delete(entries, ip)
-			}
-		}
 
 		allowed := entry.count <= limit
 		resetAt := entry.resetAt
@@ -70,8 +79,21 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		var token string
+		// 优先从 Authorization header 获取
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				token = parts[1]
+			}
+		}
+		// 回退到 HttpOnly Cookie
+		if token == "" {
+			token, _ = c.Cookie("auth_token")
+		}
+
+		if token == "" {
 			c.AbortWithStatusJSON(401, Response{
 				Code:    401,
 				Message: "未登录，请先登录",
@@ -79,16 +101,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(401, Response{
-				Code:    401,
-				Message: "token格式错误",
-			})
-			return
-		}
-
-		token := parts[1]
 		claims, err := ParseToken(token)
 		if err != nil {
 			c.AbortWithStatusJSON(401, Response{
@@ -105,31 +117,6 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func applyDevAdminBypass(c *gin.Context) bool {
-	if !devAdminBypassEnabled() || !isLoopbackRequest(c) {
-		return false
-	}
-
-	c.Set("user_id", uint(0))
-	c.Set("username", "local-dev-admin")
-	c.Set("role", "admin")
-	c.Set("dev_admin_bypass", true)
-	return true
-}
-
-func devAdminBypassEnabled() bool {
-	value := strings.ToLower(strings.TrimSpace(os.Getenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS")))
-	return value == "1" || value == "true" || value == "yes" || value == "on"
-}
-
-func isLoopbackRequest(c *gin.Context) bool {
-	host, _, err := net.SplitHostPort(c.Request.RemoteAddr)
-	if err != nil {
-		return false
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
-}
 
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -147,7 +134,23 @@ func AdminMiddleware() gin.HandlerFunc {
 
 func WSTokenAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.Query("token")
+		var token string
+		// 优先从 Sec-WebSocket-Protocol 子协议提取
+		protocols := c.GetHeader("Sec-WebSocket-Protocol")
+		for _, p := range strings.Split(protocols, ",") {
+			p = strings.TrimSpace(p)
+			if strings.HasPrefix(p, "auth.token.") {
+				token = strings.TrimPrefix(p, "auth.token.")
+				break
+			}
+		}
+		// 回退到 query 参数（兼容旧客户端）
+		if token == "" {
+			token = c.Query("token")
+			if token != "" {
+				slog.Warn("WebSocket token 通过 URL query 传递，建议迁移至子协议")
+			}
+		}
 		if token == "" {
 			c.AbortWithStatusJSON(401, Response{
 				Code:    401,

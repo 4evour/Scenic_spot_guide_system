@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"sort"
 	"strings"
@@ -55,17 +56,47 @@ func (s *StatsService) GetDashboardOverview() DashboardOverview {
 	yesterday := today.Add(-24 * time.Hour)
 	weekStart := today.AddDate(0, 0, -int(today.Weekday()+6)%7)
 
-	todayVisitors, _ := s.interactionRepo.GetUniqueSessionCount(today)
-	yesterdayVisitors, _ := s.interactionRepo.GetUniqueSessionCount(yesterday)
-	weeklyVisitors, _ := s.interactionRepo.GetUniqueSessionCount(weekStart)
-	todayChats, _ := s.interactionRepo.GetTotalCount(today)
-	weeklyChats, _ := s.interactionRepo.GetTotalCount(weekStart)
-	yesterdayChats, _ := s.interactionRepo.GetTotalCount(yesterday)
+	todayVisitors, err := s.interactionRepo.GetUniqueSessionCount(today)
+	if err != nil {
+		slog.Error("查询今日访问量失败", "error", err)
+	}
+	yesterdayVisitors, err := s.interactionRepo.GetUniqueSessionCount(yesterday)
+	if err != nil {
+		slog.Error("查询昨日访问量失败", "error", err)
+	}
+	weeklyVisitors, err := s.interactionRepo.GetUniqueSessionCount(weekStart)
+	if err != nil {
+		slog.Error("查询本周访问量失败", "error", err)
+	}
+	todayChats, err := s.interactionRepo.GetTotalCount(today)
+	if err != nil {
+		slog.Error("查询今日交互次数失败", "error", err)
+	}
+	weeklyChats, err := s.interactionRepo.GetTotalCount(weekStart)
+	if err != nil {
+		slog.Error("查询本周交互次数失败", "error", err)
+	}
+	yesterdayChats, err := s.interactionRepo.GetTotalCount(yesterday)
+	if err != nil {
+		slog.Error("查询昨日交互次数失败", "error", err)
+	}
 
-	avgRT, _ := s.interactionRepo.GetAvgResponseTime(today)
-	satisfaction, _ := s.interactionRepo.GetSatisfactionRate(today)
-	yesterdaySatisfaction, _ := s.interactionRepo.GetSatisfactionRate(yesterday)
-	yesterdayAvgRT, _ := s.interactionRepo.GetAvgResponseTime(yesterday)
+	avgRT, err := s.interactionRepo.GetAvgResponseTime(today)
+	if err != nil {
+		slog.Error("查询平均响应时间失败", "error", err)
+	}
+	satisfaction, err := s.interactionRepo.GetSatisfactionRate(today)
+	if err != nil {
+		slog.Error("查询满意度失败", "error", err)
+	}
+	yesterdaySatisfaction, err := s.interactionRepo.GetSatisfactionRate(yesterday)
+	if err != nil {
+		slog.Error("查询昨日满意度失败", "error", err)
+	}
+	yesterdayAvgRT, err := s.interactionRepo.GetAvgResponseTime(yesterday)
+	if err != nil {
+		slog.Error("查询昨日平均响应时间失败", "error", err)
+	}
 
 	// 计算趋势
 	var chatsTrend, satisfactionTrend, responseTrend, visitorsTrend float64
@@ -106,7 +137,10 @@ type HourlyTrendItem struct {
 
 func (s *StatsService) GetHourlyTrend() []HourlyTrendItem {
 	today := time.Now().Truncate(24 * time.Hour)
-	stats, _ := s.interactionRepo.GetHourlyStats(today)
+	stats, err := s.interactionRepo.GetHourlyStats(today)
+	if err != nil {
+		slog.Error("查询小时趋势失败", "error", err)
+	}
 
 	// 补全24小时
 	result := make([]HourlyTrendItem, 24)
@@ -132,7 +166,10 @@ type TopQuestion struct {
 
 func (s *StatsService) GetTopQuestions(limit int) []TopQuestion {
 	today := time.Now().Truncate(24 * time.Hour)
-	questions, _ := s.interactionRepo.GetTopQuestions(today, limit)
+	questions, err := s.interactionRepo.GetTopQuestions(today, limit)
+	if err != nil {
+		slog.Error("查询热门问题失败", "error", err)
+	}
 	result := make([]TopQuestion, len(questions))
 	for i, q := range questions {
 		// 截断过长的问题
@@ -154,7 +191,10 @@ type CategoryDistItem struct {
 
 func (s *StatsService) GetCategoryDistribution() []CategoryDistItem {
 	today := time.Now().Truncate(24 * time.Hour)
-	cats, _ := s.interactionRepo.GetCategoryDistribution(today)
+	cats, err := s.interactionRepo.GetCategoryDistribution(today)
+	if err != nil {
+		slog.Error("查询分类分布失败", "error", err)
+	}
 
 	var total int64
 	for _, c := range cats {
@@ -195,7 +235,10 @@ type SatisfactionTrendItem struct {
 
 func (s *StatsService) GetResponseTimeDistribution() []ResponseTimeDistItem {
 	today := time.Now().Truncate(24 * time.Hour)
-	dist, _ := s.interactionRepo.GetResponseTimeDistribution(today)
+	dist, err := s.interactionRepo.GetResponseTimeDistribution(today)
+	if err != nil {
+		slog.Error("查询响应时间分布失败", "error", err)
+	}
 
 	var total int64
 	for _, c := range dist {
@@ -217,7 +260,10 @@ func (s *StatsService) GetResponseTimeDistribution() []ResponseTimeDistItem {
 
 func (s *StatsService) GetSatisfactionTrend() []SatisfactionTrendItem {
 	since := time.Now().AddDate(0, 0, -6).Truncate(24 * time.Hour)
-	stats, _ := s.interactionRepo.GetDailySatisfactionTrend(since)
+	stats, err := s.interactionRepo.GetDailySatisfactionTrend(since)
+	if err != nil {
+		slog.Error("查询满意度趋势失败", "error", err)
+	}
 	byDate := make(map[string]repository.DailySatisfactionStat)
 	for _, stat := range stats {
 		byDate[stat.Date] = stat
@@ -246,7 +292,10 @@ type RecentConversation struct {
 }
 
 func (s *StatsService) GetRecentConversations(limit int) []RecentConversation {
-	logs, _ := s.interactionRepo.GetRecentConversations(limit)
+	logs, err := s.interactionRepo.GetRecentConversations(limit)
+	if err != nil {
+		slog.Error("查询最近对话失败", "error", err)
+	}
 	result := make([]RecentConversation, len(logs))
 	for i, log := range logs {
 		// 截断过长文本
@@ -314,10 +363,16 @@ type ReportSummary struct {
 
 func (s *StatsService) GetVisitorReport() VisitorReport {
 	weekAgo := time.Now().Add(-7 * 24 * time.Hour)
-	totalInteractions, _ := s.interactionRepo.GetTotalCount(weekAgo)
+	totalInteractions, err := s.interactionRepo.GetTotalCount(weekAgo)
+	if err != nil {
+		slog.Error("查询交互总数失败", "error", err)
+	}
 
 	// 关注点分析 - 从分类分布获取
-	cats, _ := s.interactionRepo.GetCategoryDistribution(weekAgo)
+	cats, err := s.interactionRepo.GetCategoryDistribution(weekAgo)
+	if err != nil {
+		slog.Error("查询分类分布失败", "error", err)
+	}
 	var total int64
 	for _, c := range cats {
 		total += c.Count
@@ -371,7 +426,10 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 	}
 
 	// 情感分布
-	dist, _ := s.interactionRepo.GetEmotionDistribution(weekAgo)
+	dist, err := s.interactionRepo.GetEmotionDistribution(weekAgo)
+	if err != nil {
+		slog.Error("查询情感分布失败", "error", err)
+	}
 	var emotionTotal int64
 	for _, c := range dist {
 		emotionTotal += c
@@ -419,7 +477,10 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 	emotionTrend := s.buildEmotionTrend(weekAgo)
 
 	// 热门时段
-	hourlyStats, _ := s.interactionRepo.GetHourlyStats(weekAgo)
+	hourlyStats, err := s.interactionRepo.GetHourlyStats(weekAgo)
+	if err != nil {
+		slog.Error("查询小时统计失败", "error", err)
+	}
 	var peakHours []PeakHourItem
 	peakHour := "暂无数据"
 	var maxPeakCount int64
@@ -471,7 +532,10 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 }
 
 func (s *StatsService) buildEmotionTrend(since time.Time) []EmotionTrendItem {
-	stats, _ := s.interactionRepo.GetDailyEmotionTrend(since)
+	stats, err := s.interactionRepo.GetDailyEmotionTrend(since)
+	if err != nil {
+		slog.Error("查询情感趋势失败", "error", err)
+	}
 	byDate := make(map[string]repository.DailyEmotionStat)
 	for _, item := range stats {
 		byDate[item.Date] = item
@@ -620,7 +684,10 @@ type KnowledgeStats struct {
 }
 
 func (s *StatsService) GetKnowledgeStats() KnowledgeStats {
-	count, _ := s.knowledgeRepo.Count()
+	count, err := s.knowledgeRepo.Count()
+	if err != nil {
+		slog.Error("查询知识库数量失败", "error", err)
+	}
 	return KnowledgeStats{TotalCount: count}
 }
 
@@ -683,15 +750,26 @@ func (s *StatsService) GetSystemSettings() SystemSettings {
 }
 
 func (s *StatsService) UpdateSystemSettings(settings SystemSettings) error {
-	s.settingRepo.Set("scenic_name", settings.ScenicName)
-	s.settingRepo.Set("scenic_desc", settings.ScenicDesc)
-	s.settingRepo.Set("service_hotline", settings.ServiceHotline)
-	s.settingRepo.Set("enable_login", fmt.Sprintf("%t", settings.EnableLogin))
-	s.settingRepo.Set("enable_voice", fmt.Sprintf("%t", settings.EnableVoice))
-	s.settingRepo.Set("enable_filter", fmt.Sprintf("%t", settings.EnableFilter))
-	s.settingRepo.Set("backup_frequency", settings.BackupFreq)
-	s.settingRepo.Set("data_retention", settings.DataRetention)
-	return nil
+	sets := []struct {
+		key string
+		val string
+	}{
+		{"scenic_name", settings.ScenicName},
+		{"scenic_desc", settings.ScenicDesc},
+		{"service_hotline", settings.ServiceHotline},
+		{"enable_login", fmt.Sprintf("%t", settings.EnableLogin)},
+		{"enable_voice", fmt.Sprintf("%t", settings.EnableVoice)},
+		{"enable_filter", fmt.Sprintf("%t", settings.EnableFilter)},
+		{"backup_frequency", settings.BackupFreq},
+		{"data_retention", settings.DataRetention},
+	}
+	var firstErr error
+	for _, entry := range sets {
+		if err := s.settingRepo.Set(entry.key, entry.val); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 // ==================== 交互日志记录 ====================

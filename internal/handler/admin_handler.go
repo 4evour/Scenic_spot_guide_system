@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -14,10 +15,14 @@ import (
 // AdminHandler 管理后台 API
 type AdminHandler struct {
 	statsService *service.StatsService
+	evalDir      string
 }
 
-func NewAdminHandler(statsService *service.StatsService) *AdminHandler {
-	return &AdminHandler{statsService: statsService}
+func NewAdminHandler(statsService *service.StatsService, evalDir string) *AdminHandler {
+	if evalDir == "" {
+		evalDir = "docs/eval-results"
+	}
+	return &AdminHandler{statsService: statsService, evalDir: evalDir}
 }
 
 func (h *AdminHandler) Routes(api *gin.RouterGroup) {
@@ -69,7 +74,13 @@ func (h *AdminHandler) GetHourlyTrend(c *gin.Context) {
 // GetTopQuestions 获取热门问题
 func (h *AdminHandler) GetTopQuestions(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "10")
-	limit, _ := strconv.Atoi(limitStr)
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
 	questions := h.statsService.GetTopQuestions(limit)
 	pkg.Success(c, questions)
 }
@@ -164,7 +175,7 @@ func (h *AdminHandler) GetKnowledgeStats(c *gin.Context) {
 
 // GetEvalStats 获取 RAG 评估指标
 func (h *AdminHandler) GetEvalStats(c *gin.Context) {
-	evalFile := "docs/eval-results/lingshan-real-rag-eval-targeted-improvement.json"
+	evalFile := filepath.Join(h.evalDir, "lingshan-real-rag-eval-targeted-improvement.json")
 	data, err := os.ReadFile(evalFile)
 	if err != nil {
 		slog.Warn("读取评估结果文件失败", "file", evalFile, "error", err)

@@ -1,7 +1,4 @@
-import { darkTheme, type GlobalThemeOverrides } from 'naive-ui'
-
-// 管理端暗色主题
-export const adminTheme = darkTheme
+import { type GlobalThemeOverrides } from 'naive-ui'
 
 export const adminThemeOverrides: GlobalThemeOverrides = {
   common: {

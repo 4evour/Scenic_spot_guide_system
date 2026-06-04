@@ -15,8 +15,8 @@ type ScenicSpot = {
   imageUrl: string;
 };
 
-const AMAP_KEY = 'f12f34639d4cdaba89a67b2b9f28d7ee';
-const AMAP_SECURITY = '12f34639d4cdaba89a67b2b9f28d7ee';
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY;
+const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY;
 
 // 灵山胜境景点坐标（真实经纬度）
 const fallbackSpots: ScenicSpot[] = [
@@ -33,6 +33,10 @@ const fallbackSpots: ScenicSpot[] = [
   { id: 'wuyin', name: '五印坛城', category: '文化建筑', description: '藏传佛教文化主题展示', lng: 120.4218, lat: 31.5640, rating: 4.7, price: 0, imageUrl: '' },
   { id: 'rest', name: '文创驿站', category: '服务设施', description: '文创商品、饮品和休憩服务', lng: 120.4190, lat: 31.5680, rating: 4.5, price: 0, imageUrl: '' },
 ];
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 
 const state = reactive({
   loading: false,
@@ -128,7 +132,7 @@ function initMap() {
         font-size: 12px; color: #1a1a2e; font-weight: bold;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         cursor: pointer;
-      ">${spot.name.charAt(0)}</div>`,
+      ">${escapeHtml(spot.name.charAt(0))}</div>`,
       extData: spot,
     });
     (marker as unknown as { on: (event: string, cb: () => void) => void }).on('click', () => showSpotInfo(spot));
@@ -160,9 +164,9 @@ function showSpotInfo(spot: ScenicSpot) {
       padding: 16px; border-radius: 8px; min-width: 200px;
       border: 1px solid rgba(82,240,238,0.2); font-family: 'Microsoft YaHei', sans-serif;
     ">
-      <h3 style="margin: 0 0 8px; color: #f4c765; font-size: 15px;">${spot.name}</h3>
-      <p style="margin: 0 0 4px; color: rgba(255,255,255,0.6); font-size: 12px;">${spot.category}</p>
-      <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.5;">${spot.description}</p>
+      <h3 style="margin: 0 0 8px; color: #f4c765; font-size: 15px;">${escapeHtml(spot.name)}</h3>
+      <p style="margin: 0 0 4px; color: rgba(255,255,255,0.6); font-size: 12px;">${escapeHtml(spot.category)}</p>
+      <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.5;">${escapeHtml(spot.description)}</p>
       <div style="display: flex; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.5);">
         <span>⭐ ${spot.rating}</span>
         ${spot.price > 0 ? `<span>¥${spot.price}</span>` : '<span>免费</span>'}
@@ -186,7 +190,7 @@ function locateMe() {
     .getCurrentPosition((status: string, result: Record<string, unknown>) => {
       if (status === 'complete' && result.position) {
         const pos = result.position as { lng: number; lat: number };
-        (map as { setCenter: (pos: number[]) => void }).setCenter([pos.lng, pos.lng]);
+        (map as { setCenter: (pos: number[]) => void }).setCenter([pos.lng, pos.lat]);
         (map as { setZoom: (z: number) => void }).setZoom(17);
       }
     });
@@ -212,19 +216,20 @@ onUnmounted(() => {
 
 <template>
   <main class="map-view">
-    <header class="hero-console">
+    <header class="map-header">
       <div>
-        <p class="eyebrow">Scenic Route Map · 高德地图</p>
         <h1>游客实时导览地图</h1>
-        <p>点击查看景点详情，支持定位和步行导航。</p>
+        <p>点击查看景点详情，支持定位和步行导航</p>
       </div>
-      <div class="status-badge" :class="state.mapReady ? 'connected' : 'loading'">
-        {{ state.mapReady ? '地图已就绪' : '加载中' }} · {{ state.source }}
+      <div class="map-status" :class="state.mapReady ? 'ready' : 'loading'">
+        <span class="status-dot"></span>
+        {{ state.mapReady ? '地图就绪' : '加载中' }}
+        <small>{{ state.source }}</small>
       </div>
     </header>
 
     <section class="map-layout">
-      <article class="map-stage panel">
+      <article class="map-stage">
         <div v-if="state.error" class="notice error">{{ state.error }}</div>
         <div ref="mapContainer" class="amap-container"></div>
         <div class="map-toolbar">
@@ -233,29 +238,35 @@ onUnmounted(() => {
         </div>
       </article>
 
-      <aside class="map-side">
-        <article v-if="state.selectedSpot" class="panel map-card spot-detail">
-          <h2>{{ state.selectedSpot.name }}</h2>
-          <p class="spot-category">{{ state.selectedSpot.category }}</p>
+      <aside class="map-sidebar">
+        <!-- 选中景点详情 -->
+        <article v-if="state.selectedSpot" class="spot-card">
+          <div class="spot-card-header">
+            <h2>{{ state.selectedSpot.name }}</h2>
+            <span class="spot-badge">{{ state.selectedSpot.category }}</span>
+          </div>
           <p class="spot-desc">{{ state.selectedSpot.description }}</p>
           <div class="spot-meta">
-            <span>⭐ {{ state.selectedSpot.rating }}</span>
-            <span>{{ state.selectedSpot.price > 0 ? '¥' + state.selectedSpot.price : '免费' }}</span>
+            <span class="spot-rating">⭐ {{ state.selectedSpot.rating }}</span>
+            <span class="spot-price">{{ state.selectedSpot.price > 0 ? '¥' + state.selectedSpot.price : '免费' }}</span>
           </div>
         </article>
 
-        <article class="panel map-card">
-          <h2>景点列表</h2>
-          <button
-            v-for="spot in state.spots"
-            :key="spot.id"
-            class="route-option"
-            :class="{ active: state.selectedSpot?.id === spot.id }"
-            @click="showSpotInfo(spot)"
-          >
-            <span>{{ spot.name }}</span>
-            <small>{{ spot.category }} · ⭐{{ spot.rating }}</small>
-          </button>
+        <!-- 景点列表 -->
+        <article class="spot-list-card">
+          <h3>景点列表 <small>({{ state.spots.length }})</small></h3>
+          <div class="spot-list">
+            <button
+              v-for="spot in state.spots"
+              :key="spot.id"
+              class="spot-item"
+              :class="{ active: state.selectedSpot?.id === spot.id }"
+              @click="showSpotInfo(spot)"
+            >
+              <span class="spot-item-name">{{ spot.name }}</span>
+              <span class="spot-item-meta">{{ spot.category }} · ⭐{{ spot.rating }}</span>
+            </button>
+          </div>
         </article>
       </aside>
     </section>
@@ -263,11 +274,69 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.map-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  background: #0a0a0f;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+.map-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  margin-bottom: 2px;
+}
+.map-header p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.map-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.map-status small { color: rgba(255, 255, 255, 0.25); }
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e88080;
+}
+.map-status.ready .status-dot { background: #63e2b7; }
+
+/* 布局 */
+.map-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  flex: 1;
+  min-height: 0;
+}
+
+.map-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .amap-container {
-  width: 100%;
-  height: 500px;
-  border-radius: 8px;
-  overflow: hidden;
+  flex: 1;
+  min-height: 300px;
   background: #0a1a1e;
 }
 
@@ -275,47 +344,140 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
-
 .tool-btn {
-  padding: 6px 14px;
-  background: rgba(82, 240, 238, 0.1);
-  border: 1px solid rgba(82, 240, 238, 0.3);
-  border-radius: 6px;
-  color: #52f0ee;
+  padding: 6px 16px;
+  background: rgba(99, 226, 183, 0.06);
+  border: 1px solid rgba(99, 226, 183, 0.15);
+  border-radius: 8px;
+  color: #63e2b7;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 .tool-btn:hover {
-  background: rgba(82, 240, 238, 0.2);
+  background: rgba(99, 226, 183, 0.12);
+}
+.loading-text { color: rgba(255, 255, 255, 0.3); font-size: 12px; }
+
+/* 侧栏 */
+.map-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.01);
 }
 
-.loading-text {
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 12px;
+/* 景点详情卡 */
+.spot-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(99, 226, 183, 0.12);
+  border-radius: 14px;
+  padding: 20px;
 }
-
-.spot-detail h2 {
+.spot-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.spot-card-header h2 {
+  font-size: 16px;
+  font-weight: 700;
   color: #f4c765;
-  margin: 0 0 4px;
+  margin: 0;
 }
-.spot-category {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
-  margin: 0 0 8px;
+.spot-badge {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: rgba(99, 226, 183, 0.1);
+  color: #63e2b7;
+  border: 1px solid rgba(99, 226, 183, 0.15);
 }
 .spot-desc {
   font-size: 13px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.75);
-  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 12px;
 }
 .spot-meta {
   display: flex;
   gap: 16px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+}
+.spot-rating { color: #f4c765; }
+.spot-price { color: rgba(255, 255, 255, 0.5); }
+
+/* 景点列表 */
+.spot-list-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.spot-list-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 12px;
+}
+.spot-list-card h3 small { color: rgba(255, 255, 255, 0.3); font-weight: 400; }
+.spot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+}
+.spot-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.spot-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.spot-item.active {
+  background: rgba(99, 226, 183, 0.06);
+  border-color: rgba(99, 226, 183, 0.15);
+}
+.spot-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+.spot-item.active .spot-item-name { color: #63e2b7; }
+.spot-item-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.notice { padding: 8px 12px; margin: 8px 16px; border-radius: 6px; font-size: 12px; }
+.notice.error { background: rgba(232, 128, 128, 0.08); color: #e88080; }
+
+@media (max-width: 1200px) {
+  .map-layout { grid-template-columns: 1fr 300px; }
+}
+@media (max-width: 768px) {
+  .map-layout { grid-template-columns: 1fr; }
+  .map-sidebar { border-left: none; border-top: 1px solid rgba(255, 255, 255, 0.04); max-height: 40vh; }
 }
 </style>

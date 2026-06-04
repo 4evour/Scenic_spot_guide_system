@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, onErrorCaptured, reactive, ref } from 'vue';
 import Live2DStage from '../components/Live2DStage.vue';
+
+const uid = (): string =>
+  typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
 import { AudioPlaybackController } from '../services/audioPlayback';
 import { VtuberSocketClient } from '../services/vtuberSocket';
 import type { ChatMessage, ConversationState, VtuberMessage } from '../types/digitalHuman';
@@ -23,7 +31,7 @@ const state = reactive({
   interruptCount: 0,
   messages: [
     {
-      id: crypto.randomUUID(),
+      id: uid(),
       role: 'assistant',
       text: '你好，我是灵山景区 AI 导游小灵。你可以问我景点历史、路线推荐、开放时间或服务设施。',
       time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
@@ -121,7 +129,7 @@ function resolveSpeechExpression(cueExpression?: string, text?: string): Express
 function addMessage(role: ChatMessage['role'], text: string) {
   const displayText = stripEmotionTags(text);
   state.messages.push({
-    id: crypto.randomUUID(),
+    id: uid(),
     role,
     text: displayText,
     time: nowTime(),
@@ -135,7 +143,7 @@ function showAssistantSpeech(text: string) {
   if (displayText === lastAssistantSpeechText) return;
   lastAssistantSpeechText = displayText;
   state.messages.push({
-    id: crypto.randomUUID(),
+    id: uid(),
     role: 'assistant',
     text: displayText,
     time: nowTime(),
@@ -390,6 +398,13 @@ function buildFallbackAnswer(text: string) {
   return '我已根据你的问题生成一段演示讲解：这里会结合本地知识库、游客兴趣和实时客流，为你推荐更合适的景点顺序与讲解重点。';
 }
 
+onErrorCaptured((err) => {
+  console.error('数字人组件错误:', err);
+  state.conversation = 'error';
+  state.subtitle = '发生了一个错误，请刷新页面重试。';
+  return false; // 阻止错误向上传播
+});
+
 onMounted(connectSocket);
 
 onUnmounted(() => {
@@ -577,11 +592,12 @@ onUnmounted(() => {
 
 /* 右侧聊天面板 */
 .dh-chat {
-  width: 400px;
+  width: min(400px, 40vw);
+  min-width: 320px;
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid rgba(99, 226, 183, 0.06);
 }
 
 .chat-header {
@@ -702,5 +718,23 @@ onUnmounted(() => {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+@media (max-width: 768px) {
+  .dh-view {
+    flex-direction: column;
+  }
+  .dh-stage {
+    flex: none;
+    height: 45vh;
+  }
+  .dh-chat {
+    width: 100%;
+    min-width: unset;
+    flex: 1;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .subtitle-bubble { max-width: 90%; }
 }
 </style>

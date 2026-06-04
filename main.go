@@ -256,7 +256,7 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	dhConfigRepo := repository.NewDigitalHumanConfigRepository(pkg.DB)
 	statsService := service.NewStatsService(interactionRepo, settingRepo, dhConfigRepo, knowledgeRepo)
 	pkg.StatsService = statsService
-	adminHandler := handler.NewAdminHandler(statsService)
+	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results")
 
 	// Default allowed origins for local development
 	origins := allowedOrigins

@@ -78,6 +78,7 @@ func (req KnowledgeRequest) toServiceInput() service.KnowledgeUpsertInput {
 }
 
 func (h *AIHandler) Chat(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20) // 1MB
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		pkg.BadRequest(c, "参数错误")
@@ -395,7 +396,15 @@ func (h *AIHandler) GetKnowledge(c *gin.Context) {
 	}
 
 	pkg.Success(c, gin.H{
-		"knowledge": knowledge,
+		"knowledge": gin.H{
+			"id":         knowledge.ID,
+			"title":      knowledge.Title,
+			"content":    knowledge.Content,
+			"source":     knowledge.Source,
+			"metadata":   knowledge.Metadata,
+			"created_at": knowledge.CreatedAt,
+			"updated_at": knowledge.UpdatedAt,
+		},
 	})
 }
 
@@ -426,8 +435,11 @@ func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
 		return
 	}
 
-	if c.Query("confirm") != "DELETE_ALL_KNOWLEDGE" {
-		pkg.BadRequest(c, "confirm=DELETE_ALL_KNOWLEDGE is required")
+	var req struct {
+		Confirm string `json:"confirm"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Confirm != "DELETE_ALL_KNOWLEDGE" {
+		pkg.BadRequest(c, "请在请求体中提供 {\"confirm\": \"DELETE_ALL_KNOWLEDGE\"}")
 		return
 	}
 

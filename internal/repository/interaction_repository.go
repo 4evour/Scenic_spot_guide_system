@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/scenic-guide/internal/model"
@@ -13,6 +14,27 @@ type InteractionRepository struct {
 
 func NewInteractionRepository(db *gorm.DB) *InteractionRepository {
 	return &InteractionRepository{db: db}
+}
+
+// dateExpr 返回数据库方言兼容的日期提取表达式
+func (r *InteractionRepository) dateExpr(column, format string) string {
+	switch r.db.Dialector.Name() {
+	case "postgres":
+		switch format {
+		case "HH24":
+			return fmt.Sprintf("TO_CHAR(%s, 'HH24')", column)
+		case "YYYY-MM-DD":
+			return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM-DD')", column)
+		}
+	}
+	// SQLite default
+	switch format {
+	case "HH24":
+		return fmt.Sprintf("strftime('%%H', %s)", column)
+	case "YYYY-MM-DD":
+		return fmt.Sprintf("strftime('%%Y-%%m-%%d', %s)", column)
+	}
+	return column
 }
 
 // Create 记录一条交互日志
@@ -140,7 +162,7 @@ func (r *InteractionRepository) GetHourlyStats(since time.Time) ([]HourlyStat, e
 	var results []HourlyStat
 	err := r.db.Model(&model.InteractionLog{}).
 		Where("created_at >= ?", since).
-		Select("strftime('%H', created_at) as hour, COUNT(*) as count").
+		Select(r.dateExpr("created_at", "HH24") + " as hour, COUNT(*) as count").
 		Group("hour").
 		Order("hour").
 		Find(&results).Error
@@ -173,12 +195,10 @@ func (r *InteractionRepository) GetDailyEmotionTrend(since time.Time) ([]DailyEm
 	var results []DailyEmotionStat
 	err := r.db.Model(&model.InteractionLog{}).
 		Where("created_at >= ?", since).
-		Select(`
-			strftime('%Y-%m-%d', created_at) as date,
+		Select(r.dateExpr("created_at", "YYYY-MM-DD") + ` as date,
 			SUM(CASE WHEN emotion IN ('joy', 'surprise') THEN 1 ELSE 0 END) as positive,
 			SUM(CASE WHEN emotion IN ('sadness', 'fear', 'anger', 'disgust') THEN 1 ELSE 0 END) as negative,
-			COUNT(*) as total
-		`).
+			COUNT(*) as total`).
 		Group("date").
 		Order("date").
 		Find(&results).Error
@@ -190,11 +210,9 @@ func (r *InteractionRepository) GetDailySatisfactionTrend(since time.Time) ([]Da
 	var results []DailySatisfactionStat
 	err := r.db.Model(&model.InteractionLog{}).
 		Where("created_at >= ?", since).
-		Select(`
-			strftime('%Y-%m-%d', created_at) as date,
+		Select(r.dateExpr("created_at", "YYYY-MM-DD") + ` as date,
 			COUNT(*) as total,
-			SUM(CASE WHEN emotion IN ('joy', 'surprise') THEN 1 ELSE 0 END) as positive
-		`).
+			SUM(CASE WHEN emotion IN ('joy', 'surprise') THEN 1 ELSE 0 END) as positive`).
 		Group("date").
 		Order("date").
 		Find(&results).Error

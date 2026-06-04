@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive } from 'vue';
-import { NTabs, NTabPane, NCard, NGrid, NGi, NStatistic, NButton, NInput, NSelect, NSpace, NForm, NFormItem, NDataTable, NTag, NPopconfirm, NSwitch, NSpin, NEmpty, useMessage } from 'naive-ui';
 import KpiCard from '../components/KpiCard.vue';
 import BarList from '../components/BarList.vue';
 import DonutChart from '../components/DonutChart.vue';
+import { apiFetch } from '../services/api';
 
-const message = useMessage();
 
 type KnowledgeItem = {
   id: string;
@@ -221,32 +220,6 @@ function normalizeKnowledge(raw: Record<string, unknown>): KnowledgeItem {
   };
 }
 
-async function apiFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('authToken');
-  const headers: HeadersInit = {
-    ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options?.headers || {}),
-  };
-  const response = await fetch(`/api/v1${path}`, {
-    ...options,
-    headers,
-  });
-  const raw = await response.text();
-  let payload: { code?: number; message?: string; msg?: string; data?: unknown } = {};
-  if (raw.trim()) {
-    try {
-      payload = JSON.parse(raw);
-    } catch {
-      throw new Error(`接口返回非 JSON 响应 (${response.status})`);
-    }
-  }
-  if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.message || payload.msg || response.statusText || `请求失败 (${response.status})`);
-  }
-  return payload.data as T;
-}
-
 function normalizeAvatarConfig(raw: Partial<AvatarConfig>): AvatarConfig {
   return {
     ...defaultAvatarConfig,
@@ -434,117 +407,142 @@ onMounted(() => {
 
 <template>
   <div class="admin-view">
-    <div class="admin-header">
-      <h1>管理后台</h1>
-      <p>维护景区知识、数字人配置和系统设置</p>
-    </div>
+    <header class="admin-header">
+      <div>
+        <h1>管理后台</h1>
+        <p>维护景区知识、数字人配置和系统设置</p>
+      </div>
+    </header>
 
-    <NTabs v-model:value="state.tab" type="line" animated>
-      <NTabPane v-for="[key, label] in tabs" :key="key" :name="key" :tab="label">
-      </NTabPane>
-    </NTabs>
+    <!-- 标签导航 -->
+    <nav class="admin-tabs">
+      <button
+        v-for="[key, label] in tabs"
+        :key="key"
+        class="admin-tab"
+        :class="{ active: state.tab === key }"
+        @click="state.tab = key"
+      >
+        {{ label }}
+      </button>
+    </nav>
 
     <div class="admin-content">
 
-      <section class="kpi-grid four">
-        <KpiCard label="知识条目" :value="String(state.total)" note="来自 RAG 知识库" />
-        <KpiCard label="当前筛选" :value="String(filtered.length)" note="本页匹配结果" tone="green" />
-        <KpiCard label="支持格式" value="JSONL/MD" note="另支持 JSON、TXT" tone="gold" />
-        <KpiCard label="缓存状态" value="自动刷新" note="增删改后立即生效" />
-      </section>
-
-      <section v-if="state.tab === 'knowledge'" class="knowledge-layout">
-        <section class="panel form-panel">
-          <h2>{{ state.editingID ? '编辑知识条目' : '新增知识条目' }}</h2>
-          <label>标题<input v-model="state.editor.title" placeholder="例如：九龙灌浴讲解词" /></label>
-          <label>分类<select v-model="state.editor.category"><option v-for="item in categoryOptions" :key="item">{{ item }}</option></select></label>
-          <label>来源<input v-model="state.editor.source" placeholder="admin / 文件名 / 景点名称" /></label>
-          <label>知识内容<textarea v-model="state.editor.content" rows="9" placeholder="填写讲解词、历史背景、FAQ 问答或运营说明"></textarea></label>
-          <div class="button-row">
-            <button class="primary-action" :disabled="state.saving || !state.editor.content.trim()" @click="saveKnowledge">
-              {{ state.editingID ? '保存更新' : '加入知识库' }}
-            </button>
-            <button class="secondary-action" type="button" @click="resetEditor">清空</button>
-          </div>
+      <!-- 知识库标签 -->
+      <template v-if="state.tab === 'knowledge'">
+        <section class="kpi-row">
+          <KpiCard label="知识条目" :value="String(state.total)" note="来自 RAG 知识库" />
+          <KpiCard label="当前筛选" :value="String(filtered.length)" note="本页匹配结果" tone="green" />
+          <KpiCard label="支持格式" value="JSONL/MD" note="另支持 JSON、TXT" tone="gold" />
+          <KpiCard label="缓存状态" value="自动刷新" note="增删改后立即生效" />
         </section>
 
-        <section class="panel upload-panel">
-          <h2>上传知识文档</h2>
-          <div class="upload-box">
-            <input type="file" accept=".jsonl,.json,.md,.markdown,.txt" @change="onFileChange" />
-            <select v-model="state.uploadCategory"><option v-for="item in categoryOptions" :key="item">{{ item }}</option></select>
-            <button class="primary-action" :disabled="state.saving || !state.selectedFile" @click="uploadKnowledge">上传并导入</button>
-          </div>
-          <p class="hint-line">JSONL/JSON 需包含 title、content、source、metadata 字段；Markdown/TXT 会按段落自动切片。</p>
-          <div v-if="state.message" class="notice success">{{ state.message }}</div>
-          <div v-if="state.error" class="notice error">{{ state.error }}</div>
-        </section>
+        <div class="two-col">
+          <section class="panel form-panel">
+            <h2>{{ state.editingID ? '编辑知识条目' : '新增知识条目' }}</h2>
+            <label>标题<input v-model="state.editor.title" placeholder="例如：九龙灌浴讲解词" /></label>
+            <label>分类<select v-model="state.editor.category"><option v-for="item in categoryOptions" :key="item">{{ item }}</option></select></label>
+            <label>来源<input v-model="state.editor.source" placeholder="admin / 文件名 / 景点名称" /></label>
+            <label>知识内容<textarea v-model="state.editor.content" rows="8" placeholder="填写讲解词、历史背景、FAQ 问答或运营说明"></textarea></label>
+            <div class="button-row">
+              <button class="primary-action" :disabled="state.saving || !state.editor.content.trim()" @click="saveKnowledge">
+                {{ state.editingID ? '保存更新' : '加入知识库' }}
+              </button>
+              <button class="secondary-action" type="button" @click="resetEditor">清空</button>
+            </div>
+          </section>
 
-        <section class="panel span-2">
-          <div class="toolbar">
-            <input v-model="state.search" placeholder="搜索景点、讲解词、FAQ、来源..." />
-            <button class="secondary-action" :disabled="state.loading" @click="loadKnowledge">刷新</button>
+          <div class="right-col">
+            <section class="panel upload-panel">
+              <h2>上传知识文档</h2>
+              <div class="upload-box">
+                <input type="file" accept=".jsonl,.json,.md,.markdown,.txt" @change="onFileChange" />
+                <select v-model="state.uploadCategory"><option v-for="item in categoryOptions" :key="item">{{ item }}</option></select>
+                <button class="primary-action" :disabled="state.saving || !state.selectedFile" @click="uploadKnowledge">上传并导入</button>
+              </div>
+              <p class="hint-line">JSONL/JSON 需包含 title、content、source、metadata 字段；Markdown/TXT 会按段落自动切片。</p>
+              <div v-if="state.message" class="notice success">{{ state.message }}</div>
+              <div v-if="state.error" class="notice error">{{ state.error }}</div>
+            </section>
+
+            <section class="panel">
+              <div class="toolbar">
+                <input v-model="state.search" placeholder="搜索景点、讲解词、FAQ、来源..." />
+                <button class="secondary-action" :disabled="state.loading" @click="loadKnowledge">刷新</button>
+              </div>
+            </section>
           </div>
+        </div>
+
+        <section class="panel">
           <div v-if="state.loading" class="muted-center">正在加载知识库...</div>
           <div v-else class="knowledge-grid">
-            <article v-for="item in filtered" :key="item.id" class="knowledge-card-vue">
-              <div>
+            <article v-for="item in filtered" :key="item.id" class="knowledge-card">
+              <div class="knowledge-card-header">
                 <h3>{{ item.title }}</h3>
-                <span>{{ item.category }}</span>
+                <span class="knowledge-tag">{{ item.category }}</span>
               </div>
-              <p>{{ item.content }}</p>
-              <small>来源：{{ item.source }} / 更新时间：{{ item.updated }}</small>
-              <div class="card-actions">
-                <button class="secondary-action" @click="editKnowledge(item)">编辑</button>
-                <button class="danger-action" @click="deleteKnowledge(item)">删除</button>
+              <p class="knowledge-preview">{{ item.content }}</p>
+              <div class="knowledge-card-footer">
+                <small>来源：{{ item.source }} / {{ item.updated }}</small>
+                <div class="card-actions">
+                  <button class="secondary-action" @click="editKnowledge(item)">编辑</button>
+                  <button class="danger-action" @click="deleteKnowledge(item)">删除</button>
+                </div>
               </div>
             </article>
+            <div v-if="filtered.length === 0" class="empty-state">暂无知识条目</div>
           </div>
         </section>
-      </section>
+      </template>
 
-      <section v-if="state.tab === 'avatar'" class="admin-two">
-        <article class="panel avatar-config-preview">
-          <div class="avatar-holo" :style="{ background: `radial-gradient(circle, ${state.avatar.color}, var(--cyan))` }">
-            {{ state.avatar.name }}
-          </div>
-          <h2>{{ state.avatar.appearance }}</h2>
-          <p>{{ state.avatar.culture_theme }}</p>
-          <ul class="avatar-summary">
-            <li><span>服装</span><strong>{{ state.avatar.costume }}</strong></li>
-            <li><span>声音</span><strong>{{ state.avatar.voice_type }}</strong></li>
-            <li><span>语气</span><strong>{{ state.avatar.voice_tone }}</strong></li>
-          </ul>
-          <small class="hint-line">当前方案：{{ avatarUpdatedNote }}</small>
-        </article>
-        <article class="panel form-panel avatar-form">
-          <h2>形象与文化设定</h2>
-          <label>数字人名称<input v-model="state.avatar.name" /></label>
-          <label>外观定位<select v-model="state.avatar.appearance"><option v-for="item in appearanceOptions" :key="item">{{ item }}</option></select></label>
-          <label>服装风格<select v-model="state.avatar.costume"><option v-for="item in costumeOptions" :key="item">{{ item }}</option></select></label>
-          <label>主视觉颜色<input v-model="state.avatar.color" type="color" /></label>
-          <label>景区文化主题<textarea v-model="state.avatar.culture_theme" rows="3"></textarea></label>
-          <label>欢迎语<textarea v-model="state.avatar.greeting" rows="3"></textarea></label>
+      <!-- 数字人形象标签 -->
+      <template v-if="state.tab === 'avatar'">
+        <div class="two-col">
+          <article class="panel avatar-preview">
+            <div class="avatar-holo" :style="{ background: `radial-gradient(circle, ${state.avatar.color}, #52f0ee)` }">
+              {{ state.avatar.name }}
+            </div>
+            <h2>{{ state.avatar.appearance }}</h2>
+            <p class="avatar-theme">{{ state.avatar.culture_theme }}</p>
+            <ul class="avatar-summary">
+              <li><span>服装</span><strong>{{ state.avatar.costume }}</strong></li>
+              <li><span>声音</span><strong>{{ state.avatar.voice_type }}</strong></li>
+              <li><span>语气</span><strong>{{ state.avatar.voice_tone }}</strong></li>
+            </ul>
+            <small class="hint-line">当前方案：{{ avatarUpdatedNote }}</small>
+          </article>
+          <article class="panel form-panel">
+            <h2>形象与文化设定</h2>
+            <label>数字人名称<input v-model="state.avatar.name" /></label>
+            <label>外观定位<select v-model="state.avatar.appearance"><option v-for="item in appearanceOptions" :key="item">{{ item }}</option></select></label>
+            <label>服装风格<select v-model="state.avatar.costume"><option v-for="item in costumeOptions" :key="item">{{ item }}</option></select></label>
+            <label>主视觉颜色<input v-model="state.avatar.color" type="color" /></label>
+            <label>景区文化主题<textarea v-model="state.avatar.culture_theme" rows="3"></textarea></label>
+            <label>欢迎语<textarea v-model="state.avatar.greeting" rows="3"></textarea></label>
 
-          <h2>声音与表达</h2>
-          <label>讲解声音<select v-model="state.avatar.voice_type"><option v-for="item in voiceOptions" :key="item">{{ item }}</option></select></label>
-          <label>讲解语气<select v-model="state.avatar.voice_tone"><option v-for="item in toneOptions" :key="item">{{ item }}</option></select></label>
-          <label>语速 {{ state.avatar.speed.toFixed(1) }}<input v-model.number="state.avatar.speed" type="range" min="0.6" max="1.4" step="0.1" /></label>
-          <label>音量 {{ state.avatar.volume }}<input v-model.number="state.avatar.volume" type="range" min="0" max="100" step="1" /></label>
-          <label>默认表情<select v-model="state.avatar.default_emotion"><option v-for="[value, label] in emotionOptions" :key="value" :value="value">{{ label }}</option></select></label>
-          <label>表情强度 {{ state.avatar.emotion_level }}<input v-model.number="state.avatar.emotion_level" type="range" min="1" max="5" step="1" /></label>
+            <h2 style="margin-top: 20px;">声音与表达</h2>
+            <label>讲解声音<select v-model="state.avatar.voice_type"><option v-for="item in voiceOptions" :key="item">{{ item }}</option></select></label>
+            <label>讲解语气<select v-model="state.avatar.voice_tone"><option v-for="item in toneOptions" :key="item">{{ item }}</option></select></label>
+            <label>语速 {{ state.avatar.speed.toFixed(1) }}<input v-model.number="state.avatar.speed" type="range" min="0.6" max="1.4" step="0.1" /></label>
+            <label>音量 {{ state.avatar.volume }}<input v-model.number="state.avatar.volume" type="range" min="0" max="100" step="1" /></label>
+            <label>默认表情<select v-model="state.avatar.default_emotion"><option v-for="[value, label] in emotionOptions" :key="value" :value="value">{{ label }}</option></select></label>
+            <label>表情强度 {{ state.avatar.emotion_level }}<input v-model.number="state.avatar.emotion_level" type="range" min="1" max="5" step="1" /></label>
 
-          <div class="button-row">
-            <button class="primary-action" :disabled="state.avatarSaving || state.avatarLoading" @click="saveAvatarConfig">保存配置</button>
-            <button class="secondary-action" type="button" :disabled="state.avatarLoading" @click="loadAvatarConfig">重新加载</button>
-          </div>
-          <div v-if="state.avatarMessage" class="notice success">{{ state.avatarMessage }}</div>
-          <div v-if="state.avatarError" class="notice error">{{ state.avatarError }}</div>
-        </article>
-      </section>
+            <div class="button-row">
+              <button class="primary-action" :disabled="state.avatarSaving || state.avatarLoading" @click="saveAvatarConfig">保存配置</button>
+              <button class="secondary-action" type="button" :disabled="state.avatarLoading" @click="loadAvatarConfig">重新加载</button>
+            </div>
+            <div v-if="state.avatarMessage" class="notice success">{{ state.avatarMessage }}</div>
+            <div v-if="state.avatarError" class="notice error">{{ state.avatarError }}</div>
+          </article>
+        </div>
+      </template>
 
-      <section v-if="state.tab === 'reports'" class="admin-two">
-        <article class="panel span-2 report-summary-panel">
+      <!-- 感受度报告标签 -->
+      <template v-if="state.tab === 'reports'">
+        <article class="panel report-header">
           <div>
             <h2>游客感受度报告</h2>
             <p class="hint-line">基于近 7 天数字人、语音和网页问答交互记录自动生成。</p>
@@ -553,160 +551,202 @@ onMounted(() => {
           <div v-if="state.reportError" class="notice error">{{ state.reportError }}</div>
         </article>
 
-        <section class="kpi-grid four span-2">
+        <section class="kpi-row">
           <KpiCard label="交互记录" :value="String(state.report.summary.total_interactions)" note="近 7 天累计" />
           <KpiCard label="满意倾向" :value="`${Math.round(state.report.summary.satisfaction_rate)}%`" note="正向情绪占比" tone="green" />
           <KpiCard label="负面占比" :value="`${Math.round(state.report.summary.negative_rate)}%`" note="需重点复盘" tone="red" />
           <KpiCard label="高峰时段" :value="state.report.summary.peak_hour" :note="`关注点：${state.report.summary.top_concern}`" tone="gold" />
         </section>
 
-        <article class="panel span-2">
+        <article class="panel">
           <h2>游客关注点分析</h2>
           <div v-if="state.reportLoading" class="muted-center">正在生成报告...</div>
           <BarList v-else :items="attentionBars" />
         </article>
 
-        <article class="panel">
-          <h2>情绪分布</h2>
-          <DonutChart :items="emotionDonutItems" :center="`${Math.round(state.report.summary.satisfaction_rate)}%`" />
-        </article>
-
-        <article class="panel">
-          <h2>情感趋势</h2>
-          <div class="emotion-trend">
-            <div v-for="item in state.report.emotion_trend" :key="item.date" class="trend-day">
-              <span>{{ item.date.slice(5) }}</span>
-              <div class="trend-stack">
-                <i class="positive" :style="{ height: `${item.positive_rate}%` }" />
-                <i class="negative" :style="{ height: `${item.negative_rate}%` }" />
+        <div class="two-col">
+          <article class="panel">
+            <h2>情绪分布</h2>
+            <DonutChart :items="emotionDonutItems" :center="`${Math.round(state.report.summary.satisfaction_rate)}%`" />
+          </article>
+          <article class="panel">
+            <h2>情感趋势</h2>
+            <div class="emotion-trend">
+              <div v-for="item in state.report.emotion_trend" :key="item.date" class="trend-day">
+                <span>{{ item.date.slice(5) }}</span>
+                <div class="trend-stack">
+                  <i class="positive" :style="{ height: `${item.positive_rate}%` }" />
+                  <i class="negative" :style="{ height: `${item.negative_rate}%` }" />
+                </div>
+                <small>{{ item.total }}</small>
               </div>
-              <small>{{ item.total }}</small>
             </div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <h2>热门时段</h2>
-          <BarList :items="peakHourBars" />
-        </article>
-
-        <article class="panel">
-          <h2>服务建议</h2>
-          <ul class="clean-list">
-            <li v-for="item in state.report.suggestions" :key="item.content">{{ item.content }}</li>
-          </ul>
-        </article>
-      </section>
-
-      <section v-if="state.tab === 'settings'" class="panel form-panel">
-        <p v-if="state.settingsError" class="msg err">{{ state.settingsError }}</p>
-        <p v-if="state.settingsMessage" class="msg ok">{{ state.settingsMessage }}</p>
-        <label>景区名称<input v-model="state.settings.scenic_name" /></label>
-        <label>景区简介<textarea v-model="state.settings.scenic_desc" rows="3"></textarea></label>
-        <label>服务热线<input v-model="state.settings.service_hotline" /></label>
-        <label>数据保留天数<input v-model="state.settings.data_retention" /></label>
-        <label>备份频率<input v-model="state.settings.backup_frequency" /></label>
-        <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_login" /> 启用用户登录</label>
-        <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_voice" /> 启用语音服务</label>
-        <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_filter" /> 启用游客感受度分析</label>
-        <div class="action-row">
-          <button class="btn primary" :disabled="state.settingsSaving" @click="saveSettings">
-            {{ state.settingsSaving ? '保存中...' : '保存设置' }}
-          </button>
-          <button class="btn" @click="loadSettings">重置</button>
+          </article>
         </div>
-      </section>
+
+        <div class="two-col">
+          <article class="panel">
+            <h2>热门时段</h2>
+            <BarList :items="peakHourBars" />
+          </article>
+          <article class="panel">
+            <h2>服务建议</h2>
+            <ul class="clean-list">
+              <li v-for="item in state.report.suggestions" :key="item.content">{{ item.content }}</li>
+            </ul>
+          </article>
+        </div>
+      </template>
+
+      <!-- 系统设置标签 -->
+      <template v-if="state.tab === 'settings'">
+        <section class="panel form-panel" style="max-width: 640px;">
+          <h2>系统设置</h2>
+          <div v-if="state.settingsError" class="msg err">{{ state.settingsError }}</div>
+          <div v-if="state.settingsMessage" class="msg ok">{{ state.settingsMessage }}</div>
+          <label>景区名称<input v-model="state.settings.scenic_name" /></label>
+          <label>景区简介<textarea v-model="state.settings.scenic_desc" rows="3"></textarea></label>
+          <label>服务热线<input v-model="state.settings.service_hotline" /></label>
+          <label>数据保留天数<input v-model="state.settings.data_retention" /></label>
+          <label>备份频率<input v-model="state.settings.backup_frequency" /></label>
+          <div class="toggle-group">
+            <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_login" /> 启用用户登录</label>
+            <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_voice" /> 启用语音服务</label>
+            <label class="toggle-row"><input type="checkbox" v-model="state.settings.enable_filter" /> 启用游客感受度分析</label>
+          </div>
+          <div class="button-row">
+            <button class="primary-action" :disabled="state.settingsSaving" @click="saveSettings">
+              {{ state.settingsSaving ? '保存中...' : '保存设置' }}
+            </button>
+            <button class="secondary-action" @click="loadSettings">重置</button>
+          </div>
+        </section>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped>
 .admin-view {
-  padding: 24px;
+  padding: 28px 32px;
   background: #0a0a0f;
   min-height: 100%;
 }
 .admin-header {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .admin-header h1 {
-  font-size: 20px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
   margin-bottom: 4px;
 }
 .admin-header p {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.35);
 }
-.admin-content {
-  margin-top: 16px;
+
+/* 标签导航 */
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  width: fit-content;
+}
+.admin-tab {
+  padding: 8px 20px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.admin-tab:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+.admin-tab.active {
+  color: #63e2b7;
+  background: rgba(99, 226, 183, 0.1);
 }
 
-/* 保留原有子组件样式 */
+.admin-content { margin-top: 0; }
+
+/* KPI 行 */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* 两栏布局 */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* 面板 */
 .panel {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 24px;
   margin-bottom: 16px;
 }
 .panel h2 {
   font-size: 15px;
+  font-weight: 600;
   color: rgba(255, 255, 255, 0.88);
   margin-bottom: 16px;
 }
 
+/* 表单 */
 .form-panel label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
 }
 .form-panel input,
 .form-panel select,
 .form-panel textarea {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 10px 12px;
-  color: white;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
   outline: none;
   font-family: inherit;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 .form-panel input:focus,
 .form-panel select:focus,
 .form-panel textarea:focus {
-  border-color: #63e2b7;
+  border-color: rgba(99, 226, 183, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(99, 226, 183, 0.06);
 }
 
+/* 按钮 */
 .button-row {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 16px;
 }
-.btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-.btn.primary {
-  background: #63e2b7;
-  color: #0a0a0f;
-  font-weight: 600;
-}
-.btn.primary:hover { background: #4fd1a0; }
-.btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
 .primary-action {
-  padding: 10px 20px;
+  padding: 10px 24px;
   background: linear-gradient(135deg, #63e2b7, #18a058);
   border: none;
   border-radius: 8px;
@@ -714,57 +754,253 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
 }
-.primary-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.primary-action:hover { opacity: 0.9; transform: translateY(-1px); }
+.primary-action:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .secondary-action {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
   cursor: pointer;
+  transition: all 0.2s;
+}
+.secondary-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.msg { padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
-.msg.ok { background: rgba(99, 226, 183, 0.1); color: #63e2b7; border: 1px solid rgba(99, 226, 183, 0.2); }
-.msg.err { background: rgba(232, 128, 128, 0.1); color: #e88080; border: 1px solid rgba(232, 128, 128, 0.2); }
+.danger-action {
+  padding: 10px 20px;
+  background: rgba(232, 128, 128, 0.08);
+  border: 1px solid rgba(232, 128, 128, 0.15);
+  border-radius: 8px;
+  color: #e88080;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.danger-action:hover {
+  background: rgba(232, 128, 128, 0.15);
+}
 
-.knowledge-table {
-  width: 100%;
-  border-collapse: collapse;
+.msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+.msg.ok { background: rgba(99, 226, 183, 0.08); color: #63e2b7; border: 1px solid rgba(99, 226, 183, 0.15); }
+.msg.err { background: rgba(232, 128, 128, 0.08); color: #e88080; border: 1px solid rgba(232, 128, 128, 0.15); }
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.toolbar input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+.toolbar input:focus {
+  border-color: rgba(99, 226, 183, 0.4);
+}
+
+/* 知识卡片网格 */
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.knowledge-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s;
+}
+.knowledge-card:hover {
+  border-color: rgba(99, 226, 183, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+.knowledge-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.knowledge-card-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  flex: 1;
+  margin-right: 8px;
+}
+.knowledge-tag {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: rgba(99, 226, 183, 0.1);
+  color: #63e2b7;
+  border: 1px solid rgba(99, 226, 183, 0.15);
+  white-space: nowrap;
+}
+.knowledge-preview {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.knowledge-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.knowledge-card-footer small {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+}
+.card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 数字人预览 */
+.avatar-preview {
+  text-align: center;
+}
+.avatar-holo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 40px rgba(99, 226, 183, 0.15);
+}
+.avatar-theme {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 16px;
+}
+.avatar-summary {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+.avatar-summary li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   font-size: 13px;
 }
-.knowledge-table th {
-  text-align: left;
-  padding: 10px 12px;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 500;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 12px;
-}
-.knowledge-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.75);
-}
-.knowledge-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
+.avatar-summary span { color: rgba(255, 255, 255, 0.4); }
+.avatar-summary strong { color: rgba(255, 255, 255, 0.8); }
 
+/* 报告 */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.report-header h2 { margin-bottom: 0; }
+
+/* 开关组 */
+.toggle-group {
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
 .toggle-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
-  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 10px;
+}
+.toggle-row:last-child { margin-bottom: 0; }
+.toggle-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #63e2b7;
 }
 
-.action-row {
+/* 其他 */
+.hint-line { font-size: 12px; color: rgba(255, 255, 255, 0.3); margin-top: 8px; }
+.muted-center { text-align: center; color: rgba(255, 255, 255, 0.3); padding: 32px; }
+.empty-state { text-align: center; color: rgba(255, 255, 255, 0.2); padding: 48px; font-size: 14px; }
+.clean-list { list-style: none; padding: 0; }
+.clean-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+.clean-list li:last-child { border-bottom: none; }
+
+.emotion-trend {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 6px;
+  align-items: flex-end;
+  height: 120px;
+}
+.trend-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.trend-day span { font-size: 10px; color: rgba(255, 255, 255, 0.3); }
+.trend-day small { font-size: 10px; color: rgba(255, 255, 255, 0.25); }
+.trend-stack {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.trend-stack .positive { background: #63e2b7; min-height: 2px; }
+.trend-stack .negative { background: #e88080; min-height: 2px; }
+
+.notice { padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: 8px; }
+.notice.success { background: rgba(99, 226, 183, 0.08); color: #63e2b7; }
+.notice.error { background: rgba(232, 128, 128, 0.08); color: #e88080; }
+
+@media (max-width: 1200px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .admin-view { padding: 16px; }
+  .admin-tabs { width: 100%; overflow-x: auto; }
+  .knowledge-grid { grid-template-columns: 1fr; }
 }
 </style>
