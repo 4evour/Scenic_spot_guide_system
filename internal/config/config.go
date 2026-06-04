@@ -14,6 +14,13 @@ type Config struct {
 	Embedding EmbeddingConfig `mapstructure:"embedding"`
 	Speech    SpeechConfig    `mapstructure:"speech"`
 	Security  SecurityConfig  `mapstructure:"security"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+}
+
+type RedisConfig struct {
+	Addr     string `mapstructure:"addr"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 type ServerConfig struct {
@@ -111,6 +118,9 @@ func bindEnvKeys() {
 		"speech.region",
 		"security.jwt_secret",
 		"security.token_expire_hours",
+		"redis.addr",
+		"redis.password",
+		"redis.db",
 	}
 	for _, key := range keys {
 		_ = viper.BindEnv(key)

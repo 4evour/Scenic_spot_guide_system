@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { NCard, NForm, NFormItem, NInput, NButton, NSpace, useMessage } from 'naive-ui';
+import { useAuthStore } from '../stores/auth';
 
-const emit = defineEmits<{ (e: 'login-success'): void }>();
+const router = useRouter();
+const authStore = useAuthStore();
 const message = useMessage();
 
 const form = ref({ username: '', password: '' });
@@ -27,7 +30,9 @@ async function handleLogin() {
       return;
     }
     message.success('登录成功');
-    emit('login-success');
+    authStore.invalidateAuth();
+    await authStore.fetchUser();
+    router.push({ name: authStore.isAdmin ? 'dashboard' : 'map' });
   } catch {
     message.error('网络错误，请重试');
   } finally {

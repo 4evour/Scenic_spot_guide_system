@@ -1,7 +1,10 @@
 package pkg
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -68,6 +71,64 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// RedisRateLimitMiddleware uses Redis INCR + EXPIRE for distributed rate limiting.
+// Falls back to the in-memory RateLimitMiddleware when Redis is unavailable.
+func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
+	client := GetRedis()
+	if client == nil {
+		// Redis not configured, fall back to in-memory limiter
+		return RateLimitMiddleware(limit, window)
+	}
+
+	if limit <= 0 {
+		limit = 1
+	}
+	if window <= 0 {
+		window = time.Minute
+	}
+
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		key := fmt.Sprintf("ratelimit:%s", c.ClientIP())
+
+		pipe := client.TxPipeline()
+		incr := pipe.Incr(ctx, key)
+		pipe.ExpireNX(ctx, key, window)
+		if _, err := pipe.Exec(ctx); err != nil {
+			slog.Error("Redis rate limit 执行失败，回退通过", "error", err)
+			c.Next()
+			return
+		}
+
+		count := incr.Val()
+		if count == 1 {
+			// First request in window; TTL was set by Expire above.
+		}
+
+		if count > int64(limit) {
+			ttl, err := client.TTL(ctx, key).Result()
+			retryAfter := int64(window.Seconds())
+			if err == nil && ttl > 0 {
+				retryAfter = int64(ttl.Seconds())
+			}
+
+			c.AbortWithStatusJSON(429, Response{
+				Code:    429,
+				Message: "too many requests",
+				Data: gin.H{
+					"retry_after_seconds": retryAfter,
+				},
+			})
+			return
+		}
+
+		remaining := int64(limit) - count
+		c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
+		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
 		c.Next()
 	}
 }

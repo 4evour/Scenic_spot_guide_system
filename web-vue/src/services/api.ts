@@ -1,4 +1,5 @@
-import { invalidateAuth } from '../router';
+import router from '../router';
+import { useAuthStore } from '../stores/auth';
 
 export async function apiFetch<T = unknown>(
   path: string,
@@ -15,8 +16,8 @@ export async function apiFetch<T = unknown>(
   });
 
   if (response.status === 401) {
-    invalidateAuth();
-    window.location.hash = '/login';
+    useAuthStore().invalidateAuth();
+    router.push('/login');
     throw new Error('未登录或登录已过期');
   }
 

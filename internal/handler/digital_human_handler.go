@@ -18,17 +18,20 @@ type DigitalHumanHandler struct {
 	ragService          *service.RAGService
 	routeService        service.TourRouteService
 	visitorQueryService service.VisitorQueryService
+	statsService        *service.StatsService
 }
 
 func NewDigitalHumanHandler(
 	ragService *service.RAGService,
 	routeService service.TourRouteService,
 	visitorQueryService service.VisitorQueryService,
+	statsService *service.StatsService,
 ) *DigitalHumanHandler {
 	return &DigitalHumanHandler{
 		ragService:          ragService,
 		routeService:        routeService,
 		visitorQueryService: visitorQueryService,
+		statsService:        statsService,
 	}
 }
 
@@ -123,8 +126,8 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 			emotion = detectEmotion(answer)
 
 			// 记录交互日志
-			if pkg.StatsService != nil {
-				pkg.StatsService.RecordInteraction(service.InteractionRecord{
+			if h.statsService != nil {
+				h.statsService.RecordInteraction(service.InteractionRecord{
 					SessionID:      req.SessionID,
 					Query:          req.InputText,
 					Response:       answer,
@@ -213,8 +216,8 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 			emotion = detectEmotion(answer)
 
 			// 记录交互日志
-			if pkg.StatsService != nil {
-				pkg.StatsService.RecordInteraction(service.InteractionRecord{
+			if h.statsService != nil {
+				h.statsService.RecordInteraction(service.InteractionRecord{
 					SessionID:      req.SessionID,
 					Query:          req.Transcript,
 					Response:       answer,

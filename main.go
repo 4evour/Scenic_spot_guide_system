@@ -48,6 +48,10 @@ func run() error {
 		slog.Warn("安全警告: 开发管理员旁路已启用，生产环境请务必禁用!", "env_var", "SCENIC_GUIDE_DEV_ADMIN_BYPASS")
 	}
 
+	if err := pkg.InitRedis(&cfg.Redis); err != nil {
+		slog.Warn("Redis 连接失败，将使用内存限流器", "error", err)
+	}
+
 	slog.Info("初始化数据库")
 	err = pkg.InitDatabase(&cfg.Database)
 	if err != nil {
@@ -56,7 +60,7 @@ func run() error {
 	slog.Info("数据库连接成功", "driver", cfg.Database.Driver)
 
 	slog.Info("执行数据库迁移")
-	err = model.AutoMigrate(pkg.DB)
+	err = model.AutoMigrate(pkg.GetDB())
 	if err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
@@ -145,7 +149,7 @@ func ensureAdminUser() {
 		return
 	}
 
-	userRepo := repository.NewUserRepository(pkg.DB)
+	userRepo := repository.NewUserRepository(pkg.GetDB())
 	admins, _ := userRepo.FindByRole("admin")
 	if len(admins) > 0 {
 		return
@@ -174,7 +178,7 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 		slog.Warn("AI API Key 未配置，RAG 将使用本地检索和规则兜底")
 	}
 
-	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
+	knowledgeRepo := repository.NewKnowledgeRepository(pkg.GetDB())
 
 	var embeddingProvider service.EmbeddingProvider
 	if cfg.Embedding.APIKey != "" {
@@ -224,38 +228,40 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 }
 
 func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigins []string) *handler.Handlers {
-	scenicSpotRepo := repository.NewScenicSpotRepository(pkg.DB)
+	db := pkg.GetDB()
+
+	// 初始化统计服务（先于 handler 创建，以便注入）
+	interactionRepo := repository.NewInteractionRepository(db)
+	knowledgeRepo := repository.NewKnowledgeRepository(db)
+	settingRepo := repository.NewSystemSettingRepository(db)
+	dhConfigRepo := repository.NewDigitalHumanConfigRepository(db)
+	statsService := service.NewStatsService(interactionRepo, settingRepo, dhConfigRepo, knowledgeRepo)
+	pkg.SetStatsService(statsService)
+
+	scenicSpotRepo := repository.NewScenicSpotRepository(db)
 	scenicSpotService := service.NewScenicSpotService(scenicSpotRepo)
 	scenicSpotHandler := handler.NewScenicSpotHandler(scenicSpotService)
 
-	guideContentRepo := repository.NewGuideContentRepository(pkg.DB)
+	guideContentRepo := repository.NewGuideContentRepository(db)
 	guideContentService := service.NewGuideContentService(guideContentRepo)
 	guideContentHandler := handler.NewGuideContentHandler(guideContentService)
 
-	tourRouteRepo := repository.NewTourRouteRepository(pkg.DB)
+	tourRouteRepo := repository.NewTourRouteRepository(db)
 	tourRouteService := service.NewTourRouteService(tourRouteRepo)
 	tourRouteHandler := handler.NewTourRouteHandler(tourRouteService)
 
-	visitorQueryRepo := repository.NewVisitorQueryRepository(pkg.DB)
+	visitorQueryRepo := repository.NewVisitorQueryRepository(db)
 	visitorQueryService := service.NewVisitorQueryService(visitorQueryRepo)
 	visitorQueryHandler := handler.NewVisitorQueryHandler(visitorQueryService)
 
-	userRepo := repository.NewUserRepository(pkg.DB)
+	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService, tokenExpireHours)
 
-	aiHandler := handler.NewAIHandler(ragService)
+	aiHandler := handler.NewAIHandler(ragService, statsService)
 	ttsHandler := handler.NewTTSHandler()
-	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService)
-	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService)
-
-	// 初始化统计服务
-	interactionRepo := repository.NewInteractionRepository(pkg.DB)
-	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
-	settingRepo := repository.NewSystemSettingRepository(pkg.DB)
-	dhConfigRepo := repository.NewDigitalHumanConfigRepository(pkg.DB)
-	statsService := service.NewStatsService(interactionRepo, settingRepo, dhConfigRepo, knowledgeRepo)
-	pkg.StatsService = statsService
+	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService, statsService)
+	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService, statsService)
 	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results")
 
 	// Default allowed origins for local development

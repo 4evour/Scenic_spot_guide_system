@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { NInput, NButton, NTag, NEmpty, NSpin, NAlert } from 'naive-ui';
 
 declare const AMap: Record<string, unknown>;
 
@@ -18,7 +19,6 @@ type ScenicSpot = {
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY;
 const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY;
 
-// 灵山胜境景点坐标（真实经纬度）
 const fallbackSpots: ScenicSpot[] = [
   { id: 'gate', name: '景区入口', category: '服务设施', description: '游客服务中心，购票和咨询', lng: 120.4155, lat: 31.5720, rating: 4.5, price: 0, imageUrl: '' },
   { id: 'wall', name: '灵山大照壁', category: '文化建筑', description: '灵山胜境的文化序厅', lng: 120.4168, lat: 31.5705, rating: 4.6, price: 0, imageUrl: '' },
@@ -38,6 +38,13 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+const categoryTagType: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
+  '核心景点': 'success',
+  '文化建筑': 'warning',
+  '演艺体验': 'info',
+  '服务设施': 'default',
+};
+
 const state = reactive({
   loading: false,
   error: '',
@@ -45,6 +52,15 @@ const state = reactive({
   source: '演示数据',
   selectedSpot: null as ScenicSpot | null,
   mapReady: false,
+  search: '',
+});
+
+const filteredSpots = computed(() => {
+  const term = state.search.trim().toLowerCase();
+  if (!term) return state.spots;
+  return state.spots.filter(s =>
+    `${s.name}${s.category}${s.description}`.toLowerCase().includes(term),
+  );
 });
 
 const mapContainer = ref<HTMLDivElement>();
@@ -117,7 +133,6 @@ function initMap() {
     offset: new (AMap.Pixel as new (x: number, y: number) => unknown)(0, -40),
   });
 
-  // 添加景点标记
   markers = [];
   const path: number[][] = [];
   for (const spot of state.spots) {
@@ -125,13 +140,13 @@ function initMap() {
       position: [spot.lng, spot.lat],
       title: spot.name,
       content: `<div style="
-        width: 28px; height: 28px; border-radius: 50%;
+        width: 32px; height: 32px; border-radius: 50%;
         background: ${spot.rating >= 4.8 ? '#f4c765' : '#52f0ee'};
-        border: 2px solid rgba(255,255,255,0.8);
+        border: 2px solid rgba(255,255,255,0.9);
         display: flex; align-items: center; justify-content: center;
-        font-size: 12px; color: #1a1a2e; font-weight: bold;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        cursor: pointer;
+        font-size: 13px; color: #0a0a0f; font-weight: bold;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        cursor: pointer; transition: transform 0.2s;
       ">${escapeHtml(spot.name.charAt(0))}</div>`,
       extData: spot,
     });
@@ -140,36 +155,41 @@ function initMap() {
     path.push([spot.lng, spot.lat]);
   }
 
-  // 绘制路线
   const polyline = new AMapPolyline({
     path,
     strokeColor: '#52f0ee',
-    strokeWeight: 4,
-    strokeOpacity: 0.8,
+    strokeWeight: 3,
+    strokeOpacity: 0.6,
     lineJoin: 'round',
     lineCap: 'round',
+    strokeStyle: 'dashed',
   });
 
   (map as { add: (overlays: unknown[]) => void }).add([...markers, polyline]);
   (map as { setFitView: () => void }).setFitView();
-
   state.mapReady = true;
 }
 
 function showSpotInfo(spot: ScenicSpot) {
   state.selectedSpot = spot;
   if (infoWindow && map) {
+    const priceText = spot.price > 0 ? `¥${spot.price}` : '免费';
     const content = `<div style="
-      background: rgba(6,16,18,0.95); color: rgba(255,255,255,0.88);
-      padding: 16px; border-radius: 8px; min-width: 200px;
-      border: 1px solid rgba(82,240,238,0.2); font-family: 'Microsoft YaHei', sans-serif;
+      background: rgba(6,16,18,0.96); color: rgba(255,255,255,0.88);
+      padding: 16px 20px; border-radius: 12px; min-width: 240px; max-width: 320px;
+      border: 1px solid rgba(82,240,238,0.15);
+      font-family: 'Microsoft YaHei', sans-serif;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
     ">
-      <h3 style="margin: 0 0 8px; color: #f4c765; font-size: 15px;">${escapeHtml(spot.name)}</h3>
-      <p style="margin: 0 0 4px; color: rgba(255,255,255,0.6); font-size: 12px;">${escapeHtml(spot.category)}</p>
-      <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.5;">${escapeHtml(spot.description)}</p>
-      <div style="display: flex; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.5);">
-        <span>⭐ ${spot.rating}</span>
-        ${spot.price > 0 ? `<span>¥${spot.price}</span>` : '<span>免费</span>'}
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h3 style="margin:0; color:#f4c765; font-size:16px; font-weight:700;">${escapeHtml(spot.name)}</h3>
+        <span style="padding:2px 8px; border-radius:8px; font-size:10px; background:rgba(99,226,183,0.12); color:#63e2b7; border:1px solid rgba(99,226,183,0.2);">${escapeHtml(spot.category)}</span>
+      </div>
+      <p style="margin:0 0 10px; font-size:13px; line-height:1.6; color:rgba(255,255,255,0.65);">${escapeHtml(spot.description)}</p>
+      <div style="display:flex; gap:16px; font-size:12px; color:rgba(255,255,255,0.5); padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+        <span style="color:#f4c765;">⭐ ${spot.rating}</span>
+        <span>${priceText}</span>
       </div>
     </div>`;
     (infoWindow as { setContent: (c: string) => void; open: (m: unknown, pos: number[]) => void })
@@ -179,13 +199,18 @@ function showSpotInfo(spot: ScenicSpot) {
   }
 }
 
+function flyToSpot(spot: ScenicSpot) {
+  showSpotInfo(spot);
+  if (map) {
+    (map as { setCenter: (pos: number[]) => void }).setCenter([spot.lng, spot.lat]);
+    (map as { setZoom: (z: number) => void }).setZoom(17);
+  }
+}
+
 function locateMe() {
   if (!map) return;
   const Geo = AMap.Geolocation as new (opts: Record<string, unknown>) => unknown;
-  const geolocation = new Geo({
-    enableHighAccuracy: true,
-    timeout: 10000,
-  });
+  const geolocation = new Geo({ enableHighAccuracy: true, timeout: 10000 });
   (geolocation as { getCurrentPosition: (cb: (status: string, result: Record<string, unknown>) => void) => void })
     .getCurrentPosition((status: string, result: Record<string, unknown>) => {
       if (status === 'complete' && result.position) {
@@ -230,10 +255,15 @@ onUnmounted(() => {
 
     <section class="map-layout">
       <article class="map-stage">
-        <div v-if="state.error" class="notice error">{{ state.error }}</div>
+        <NAlert v-if="state.error" type="error" :show-icon="true" style="margin: 8px 16px;">
+          {{ state.error }}
+        </NAlert>
         <div ref="mapContainer" class="amap-container"></div>
         <div class="map-toolbar">
-          <button class="tool-btn" @click="locateMe">📍 我的位置</button>
+          <NButton size="small" quaternary @click="locateMe">
+            📍 我的位置
+          </NButton>
+          <NSpin v-if="state.loading" size="small" />
           <span v-if="state.loading" class="loading-text">加载景点数据...</span>
         </div>
       </article>
@@ -243,7 +273,9 @@ onUnmounted(() => {
         <article v-if="state.selectedSpot" class="spot-card">
           <div class="spot-card-header">
             <h2>{{ state.selectedSpot.name }}</h2>
-            <span class="spot-badge">{{ state.selectedSpot.category }}</span>
+            <NTag :type="categoryTagType[state.selectedSpot.category] || 'default'" size="small" :bordered="false">
+              {{ state.selectedSpot.category }}
+            </NTag>
           </div>
           <p class="spot-desc">{{ state.selectedSpot.description }}</p>
           <div class="spot-meta">
@@ -252,20 +284,30 @@ onUnmounted(() => {
           </div>
         </article>
 
-        <!-- 景点列表 -->
+        <!-- 搜索 + 景点列表 -->
         <article class="spot-list-card">
-          <h3>景点列表 <small>({{ state.spots.length }})</small></h3>
+          <div class="spot-list-header">
+            <h3>景点 <small>({{ filteredSpots.length }})</small></h3>
+          </div>
+          <NInput
+            v-model:value="state.search"
+            placeholder="搜索景点..."
+            size="small"
+            clearable
+            style="margin-bottom: 10px;"
+          />
           <div class="spot-list">
             <button
-              v-for="spot in state.spots"
+              v-for="spot in filteredSpots"
               :key="spot.id"
               class="spot-item"
               :class="{ active: state.selectedSpot?.id === spot.id }"
-              @click="showSpotInfo(spot)"
+              @click="flyToSpot(spot)"
             >
               <span class="spot-item-name">{{ spot.name }}</span>
               <span class="spot-item-meta">{{ spot.category }} · ⭐{{ spot.rating }}</span>
             </button>
+            <NEmpty v-if="filteredSpots.length === 0" description="没有匹配的景点" size="small" />
           </div>
         </article>
       </aside>
@@ -278,7 +320,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 56px);
-  background: #0a0a0f;
+  background: var(--sg-bg-ink, #031012);
 }
 
 .map-header {
@@ -286,18 +328,18 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 28px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
   flex-shrink: 0;
 }
 .map-header h1 {
   font-size: 18px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--sg-text-heading, rgba(255,255,255,0.92));
   margin-bottom: 2px;
 }
 .map-header p {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--sg-text-hint, rgba(255,255,255,0.35));
 }
 
 .map-status {
@@ -307,20 +349,19 @@ onUnmounted(() => {
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--sg-text-secondary, rgba(255,255,255,0.5));
+  background: var(--sg-surface-card, rgba(255,255,255,0.03));
+  border: 1px solid var(--sg-border-soft, rgba(255,255,255,0.06));
 }
-.map-status small { color: rgba(255, 255, 255, 0.25); }
+.map-status small { color: var(--sg-text-faint, rgba(255,255,255,0.25)); }
 .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #e88080;
+  background: var(--sg-red-bright, #e88080);
 }
-.map-status.ready .status-dot { background: #63e2b7; }
+.map-status.ready .status-dot { background: var(--sg-jade-bright, #63e2b7); }
 
-/* 布局 */
 .map-layout {
   display: grid;
   grid-template-columns: 1fr 360px;
@@ -345,38 +386,23 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
 }
-.tool-btn {
-  padding: 6px 16px;
-  background: rgba(99, 226, 183, 0.06);
-  border: 1px solid rgba(99, 226, 183, 0.15);
-  border-radius: 8px;
-  color: #63e2b7;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.tool-btn:hover {
-  background: rgba(99, 226, 183, 0.12);
-}
-.loading-text { color: rgba(255, 255, 255, 0.3); font-size: 12px; }
+.loading-text { color: var(--sg-text-faint, rgba(255,255,255,0.3)); font-size: 12px; }
 
-/* 侧栏 */
 .map-sidebar {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px;
   overflow-y: auto;
-  border-left: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.01);
+  border-left: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
+  background: rgba(255,255,255,0.01);
 }
 
-/* 景点详情卡 */
 .spot-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(99, 226, 183, 0.12);
+  background: var(--sg-surface-card, rgba(255,255,255,0.03));
+  border: 1px solid var(--sg-jade-border, rgba(99,226,183,0.12));
   border-radius: 14px;
   padding: 20px;
 }
@@ -389,21 +415,13 @@ onUnmounted(() => {
 .spot-card-header h2 {
   font-size: 16px;
   font-weight: 700;
-  color: #f4c765;
+  color: var(--sg-gold, #f4c765);
   margin: 0;
-}
-.spot-badge {
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 11px;
-  background: rgba(99, 226, 183, 0.1);
-  color: #63e2b7;
-  border: 1px solid rgba(99, 226, 183, 0.15);
 }
 .spot-desc {
   font-size: 13px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--sg-text-secondary, rgba(255,255,255,0.6));
   margin: 0 0 12px;
 }
 .spot-meta {
@@ -411,13 +429,12 @@ onUnmounted(() => {
   gap: 16px;
   font-size: 13px;
 }
-.spot-rating { color: #f4c765; }
-.spot-price { color: rgba(255, 255, 255, 0.5); }
+.spot-rating { color: var(--sg-gold, #f4c765); }
+.spot-price { color: var(--sg-text-secondary, rgba(255,255,255,0.5)); }
 
-/* 景点列表 */
 .spot-list-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--sg-surface-card, rgba(255,255,255,0.03));
+  border: 1px solid var(--sg-border-soft, rgba(255,255,255,0.06));
   border-radius: 14px;
   padding: 16px;
   flex: 1;
@@ -425,13 +442,19 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
 }
-.spot-list-card h3 {
+.spot-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.spot-list-header h3 {
   font-size: 14px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 12px;
+  color: var(--sg-text-body, rgba(255,255,255,0.88));
+  margin: 0;
 }
-.spot-list-card h3 small { color: rgba(255, 255, 255, 0.3); font-weight: 400; }
+.spot-list-header h3 small { color: var(--sg-text-faint, rgba(255,255,255,0.3)); font-weight: 400; }
 .spot-list {
   display: flex;
   flex-direction: column;
@@ -452,32 +475,29 @@ onUnmounted(() => {
   text-align: left;
 }
 .spot-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.06);
+  background: var(--sg-surface-hover, rgba(255,255,255,0.03));
+  border-color: var(--sg-border-soft, rgba(255,255,255,0.06));
 }
 .spot-item.active {
-  background: rgba(99, 226, 183, 0.06);
-  border-color: rgba(99, 226, 183, 0.15);
+  background: var(--sg-jade-bg, rgba(99,226,183,0.06));
+  border-color: var(--sg-jade-border, rgba(99,226,183,0.15));
 }
 .spot-item-name {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--sg-text-body, rgba(255,255,255,0.8));
 }
-.spot-item.active .spot-item-name { color: #63e2b7; }
+.spot-item.active .spot-item-name { color: var(--sg-jade-bright, #63e2b7); }
 .spot-item-meta {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--sg-text-faint, rgba(255,255,255,0.3));
 }
-
-.notice { padding: 8px 12px; margin: 8px 16px; border-radius: 6px; font-size: 12px; }
-.notice.error { background: rgba(232, 128, 128, 0.08); color: #e88080; }
 
 @media (max-width: 1200px) {
   .map-layout { grid-template-columns: 1fr 300px; }
 }
 @media (max-width: 768px) {
   .map-layout { grid-template-columns: 1fr; }
-  .map-sidebar { border-left: none; border-top: 1px solid rgba(255, 255, 255, 0.04); max-height: 40vh; }
+  .map-sidebar { border-left: none; border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04)); max-height: 40vh; }
 }
 </style>

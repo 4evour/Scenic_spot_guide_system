@@ -15,7 +15,13 @@ import (
 	sqlite3 "modernc.org/sqlite"
 )
 
-var DB *gorm.DB
+// db 是包级别的数据库连接实例，通过 InitDatabase 初始化
+var db *gorm.DB
+
+// GetDB 获取数据库连接实例
+func GetDB() *gorm.DB {
+	return db
+}
 
 const (
 	defaultMaxOpenConns           = 25
@@ -39,7 +45,7 @@ func InitDatabase(cfg *config.DatabaseConfig) error {
 	var err error
 	switch driver {
 	case "postgres", "postgresql":
-		DB, err = gorm.Open(postgres.Open(postgresDSN(cfg)), &gorm.Config{})
+		db, err = gorm.Open(postgres.Open(postgresDSN(cfg)), &gorm.Config{})
 	case "sqlite":
 		path := strings.TrimSpace(cfg.Path)
 		if path == "" {
@@ -51,7 +57,7 @@ func InitDatabase(cfg *config.DatabaseConfig) error {
 			}
 		}
 
-		DB, err = gorm.Open(sqlite.New(sqlite.Config{
+		db, err = gorm.Open(sqlite.New(sqlite.Config{
 			DriverName: "modernc",
 			DSN:        path,
 		}), &gorm.Config{})
@@ -63,7 +69,7 @@ func InitDatabase(cfg *config.DatabaseConfig) error {
 		return err
 	}
 
-	sqlDB, err := DB.DB()
+	sqlDB, err := db.DB()
 	if err != nil {
 		return err
 	}

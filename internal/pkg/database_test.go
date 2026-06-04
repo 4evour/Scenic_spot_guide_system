@@ -67,10 +67,10 @@ func TestInitDatabaseCreatesSQLiteParentDirectory(t *testing.T) {
 		t.Fatalf("init sqlite database: %v", err)
 	}
 
-	if DB == nil {
+	if GetDB() == nil {
 		t.Fatal("expected global database handle to be initialized")
 	}
-	sqlDB, err := DB.DB()
+	sqlDB, err := GetDB().DB()
 	if err != nil {
 		t.Fatalf("get sql db: %v", err)
 	}

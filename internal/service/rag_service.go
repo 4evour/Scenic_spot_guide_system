@@ -358,69 +358,83 @@ func (s *RAGService) getSystemPromptOrDefault() string {
 
 
 func (s *RAGService) GenerateTourRoute(query string) *TourRoute {
-	defaultRoutes := []TourRoute{
-		{
-			Name:        "经典文化之旅",
-			Description: "建议从景区入口出发，依次参观灵山大照壁、五明桥、佛足坛、五智门，最后到达灵山大佛。我会重点讲解佛教文化和历史故事。",
-			Duration:    "约2.5小时",
-			Steps: []TourRouteStep{
-				{Number: 1, Name: "灵山胜境入口", Desc: "起点"},
-				{Number: 2, Name: "灵山大照壁", Desc: "华夏第一壁"},
-				{Number: 3, Name: "五明桥", Desc: "佛教智慧象征"},
-				{Number: 4, Name: "佛足坛", Desc: "祈福朝圣"},
-				{Number: 5, Name: "五智门", Desc: "核心景区门户"},
-				{Number: 6, Name: "灵山大佛", Desc: "世界最高佛立像"},
-			},
-		},
-		{
-			Name:        "禅意体验之旅",
-			Description: "深入体验灵山禅意文化，从灵山梵宫开始，途经五印坛城、曼飞龙塔，最后到达拈花湾禅意小镇。",
-			Duration:    "约3小时",
-			Steps: []TourRouteStep{
-				{Number: 1, Name: "灵山梵宫", Desc: "东方卢浮宫"},
-				{Number: 2, Name: "五印坛城", Desc: "藏传佛教文化"},
-				{Number: 3, Name: "曼飞龙塔", Desc: "南传佛教建筑"},
-				{Number: 4, Name: "拈花广场", Desc: "禅意开篇"},
-				{Number: 5, Name: "梵天花海", Desc: "自然禅意"},
-				{Number: 6, Name: "香月花街", Desc: "禅意商业街"},
-			},
-		},
-		{
-			Name:        "亲子欢乐之旅",
-			Description: "适合家庭出游的轻松路线，从九龙灌浴开始，途经百子戏弥勒、祥符禅寺，最后到灵山胜境儿童乐园。",
-			Duration:    "约2小时",
-			Steps: []TourRouteStep{
-				{Number: 1, Name: "九龙灌浴", Desc: "动态喷泉表演"},
-				{Number: 2, Name: "百子戏弥勒", Desc: "亲子互动"},
-				{Number: 3, Name: "祥符禅寺", Desc: "千年古刹"},
-				{Number: 4, Name: "佛教文化博览馆", Desc: "科普教育"},
-				{Number: 5, Name: "灵山胜境儿童乐园", Desc: "亲子游乐"},
-			},
-		},
-		{
-			Name:        "深度历史之旅",
-			Description: "探索灵山千年历史，从无尽意斋开始，了解赵朴初先生与灵山的渊源，最后到达祥符禅寺感受千年禅意。",
-			Duration:    "约1.5小时",
-			Steps: []TourRouteStep{
-				{Number: 1, Name: "无尽意斋", Desc: "赵朴初纪念馆"},
-				{Number: 2, Name: "降魔浮雕", Desc: "佛教故事"},
-				{Number: 3, Name: "阿育王柱", Desc: "佛教文化象征"},
-				{Number: 4, Name: "祥符禅寺", Desc: "千年禅宗祖庭"},
-			},
-		},
+	routes := s.getTourRoutes()
+	if len(routes) == 0 {
+		return nil
 	}
 
 	queryLower := strings.ToLower(query)
 
 	if strings.Contains(queryLower, "亲子") || strings.Contains(queryLower, "儿童") || strings.Contains(queryLower, "家庭") {
-		return &defaultRoutes[2]
-	} else if strings.Contains(queryLower, "历史") || strings.Contains(queryLower, "文化") || strings.Contains(queryLower, "千年") {
-		return &defaultRoutes[3]
+		for _, r := range routes {
+			if strings.Contains(r.Name, "亲子") {
+				return &r
+			}
+		}
+	} else if strings.Contains(queryLower, "历史") || strings.Contains(queryLower, "千年") {
+		for _, r := range routes {
+			if strings.Contains(r.Name, "深度") || strings.Contains(r.Name, "历史") {
+				return &r
+			}
+		}
 	} else if strings.Contains(queryLower, "禅意") || strings.Contains(queryLower, "体验") || strings.Contains(queryLower, "拈花湾") {
-		return &defaultRoutes[1]
+		for _, r := range routes {
+			if strings.Contains(r.Name, "禅意") {
+				return &r
+			}
+		}
+	} else if strings.Contains(queryLower, "文化") {
+		for _, r := range routes {
+			if strings.Contains(r.Name, "经典") || strings.Contains(r.Name, "文化") {
+				return &r
+			}
+		}
 	}
 
-	return &defaultRoutes[0]
+	// 默认返回第一条路线
+	return &routes[0]
+}
+
+// getTourRoutes 从景区配置加载路线，转换为 API 格式
+func (s *RAGService) getTourRoutes() []TourRoute {
+	if s.profile == nil || len(s.profile.Routes) == 0 {
+		return nil
+	}
+	routes := make([]TourRoute, 0, len(s.profile.Routes))
+	for _, rc := range s.profile.Routes {
+		routes = append(routes, routeConfigToTourRoute(rc))
+	}
+	return routes
+}
+
+// routeConfigToTourRoute 将配置中的路线转换为 API 响应格式
+func routeConfigToTourRoute(rc iconfig.RouteConfig) TourRoute {
+	spots := strings.Split(rc.Spots, ",")
+	steps := make([]TourRouteStep, len(spots))
+	for i, spot := range spots {
+		steps[i] = TourRouteStep{
+			Number: i + 1,
+			Name:   strings.TrimSpace(spot),
+		}
+	}
+
+	duration := fmt.Sprintf("约%d分钟", rc.Duration)
+	if rc.Duration >= 60 {
+		hours := rc.Duration / 60
+		mins := rc.Duration % 60
+		if mins == 0 {
+			duration = fmt.Sprintf("约%d小时", hours)
+		} else {
+			duration = fmt.Sprintf("约%d小时%d分钟", hours, mins)
+		}
+	}
+
+	return TourRoute{
+		Name:        rc.Name,
+		Description: rc.Description,
+		Steps:       steps,
+		Duration:    duration,
+	}
 }
 
 func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, error) {

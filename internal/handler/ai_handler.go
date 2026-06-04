@@ -30,11 +30,12 @@ var allowedKnowledgeUploadExts = map[string]struct{}{
 }
 
 type AIHandler struct {
-	ragService *service.RAGService
+	ragService   *service.RAGService
+	statsService *service.StatsService
 }
 
-func NewAIHandler(ragService *service.RAGService) *AIHandler {
-	return &AIHandler{ragService: ragService}
+func NewAIHandler(ragService *service.RAGService, statsService *service.StatsService) *AIHandler {
+	return &AIHandler{ragService: ragService, statsService: statsService}
 }
 
 type ChatRequest struct {
@@ -115,8 +116,8 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			"elapsed_ms", elapsed,
 		)
 
-		if pkg.StatsService != nil {
-			pkg.StatsService.RecordInteraction(service.InteractionRecord{
+		if h.statsService != nil {
+			h.statsService.RecordInteraction(service.InteractionRecord{
 				SessionID:      req.SessionID,
 				Query:          req.Message,
 				Response:       response,
@@ -217,8 +218,8 @@ func (h *AIHandler) Feedback(c *gin.Context) {
 		rating = 5
 	}
 
-	if pkg.StatsService != nil {
-		pkg.StatsService.RecordInteraction(service.InteractionRecord{
+	if h.statsService != nil {
+		h.statsService.RecordInteraction(service.InteractionRecord{
 			SessionID: "feedback-" + fmt.Sprintf("%d", time.Now().UnixMilli()),
 			Query:     req.Query,
 			Response:  req.Response,

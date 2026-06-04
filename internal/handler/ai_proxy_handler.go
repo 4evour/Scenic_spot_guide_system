@@ -9,18 +9,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/service"
 )
 
 // OpenAIProxyHandler 提供 OpenAI 兼容的 /v1/chat/completions 端点
 // 让 Open-LLM-VTuber 可以直接调用 Go 后端的 RAG 服务
 type OpenAIProxyHandler struct {
-	ragService *service.RAGService
+	ragService   *service.RAGService
+	statsService *service.StatsService
 }
 
-func NewOpenAIProxyHandler(ragService *service.RAGService) *OpenAIProxyHandler {
-	return &OpenAIProxyHandler{ragService: ragService}
+func NewOpenAIProxyHandler(ragService *service.RAGService, statsService *service.StatsService) *OpenAIProxyHandler {
+	return &OpenAIProxyHandler{ragService: ragService, statsService: statsService}
 }
 
 // ==================== 请求格式 ====================
@@ -176,8 +176,8 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 	responseWithEmotion := fmt.Sprintf("[%s] %s", emotion, response)
 
 	// 记录交互日志
-	if pkg.StatsService != nil {
-		pkg.StatsService.RecordInteraction(service.InteractionRecord{
+	if h.statsService != nil {
+		h.statsService.RecordInteraction(service.InteractionRecord{
 			SessionID:      req.SessionID,
 			Query:          query,
 			Response:       response,

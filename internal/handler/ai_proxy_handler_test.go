@@ -52,7 +52,7 @@ func newProxyTestRAGService(t *testing.T) *service.RAGService {
 func TestOpenAIProxyChatCompletionsNonStream(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/v1/chat/completions", NewOpenAIProxyHandler(newProxyTestRAGService(t)).ChatCompletions)
+	router.POST("/v1/chat/completions", NewOpenAIProxyHandler(newProxyTestRAGService(t), nil).ChatCompletions)
 
 	body := bytes.NewBufferString(`{"model":"test-model","messages":[{"role":"user","content":"灵山大佛有多高？"}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", body)
@@ -81,7 +81,7 @@ func TestOpenAIProxyChatCompletionsNonStream(t *testing.T) {
 func TestOpenAIProxyChatCompletionsStream(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/v1/chat/completions", NewOpenAIProxyHandler(newProxyTestRAGService(t)).ChatCompletions)
+	router.POST("/v1/chat/completions", NewOpenAIProxyHandler(newProxyTestRAGService(t), nil).ChatCompletions)
 
 	body := bytes.NewBufferString(`{"model":"test-model","stream":true,"messages":[{"role":"user","content":[{"type":"text","text":"灵山大佛有多高？"}]}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", body)
@@ -105,7 +105,7 @@ func TestOpenAIProxyChatCompletionsStream(t *testing.T) {
 func TestOpenAIProxyChatCompletionsUsesSessionContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	handler := NewOpenAIProxyHandler(newProxyTestRAGService(t))
+	handler := NewOpenAIProxyHandler(newProxyTestRAGService(t), nil)
 	router.POST("/v1/chat/completions", handler.ChatCompletions)
 
 	firstBody := bytes.NewBufferString(`{"model":"test-model","session_id":"s1","messages":[{"role":"user","content":"灵山大佛是什么？"}]}`)
@@ -143,7 +143,7 @@ func TestOpenAIProxyChatCompletionsUsesSessionContext(t *testing.T) {
 func TestAIChatResponseDoesNotExposeInternalRewriteContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	handler := NewAIHandler(newProxyTestRAGService(t))
+	handler := NewAIHandler(newProxyTestRAGService(t), nil)
 	router.POST("/api/v1/ai/chat", handler.Chat)
 
 	body := bytes.NewBufferString(`{"session_id":"s1","message":"灵山大佛有多高？"}`)

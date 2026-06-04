@@ -51,3 +51,10 @@ security:
   # Add your production domain here.
   # allowed_origins:
   #   - "https://your-domain.com"
+
+# Redis (optional) — enables distributed rate limiting across multiple instances.
+# Leave addr empty to use in-memory rate limiting.
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0

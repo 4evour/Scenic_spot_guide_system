@@ -2,9 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +16,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	r.GET("/metrics", pkg.PrometheusHandler())
 
 	r.Static("/static", "./static")
-	r.Any("/vtuber-ws/*path", pkg.WSTokenAuth(), vtuberWebSocketProxy("http://127.0.0.1:12393"))
+	r.Any("/vtuber-ws/*path", pkg.WSTokenAuth(), pkg.WSProxyHandler("http://127.0.0.1:12393"))
 
 	r.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
@@ -47,7 +44,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	handlers.Admin.Routes(api)
 
 	// OpenAI-compatible endpoint for Open-LLM-VTuber.
-	r.POST("/v1/chat/completions", pkg.RateLimitMiddleware(30, time.Minute), handlers.OpenAIProxy.ChatCompletions)
+	r.POST("/v1/chat/completions", getRateLimitMiddleware(30, time.Minute), handlers.OpenAIProxy.ChatCompletions)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -103,28 +100,10 @@ func securityHeaders() gin.HandlerFunc {
 	}
 }
 
-func vtuberWebSocketProxy(target string) gin.HandlerFunc {
-	targetURL, err := url.Parse(target)
-	if err != nil {
-		panic(err)
-	}
-
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		req.Host = targetURL.Host
-		req.URL.Scheme = targetURL.Scheme
-		req.URL.Host = targetURL.Host
-		req.URL.Path = strings.TrimPrefix(req.URL.Path, "/vtuber-ws")
-		if req.URL.Path == "" {
-			req.URL.Path = "/"
-		}
-	}
-
-	return func(c *gin.Context) {
-		proxy.ServeHTTP(c.Writer, c.Request)
-	}
+// getRateLimitMiddleware returns the Redis-based rate limiter when Redis is
+// connected, otherwise the in-memory rate limiter.
+func getRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
+	return pkg.RedisRateLimitMiddleware(limit, window)
 }
 
 type Handlers struct {

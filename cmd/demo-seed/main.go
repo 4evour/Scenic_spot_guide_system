@@ -41,7 +41,7 @@ func seedDemoData(configDir, adminPassword string) error {
 	if err := pkg.InitDatabase(&cfg.Database); err != nil {
 		return fmt.Errorf("初始化数据库失败: %w", err)
 	}
-	if err := model.AutoMigrate(pkg.DB); err != nil {
+	if err := model.AutoMigrate(pkg.GetDB()); err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
@@ -58,7 +58,7 @@ func seedDemoData(configDir, adminPassword string) error {
 		return err
 	}
 
-	knowledgeRepo := repository.NewKnowledgeRepository(pkg.DB)
+	knowledgeRepo := repository.NewKnowledgeRepository(pkg.GetDB())
 	count, err := knowledgeRepo.Count()
 	if err != nil {
 		return fmt.Errorf("统计知识库失败: %w", err)
@@ -84,7 +84,7 @@ func seedUsers(adminPassword string) error {
 		Email:    "admin@example.com",
 		Role:     "admin",
 	}
-	if err := pkg.DB.Where("username = ?", admin.Username).
+	if err := pkg.GetDB().Where("username = ?", admin.Username).
 		Assign(model.User{Password: admin.Password, Email: admin.Email, Role: admin.Role}).
 		FirstOrCreate(&admin).Error; err != nil {
 		return fmt.Errorf("写入演示管理员失败: %w", err)
@@ -96,7 +96,7 @@ func seedUsers(adminPassword string) error {
 		Email:    "visitor@example.com",
 		Role:     "visitor",
 	}
-	if err := pkg.DB.Where("username = ?", visitor.Username).
+	if err := pkg.GetDB().Where("username = ?", visitor.Username).
 		Assign(model.User{Password: visitor.Password, Email: visitor.Email, Role: visitor.Role}).
 		FirstOrCreate(&visitor).Error; err != nil {
 		return fmt.Errorf("写入演示游客失败: %w", err)
@@ -113,7 +113,7 @@ func seedScenicSpots() error {
 		{Name: "文创驿站", Description: "提供文创商品、饮品和游客休憩服务。", Location: "出口商业区", Category: "服务设施", Rating: 4.5, Price: 0},
 	}
 	for _, spot := range spots {
-		if err := pkg.DB.Where("name = ?", spot.Name).Assign(spot).FirstOrCreate(&spot).Error; err != nil {
+		if err := pkg.GetDB().Where("name = ?", spot.Name).Assign(spot).FirstOrCreate(&spot).Error; err != nil {
 			return fmt.Errorf("写入演示景点失败: %w", err)
 		}
 	}
@@ -126,7 +126,7 @@ func seedTourRoutes() error {
 		{Name: "文化深度路线", Description: "梵宫、五印坛城与祥符禅寺串联，适合文化讲解。", Spots: "灵山梵宫,五印坛城,祥符禅寺", Duration: 240, Difficulty: "medium", Rating: 4.7},
 	}
 	for _, route := range routes {
-		if err := pkg.DB.Where("name = ?", route.Name).Assign(route).FirstOrCreate(&route).Error; err != nil {
+		if err := pkg.GetDB().Where("name = ?", route.Name).Assign(route).FirstOrCreate(&route).Error; err != nil {
 			return fmt.Errorf("写入演示路线失败: %w", err)
 		}
 	}
@@ -134,7 +134,7 @@ func seedTourRoutes() error {
 }
 
 func seedInteractions() error {
-	if err := pkg.DB.Where("session_id LIKE ?", "demo-%").Delete(&model.InteractionLog{}).Error; err != nil {
+	if err := pkg.GetDB().Where("session_id LIKE ?", "demo-%").Delete(&model.InteractionLog{}).Error; err != nil {
 		return fmt.Errorf("清理旧演示交互失败: %w", err)
 	}
 
@@ -145,7 +145,7 @@ func seedInteractions() error {
 		{SessionID: "demo-003", Query: "梵宫有什么特色？", Response: "梵宫汇集东阳木雕、琉璃和油画等艺术。", Emotion: "surprise", ResponseTimeMs: 1680, Category: "历史", Source: "voice", CreatedAt: now.Add(-25 * time.Minute)},
 		{SessionID: "demo-004", Query: "五印坛城讲什么文化？", Response: "五印坛城主要体现藏传佛教文化。", Emotion: "joy", ResponseTimeMs: 1120, Category: "历史", Source: "web", CreatedAt: now.Add(-10 * time.Minute)},
 	}
-	if err := pkg.DB.Create(&logs).Error; err != nil {
+	if err := pkg.GetDB().Create(&logs).Error; err != nil {
 		return fmt.Errorf("写入演示交互失败: %w", err)
 	}
 	return nil
