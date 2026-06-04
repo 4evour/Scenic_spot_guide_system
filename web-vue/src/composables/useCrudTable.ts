@@ -22,6 +22,32 @@ interface CrudOptions<T extends Record<string, unknown>> {
   defaultForm: () => Partial<T>
 }
 
+/** 将 Go 后端的 PascalCase 字段名转为 camelCase（处理 ID→id, Name→name 等） */
+function toCamelCase(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    let camel = key
+    if (key === key.toUpperCase() && key.length <= 3) {
+      camel = key.toLowerCase()
+    } else {
+      camel = key.charAt(0).toLowerCase() + key.slice(1)
+    }
+    result[camel] = value
+  }
+  return result
+}
+
+/** 将前端 camelCase 字段名转为 PascalCase 供 Go 后端解析（id→ID, name→Name） */
+function toPascalCase(obj: Record<string, unknown>): Record<string, unknown> {
+  const special: Record<string, string> = { id: 'ID', url: 'URL', uid: 'UID' }
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    const pascal = special[key] || key.charAt(0).toUpperCase() + key.slice(1)
+    result[pascal] = value
+  }
+  return result
+}
+
 export function useCrudTable<T extends Record<string, unknown>>(options: CrudOptions<T>) {
   const message = useMessage()
   const dialog = useDialog()
@@ -52,13 +78,16 @@ export function useCrudTable<T extends Record<string, unknown>>(options: CrudOpt
       const params: ListParams = { page: pagination.page, pageSize: pagination.pageSize }
       const data = await apiFetch<ListResult<T> | T[]>(`${options.listApi}?page=${params.page}&page_size=${params.pageSize}`)
       // 兼容两种后端返回格式：分页对象 {list, total} 或普通数组 [...]
+      // 同时将 Go 的 PascalCase 字段名转为 camelCase
+      let items: T[]
       if (Array.isArray(data)) {
-        tableData.value = data
-        total.value = data.length
+        items = data.map(item => toCamelCase(item as Record<string, unknown>) as T)
+        total.value = items.length
       } else {
-        tableData.value = data.list || []
+        items = (data.list || []).map(item => toCamelCase(item as Record<string, unknown>) as T)
         total.value = data.total || 0
       }
+      tableData.value = items
       pagination.page = params.page
     } catch (error) {
       message.error(error instanceof Error ? error.message : '加载失败')
@@ -91,7 +120,9 @@ export function useCrudTable<T extends Record<string, unknown>>(options: CrudOpt
     saving.value = true
     try {
       const { path, method } = options.saveApi(formData.value, isEditing.value)
-      await apiFetch(path, { method, body: JSON.stringify(formData.value) })
+      // 将 camelCase 表单数据转为 PascalCase 供 Go 后端解析
+      const body = toPascalCase(formData.value as Record<string, unknown>)
+      await apiFetch(path, { method, body: JSON.stringify(body) })
       message.success(isEditing.value ? '更新成功' : '创建成功')
       closeDrawer()
       await fetchData()
