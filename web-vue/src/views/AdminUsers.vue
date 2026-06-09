@@ -65,18 +65,22 @@ const passwordRule = computed(() => ({
   trigger: 'blur' as const,
 }))
 
+function validatePassword(_rule: unknown, value: string | undefined): boolean {
+  if (isEditing.value && !value) return true
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,128}$/.test(value || '')
+}
+
 const formRules = computed<FormRules>(() => ({
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 2, max: 32, message: '用户名长度为 2-32 个字符', trigger: 'blur' },
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
   ],
   password: [
     passwordRule.value,
-    { min: 6, message: '密码长度至少 6 个字符', trigger: 'blur' },
+    { validator: validatePassword, message: '密码需 8-128 位且包含大小写字母和数字', trigger: 'blur' },
   ],
   role: [
     { required: true, message: '请选择角色', trigger: 'change' },

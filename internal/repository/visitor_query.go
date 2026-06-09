@@ -45,9 +45,24 @@ func (r *visitorQueryRepository) FindUnanswered() ([]model.VisitorQuery, error) 
 }
 
 func (r *visitorQueryRepository) Update(query *model.VisitorQuery) error {
-	return r.db.Save(query).Error
+	if err := r.db.Select("id").First(&model.VisitorQuery{}, query.ID).Error; err != nil {
+		return err
+	}
+	return r.db.Model(&model.VisitorQuery{}).Where("id = ?", query.ID).Updates(map[string]interface{}{
+		"query":       query.Query,
+		"response":    query.Response,
+		"spot_id":     query.SpotID,
+		"is_answered": query.IsAnswered,
+	}).Error
 }
 
 func (r *visitorQueryRepository) Delete(id uint) error {
-	return r.db.Delete(&model.VisitorQuery{}, id).Error
+	result := r.db.Delete(&model.VisitorQuery{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

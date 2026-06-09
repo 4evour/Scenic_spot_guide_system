@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -88,8 +89,23 @@ func LoadConfig(path string) (*Config, error) {
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, err
 	}
+	if origins := os.Getenv("SCENIC_GUIDE_SECURITY_ALLOWED_ORIGINS"); origins != "" {
+		config.Security.AllowedOrigins = splitCSV(origins)
+	}
 
 	return &config, nil
+}
+
+func splitCSV(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item != "" {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 func bindEnvKeys() {
@@ -118,6 +134,7 @@ func bindEnvKeys() {
 		"speech.region",
 		"security.jwt_secret",
 		"security.token_expire_hours",
+		"security.allowed_origins",
 		"redis.addr",
 		"redis.password",
 		"redis.db",

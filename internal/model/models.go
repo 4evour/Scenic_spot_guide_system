@@ -7,62 +7,62 @@ import (
 )
 
 type ScenicSpot struct {
-	ID          uint      `gorm:"primaryKey"`
-	Name        string    `gorm:"size:255;not null"`
-	Description string    `gorm:"text"`
-	Location    string    `gorm:"size:500"`
-	Category    string    `gorm:"size:100;index:idx_scenic_spots_category_updated"`
-	Rating      float64   `gorm:"default:0"`
-	Price       float64   `gorm:"default:0"`
-	ImageURL    string    `gorm:"size:500"`
-	Latitude    float64   `gorm:"column:latitude;default:0"`
-	Longitude   float64   `gorm:"column:longitude;default:0"`
-	SortOrder   int       `gorm:"column:sort_order;default:0"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	Name        string    `gorm:"size:255;not null" json:"name"`
+	Description string    `gorm:"text" json:"description"`
+	Location    string    `gorm:"size:500" json:"location"`
+	Category    string    `gorm:"size:100;index:idx_scenic_spots_category_updated" json:"category"`
+	Rating      float64   `gorm:"default:0" json:"rating"`
+	Price       float64   `gorm:"default:0" json:"price"`
+	ImageURL    string    `gorm:"size:500" json:"image_url"`
+	Latitude    float64   `gorm:"column:latitude;default:0" json:"latitude"`
+	Longitude   float64   `gorm:"column:longitude;default:0" json:"longitude"`
+	SortOrder   int       `gorm:"column:sort_order;default:0" json:"sort_order"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated" json:"updated_at"`
 }
 
 type GuideContent struct {
-	ID        uint      `gorm:"primaryKey"`
-	SpotID    uint      `gorm:"not null"`
-	Title     string    `gorm:"size:255;not null"`
-	Content   string    `gorm:"text;not null"`
-	Type      string    `gorm:"size:50"`
-	AudioURL  string    `gorm:"size:500"`
-	Duration  int       `gorm:"default:0"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	SpotID    uint      `gorm:"not null" json:"spot_id"`
+	Title     string    `gorm:"size:255;not null" json:"title"`
+	Content   string    `gorm:"text;not null" json:"content"`
+	Type      string    `gorm:"size:50" json:"content_type"`
+	AudioURL  string    `gorm:"size:500" json:"audio_url"`
+	Duration  int       `gorm:"default:0" json:"duration"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 type TourRoute struct {
-	ID          uint      `gorm:"primaryKey"`
-	Name        string    `gorm:"size:255;not null"`
-	Description string    `gorm:"text"`
-	Spots       string    `gorm:"text"`
-	Duration    int       `gorm:"default:0"`
-	Difficulty  string    `gorm:"size:50"`
-	Rating      float64   `gorm:"default:0"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	Name        string    `gorm:"size:255;not null" json:"name"`
+	Description string    `gorm:"text" json:"description"`
+	Spots       string    `gorm:"text" json:"spots"`
+	Duration    int       `gorm:"default:0" json:"duration"`
+	Difficulty  string    `gorm:"size:50" json:"difficulty"`
+	Rating      float64   `gorm:"default:0" json:"rating"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 type VisitorQuery struct {
-	ID         uint      `gorm:"primaryKey"`
-	Query      string    `gorm:"text;not null"`
-	Response   string    `gorm:"text"`
-	SpotID     uint      `gorm:"default:0"`
-	IsAnswered bool      `gorm:"default:false"`
-	CreatedAt  time.Time `gorm:"autoCreateTime"`
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	Query      string    `gorm:"text;not null" json:"query"`
+	Response   string    `gorm:"text" json:"response"`
+	SpotID     uint      `gorm:"default:0" json:"spot_id"`
+	IsAnswered bool      `gorm:"default:false" json:"is_answered"`
+	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 
 type User struct {
-	ID        uint      `gorm:"primaryKey"`
-	Username  string    `gorm:"size:100;uniqueIndex;not null"`
-	Password  string    `gorm:"size:255;not null"`
-	Email     string    `gorm:"size:255"`
-	Role      string    `gorm:"size:50;default:'visitor'"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Username  string    `gorm:"size:100;uniqueIndex;not null" json:"username"`
+	Password  string    `gorm:"size:255;not null" json:"password,omitempty"`
+	Email     string    `gorm:"size:255" json:"email"`
+	Role      string    `gorm:"size:50;default:'visitor'" json:"role"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 type VisitRecord struct {

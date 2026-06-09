@@ -71,10 +71,15 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 
 ## 安全与鉴权补充
 
-- `/api/v1/admin/*` 管理接口统一要求 `Authorization: Bearer <token>`，并必须通过 `AuthMiddleware` 与 `AdminMiddleware`。
+- 登录使用 `auth_token` HttpOnly Cookie；`POST /api/v1/login` 不在响应体返回 JWT，前端通过 `/api/v1/user/me` 恢复会话。`Authorization: Bearer <token>` 仍作为非浏览器客户端兼容路径保留。
+- `/api/v1/admin/*` 管理接口必须通过 `AuthMiddleware` 与 `AdminMiddleware`；浏览器端依赖 Cookie 会话，非浏览器客户端可使用 Bearer token。
 - `/api/v1/knowledge/*` 知识库管理接口按管理员接口处理，读取、创建、上传、更新和删除都需要管理员权限。
 - `/api/v1/register` 不接受客户端传入角色，后端会强制把新注册用户角色设为 `visitor`。
-- 静态管理页和 Vue 管理/大屏页面从 `localStorage.authToken` 读取 JWT 并附加到管理请求。
+- 静态首页和 Vue 前端不再读写 `localStorage.authToken`；登录、登出、数字人 API 和管理接口统一依赖 Cookie 会话。
+- 对外 JSON 字段统一使用 `snake_case`，例如 `image_url`、`sort_order`、`spot_id`、`content_type`、`audio_url`、`created_at`、`updated_at`；Vue 管理页按该契约直接收发字段。
+- `/api/v1/admin/users` 支持管理员用户分页、创建、编辑和删除；创建/改密复用密码策略和 bcrypt，编辑时密码留空表示不修改。
+- `/api/v1/contents` 是管理员分页列表；公开导览内容查询仅保留单条与按景点/类型查询路径，避免公开全量导览内容。
+- `/vtuber-ws/*` WebSocket 代理支持 `auth_token` Cookie 鉴权，同时保留子协议 token 和 query token 兼容路径。
 - 旧静态游客页和大屏中由用户或接口返回的文本插入 HTML 前必须经过 `escapeHtml` 转义。
 - RAG 通用问答日志不得打印 API Key 或其前缀；调试日志应避免输出完整请求体和敏感响应体。
 - 日志使用 Go `slog` 作为默认结构化 logger；AI、RAG、数字人和 OpenAI 兼容代理链路优先记录长度、耗时、状态码、trace/session 等元信息，不记录完整敏感正文。RAG trace 记录 `trace_id`、`retrieval_ms`、`embedding_ms`、`generation_ms`、`total_ms`、`provider`、`cache_hit`、`chunk_count` 和 `retrieval_mode`；总耗时超过 5 秒时输出结构化 WARN 日志。

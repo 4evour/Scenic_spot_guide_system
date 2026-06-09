@@ -120,5 +120,45 @@ router.beforeEach(async (to) => {
   return true
 })
 
+// 自动上报页面访问
+router.afterEach((to) => {
+  const title = (to.meta?.title as string) || to.name?.toString() || to.path
+  trackPageVisit(to.fullPath, title)
+})
+
+/** 上报页面访问（静默失败，不影响用户体验） */
+export function trackPageVisit(path: string, title: string) {
+  const authStore = useAuthStore()
+  fetch('/api/v1/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    signal: AbortSignal.timeout(5000),
+    body: JSON.stringify({
+      page: path,
+      action: 'visit',
+      details: title,
+      user_id: authStore.user?.userId ? Number(authStore.user.userId) : 0,
+    }),
+  }).catch(() => {})
+}
+
+/** 上报用户操作（静默失败） */
+export function trackUserAction(action: string, details: string) {
+  const authStore = useAuthStore()
+  fetch('/api/v1/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    signal: AbortSignal.timeout(5000),
+    body: JSON.stringify({
+      page: window.location.hash || '/',
+      action,
+      details,
+      user_id: authStore.user?.userId ? Number(authStore.user.userId) : 0,
+    }),
+  }).catch(() => {})
+}
+
 export default router
 export { routes }

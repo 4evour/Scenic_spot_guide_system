@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
+
 type KnowledgeRepository struct {
 	db *gorm.DB
 }
@@ -71,6 +72,7 @@ func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string)
 
 	var chunks []model.KnowledgeChunk
 	err := query.Order("updated_at DESC").
+		Omit("Vector").
 		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&chunks).Error
@@ -82,7 +84,14 @@ func (r *KnowledgeRepository) Update(chunk *model.KnowledgeChunk) error {
 }
 
 func (r *KnowledgeRepository) Delete(id string) error {
-	return r.db.Delete(&model.KnowledgeChunk{}, "id = ?", id).Error
+	result := r.db.Delete(&model.KnowledgeChunk{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r *KnowledgeRepository) Exists(id string) (bool, error) {
@@ -92,7 +101,7 @@ func (r *KnowledgeRepository) Exists(id string) (bool, error) {
 }
 
 func (r *KnowledgeRepository) DeleteAll() error {
-	return r.db.Exec("DELETE FROM knowledge_chunks").Error
+	return r.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.KnowledgeChunk{}).Error
 }
 
 func (r *KnowledgeRepository) Count() (int64, error) {

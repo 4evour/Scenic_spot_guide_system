@@ -49,11 +49,26 @@ func (r *userRepository) FindByEmail(email string) (*model.User, error) {
 }
 
 func (r *userRepository) Update(user *model.User) error {
-	return r.db.Save(user).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Select("id").First(&model.User{}, user.ID).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+			"username": user.Username,
+			"password": user.Password,
+			"email":    user.Email,
+			"role":     user.Role,
+		}).Error
+	})
 }
 
 func (r *userRepository) UpdateFields(id uint, fields map[string]interface{}) error {
-	return r.db.Model(&model.User{}).Where("id = ?", id).Updates(fields).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Select("id").First(&model.User{}, id).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.User{}).Where("id = ?", id).Updates(fields).Error
+	})
 }
 
 func (r *userRepository) FindAll() ([]model.User, error) {
@@ -79,5 +94,12 @@ func (r *userRepository) FindByRole(role string) ([]model.User, error) {
 }
 
 func (r *userRepository) Delete(id uint) error {
-	return r.db.Delete(&model.User{}, id).Error
+	result := r.db.Delete(&model.User{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

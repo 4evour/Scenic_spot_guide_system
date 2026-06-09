@@ -3,6 +3,7 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,6 +25,30 @@ func NewUserHandler(service service.UserService, tokenExpireHours int) *UserHand
 		tokenExpireHours = 4
 	}
 	return &UserHandler{service: service, tokenExpireHours: tokenExpireHours}
+}
+
+func validateUsername(username string) bool {
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]{3,32}$`, username)
+	return matched
+}
+
+func validateEmail(email string) bool {
+	return email == "" || (strings.Contains(email, "@") && len(email) <= 254)
+}
+
+func validateRole(role string) bool {
+	return role == "admin" || role == "visitor"
+}
+
+func userPayload(user *model.User) gin.H {
+	return gin.H{
+		"id":         user.ID,
+		"username":   user.Username,
+		"email":      user.Email,
+		"role":       user.Role,
+		"created_at": user.CreatedAt,
+		"updated_at": user.UpdatedAt,
+	}
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
@@ -79,8 +104,10 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	c.SetSameSite(http.SameSiteStrictMode)
-	c.SetCookie("auth_token", token, h.tokenExpireHours*3600, "/", "", false, true)
+	secureCookie := os.Getenv("SCENIC_GUIDE_COOKIE_SECURE") == "true" || os.Getenv("GIN_MODE") == "release"
+	c.SetCookie("auth_token", token, h.tokenExpireHours*3600, "/", "", secureCookie, true)
 
+	pkg.SetCSRFCookie(c)
 	pkg.Success(c, gin.H{
 		"id":       user.ID,
 		"username": user.Username,
@@ -90,7 +117,9 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 func (h *UserHandler) Logout(c *gin.Context) {
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	secureCookie := os.Getenv("SCENIC_GUIDE_COOKIE_SECURE") == "true" || os.Getenv("GIN_MODE") == "release"
+	c.SetCookie("auth_token", "", -1, "/", "", secureCookie, true)
 	pkg.SuccessWithMessage(c, "已退出登录", nil)
 }
 
@@ -191,6 +220,10 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateProfile(uint(id), newUsername, newEmail); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "用户不存在")
+			return
+		}
 		slog.Error("更新用户失败", "error", err, "user_id", id)
 		pkg.InternalError(c, "更新用户信息失败")
 		return
@@ -226,12 +259,102 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteUser(uint(id)); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "user not found")
+			return
+		}
 		slog.Error("删除用户失败", "error", err, "user_id", id)
 		pkg.InternalError(c, "删除用户失败")
 		return
 	}
 
 	pkg.SuccessWithMessage(c, "删除成功", nil)
+}
+
+func (h *UserHandler) AdminCreateUser(c *gin.Context) {
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
+		Role     string `json:"role"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, "invalid request")
+		return
+	}
+	if !validateUsername(req.Username) {
+		pkg.BadRequest(c, "invalid username")
+		return
+	}
+	if !validateEmail(req.Email) {
+		pkg.BadRequest(c, "invalid email")
+		return
+	}
+	if req.Role == "" {
+		req.Role = "visitor"
+	}
+	if !validateRole(req.Role) {
+		pkg.BadRequest(c, "invalid role")
+		return
+	}
+
+	user := &model.User{
+		Username: req.Username,
+		Password: req.Password,
+		Email:    req.Email,
+		Role:     req.Role,
+	}
+	if err := h.service.CreateUser(user); err != nil {
+		slog.Warn("admin create user failed", "error", err, "username", req.Username)
+		pkg.BadRequest(c, "create user failed")
+		return
+	}
+
+	pkg.Success(c, userPayload(user))
+}
+
+func (h *UserHandler) AdminUpdateUser(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		pkg.BadRequest(c, "invalid id")
+		return
+	}
+
+	var req struct {
+		Username *string `json:"username"`
+		Password *string `json:"password"`
+		Email    *string `json:"email"`
+		Role     *string `json:"role"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, "invalid request")
+		return
+	}
+	if req.Username != nil && !validateUsername(*req.Username) {
+		pkg.BadRequest(c, "invalid username")
+		return
+	}
+	if req.Email != nil && !validateEmail(*req.Email) {
+		pkg.BadRequest(c, "invalid email")
+		return
+	}
+	if req.Role != nil && !validateRole(*req.Role) {
+		pkg.BadRequest(c, "invalid role")
+		return
+	}
+
+	user, err := h.service.UpdateAdminUser(uint(id), req.Username, req.Email, req.Role, req.Password)
+	if err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "user not found")
+			return
+		}
+		slog.Error("admin update user failed", "error", err, "user_id", id)
+		pkg.BadRequest(c, "update user failed")
+		return
+	}
+
+	pkg.Success(c, userPayload(user))
 }
 
 func (h *UserHandler) GetAllUsers(c *gin.Context) {
@@ -255,12 +378,8 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 
 	result := make([]gin.H, 0, len(users))
 	for _, user := range users {
-		result = append(result, gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-			"email":    user.Email,
-			"role":     user.Role,
-		})
+		u := user
+		result = append(result, userPayload(&u))
 	}
 
 	pkg.Success(c, gin.H{
@@ -287,12 +406,8 @@ func (h *UserHandler) GetUsersByRole(c *gin.Context) {
 
 	result := make([]gin.H, 0, len(users))
 	for _, user := range users {
-		result = append(result, gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-			"email":    user.Email,
-			"role":     user.Role,
-		})
+		u := user
+		result = append(result, userPayload(&u))
 	}
 
 	pkg.Success(c, result)
@@ -317,5 +432,8 @@ func (h *UserHandler) Routes(r *gin.RouterGroup) {
 	{
 		admin.GET("/users", h.GetAllUsers)
 		admin.GET("/users/role", h.GetUsersByRole)
+		admin.POST("/users", h.AdminCreateUser)
+		admin.PUT("/users/:id", h.AdminUpdateUser)
+		admin.DELETE("/users/:id", h.DeleteUser)
 	}
 }

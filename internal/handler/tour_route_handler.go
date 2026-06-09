@@ -95,6 +95,10 @@ func (h *TourRouteHandler) UpdateRoute(c *gin.Context) {
 
 	route.ID = uint(id)
 	if err := h.service.UpdateRoute(&route); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "游览路线不存在")
+			return
+		}
 		slog.Error("更新游览路线失败", "error", err, "route_id", id)
 		pkg.InternalError(c, "更新游览路线失败")
 		return
@@ -112,6 +116,10 @@ func (h *TourRouteHandler) DeleteRoute(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteRoute(uint(id)); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "游览路线不存在")
+			return
+		}
 		slog.Error("删除游览路线失败", "error", err, "route_id", id)
 		pkg.InternalError(c, "删除游览路线失败")
 		return

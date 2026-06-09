@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"net/http"
 	"regexp"
@@ -101,7 +100,7 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, readErr := io.ReadAll(resp.Body)
+	bodyBytes, readErr := readLimitedBody(resp.Body)
 	if readErr != nil {
 		return nil, fmt.Errorf("读取响应体失败: %v", readErr)
 	}

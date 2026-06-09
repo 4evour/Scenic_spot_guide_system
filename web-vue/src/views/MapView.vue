@@ -16,8 +16,8 @@ type ScenicSpot = {
   imageUrl: string;
 };
 
-const AMAP_KEY = import.meta.env.VITE_AMAP_KEY;
-const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY;
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '';
+const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY || '';
 
 const fallbackSpots: ScenicSpot[] = [
   { id: 'gate', name: '景区入口', category: '服务设施', description: '游客服务中心，购票和咨询', lng: 120.4155, lat: 31.5720, rating: 4.5, price: 0, imageUrl: '' },
@@ -72,7 +72,7 @@ async function loadSpots() {
   state.loading = true;
   state.error = '';
   try {
-    const response = await fetch('/api/v1/spots');
+    const response = await fetch('/api/v1/spots', { signal: AbortSignal.timeout(15000) });
     const payload = await response.json() as { code?: number; message?: string; data?: Array<Record<string, unknown>> };
     if (!response.ok || payload.code !== 0) throw new Error(payload.message || '加载失败');
     const spots = (payload.data || []).map((raw, i) => ({
@@ -104,8 +104,12 @@ async function loadSpots() {
 function loadAmapScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof AMap !== 'undefined') { resolve(); return; }
+    if (!AMAP_KEY) { reject(new Error('地图配置缺失')); return; }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any)._AMapSecurityConfig = { securityJsCode: AMAP_SECURITY };
+    if (AMAP_SECURITY) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any)._AMapSecurityConfig = { securityJsCode: AMAP_SECURITY };
+    }
     const script = document.createElement('script');
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.Walking,AMap.Geolocation`;
     script.onload = () => resolve();

@@ -35,6 +35,7 @@ const (
 
 	wsMaxControlPayload = 125
 	wsPingInterval      = 30 * time.Second
+	wsPongTimeout       = 90 * time.Second
 )
 
 // WSProxyHandler returns a gin.HandlerFunc that upgrades the client connection
@@ -444,6 +445,10 @@ func buildFrame(opcode byte, masked bool, payload []byte) []byte {
 }
 
 func keepalive(client, backend net.Conn, closeConn func()) {
+	deadline := time.Now().Add(wsPongTimeout)
+	client.SetDeadline(deadline)
+	backend.SetDeadline(deadline)
+
 	ticker := time.NewTicker(wsPingInterval)
 	defer ticker.Stop()
 
@@ -461,5 +466,9 @@ func keepalive(client, backend net.Conn, closeConn func()) {
 			closeConn()
 			return
 		}
+
+		deadline = time.Now().Add(wsPongTimeout)
+		client.SetDeadline(deadline)
+		backend.SetDeadline(deadline)
 	}
 }

@@ -1,4 +1,4 @@
-# Scenic Spot Guide System
+﻿# Scenic Spot Guide System
 
 [![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
 
@@ -70,8 +70,17 @@ flowchart LR
 - **数据大屏**：5 个 KPI 卡片 + 24h 趋势 + 热门问答 + 满意度 + RAG 评估指标可视化，30 秒自动刷新。
 - **管理后台**：知识库在线编辑/文件上传、数字人形象配置、游客感受度报告、系统设置。
 - **Prometheus 监控**：`/metrics` 端点暴露请求量、延迟 P50/P95/P99、RAG 查询耗时、缓存命中率等指标。
-- **安全加固**：JWT 算法混淆防护、IDOR 权限校验、密码策略、全局限流、CSP/HSTS 安全头、登录统一错误防枚举。
+- **安全加固**：JWT 算法混淆防护、IDOR 权限校验、密码策略、全局限流、CSP/HSTS 安全头、登录统一错误防枚举、CSRF 防护、Secure Cookie 策略、限流器优雅停止、API 响应体大小限制、/metrics 端点管理员鉴权保护。
 - **RAG 评估框架**：203 条真实问答评测集，Recall@8 99.5%，支持 5 种模式对比、分组统计、失败分析。
+
+## 接口契约与鉴权
+
+- 登录使用 Cookie 会话：`POST /api/v1/login` 只设置 `auth_token` HttpOnly Cookie，响应体返回用户资料，不返回 JWT；前端通过 `GET /api/v1/user/me` 恢复会话。
+- Vue 游客地图、数字人入口、数字人 API 都属于登录后体验；`/api/v1/dh/session/create`、`/api/v1/dh/chat/text`、`/api/v1/dh/chat/voice-transcript`、`/api/v1/dh/feedback` 均需要登录。
+- 对外 JSON 字段统一使用 `snake_case`，例如 `image_url`、`sort_order`、`spot_id`、`content_type`、`audio_url`、`created_at`、`updated_at`。
+- 管理员用户管理接口为 `/api/v1/admin/users`：支持分页列表、创建、编辑和删除；创建/改密复用后端密码策略与 bcrypt，编辑时密码留空表示不修改。
+- `/api/v1/contents` 是管理员分页列表；公开导览内容查询保留 `/api/v1/contents/:id`、`/api/v1/contents/spot/:spot_id` 和 `/api/v1/contents/spot/:spot_id/type`。
+- `/vtuber-ws/*` WebSocket 代理支持从同源浏览器自动携带的 `auth_token` Cookie 鉴权，同时保留子协议 token 和 query token 兼容路径。
 
 ## 技术栈
 
@@ -273,6 +282,36 @@ go run ./cmd/demo-seed -admin-password "替换成本地演示密码"
 
 默认账号 `admin / DemoAdmin123456` 仅用于本地演示，公开部署或生产环境不要使用默认演示密码。
 
+## 代码审查修复记录
+
+本次代码审查对后端安全性、健壮性和代码质量进行了全面加固，主要变更如下：
+
+### 后端安全与健壮性
+- **CSRF 防护**：所有 /api/v1 路由新增 CSRF Token 校验中间件，登录时同步设置 CSRF Cookie。
+- **Secure Cookie**：登录/登出 Cookie 的 Secure 标志根据 GIN_MODE=release 或 SCENIC_GUIDE_COOKIE_SECURE=true 环境变量自动启用。
+- **限流器优雅停止**：RateLimitMiddleware 后台清理 goroutine 支持通过 channel 信号停止，新增 StopRateLimiters() 函数供服务关闭时调用，避免 goroutine 泄漏。
+- **API 响应体大小限制**：LLM API 响应读取增加 20MB 上限（eadLimitedBody），防止异常响应耗尽内存。
+- **IDOR 修复**：用户更新/删除操作增加 isRecordNotFound 错误区分，避免信息泄露。
+- **/metrics 端点保护**：Prometheus 指标端点现在需要 AuthMiddleware + AdminMiddleware 鉴权。
+- **密钥检测增强**：scripts/check-secrets.mjs 新增高德地图 API Key 检测规则。
+
+### 代码质量改进
+- **统一输入校验**：user_handler.go 提取 alidateUsername、alidateEmail、alidateRole、userPayload 等共享函数，消除重复代码。
+- **统一错误处理**：新增 handler/errors.go，提供 isRecordNotFound 统一封装 gorm.ErrRecordNotFound 判断。
+- **限流器可测试化**：
+ewRateLimitMiddlewareWithStopper 内部构造函数支持单元测试中精确控制清理 goroutine。
+- **路由整理**：新增 /map Vue SPA 路由、/api/v1/scenic/profile 景区信息接口、/api/v1/track 轻量行为追踪接口。
+
+### 前端改进
+- **ESLint + Prettier**：web-vue 新增 .eslintrc.cjs、.prettierrc.json、.prettierignore 配置文件。
+- **Vue 路由完善**：outer/index.ts 补充缺失路由定义，修复首次导航空白问题。
+- **CRUD 表格修复**：useCrudTable.ts 简化逻辑，修复 Go PascalCase 与前端 camelCase 字段名不匹配导致数据不显示的问题。
+
+### 测试覆盖
+- 新增 internal/handler/digital_human_auth_test.go：数字人接口鉴权测试。
+- 新增 internal/handler/user_handler_test.go：用户注册/登录/CRUD 全流程测试。
+- 新增 internal/repository/crud_safety_test.go：通用 CRUD 安全性测试。
+- 新增 docs/architecture.md：系统解耦架构说明文档。
 ## 清理与提交约定
 
 - 不提交 `configs/config.yaml`、`.env`、数据库文件、日志、可执行文件和本地缓存。

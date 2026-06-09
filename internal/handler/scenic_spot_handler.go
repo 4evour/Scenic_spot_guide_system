@@ -95,6 +95,10 @@ func (h *ScenicSpotHandler) UpdateSpot(c *gin.Context) {
 
 	spot.ID = uint(id)
 	if err := h.service.UpdateSpot(&spot); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "景点不存在")
+			return
+		}
 		slog.Error("更新景点失败", "error", err, "spot_id", id)
 		pkg.InternalError(c, "更新景点失败")
 		return
@@ -112,6 +116,10 @@ func (h *ScenicSpotHandler) DeleteSpot(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteSpot(uint(id)); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "景点不存在")
+			return
+		}
 		slog.Error("删除景点失败", "error", err, "spot_id", id)
 		pkg.InternalError(c, "删除景点失败")
 		return

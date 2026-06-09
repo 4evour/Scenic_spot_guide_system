@@ -47,7 +47,7 @@ const state = reactive({
   saving: false,
   total: 0,
   page: 1,
-  pageSize: 100,
+  pageSize: 20,
   knowledge: [] as KnowledgeItem[],
   editingID: '',
   editor: { ...emptyEditor },

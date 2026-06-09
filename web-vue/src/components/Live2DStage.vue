@@ -204,6 +204,7 @@ function applyLive2DState() {
 }
 
 function loop() {
+  if (live2dLoaded.value) return;
   frame += 1;
   drawFallback();
   raf = requestAnimationFrame(loop);

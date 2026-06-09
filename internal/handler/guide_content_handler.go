@@ -51,6 +51,32 @@ func (h *GuideContentHandler) GetContent(c *gin.Context) {
 	pkg.Success(c, content)
 }
 
+func (h *GuideContentHandler) ListContents(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	pageSizeStr := c.DefaultQuery("page_size", "20")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	contents, total, err := h.service.ListContentsPaginated(page, pageSize)
+	if err != nil {
+		slog.Error("获取导览内容列表失败", "error", err)
+		pkg.InternalError(c, "获取导览内容列表失败")
+		return
+	}
+	pkg.Success(c, gin.H{
+		"list":      contents,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
+}
+
 func (h *GuideContentHandler) GetContentsBySpotID(c *gin.Context) {
 	spotIDStr := c.Param("spot_id")
 	spotID, err := strconv.ParseUint(spotIDStr, 10, 32)
@@ -109,6 +135,10 @@ func (h *GuideContentHandler) UpdateContent(c *gin.Context) {
 
 	content.ID = uint(id)
 	if err := h.service.UpdateContent(&content); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "导览内容不存在")
+			return
+		}
 		slog.Error("更新导览内容失败", "error", err, "content_id", id)
 		pkg.InternalError(c, "更新导览内容失败")
 		return
@@ -126,6 +156,10 @@ func (h *GuideContentHandler) DeleteContent(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteContent(uint(id)); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "导览内容不存在")
+			return
+		}
 		slog.Error("删除导览内容失败", "error", err, "content_id", id)
 		pkg.InternalError(c, "删除导览内容失败")
 		return
@@ -135,13 +169,14 @@ func (h *GuideContentHandler) DeleteContent(c *gin.Context) {
 }
 
 func (h *GuideContentHandler) Routes(r *gin.RouterGroup) {
-	r.GET("/contents/:id", h.GetContent)
 	r.GET("/contents/spot/:spot_id", h.GetContentsBySpotID)
 	r.GET("/contents/spot/:spot_id/type", h.GetContentsBySpotIDAndType)
+	r.GET("/contents/:id", h.GetContent)
 
 	admin := r.Group("")
 	admin.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
 	{
+		admin.GET("/contents", h.ListContents)
 		admin.POST("/contents", h.CreateContent)
 		admin.PUT("/contents/:id", h.UpdateContent)
 		admin.DELETE("/contents/:id", h.DeleteContent)

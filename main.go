@@ -90,9 +90,8 @@ func run() error {
 
 	slog.Info("设置路由")
 	r := gin.Default()
-	r.Use(gin.Recovery())
 
-	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours, cfg.Security.AllowedOrigins)
+	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours, cfg.Security.AllowedOrigins, scenicProfile)
 	handler.SetupRoutes(r, setupHandlers)
 	slog.Info("路由设置成功")
 
@@ -134,6 +133,7 @@ func run() error {
 		return fmt.Errorf("服务器关闭失败: %w", err)
 	}
 	slog.Info("服务已优雅关闭")
+	pkg.StopRateLimiters()
 	return nil
 }
 
@@ -150,7 +150,11 @@ func ensureAdminUser() {
 	}
 
 	userRepo := repository.NewUserRepository(pkg.GetDB())
-	admins, _ := userRepo.FindByRole("admin")
+	admins, err := userRepo.FindByRole("admin")
+	if err != nil {
+		slog.Error("查询管理员账号失败", "error", err)
+		return
+	}
 	if len(admins) > 0 {
 		return
 	}
@@ -227,7 +231,7 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 	return ragService
 }
 
-func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigins []string) *handler.Handlers {
+func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigins []string, scenicProfile *config.ScenicProfile) *handler.Handlers {
 	db := pkg.GetDB()
 
 	// 初始化统计服务（先于 handler 创建，以便注入）
@@ -263,6 +267,7 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService, statsService)
 	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService, statsService)
 	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results")
+	scenicProfileHandler := handler.NewScenicProfileHandler(scenicProfile)
 
 	// Default allowed origins for local development
 	origins := allowedOrigins
@@ -286,6 +291,7 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 		DigitalHuman:  digitalHumanHandler,
 		OpenAIProxy:   openAIProxyHandler,
 		Admin:         adminHandler,
+		ScenicProfile: scenicProfileHandler,
 		AllowedOrigins: origins,
 	}
 }

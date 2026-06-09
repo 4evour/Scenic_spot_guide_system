@@ -164,7 +164,9 @@ function connectSocket() {
     },
     onError: message => {
       addMessage('system', message);
-      state.conversation = 'error';
+      // WebSocket 断开不算致命错误，文字聊天仍可用
+      state.conversation = 'idle';
+      state.expression = 'neutral';
     },
     onMessage: handleSocketMessage,
   });

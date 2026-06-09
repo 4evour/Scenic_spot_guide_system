@@ -12,18 +12,26 @@ All responses from project handlers use:
 }
 ```
 
-Protected endpoints require:
+Protected endpoints require an authenticated session. Browser clients should use
+the HttpOnly `auth_token` cookie set by `/login`; non-browser clients may still
+send `Authorization: Bearer <token>` for API compatibility.
 
 ```http
 Authorization: Bearer <token>
 ```
+
+Public JSON fields use `snake_case`. For example, guide content exposes
+`content_type` and `audio_url`; scenic spots expose `image_url`, `sort_order`,
+`created_at`, and `updated_at`.
 
 ## Auth
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
 | POST | `/register` | Public, rate limited | Register a visitor account. Client supplied roles are ignored. |
-| POST | `/login` | Public | Login and receive a JWT. |
+| POST | `/login` | Public | Login and set the `auth_token` HttpOnly Cookie. The response body returns user profile data, not a token. |
+| POST | `/logout` | User | Clear the `auth_token` Cookie. |
+| GET | `/user/me` | User | Read the current Cookie-backed session. |
 
 ## Scenic Spots
 
@@ -40,6 +48,7 @@ Authorization: Bearer <token>
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
+| GET | `/contents?page=1&page_size=20` | Admin | Paginated admin list for guide content management. |
 | GET | `/contents/:id` | Public | Get one guide content item. |
 | GET | `/contents/spot/:spot_id` | Public | List guide content by scenic spot. |
 | GET | `/contents/spot/:spot_id/type?type=...` | Public | List guide content by scenic spot and content type. |
@@ -86,10 +95,10 @@ Authorization: Bearer <token>
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| POST | `/dh/session/create` | Public | Create a short-lived digital human session ID. |
-| POST | `/dh/chat/text` | Public | Text chat with emotion-tagged answer. |
-| POST | `/dh/chat/voice-transcript` | Public | Chat using a speech transcript. |
-| POST | `/dh/feedback` | Public | Submit feedback. |
+| POST | `/dh/session/create` | User | Create a short-lived digital human session ID. |
+| POST | `/dh/chat/text` | User | Text chat with emotion-tagged answer. |
+| POST | `/dh/chat/voice-transcript` | User | Chat using a speech transcript. |
+| POST | `/dh/feedback` | User | Submit feedback. |
 | GET | `/dh/health` | Public | Digital human API health. |
 
 ## Admin
@@ -98,6 +107,10 @@ All `/admin/*` endpoints require admin authentication.
 
 | Method | Path | Description |
 | --- | --- | --- |
+| GET | `/admin/users?page=1&page_size=20` | Paginated user list. |
+| POST | `/admin/users` | Create a user. Password policy and bcrypt hashing are enforced server-side. |
+| PUT | `/admin/users/:id` | Update username, email, role, and optionally password. Empty password keeps the existing hash. |
+| DELETE | `/admin/users/:id` | Delete a user. Missing users return 404. |
 | GET | `/admin/dashboard/overview` | Dashboard overview. |
 | GET | `/admin/dashboard/hourly-trend` | 24-hour trend. |
 | GET | `/admin/dashboard/top-questions` | Top questions. |
@@ -117,5 +130,5 @@ All `/admin/*` endpoints require admin authentication.
 | Method | Path | Description |
 | --- | --- | --- |
 | POST | `/v1/chat/completions` | OpenAI-compatible chat completions endpoint for Open-LLM-VTuber. |
-| ANY | `/vtuber-ws/*path` | WebSocket reverse proxy to Open-LLM-VTuber on `127.0.0.1:12393`. |
+| ANY | `/vtuber-ws/*path` | WebSocket reverse proxy to Open-LLM-VTuber on `127.0.0.1:12393`; authenticates via `auth_token` Cookie, `auth.token.*` subprotocol, or legacy `?token=`. |
 | GET | `/health` | Service health check. |

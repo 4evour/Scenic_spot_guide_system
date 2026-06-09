@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"net/http"
+	"os"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,6 +21,11 @@ type rateLimitEntry struct {
 }
 
 func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
+	mw, _ := newRateLimitMiddlewareWithStopper(limit, window)
+	return mw
+}
+
+func newRateLimitMiddlewareWithStopper(limit int, window time.Duration) (gin.HandlerFunc, func()) {
 	if limit <= 0 {
 		limit = 1
 	}
@@ -27,24 +35,30 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 
 	var mu sync.Mutex
 	entries := make(map[string]rateLimitEntry)
+	stop := make(chan struct{})
 
 	// 后台清理过期条目，避免在请求热路径中遍历全量 map
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
-		for range ticker.C {
-			mu.Lock()
-			now := time.Now()
-			for ip, item := range entries {
-				if now.After(item.resetAt) {
-					delete(entries, ip)
+		for {
+			select {
+			case <-ticker.C:
+				mu.Lock()
+				now := time.Now()
+				for ip, item := range entries {
+					if now.After(item.resetAt) {
+						delete(entries, ip)
+					}
 				}
+				mu.Unlock()
+			case <-stop:
+				return
 			}
-			mu.Unlock()
 		}
 	}()
 
-	return func(c *gin.Context) {
+	handler := func(c *gin.Context) {
 		now := time.Now()
 		key := c.ClientIP()
 
@@ -73,6 +87,16 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 
 		c.Next()
 	}
+	return handler, func() { close(stop) }
+}
+
+var rateLimitCleanups []func()
+
+func StopRateLimiters() {
+	for _, stop := range rateLimitCleanups {
+		stop()
+	}
+	rateLimitCleanups = nil
 }
 
 // RedisRateLimitMiddleware uses Redis INCR + EXPIRE for distributed rate limiting.
@@ -80,8 +104,10 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	client := GetRedis()
 	if client == nil {
-		// Redis not configured, fall back to in-memory limiter
-		return RateLimitMiddleware(limit, window)
+		// Redis not configured, fall back to in-memory limiter with stopper
+		handler, stopper := newRateLimitMiddlewareWithStopper(limit, window)
+		rateLimitCleanups = append(rateLimitCleanups, stopper)
+		return handler
 	}
 
 	if limit <= 0 {
@@ -99,8 +125,10 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 		incr := pipe.Incr(ctx, key)
 		pipe.ExpireNX(ctx, key, window)
 		if _, err := pipe.Exec(ctx); err != nil {
-			slog.Error("Redis rate limit 执行失败，回退通过", "error", err)
-			c.Next()
+			slog.Error("Redis rate limit 执行失败，降级到内存限流", "error", err)
+			fallback, stopper := newRateLimitMiddlewareWithStopper(limit, window)
+			rateLimitCleanups = append(rateLimitCleanups, stopper)
+			fallback(c)
 			return
 		}
 
@@ -131,6 +159,39 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
 		c.Next()
 	}
+}
+
+func csrfProtection() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == "GET" || c.Request.Method == "HEAD" || c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+		if strings.EqualFold(c.GetHeader("X-Requested-With"), "XMLHttpRequest") {
+			c.Next()
+			return
+		}
+		token, _ := c.Cookie("csrf_token")
+		if strings.TrimSpace(token) == "" {
+			c.AbortWithStatusJSON(403, Response{Code: 403, Message: "missing csrf token"})
+			return
+		}
+		c.Next()
+	}
+}
+
+func CSRFProtection() gin.HandlerFunc {
+	return csrfProtection()
+}
+
+func SetCSRFCookie(c *gin.Context) {
+	token, err := GenerateToken(0, "csrf", "csrf", 12)
+	if err != nil {
+		return
+	}
+	secure := strings.EqualFold(os.Getenv("SCENIC_GUIDE_COOKIE_SECURE"), "true") || strings.EqualFold(os.Getenv("GIN_MODE"), "release")
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("csrf_token", token, 12*3600, "/", "", secure, false)
 }
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -178,7 +239,6 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
@@ -211,6 +271,9 @@ func WSTokenAuth() gin.HandlerFunc {
 			if token != "" {
 				slog.Warn("WebSocket token 通过 URL query 传递，建议迁移至子协议")
 			}
+		}
+		if token == "" {
+			token, _ = c.Cookie("auth_token")
 		}
 		if token == "" {
 			c.AbortWithStatusJSON(401, Response{

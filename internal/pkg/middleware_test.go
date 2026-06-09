@@ -112,7 +112,6 @@ func TestRateLimitMiddlewareConcurrentRequests(t *testing.T) {
 	}
 }
 
-
 func TestAdminMiddlewareRejectsVisitorToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
@@ -184,6 +183,32 @@ func TestKnowledgeDangerousRouteRequiresAdmin(t *testing.T) {
 				t.Fatalf("status = %d, want %d", resp.Code, tt.wantStatus)
 			}
 		})
+	}
+}
+
+func TestWSTokenAuthReadsAuthTokenCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+		t.Fatalf("InitJWT returned error: %v", err)
+	}
+	token, err := GenerateToken(7, "visitor", "visitor", 1)
+	if err != nil {
+		t.Fatalf("GenerateToken returned error: %v", err)
+	}
+
+	router := gin.New()
+	router.GET("/vtuber-ws/client-ws", WSTokenAuth(), func(c *gin.Context) {
+		Success(c, gin.H{"user_id": c.GetUint("user_id")})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/vtuber-ws/client-ws", nil)
+	req.RemoteAddr = "192.0.2.40:1234"
+	req.AddCookie(&http.Cookie{Name: "auth_token", Value: token})
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.Code, http.StatusOK)
 	}
 }
 

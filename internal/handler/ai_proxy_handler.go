@@ -302,7 +302,7 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 
 	// 2. 将内容按字符分批发送
 	runes := []rune(content)
-	chunkSize := 3
+	chunkSize := 12
 	for i := 0; i < len(runes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(runes) {
@@ -341,7 +341,6 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 			},
 		})
 
-		time.Sleep(30 * time.Millisecond)
 	}
 
 	// 3. 发送 [DONE] 标记

@@ -3,6 +3,7 @@ let isSpeaking = false;
 let recognition = null;
 let map = null;
 const DIGITAL_HUMAN_URL = '/digital-human#/digital-human';
+const AMAP_KEY = window.SCENIC_AMAP_KEY || document.querySelector('meta[name="scenic-amap-key"]')?.content || '';
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -420,8 +421,6 @@ async function login() {
             throw new Error(result.message || '登录失败');
         }
         currentUser = result.data;
-        localStorage.setItem('authToken', result.data.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.data));
         updateUserInterface();
         closeModal();
         alert(`欢迎, ${result.data.username}!`);
@@ -473,19 +472,21 @@ async function adminLogin() {
         if (result.data?.role !== 'admin') {
             throw new Error('当前账号没有管理员权限');
         }
-        localStorage.setItem('authToken', result.data.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.data));
         window.location.href = '/admin';
     } catch (error) {
         alert(error.message || '管理员账号或密码错误');
     }
 }
 
-function logout() {
+async function logout() {
+    try {
+        await fetch('/api/v1/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+        // ignore network errors while clearing local state
+    }
     currentUser = null;
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
     updateUserInterface();
+    refreshCurrentUser();
     alert('已退出登录');
 }
 
@@ -494,13 +495,7 @@ function openDashboard() {
 }
 
 function updateUserInterface() {
-    const storedUser = currentUser || (() => {
-        try {
-            return JSON.parse(localStorage.getItem('currentUser') || 'null');
-        } catch {
-            return null;
-        }
-    })();
+    const storedUser = currentUser;
 
     currentUser = storedUser;
 
@@ -528,6 +523,22 @@ function updateUserInterface() {
     }
 }
 
+async function refreshCurrentUser() {
+    try {
+        const response = await fetch('/api/v1/user/me', { credentials: 'include' });
+        if (!response.ok) {
+            currentUser = null;
+            updateUserInterface();
+            return;
+        }
+        const result = await response.json();
+        currentUser = result.code === 0 ? result.data : null;
+    } catch {
+        currentUser = null;
+    }
+    updateUserInterface();
+}
+
 function openLoginFromHash() {
     if (window.location.hash !== '#login') return;
     const modal = document.getElementById('loginModal');
@@ -538,6 +549,7 @@ function sendFeedback(feedbackId, helpful, query, response) {
     fetch('/api/v1/ai/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ query, response, helpful })
     }).then(() => {
         const el = document.getElementById(feedbackId);
@@ -577,6 +589,7 @@ function sendMessage(message) {
     fetch('/api/v1/dh/chat/text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ session_id: 'home_' + Date.now(), input_text: message })
     })
     .then(response => {
@@ -832,6 +845,23 @@ function initAMap() {
     if (!mapContainer) return;
 
     if (typeof AMap === 'undefined') {
+        if (!AMAP_KEY) {
+            const loading = document.querySelector('.map-loading');
+            if (loading) loading.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>地图配置缺失</span>';
+            return;
+        }
+        if (!initAMap.loadingScript) {
+            initAMap.loadingScript = true;
+            const script = document.createElement('script');
+            script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(AMAP_KEY)}`;
+            script.async = true;
+            script.onload = () => setTimeout(initAMap, 0);
+            script.onerror = () => {
+                const loading = document.querySelector('.map-loading');
+                if (loading) loading.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>地图加载失败</span>';
+            };
+            document.head.appendChild(script);
+        }
         const retries = initAMap.retries || 0;
         if (retries < 10) {
             initAMap.retries = retries + 1;
@@ -1104,9 +1134,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
+            fetch('/api/v1/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             currentUser = null;
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
             document.getElementById('userName').textContent = '游客';
             document.getElementById('loginBtn').style.display = 'inline-block';
             document.getElementById('logoutBtn').style.display = 'none';

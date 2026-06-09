@@ -27,7 +27,7 @@ export class VtuberSocketClient {
       this.send({ type: 'create-new-history' });
     };
     this.ws.onclose = () => this.handlers.onClose?.();
-    this.ws.onerror = () => this.handlers.onError?.('WebSocket 连接失败，请确认 Open-LLM-VTuber 服务已启动。');
+    this.ws.onerror = () => this.handlers.onError?.('数字人语音服务未连接。文字聊天仍可正常使用，如需语音功能请启动 Open-LLM-VTuber 服务。');
     this.ws.onmessage = event => {
       try {
         this.handlers.onMessage?.(JSON.parse(event.data));

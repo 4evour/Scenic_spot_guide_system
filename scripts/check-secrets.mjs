@@ -26,6 +26,8 @@ const patterns = [
   ['openai_or_deepseek_style_key', /sk-[A-Za-z0-9]{12,}/g],
   ['github_token', /gh[pousr]_[0-9A-Za-z_]{20,}/g],
   ['google_api_key', /AIza[0-9A-Za-z_-]{20,}/g],
+  ['amap_webapi_key', /webapi\.amap\.com\/maps\?[^"'`\s>]*key=[A-Fa-f0-9]{32}/g],
+  ['amap_config_key', /(?:AMAP_KEY|VITE_AMAP_KEY|SCENIC_AMAP_KEY)\s*[:=]\s*["']?[A-Fa-f0-9]{32}/g],
   ['aws_access_key', /AKIA[0-9A-Z]{16}/g],
   ['private_key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g],
   ['bearer_token_literal', /Bearer\s+[A-Za-z0-9._-]{24,}/g],

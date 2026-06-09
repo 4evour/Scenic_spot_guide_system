@@ -18,15 +18,17 @@ import {
 import { useCrudTable } from '../composables/useCrudTable'
 
 interface SpotForm {
-  Name: string
-  Description: string
-  Location: string
-  Category: string
-  Rating: number
-  Price: number
-  ImageURL: string
-  Latitude: number
-  Longitude: number
+  id?: number
+  name: string
+  description: string
+  location: string
+  category: string
+  rating: number
+  price: number
+  image_url: string
+  latitude: number
+  longitude: number
+  sort_order: number
 }
 
 const categoryOptions = [
@@ -45,15 +47,16 @@ const categoryTagType: Record<string, 'success' | 'info' | 'warning' | 'error'> 
 
 function defaultForm(): SpotForm {
   return {
-    Name: '',
-    Description: '',
-    Location: '',
-    Category: '核心景点',
-    Rating: 4.0,
-    Price: 0,
-    ImageURL: '',
-    Latitude: 0,
-    Longitude: 0,
+    name: '',
+    description: '',
+    location: '',
+    category: '核心景点',
+    rating: 4.0,
+    price: 0,
+    image_url: '',
+    latitude: 0,
+    longitude: 0,
+    sort_order: 0,
   }
 }
 
@@ -75,26 +78,27 @@ const {
 } = useCrudTable<Record<string, unknown>>({
   listApi: '/spots',
   saveApi: (data, edit) => ({
-    path: edit ? `/spots/${(data as Record<string, unknown>).ID || (data as Record<string, unknown>).id}` : '/spots',
+    path: edit ? `/spots/${data.id}` : '/spots',
     method: edit ? 'PUT' : 'POST',
   }),
   deleteApi: (id) => ({ path: `/spots/${id}` }),
+  idField: 'id',
   defaultForm: defaultForm as unknown as () => Record<string, unknown>,
 })
 
 const formRef = ref<FormInst | null>(null)
 
 const formRules: FormRules = {
-  Name: [
+  name: [
     { required: true, message: '请输入景点名称', trigger: ['blur', 'input'] },
   ],
-  Location: [
+  location: [
     { required: true, message: '请输入位置信息', trigger: ['blur', 'input'] },
   ],
-  Category: [
+  category: [
     { required: true, message: '请选择分类', trigger: ['blur', 'change'] },
   ],
-  Rating: [
+  rating: [
     {
       type: 'number',
       min: 0,
@@ -108,43 +112,43 @@ const formRules: FormRules = {
 const columns: DataTableColumns<Record<string, unknown>> = [
   {
     title: '名称',
-    key: 'Name',
+    key: 'name',
     width: 180,
     ellipsis: { tooltip: true },
   },
   {
     title: '分类',
-    key: 'Category',
+    key: 'category',
     width: 120,
     render(row) {
-      const cat = String(row.Category || '')
+      const cat = String(row.category || '')
       const type = categoryTagType[cat] || 'info'
       return h(NTag, { type, size: 'small', bordered: false }, { default: () => cat || '-' })
     },
   },
   {
     title: '位置',
-    key: 'Location',
+    key: 'location',
     width: 200,
     ellipsis: { tooltip: true },
   },
   {
     title: '评分',
-    key: 'Rating',
+    key: 'rating',
     width: 80,
     align: 'center',
     render(row) {
-      const rating = Number(row.Rating ?? 0)
+      const rating = Number(row.rating ?? 0)
       return rating.toFixed(1)
     },
   },
   {
     title: '价格',
-    key: 'Price',
+    key: 'price',
     width: 100,
     align: 'right',
     render(row) {
-      const price = Number(row.Price ?? 0)
+      const price = Number(row.price ?? 0)
       return price > 0 ? `¥${price.toFixed(0)}` : '免费'
     },
   },
@@ -185,7 +189,7 @@ function getForm(): SpotForm {
 }
 
 function rowKey(row: Record<string, unknown>): string | number {
-  return (row.ID ?? row.id ?? '') as string | number
+  return (row.id ?? '') as string | number
 }
 
 function onSaveClick() {
@@ -239,94 +243,104 @@ onMounted(fetchData)
           label-width="80"
           require-mark-placement="right-hanging"
         >
-          <NFormItem label="名称" path="Name">
+          <NFormItem label="名称" path="name">
             <NInput
-              :value="getForm().Name"
+              :value="getForm().name"
               placeholder="请输入景点名称"
-              @update:value="(v: string) => { getForm().Name = v }"
+              @update:value="(v: string) => { getForm().name = v }"
             />
           </NFormItem>
 
-          <NFormItem label="描述" path="Description">
+          <NFormItem label="描述" path="description">
             <NInput
-              :value="getForm().Description"
+              :value="getForm().description"
               type="textarea"
               :rows="3"
               placeholder="请输入景点描述"
-              @update:value="(v: string) => { getForm().Description = v }"
+              @update:value="(v: string) => { getForm().description = v }"
             />
           </NFormItem>
 
-          <NFormItem label="位置" path="Location">
+          <NFormItem label="位置" path="location">
             <NInput
-              :value="getForm().Location"
+              :value="getForm().location"
               placeholder="请输入位置信息"
-              @update:value="(v: string) => { getForm().Location = v }"
+              @update:value="(v: string) => { getForm().location = v }"
             />
           </NFormItem>
 
-          <NFormItem label="分类" path="Category">
+          <NFormItem label="分类" path="category">
             <NSelect
-              :value="getForm().Category"
+              :value="getForm().category"
               :options="categoryOptions"
               placeholder="请选择分类"
-              @update:value="(v: string) => { getForm().Category = v }"
+              @update:value="(v: string) => { getForm().category = v }"
             />
           </NFormItem>
 
-          <NFormItem label="评分" path="Rating">
+          <NFormItem label="评分" path="rating">
             <NInputNumber
-              :value="getForm().Rating"
+              :value="getForm().rating"
               :min="0"
               :max="5"
               :step="0.1"
               :precision="1"
               placeholder="0-5"
               style="width: 100%"
-              @update:value="(v: number | null) => { getForm().Rating = v ?? 0 }"
+              @update:value="(v: number | null) => { getForm().rating = v ?? 0 }"
             />
           </NFormItem>
 
-          <NFormItem label="价格" path="Price">
+          <NFormItem label="价格" path="price">
             <NInputNumber
-              :value="getForm().Price"
+              :value="getForm().price"
               :min="0"
               :precision="0"
               placeholder="0 为免费"
               style="width: 100%"
-              @update:value="(v: number | null) => { getForm().Price = v ?? 0 }"
+              @update:value="(v: number | null) => { getForm().price = v ?? 0 }"
             />
           </NFormItem>
 
-          <NFormItem label="图片链接" path="ImageURL">
+          <NFormItem label="图片链接" path="image_url">
             <NInput
-              :value="getForm().ImageURL"
+              :value="getForm().image_url"
               placeholder="可选，图片 URL"
-              @update:value="(v: string) => { getForm().ImageURL = v }"
+              @update:value="(v: string) => { getForm().image_url = v }"
             />
           </NFormItem>
 
           <div class="coord-row">
-            <NFormItem label="经度" path="Longitude" class="coord-item">
+            <NFormItem label="经度" path="longitude" class="coord-item">
               <NInputNumber
-                :value="getForm().Longitude"
+                :value="getForm().longitude"
                 :precision="6"
                 placeholder="经度"
                 style="width: 100%"
-                @update:value="(v: number | null) => { getForm().Longitude = v ?? 0 }"
+                @update:value="(v: number | null) => { getForm().longitude = v ?? 0 }"
               />
             </NFormItem>
 
-            <NFormItem label="纬度" path="Latitude" class="coord-item">
+            <NFormItem label="纬度" path="latitude" class="coord-item">
               <NInputNumber
-                :value="getForm().Latitude"
+                :value="getForm().latitude"
                 :precision="6"
                 placeholder="纬度"
                 style="width: 100%"
-                @update:value="(v: number | null) => { getForm().Latitude = v ?? 0 }"
+                @update:value="(v: number | null) => { getForm().latitude = v ?? 0 }"
               />
             </NFormItem>
           </div>
+
+          <NFormItem label="排序" path="sort_order">
+            <NInputNumber
+              :value="getForm().sort_order"
+              :precision="0"
+              placeholder="数值越小越靠前"
+              style="width: 100%"
+              @update:value="(v: number | null) => { getForm().sort_order = v ?? 0 }"
+            />
+          </NFormItem>
         </NForm>
 
         <template #footer>

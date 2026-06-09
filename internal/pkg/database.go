@@ -52,7 +52,7 @@ func InitDatabase(cfg *config.DatabaseConfig) error {
 			path = defaultSQLitePath
 		}
 		if dir := filepath.Dir(path); dir != "." && dir != "" {
-			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			if err := os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
 				return err
 			}
 		}

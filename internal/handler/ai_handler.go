@@ -165,7 +165,7 @@ func (h *AIHandler) writeSSEResponse(c *gin.Context, response string, route inte
 	}
 
 	runes := []rune(response)
-	chunkSize := 3
+	chunkSize := 12
 	for i := 0; i < len(runes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(runes) {
@@ -175,7 +175,6 @@ func (h *AIHandler) writeSSEResponse(c *gin.Context, response string, route inte
 		data, _ := json.Marshal(gin.H{"token": chunk, "done": false})
 		fmt.Fprintf(writer, "data: %s\n\n", string(data))
 		flusher.Flush()
-		time.Sleep(20 * time.Millisecond)
 	}
 
 	// 发送完成标记（含路由和 trace_id）

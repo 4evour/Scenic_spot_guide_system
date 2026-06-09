@@ -3,17 +3,22 @@ package service
 import (
 	"errors"
 
+	"fmt"
+
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/repository"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type UserService interface {
 	Register(user *model.User) error
+	CreateUser(user *model.User) error
 	Login(username, password string) (*model.User, error)
 	GetUserByID(id uint) (*model.User, error)
 	GetUserByUsername(username string) (*model.User, error)
 	UpdateUser(user *model.User) error
+	UpdateAdminUser(id uint, username, email, role, password *string) (*model.User, error)
 	UpdateProfile(id uint, username, email string) error
 	DeleteUser(id uint) error
 	GetAllUsers() ([]model.User, error)
@@ -30,8 +35,11 @@ func NewUserService(repo repository.UserRepository) UserService {
 }
 
 func (s *userService) Register(user *model.User) error {
-	existingUser, _ := s.repo.FindByUsername(user.Username)
-	if existingUser.ID != 0 {
+	existingUser, err := s.repo.FindByUsername(user.Username)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("查询用户名失败: %w", err)
+	}
+	if existingUser != nil && existingUser.ID != 0 {
 		return errors.New("用户名已存在")
 	}
 
@@ -46,6 +54,13 @@ func (s *userService) Register(user *model.User) error {
 	user.Password = string(hashedPassword)
 
 	return s.repo.Create(user)
+}
+
+func (s *userService) CreateUser(user *model.User) error {
+	if user.Role == "" {
+		user.Role = "visitor"
+	}
+	return s.Register(user)
 }
 
 func validatePassword(password string) error {
@@ -96,6 +111,44 @@ func (s *userService) GetUserByUsername(username string) (*model.User, error) {
 
 func (s *userService) UpdateUser(user *model.User) error {
 	return s.repo.Update(user)
+}
+
+func (s *userService) UpdateAdminUser(id uint, username, email, role, password *string) (*model.User, error) {
+	user, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := map[string]interface{}{}
+	if username != nil {
+		fields["username"] = *username
+		user.Username = *username
+	}
+	if email != nil {
+		fields["email"] = *email
+		user.Email = *email
+	}
+	if role != nil {
+		fields["role"] = *role
+		user.Role = *role
+	}
+	if password != nil && *password != "" {
+		if err := validatePassword(*password); err != nil {
+			return nil, err
+		}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		fields["password"] = string(hashedPassword)
+	}
+	if len(fields) == 0 {
+		return user, nil
+	}
+	if err := s.repo.UpdateFields(id, fields); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (s *userService) UpdateProfile(id uint, username, email string) error {

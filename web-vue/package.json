@@ -8,7 +8,9 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "check": "vue-tsc -b --pretty false",
-    "check:encoding": "node ../scripts/check-encoding.mjs"
+    "check:encoding": "node ../scripts/check-encoding.mjs",
+    "lint": "eslint . --ext .vue,.ts,.tsx",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@vueuse/core": "^14.3.0",

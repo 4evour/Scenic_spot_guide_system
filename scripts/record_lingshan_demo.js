@@ -37,11 +37,18 @@ async function login() {
     throw new Error(`login failed: ${response.status}`);
   }
   const payload = await response.json();
-  const token = payload && payload.data && payload.data.token;
-  if (!token) {
-    throw new Error('login response did not include token');
+  if (!payload || payload.code !== 0) {
+    throw new Error(`login failed: ${payload && payload.message ? payload.message : 'unknown error'}`);
   }
-  return token;
+  const setCookie = response.headers.get('set-cookie') || '';
+  const cookiePair = setCookie.split(';')[0];
+  const [name, value] = cookiePair.split('=');
+  if (name !== 'auth_token' || !value) {
+    throw new Error('login response did not include auth_token cookie');
+  }
+  return {
+    cookieValue: value,
+  };
 }
 
 function cleanupOutput() {
@@ -272,7 +279,7 @@ function ragReportUrl() {
 async function record() {
   cleanupOutput();
   await checkService();
-  const token = await login();
+  const session = await login();
 
   const launchOptions = {
     headless: true,
@@ -296,9 +303,14 @@ async function record() {
     locale: 'zh-CN',
   });
 
-  await context.addInitScript(authToken => {
-    window.localStorage.setItem('authToken', authToken);
-  }, token);
+  await context.addCookies([{
+    name: 'auth_token',
+    value: session.cookieValue,
+    url: BASE_URL,
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Strict',
+  }]);
 
   const page = await context.newPage();
   page.setDefaultTimeout(8000);

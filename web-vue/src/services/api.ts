@@ -9,7 +9,9 @@ export async function apiFetch<T = unknown>(
     ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options?.headers || {}),
   };
+  const timeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
   const response = await fetch(`/api/v1${path}`, {
+    signal: AbortSignal.timeout(timeoutMs),
     ...options,
     headers,
     credentials: 'include',

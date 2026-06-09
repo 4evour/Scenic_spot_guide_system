@@ -89,6 +89,10 @@ func (h *VisitorQueryHandler) UpdateQuery(c *gin.Context) {
 
 	query.ID = uint(id)
 	if err := h.service.UpdateQuery(&query); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "游客问题不存在")
+			return
+		}
 		slog.Error("更新游客问题失败", "error", err, "query_id", id)
 		pkg.InternalError(c, "更新游客问题失败")
 		return
@@ -106,6 +110,10 @@ func (h *VisitorQueryHandler) DeleteQuery(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteQuery(uint(id)); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, "游客问题不存在")
+			return
+		}
 		slog.Error("删除游客问题失败", "error", err, "query_id", id)
 		pkg.InternalError(c, "删除游客问题失败")
 		return

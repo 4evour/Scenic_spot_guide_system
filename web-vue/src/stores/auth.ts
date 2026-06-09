@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
+
 interface CachedAuth {
   valid: boolean
   role: string
@@ -27,7 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
       return cache.value.valid
     }
     try {
-      const res = await fetch('/api/v1/user/me', { credentials: 'include' })
+      const res = await fetch('/api/v1/user/me', { credentials: 'include', signal: AbortSignal.timeout(API_TIMEOUT_MS) })
       if (!res.ok) {
         cache.value = { valid: false, role: '', userId: '', username: '', checkedAt: Date.now() }
         return false
@@ -54,7 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     try {
-      await fetch('/api/v1/logout', { method: 'POST', credentials: 'include' })
+      await fetch('/api/v1/logout', { method: 'POST', credentials: 'include', signal: AbortSignal.timeout(API_TIMEOUT_MS) })
     } catch { /* ignore */ }
     invalidateAuth()
   }

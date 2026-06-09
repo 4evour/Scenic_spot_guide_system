@@ -45,9 +45,32 @@ func (r *scenicSpotRepository) FindByCategory(category string) ([]model.ScenicSp
 }
 
 func (r *scenicSpotRepository) Update(spot *model.ScenicSpot) error {
-	return r.db.Save(spot).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Select("id").First(&model.ScenicSpot{}, spot.ID).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.ScenicSpot{}).Where("id = ?", spot.ID).Updates(map[string]interface{}{
+			"name":        spot.Name,
+			"description": spot.Description,
+			"location":    spot.Location,
+			"category":    spot.Category,
+			"rating":      spot.Rating,
+			"price":       spot.Price,
+			"image_url":   spot.ImageURL,
+			"latitude":    spot.Latitude,
+			"longitude":   spot.Longitude,
+			"sort_order":  spot.SortOrder,
+		}).Error
+	})
 }
 
 func (r *scenicSpotRepository) Delete(id uint) error {
-	return r.db.Delete(&model.ScenicSpot{}, id).Error
+	result := r.db.Delete(&model.ScenicSpot{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

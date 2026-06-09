@@ -8,6 +8,8 @@ import (
 type GuideContentService interface {
 	CreateContent(content *model.GuideContent) error
 	GetContentByID(id uint) (*model.GuideContent, error)
+	ListContents() ([]model.GuideContent, error)
+	ListContentsPaginated(page, pageSize int) ([]model.GuideContent, int64, error)
 	GetContentsBySpotID(spotID uint) ([]model.GuideContent, error)
 	GetContentsBySpotIDAndType(spotID uint, contentType string) ([]model.GuideContent, error)
 	UpdateContent(content *model.GuideContent) error
@@ -28,6 +30,14 @@ func (s *guideContentService) CreateContent(content *model.GuideContent) error {
 
 func (s *guideContentService) GetContentByID(id uint) (*model.GuideContent, error) {
 	return s.repo.FindByID(id)
+}
+
+func (s *guideContentService) ListContents() ([]model.GuideContent, error) {
+	return s.repo.ListAll()
+}
+
+func (s *guideContentService) ListContentsPaginated(page, pageSize int) ([]model.GuideContent, int64, error) {
+	return s.repo.ListPaginated(page, pageSize)
 }
 
 func (s *guideContentService) GetContentsBySpotID(spotID uint) ([]model.GuideContent, error) {

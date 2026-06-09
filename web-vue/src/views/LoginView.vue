@@ -22,10 +22,11 @@ async function handleLogin() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify(form.value),
     });
     const data = await res.json();
-    if (data.code !== 0) {
+    if (!res.ok || data.code !== 0) {
       message.error(data.message || '登录失败');
       return;
     }

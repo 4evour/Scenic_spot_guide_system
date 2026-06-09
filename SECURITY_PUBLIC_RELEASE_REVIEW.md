@@ -37,11 +37,11 @@
 
 ## 剩余风险
 
-### [M-1] 前端 JWT 存储在 localStorage
+### [M-1] 登录会话已迁移到 HttpOnly Cookie
 
 位置：`static/js/app.js:423`、`web-vue/src/views/AdminView.vue:195`
 
-说明：当前实现使用 `localStorage.authToken` 保存 JWT。公开仓库本身不会泄露密钥，但若页面出现 XSS，Token 更容易被读取。生产环境建议迁移到 `HttpOnly`、`Secure`、`SameSite` Cookie，并配套 CSRF 防护。
+说明：当前实现使用 `auth_token` HttpOnly Cookie 保存登录会话，前端不再读写 `localStorage.authToken`，`POST /api/v1/login` 响应体也不返回 JWT。生产环境仍需在 HTTPS 下启用 Secure Cookie，并持续配套 SameSite/CSRF 防护检查。
 
 ### [M-2] 静态数字人资源体积大且包含第三方运行库
 

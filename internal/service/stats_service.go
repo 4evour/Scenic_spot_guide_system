@@ -798,7 +798,9 @@ func (s *StatsService) RecordInteraction(record InteractionRecord) {
 		Category:       record.Category,
 		Source:         record.Source,
 	}
-	s.interactionRepo.Create(log)
+	if err := s.interactionRepo.Create(log); err != nil {
+		slog.Error("写入交互日志失败", "error", err, "source", record.Source)
+	}
 }
 
 // ==================== 辅助函数 ====================

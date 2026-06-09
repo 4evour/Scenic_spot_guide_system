@@ -40,6 +40,7 @@ security:
 
 	t.Setenv("SCENIC_GUIDE_SERVER_PORT", "9090")
 	t.Setenv("SCENIC_GUIDE_SECURITY_TOKEN_EXPIRE_HOURS", "4")
+	t.Setenv("SCENIC_GUIDE_SECURITY_ALLOWED_ORIGINS", "http://localhost:5173, https://example.com ")
 	t.Setenv("SCENIC_GUIDE_AI_API_KEY", "env-api-key")
 
 	cfg, err := LoadConfig(dir)
@@ -55,5 +56,11 @@ security:
 	}
 	if cfg.AI.APIKey != "env-api-key" {
 		t.Fatalf("expected env AI key override")
+	}
+	if len(cfg.Security.AllowedOrigins) != 2 {
+		t.Fatalf("expected 2 allowed origins, got %#v", cfg.Security.AllowedOrigins)
+	}
+	if cfg.Security.AllowedOrigins[0] != "http://localhost:5173" || cfg.Security.AllowedOrigins[1] != "https://example.com" {
+		t.Fatalf("unexpected allowed origins: %#v", cfg.Security.AllowedOrigins)
 	}
 }

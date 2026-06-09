@@ -75,6 +75,12 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 		prompt = strings.ReplaceAll(prompt, "{knowledge_context}", context.String())
 		prompt = strings.ReplaceAll(prompt, "{session_context}", conversation.String())
 		prompt = strings.ReplaceAll(prompt, "{query}", query)
+
+		// 注入个性化路线推荐（当查询匹配路线关键词时）
+		routeHint := s.buildRouteRecommendation(query)
+		if routeHint != "" {
+			prompt += "\n\n【路线推荐参考】\n" + routeHint + "\n请根据游客的兴趣自然地推荐合适的路线。"
+		}
 		return prompt
 	}
 
@@ -237,7 +243,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := readLimitedBody(resp.Body)
 		slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
 		fallbackStart := time.Now()
 		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
@@ -290,6 +296,20 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 	s.setCachedResponse(cacheKey, answer)
 	return answer, trace, nil
+}
+
+const maxAPIResponseBytes = 20 << 20 // 20MB
+
+func readLimitedBody(body io.Reader) ([]byte, error) {
+	limited := io.LimitReader(body, maxAPIResponseBytes+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return data, err
+	}
+	if int64(len(data)) > maxAPIResponseBytes {
+		return data[:maxAPIResponseBytes], fmt.Errorf("response body exceeded %d bytes", maxAPIResponseBytes)
+	}
+	return data, nil
 }
 
 func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.KnowledgeChunk) string {
@@ -486,7 +506,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 
 	slog.Debug("通用 Chat API 已响应", "status", resp.StatusCode)
 
-	body, readErr := io.ReadAll(resp.Body)
+	body, readErr := readLimitedBody(resp.Body)
 	if readErr != nil {
 		slog.Error("通用 Chat API 响应读取失败", "error", readErr)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("读取响应体失败: %v", readErr)
@@ -526,4 +546,82 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 	return answer, nil
 }
 
+// buildRouteRecommendation 根据用户查询匹配路线关键词，返回路线推荐信息
+func (s *RAGService) buildRouteRecommendation(query string) string {
+	if s.profile == nil || len(s.profile.Routes) == 0 {
+		return ""
+	}
+
+	// 路线匹配关键词映射
+	routeKeywords := map[string][]string{
+		"历史":  {"历史", "文化", "古迹", "建筑", "佛教", "寺庙"},
+		"自然":  {"自然", "风景", "拍照", "山水", "湖"},
+		"亲子":  {"亲子", "儿童", "孩子", "家庭", "小朋友", "带孩子"},
+		"美食":  {"美食", "小吃", "吃饭", "餐厅", "素食"},
+		"路线":  {"路线", "推荐", "怎么玩", "怎么走", "规划", "行程"},
+		"轻松":  {"轻松", "老人", "长辈", "不累"},
+		"深度":  {"深度", "详细", "全面", "全部"},
+	}
+
+	// 检查查询匹配哪些路线类别
+	queryLower := query
+	var matchedCategories []string
+	for category, keywords := range routeKeywords {
+		for _, kw := range keywords {
+			if strings.Contains(queryLower, kw) {
+				matchedCategories = append(matchedCategories, category)
+				break
+			}
+		}
+	}
+
+	if len(matchedCategories) == 0 {
+		return ""
+	}
+
+	// 构建路线推荐信息
+	var result string
+	for _, route := range s.profile.Routes {
+		routeName := route.Name
+		routeDesc := route.Description
+		routeSpots := route.Spots
+
+		// 根据匹配的类别筛选路线
+		relevant := false
+		for _, cat := range matchedCategories {
+			switch cat {
+			case "历史", "深度":
+				if strings.Contains(routeName, "文化") || strings.Contains(routeName, "历史") || strings.Contains(routeName, "深度") {
+					relevant = true
+				}
+			case "自然":
+				if strings.Contains(routeName, "自然") || strings.Contains(routeName, "风光") {
+					relevant = true
+				}
+			case "亲子":
+				if strings.Contains(routeName, "亲子") || strings.Contains(routeName, "欢乐") {
+					relevant = true
+				}
+			case "美食":
+				if strings.Contains(routeName, "美食") || strings.Contains(routeName, "体验") {
+					relevant = true
+				}
+			case "轻松":
+				if strings.Contains(routeDesc, "轻松") || route.Difficulty == "easy" {
+					relevant = true
+				}
+			case "路线":
+				relevant = true // 用户问路线推荐，所有路线都相关
+			}
+		}
+
+		if relevant {
+			result += fmt.Sprintf("- %s：%s（途经：%s）\n", routeName, routeDesc, routeSpots)
+		}
+	}
+
+	return result
+}
+
+// contains 检查字符串是否包含子串
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/pkg"
+	"github.com/scenic-guide/internal/service"
 )
 
 func SetupRoutes(r *gin.Engine, handlers *Handlers) {
@@ -13,7 +14,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	r.Use(securityHeaders())
 	r.Use(pkg.MetricsMiddleware())
 
-	r.GET("/metrics", pkg.PrometheusHandler())
+	r.GET("/metrics", pkg.AuthMiddleware(), pkg.AdminMiddleware(), pkg.PrometheusHandler())
 
 	r.Static("/static", "./static")
 	r.Any("/vtuber-ws/*path", pkg.WSTokenAuth(), pkg.WSProxyHandler("http://127.0.0.1:12393"))
@@ -30,8 +31,10 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	r.GET("/dashboard", vueApp)
 	r.GET("/admin", vueApp)
 	r.GET("/digital-human", vueApp)
+	r.GET("/map", vueApp)
 
 	api := r.Group("/api/v1")
+	api.Use(pkg.CSRFProtection())
 
 	handlers.ScenicSpot.Routes(api)
 	handlers.GuideContent.Routes(api)
@@ -42,6 +45,35 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	handlers.TTS.Routes(api)
 	handlers.DigitalHuman.Routes(api)
 	handlers.Admin.Routes(api)
+	handlers.ScenicProfile.Routes(api)
+
+	// 轻量级行为追踪接口（页面访问、用户操作）
+	api.POST("/track", func(c *gin.Context) {
+		var req struct {
+			Page    string `json:"page"`
+			Action  string `json:"action"`
+			Details string `json:"details"`
+			UserID  uint   `json:"user_id"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(200, gin.H{"code": 0})
+			return
+		}
+		if statsSvc := pkg.GetStatsService(); statsSvc != nil {
+			source := "page_visit"
+			if req.Action != "" {
+				source = "user_action"
+			}
+			statsSvc.RecordInteraction(service.InteractionRecord{
+				UserID:   req.UserID,
+				Query:    req.Page,
+				Response: req.Details,
+				Category: req.Action,
+				Source:   source,
+			})
+		}
+		c.JSON(200, gin.H{"code": 0})
+	})
 
 	// OpenAI-compatible endpoint for Open-LLM-VTuber.
 	r.POST("/v1/chat/completions", getRateLimitMiddleware(30, time.Minute), handlers.OpenAIProxy.ChatCompletions)
@@ -73,7 +105,7 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 			c.Header("Access-Control-Allow-Credentials", "true")
 			c.Header("Vary", "Origin")
 			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Requested-With")
 			c.Header("Access-Control-Max-Age", "86400")
 		} else {
 			c.AbortWithStatus(http.StatusForbidden)
@@ -95,7 +127,7 @@ func securityHeaders() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=()")
 		c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; media-src 'self' blob:;")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' https://webapi.amap.com https://restapi.amap.com; style-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://webapi.amap.com https://*.amap.com; connect-src 'self' ws: wss: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://cdnjs.cloudflare.com; media-src 'self' blob:;")
 		c.Next()
 	}
 }
@@ -107,15 +139,16 @@ func getRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 }
 
 type Handlers struct {
-	ScenicSpot    *ScenicSpotHandler
-	GuideContent  *GuideContentHandler
-	TourRoute     *TourRouteHandler
-	VisitorQuery  *VisitorQueryHandler
-	User          *UserHandler
-	AI            *AIHandler
-	TTS           *TTSHandler
-	DigitalHuman  *DigitalHumanHandler
-	OpenAIProxy   *OpenAIProxyHandler
-	Admin         *AdminHandler
+	ScenicSpot     *ScenicSpotHandler
+	GuideContent   *GuideContentHandler
+	TourRoute      *TourRouteHandler
+	VisitorQuery   *VisitorQueryHandler
+	User           *UserHandler
+	AI             *AIHandler
+	TTS            *TTSHandler
+	DigitalHuman   *DigitalHumanHandler
+	OpenAIProxy    *OpenAIProxyHandler
+	Admin          *AdminHandler
+	ScenicProfile  *ScenicProfileHandler
 	AllowedOrigins []string
 }

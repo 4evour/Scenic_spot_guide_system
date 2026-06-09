@@ -45,9 +45,28 @@ func (r *tourRouteRepository) FindByDifficulty(difficulty string) ([]model.TourR
 }
 
 func (r *tourRouteRepository) Update(route *model.TourRoute) error {
-	return r.db.Save(route).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Select("id").First(&model.TourRoute{}, route.ID).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.TourRoute{}).Where("id = ?", route.ID).Updates(map[string]interface{}{
+			"name":        route.Name,
+			"description": route.Description,
+			"spots":       route.Spots,
+			"duration":    route.Duration,
+			"difficulty":  route.Difficulty,
+			"rating":      route.Rating,
+		}).Error
+	})
 }
 
 func (r *tourRouteRepository) Delete(id uint) error {
-	return r.db.Delete(&model.TourRoute{}, id).Error
+	result := r.db.Delete(&model.TourRoute{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

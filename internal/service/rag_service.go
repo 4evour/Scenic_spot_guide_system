@@ -205,9 +205,37 @@ func (s *RAGService) getCachedKnowledge() ([]model.KnowledgeChunk, error) {
 		return chunks, nil
 	}
 
-	allChunks, err := s.repo.GetAll()
-	if err != nil {
-		return nil, err
+	total, countErr := s.repo.Count()
+	if countErr != nil {
+		return nil, countErr
+	}
+	if total == 0 {
+		s.knowledgeCache = []model.KnowledgeChunk{}
+		return s.knowledgeCache, nil
+	}
+
+	if total <= 2000 {
+		allChunks, err := s.repo.GetAll()
+		if err != nil {
+			return nil, err
+		}
+		s.knowledgeCache = allChunks
+		s.rebuildBM25IndexLocked(allChunks)
+		s.lastCacheTime = now
+		return allChunks, nil
+	}
+
+	const batchSize = 1000
+	allChunks := make([]model.KnowledgeChunk, 0, total)
+	for page := 1; len(allChunks) < int(total); page++ {
+		chunks, _, err := s.repo.List(page, batchSize, "", "")
+		if err != nil {
+			return nil, err
+		}
+		allChunks = append(allChunks, chunks...)
+		if len(chunks) < batchSize {
+			break
+		}
 	}
 
 	s.knowledgeCache = allChunks
