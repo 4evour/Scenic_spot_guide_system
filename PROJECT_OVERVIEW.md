@@ -1,4 +1,4 @@
-# 项目总览
+﻿# 项目总览
 
 ## 项目目标
 
@@ -67,6 +67,11 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - `static/digital-human/libs/live2dcubismcore.min.js` 被 Vue 入口引用，不能随意删除。
 - 当前 Live2D 主模型使用 `static/live2d-models/mao_pro`。
 - 未被业务入口引用的旧 `static/live2d-models/shizuku` 模型已清理。
+- scripts/check-secrets.mjs 新增高德地图 API Key 检测规则（map_webapi_key、map_config_key）。
+- internal/handler/errors.go 提供 isRecordNotFound 统一封装 gorm.ErrRecordNotFound，handler 层统一使用。
+- user_handler.go 提取 alidateUsername、alidateEmail、alidateRole、userPayload 共享函数；创建/编辑用户统一走密码策略校验。
+- docs/architecture.md 记录景区系统与数字人系统的解耦架构、独立迁移清单和 API 连接点。
+- web-vue 新增 .eslintrc.cjs、.prettierrc.json、.prettierignore，前端代码风格统一由 ESLint + Prettier 管理。
 - 源码和文档统一使用 UTF-8；提交前应运行编码检查，防止中文内容 mojibake。
 
 ## 安全与鉴权补充
