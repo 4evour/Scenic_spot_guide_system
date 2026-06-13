@@ -1,0 +1,26 @@
+{
+  "total_records": 140447,
+  "total_attractions": 152,
+  "attraction_types": 8,
+  "date_range": {
+    "start": "2025-01-01 00:00:00",
+    "end": "2025-12-31 00:00:00"
+  },
+  "overall_stats": {
+    "avg_satisfaction": 3.72,
+    "avg_stay_hours": 4.2,
+    "avg_total_cost": 693,
+    "avg_ticket_cost": 156,
+    "gender_ratio": {
+      "male": 50.1,
+      "female": 49.9
+    },
+    "age_group_distribution": {
+      "19-25": 21749,
+      "26-35": 49307,
+      "36-45": 34484,
+      "46-55": 20009,
+      "56+": 14898
+    }
+  }
+}

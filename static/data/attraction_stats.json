@@ -1,0 +1,3704 @@
+[
+  {
+    "name": "同里古镇",
+    "type": "古镇水乡",
+    "record_count": 5476,
+    "avg_satisfaction": 3.19,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 97,
+    "avg_food_cost": 208,
+    "avg_shopping_cost": 281,
+    "avg_transport_cost": 41,
+    "avg_entertainment_cost": 92,
+    "avg_total_cost": 719,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 704,
+      "3": 3148,
+      "4": 1496,
+      "5": 128
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "宁波方特东方神画",
+    "type": "主题乐园",
+    "record_count": 5396,
+    "avg_satisfaction": 3.25,
+    "avg_stay_hours": 9.0,
+    "avg_ticket_cost": 271,
+    "avg_food_cost": 482,
+    "avg_shopping_cost": 442,
+    "avg_transport_cost": 47,
+    "avg_entertainment_cost": 333,
+    "avg_total_cost": 1575,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 75,
+      "3": 4014,
+      "4": 1211,
+      "5": 96
+    },
+    "gender_ratio": {
+      "male": 49.0,
+      "female": 51.0
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "杭州宋城",
+    "type": "主题乐园",
+    "record_count": 5387,
+    "avg_satisfaction": 3.26,
+    "avg_stay_hours": 9.0,
+    "avg_ticket_cost": 308,
+    "avg_food_cost": 478,
+    "avg_shopping_cost": 436,
+    "avg_transport_cost": 47,
+    "avg_entertainment_cost": 330,
+    "avg_total_cost": 1600,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 79,
+      "3": 3934,
+      "4": 1288,
+      "5": 86
+    },
+    "gender_ratio": {
+      "male": 50.7,
+      "female": 49.3
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "金茂大厦",
+    "type": "现代地标",
+    "record_count": 5345,
+    "avg_satisfaction": 4.25,
+    "avg_stay_hours": 2.8,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 83,
+    "avg_shopping_cost": 73,
+    "avg_transport_cost": 49,
+    "avg_entertainment_cost": 35,
+    "avg_total_cost": 240,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 422,
+      "4": 3177,
+      "5": 1746
+    },
+    "gender_ratio": {
+      "male": 49.6,
+      "female": 50.4
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "周庄",
+    "type": "古镇水乡",
+    "record_count": 5333,
+    "avg_satisfaction": 3.21,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 97,
+    "avg_food_cost": 210,
+    "avg_shopping_cost": 283,
+    "avg_transport_cost": 41,
+    "avg_entertainment_cost": 94,
+    "avg_total_cost": 724,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 623,
+      "3": 3087,
+      "4": 1516,
+      "5": 107
+    },
+    "gender_ratio": {
+      "male": 49.7,
+      "female": 50.3
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "东方明珠",
+    "type": "现代地标",
+    "record_count": 5316,
+    "avg_satisfaction": 3.23,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 193,
+    "avg_food_cost": 164,
+    "avg_shopping_cost": 144,
+    "avg_transport_cost": 95,
+    "avg_entertainment_cost": 67,
+    "avg_total_cost": 664,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 638,
+      "3": 2926,
+      "4": 1638,
+      "5": 114
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "豫园",
+    "type": "历史文化",
+    "record_count": 5304,
+    "avg_satisfaction": 3.91,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 39,
+    "avg_food_cost": 139,
+    "avg_shopping_cost": 218,
+    "avg_transport_cost": 31,
+    "avg_entertainment_cost": 72,
+    "avg_total_cost": 499,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 1454,
+      "4": 2896,
+      "5": 954
+    },
+    "gender_ratio": {
+      "male": 49.6,
+      "female": 50.4
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "上海科技馆",
+    "type": "博物馆与展馆",
+    "record_count": 5292,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 30,
+    "avg_shopping_cost": 55,
+    "avg_transport_cost": 9,
+    "avg_entertainment_cost": 45,
+    "avg_total_cost": 138,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 28,
+      "4": 806,
+      "5": 4458
+    },
+    "gender_ratio": {
+      "male": 48.7,
+      "female": 51.3
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "世纪公园",
+    "type": "自然公园",
+    "record_count": 5277,
+    "avg_satisfaction": 4.82,
+    "avg_stay_hours": 3.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 28,
+    "avg_shopping_cost": 17,
+    "avg_transport_cost": 76,
+    "avg_entertainment_cost": 37,
+    "avg_total_cost": 158,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 890,
+      "5": 4348
+    },
+    "gender_ratio": {
+      "male": 50.9,
+      "female": 49.1
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "西湖风景名胜区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 5273,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 108,
+    "avg_shopping_cost": 113,
+    "avg_transport_cost": 60,
+    "avg_entertainment_cost": 48,
+    "avg_total_cost": 329,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 772,
+      "4": 3017,
+      "5": 1484
+    },
+    "gender_ratio": {
+      "male": 49.2,
+      "female": 50.8
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "上海博物馆",
+    "type": "博物馆与展馆",
+    "record_count": 5262,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 2.8,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 30,
+    "avg_shopping_cost": 54,
+    "avg_transport_cost": 9,
+    "avg_entertainment_cost": 44,
+    "avg_total_cost": 137,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 25,
+      "4": 781,
+      "5": 4456
+    },
+    "gender_ratio": {
+      "male": 50.9,
+      "female": 49.1
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "乌镇",
+    "type": "古镇水乡",
+    "record_count": 5255,
+    "avg_satisfaction": 3.18,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 97,
+    "avg_food_cost": 211,
+    "avg_shopping_cost": 286,
+    "avg_transport_cost": 41,
+    "avg_entertainment_cost": 94,
+    "avg_total_cost": 729,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 665,
+      "3": 3076,
+      "4": 1429,
+      "5": 85
+    },
+    "gender_ratio": {
+      "male": 49.4,
+      "female": 50.6
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "上海海洋水族馆",
+    "type": "动植物园与水族馆",
+    "record_count": 5248,
+    "avg_satisfaction": 3.38,
+    "avg_stay_hours": 4.5,
+    "avg_ticket_cost": 155,
+    "avg_food_cost": 269,
+    "avg_shopping_cost": 295,
+    "avg_transport_cost": 174,
+    "avg_entertainment_cost": 186,
+    "avg_total_cost": 1079,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 36,
+      "3": 3419,
+      "4": 1567,
+      "5": 226
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "上海海昌海洋公园",
+    "type": "动植物园与水族馆",
+    "record_count": 5236,
+    "avg_satisfaction": 3.39,
+    "avg_stay_hours": 4.5,
+    "avg_ticket_cost": 385,
+    "avg_food_cost": 201,
+    "avg_shopping_cost": 220,
+    "avg_transport_cost": 129,
+    "avg_entertainment_cost": 137,
+    "avg_total_cost": 1073,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 43,
+      "3": 3367,
+      "4": 1590,
+      "5": 236
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "西塘古镇",
+    "type": "古镇水乡",
+    "record_count": 5228,
+    "avg_satisfaction": 3.18,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 92,
+    "avg_food_cost": 213,
+    "avg_shopping_cost": 286,
+    "avg_transport_cost": 41,
+    "avg_entertainment_cost": 95,
+    "avg_total_cost": 728,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 683,
+      "3": 3040,
+      "4": 1388,
+      "5": 117
+    },
+    "gender_ratio": {
+      "male": 50.9,
+      "female": 49.1
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "上海欢乐谷",
+    "type": "主题乐园",
+    "record_count": 5181,
+    "avg_satisfaction": 3.25,
+    "avg_stay_hours": 9.0,
+    "avg_ticket_cost": 290,
+    "avg_food_cost": 479,
+    "avg_shopping_cost": 438,
+    "avg_transport_cost": 46,
+    "avg_entertainment_cost": 330,
+    "avg_total_cost": 1583,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 61,
+      "3": 3832,
+      "4": 1199,
+      "5": 89
+    },
+    "gender_ratio": {
+      "male": 49.6,
+      "female": 50.4
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "朱家角古镇景区",
+    "type": "古镇水乡",
+    "record_count": 5178,
+    "avg_satisfaction": 4.23,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 116,
+    "avg_shopping_cost": 101,
+    "avg_transport_cost": 17,
+    "avg_entertainment_cost": 25,
+    "avg_total_cost": 259,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 509,
+      "4": 2948,
+      "5": 1721
+    },
+    "gender_ratio": {
+      "male": 50.4,
+      "female": 49.6
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "上海野生动物园",
+    "type": "动植物园与水族馆",
+    "record_count": 5158,
+    "avg_satisfaction": 3.37,
+    "avg_stay_hours": 4.5,
+    "avg_ticket_cost": 160,
+    "avg_food_cost": 268,
+    "avg_shopping_cost": 295,
+    "avg_transport_cost": 174,
+    "avg_entertainment_cost": 186,
+    "avg_total_cost": 1084,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 37,
+      "3": 3377,
+      "4": 1527,
+      "5": 217
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "拙政园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 5149,
+    "avg_satisfaction": 3.09,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 77,
+    "avg_food_cost": 280,
+    "avg_shopping_cost": 291,
+    "avg_transport_cost": 156,
+    "avg_entertainment_cost": 125,
+    "avg_total_cost": 929,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 769,
+      "3": 3247,
+      "4": 1046,
+      "5": 87
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "上海之巅观光厅",
+    "type": "现代地标",
+    "record_count": 5115,
+    "avg_satisfaction": 3.22,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 175,
+    "avg_food_cost": 172,
+    "avg_shopping_cost": 150,
+    "avg_transport_cost": 100,
+    "avg_entertainment_cost": 71,
+    "avg_total_cost": 667,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 600,
+      "3": 2883,
+      "4": 1528,
+      "5": 104
+    },
+    "gender_ratio": {
+      "male": 50.7,
+      "female": 49.3
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "方塔园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 538,
+    "avg_satisfaction": 3.05,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 12,
+    "avg_food_cost": 319,
+    "avg_shopping_cost": 332,
+    "avg_transport_cost": 178,
+    "avg_entertainment_cost": 143,
+    "avg_total_cost": 983,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 83,
+      "3": 351,
+      "4": 97,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 49.4,
+      "female": 50.6
+    },
+    "avg_age": 38.6
+  },
+  {
+    "name": "金山城市沙滩",
+    "type": "风景名胜与休闲度假",
+    "record_count": 311,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 113,
+    "avg_shopping_cost": 116,
+    "avg_transport_cost": 63,
+    "avg_entertainment_cost": 51,
+    "avg_total_cost": 344,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 45,
+      "4": 177,
+      "5": 89
+    },
+    "gender_ratio": {
+      "male": 56.6,
+      "female": 43.4
+    },
+    "avg_age": 39.1
+  },
+  {
+    "name": "锦溪古镇",
+    "type": "古镇水乡",
+    "record_count": 309,
+    "avg_satisfaction": 4.23,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 124,
+    "avg_shopping_cost": 110,
+    "avg_transport_cost": 18,
+    "avg_entertainment_cost": 27,
+    "avg_total_cost": 278,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 33,
+      "4": 172,
+      "5": 104
+    },
+    "gender_ratio": {
+      "male": 48.2,
+      "female": 51.8
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "江南三民文化村",
+    "type": "历史文化",
+    "record_count": 309,
+    "avg_satisfaction": 3.96,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 58,
+    "avg_food_cost": 123,
+    "avg_shopping_cost": 195,
+    "avg_transport_cost": 28,
+    "avg_entertainment_cost": 64,
+    "avg_total_cost": 469,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 64,
+      "4": 192,
+      "5": 53
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "东湖",
+    "type": "风景名胜与休闲度假",
+    "record_count": 309,
+    "avg_satisfaction": 3.12,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 48,
+    "avg_food_cost": 288,
+    "avg_shopping_cost": 301,
+    "avg_transport_cost": 159,
+    "avg_entertainment_cost": 127,
+    "avg_total_cost": 923,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 42,
+      "3": 193,
+      "4": 68,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 46.0,
+      "female": 54.0
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "云澜湾温泉",
+    "type": "风景名胜与休闲度假",
+    "record_count": 308,
+    "avg_satisfaction": 3.07,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 193,
+    "avg_food_cost": 260,
+    "avg_shopping_cost": 271,
+    "avg_transport_cost": 143,
+    "avg_entertainment_cost": 114,
+    "avg_total_cost": 981,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 47,
+      "3": 194,
+      "4": 64,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 47.1,
+      "female": 52.9
+    },
+    "avg_age": 36.7
+  },
+  {
+    "name": "平江路历史街区",
+    "type": "古镇水乡",
+    "record_count": 308,
+    "avg_satisfaction": 4.21,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 128,
+    "avg_shopping_cost": 110,
+    "avg_transport_cost": 18,
+    "avg_entertainment_cost": 28,
+    "avg_total_cost": 284,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 40,
+      "4": 164,
+      "5": 104
+    },
+    "gender_ratio": {
+      "male": 55.2,
+      "female": 44.8
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "吴淞炮台湾湿地森林公园",
+    "type": "自然公园",
+    "record_count": 307,
+    "avg_satisfaction": 4.81,
+    "avg_stay_hours": 3.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 30,
+    "avg_shopping_cost": 18,
+    "avg_transport_cost": 80,
+    "avg_entertainment_cost": 39,
+    "avg_total_cost": 167,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 3,
+      "4": 52,
+      "5": 252
+    },
+    "gender_ratio": {
+      "male": 49.5,
+      "female": 50.5
+    },
+    "avg_age": 39.1
+  },
+  {
+    "name": "南通狼山风景名胜区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 307,
+    "avg_satisfaction": 3.08,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 49,
+    "avg_food_cost": 282,
+    "avg_shopping_cost": 293,
+    "avg_transport_cost": 158,
+    "avg_entertainment_cost": 128,
+    "avg_total_cost": 910,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 48,
+      "3": 194,
+      "4": 57,
+      "5": 8
+    },
+    "gender_ratio": {
+      "male": 51.1,
+      "female": 48.9
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "梅园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 306,
+    "avg_satisfaction": 3.12,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 58,
+    "avg_food_cost": 279,
+    "avg_shopping_cost": 291,
+    "avg_transport_cost": 154,
+    "avg_entertainment_cost": 123,
+    "avg_total_cost": 905,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 43,
+      "3": 190,
+      "4": 66,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 48.4,
+      "female": 51.6
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "廊下郊野公园",
+    "type": "自然公园",
+    "record_count": 306,
+    "avg_satisfaction": 4.82,
+    "avg_stay_hours": 3.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 29,
+    "avg_shopping_cost": 18,
+    "avg_transport_cost": 79,
+    "avg_entertainment_cost": 39,
+    "avg_total_cost": 165,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 1,
+      "4": 54,
+      "5": 251
+    },
+    "gender_ratio": {
+      "male": 48.7,
+      "female": 51.3
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "长兴岛郊野公园",
+    "type": "自然公园",
+    "record_count": 305,
+    "avg_satisfaction": 4.8,
+    "avg_stay_hours": 3.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 30,
+    "avg_shopping_cost": 18,
+    "avg_transport_cost": 81,
+    "avg_entertainment_cost": 40,
+    "avg_total_cost": 170,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 3,
+      "4": 55,
+      "5": 247
+    },
+    "gender_ratio": {
+      "male": 52.5,
+      "female": 47.5
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "上海四季花港",
+    "type": "自然公园",
+    "record_count": 305,
+    "avg_satisfaction": 3.95,
+    "avg_stay_hours": 3.4,
+    "avg_ticket_cost": 49,
+    "avg_food_cost": 84,
+    "avg_shopping_cost": 70,
+    "avg_transport_cost": 175,
+    "avg_entertainment_cost": 86,
+    "avg_total_cost": 464,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 74,
+      "4": 173,
+      "5": 58
+    },
+    "gender_ratio": {
+      "male": 49.5,
+      "female": 50.5
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "中国共产党第二次全国代表大会会址纪念馆",
+    "type": "历史文化",
+    "record_count": 304,
+    "avg_satisfaction": 4.78,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 46,
+    "avg_shopping_cost": 92,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 30,
+    "avg_total_cost": 179,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 3,
+      "4": 61,
+      "5": 240
+    },
+    "gender_ratio": {
+      "male": 45.7,
+      "female": 54.3
+    },
+    "avg_age": 40.4
+  },
+  {
+    "name": "上海都市菜园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 304,
+    "avg_satisfaction": 3.02,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 44,
+    "avg_food_cost": 314,
+    "avg_shopping_cost": 328,
+    "avg_transport_cost": 176,
+    "avg_entertainment_cost": 141,
+    "avg_total_cost": 1003,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 59,
+      "3": 184,
+      "4": 57,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 53.6,
+      "female": 46.4
+    },
+    "avg_age": 37.6
+  },
+  {
+    "name": "中共四大纪念馆",
+    "type": "历史文化",
+    "record_count": 303,
+    "avg_satisfaction": 4.72,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 46,
+    "avg_shopping_cost": 91,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 31,
+    "avg_total_cost": 180,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 6,
+      "4": 72,
+      "5": 225
+    },
+    "gender_ratio": {
+      "male": 48.5,
+      "female": 51.5
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "沈园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 303,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 110,
+    "avg_shopping_cost": 115,
+    "avg_transport_cost": 61,
+    "avg_entertainment_cost": 50,
+    "avg_total_cost": 335,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 40,
+      "4": 181,
+      "5": 82
+    },
+    "gender_ratio": {
+      "male": 47.9,
+      "female": 52.1
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "苏州乐园森林世界",
+    "type": "主题乐园",
+    "record_count": 300,
+    "avg_satisfaction": 3.27,
+    "avg_stay_hours": 9.0,
+    "avg_ticket_cost": 132,
+    "avg_food_cost": 512,
+    "avg_shopping_cost": 474,
+    "avg_transport_cost": 50,
+    "avg_entertainment_cost": 353,
+    "avg_total_cost": 1522,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 4,
+      "3": 219,
+      "4": 68,
+      "5": 9
+    },
+    "gender_ratio": {
+      "male": 46.0,
+      "female": 54.0
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "上海宋庆龄故居纪念馆",
+    "type": "历史文化",
+    "record_count": 300,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 44,
+    "avg_shopping_cost": 87,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 29,
+    "avg_total_cost": 170,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "4": 49,
+      "5": 251
+    },
+    "gender_ratio": {
+      "male": 50.3,
+      "female": 49.7
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "上海玻璃博物馆",
+    "type": "博物馆与展馆",
+    "record_count": 299,
+    "avg_satisfaction": 4.02,
+    "avg_stay_hours": 2.8,
+    "avg_ticket_cost": 77,
+    "avg_food_cost": 69,
+    "avg_shopping_cost": 126,
+    "avg_transport_cost": 20,
+    "avg_entertainment_cost": 104,
+    "avg_total_cost": 396,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 65,
+      "4": 162,
+      "5": 72
+    },
+    "gender_ratio": {
+      "male": 50.5,
+      "female": 49.5
+    },
+    "avg_age": 39.4
+  },
+  {
+    "name": "海上花岛前卫村景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 299,
+    "avg_satisfaction": 4.17,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 107,
+    "avg_shopping_cost": 111,
+    "avg_transport_cost": 60,
+    "avg_entertainment_cost": 48,
+    "avg_total_cost": 326,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 41,
+      "4": 166,
+      "5": 92
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "黎里古镇",
+    "type": "古镇水乡",
+    "record_count": 298,
+    "avg_satisfaction": 3.16,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 58,
+    "avg_food_cost": 235,
+    "avg_shopping_cost": 318,
+    "avg_transport_cost": 46,
+    "avg_entertainment_cost": 106,
+    "avg_total_cost": 763,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 39,
+      "3": 174,
+      "4": 82,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 50.7,
+      "female": 49.3
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "东方绿舟景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 298,
+    "avg_satisfaction": 3.09,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 48,
+    "avg_food_cost": 288,
+    "avg_shopping_cost": 303,
+    "avg_transport_cost": 160,
+    "avg_entertainment_cost": 128,
+    "avg_total_cost": 927,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 46,
+      "3": 188,
+      "4": 55,
+      "5": 9
+    },
+    "gender_ratio": {
+      "male": 46.3,
+      "female": 53.7
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "尚湖风景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 298,
+    "avg_satisfaction": 3.07,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 78,
+    "avg_food_cost": 261,
+    "avg_shopping_cost": 272,
+    "avg_transport_cost": 146,
+    "avg_entertainment_cost": 117,
+    "avg_total_cost": 874,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 43,
+      "3": 196,
+      "4": 53,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 51.3,
+      "female": 48.7
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "梅花洲",
+    "type": "风景名胜与休闲度假",
+    "record_count": 297,
+    "avg_satisfaction": 3.08,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 98,
+    "avg_food_cost": 290,
+    "avg_shopping_cost": 302,
+    "avg_transport_cost": 162,
+    "avg_entertainment_cost": 129,
+    "avg_total_cost": 981,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 41,
+      "3": 194,
+      "4": 58,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 37.4
+  },
+  {
+    "name": "西溪国家湿地公园",
+    "type": "自然公园",
+    "record_count": 297,
+    "avg_satisfaction": 3.94,
+    "avg_stay_hours": 3.4,
+    "avg_ticket_cost": 79,
+    "avg_food_cost": 76,
+    "avg_shopping_cost": 64,
+    "avg_transport_cost": 156,
+    "avg_entertainment_cost": 76,
+    "avg_total_cost": 450,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 71,
+      "4": 174,
+      "5": 52
+    },
+    "gender_ratio": {
+      "male": 46.5,
+      "female": 53.5
+    },
+    "avg_age": 37.0
+  },
+  {
+    "name": "上海影视乐园",
+    "type": "主题乐园",
+    "record_count": 297,
+    "avg_satisfaction": 3.26,
+    "avg_stay_hours": 8.8,
+    "avg_ticket_cost": 78,
+    "avg_food_cost": 557,
+    "avg_shopping_cost": 515,
+    "avg_transport_cost": 54,
+    "avg_entertainment_cost": 384,
+    "avg_total_cost": 1589,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 2,
+      "3": 223,
+      "4": 65,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "闵行文化公园",
+    "type": "自然公园",
+    "record_count": 296,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 3.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 29,
+    "avg_shopping_cost": 18,
+    "avg_transport_cost": 78,
+    "avg_entertainment_cost": 38,
+    "avg_total_cost": 163,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 1,
+      "4": 45,
+      "5": 250
+    },
+    "gender_ratio": {
+      "male": 51.4,
+      "female": 48.6
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "南翔古镇",
+    "type": "古镇水乡",
+    "record_count": 296,
+    "avg_satisfaction": 4.27,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 105,
+    "avg_shopping_cost": 92,
+    "avg_transport_cost": 15,
+    "avg_entertainment_cost": 23,
+    "avg_total_cost": 235,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 22,
+      "4": 173,
+      "5": 101
+    },
+    "gender_ratio": {
+      "male": 49.0,
+      "female": 51.0
+    },
+    "avg_age": 37.2
+  },
+  {
+    "name": "醉白池",
+    "type": "风景名胜与休闲度假",
+    "record_count": 296,
+    "avg_satisfaction": 4.11,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 105,
+    "avg_shopping_cost": 110,
+    "avg_transport_cost": 59,
+    "avg_entertainment_cost": 47,
+    "avg_total_cost": 321,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 54,
+      "4": 156,
+      "5": 86
+    },
+    "gender_ratio": {
+      "male": 51.0,
+      "female": 49.0
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "西山",
+    "type": "风景名胜与休闲度假",
+    "record_count": 295,
+    "avg_satisfaction": 4.18,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 100,
+    "avg_shopping_cost": 104,
+    "avg_transport_cost": 56,
+    "avg_entertainment_cost": 45,
+    "avg_total_cost": 305,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 164,
+      "5": 92
+    },
+    "gender_ratio": {
+      "male": 51.2,
+      "female": 48.8
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "寒山寺",
+    "type": "历史文化",
+    "record_count": 295,
+    "avg_satisfaction": 3.93,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 19,
+    "avg_food_cost": 131,
+    "avg_shopping_cost": 205,
+    "avg_transport_cost": 29,
+    "avg_entertainment_cost": 69,
+    "avg_total_cost": 454,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 71,
+      "4": 173,
+      "5": 51
+    },
+    "gender_ratio": {
+      "male": 54.2,
+      "female": 45.8
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "南禅寺",
+    "type": "历史文化",
+    "record_count": 295,
+    "avg_satisfaction": 4.77,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 46,
+    "avg_shopping_cost": 88,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 32,
+    "avg_total_cost": 177,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 65,
+      "5": 228
+    },
+    "gender_ratio": {
+      "male": 58.6,
+      "female": 41.4
+    },
+    "avg_age": 36.6
+  },
+  {
+    "name": "上海佘山国家森林公园",
+    "type": "自然公园",
+    "record_count": 294,
+    "avg_satisfaction": 4.77,
+    "avg_stay_hours": 3.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 28,
+    "avg_shopping_cost": 17,
+    "avg_transport_cost": 76,
+    "avg_entertainment_cost": 37,
+    "avg_total_cost": 158,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 3,
+      "4": 62,
+      "5": 229
+    },
+    "gender_ratio": {
+      "male": 49.3,
+      "female": 50.7
+    },
+    "avg_age": 36.8
+  },
+  {
+    "name": "古猗园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 294,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 112,
+    "avg_shopping_cost": 116,
+    "avg_transport_cost": 63,
+    "avg_entertainment_cost": 51,
+    "avg_total_cost": 343,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 46,
+      "4": 161,
+      "5": 87
+    },
+    "gender_ratio": {
+      "male": 53.7,
+      "female": 46.3
+    },
+    "avg_age": 37.0
+  },
+  {
+    "name": "泰会生活文化园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 293,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 110,
+    "avg_shopping_cost": 113,
+    "avg_transport_cost": 61,
+    "avg_entertainment_cost": 49,
+    "avg_total_cost": 333,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 49,
+      "4": 154,
+      "5": 90
+    },
+    "gender_ratio": {
+      "male": 48.8,
+      "female": 51.2
+    },
+    "avg_age": 37.3
+  },
+  {
+    "name": "杭州Hello Kitty乐园",
+    "type": "主题乐园",
+    "record_count": 291,
+    "avg_satisfaction": 3.25,
+    "avg_stay_hours": 9.0,
+    "avg_ticket_cost": 282,
+    "avg_food_cost": 520,
+    "avg_shopping_cost": 481,
+    "avg_transport_cost": 51,
+    "avg_entertainment_cost": 356,
+    "avg_total_cost": 1692,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 5,
+      "3": 212,
+      "4": 71,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 48.8,
+      "female": 51.2
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "荡口古镇",
+    "type": "古镇水乡",
+    "record_count": 290,
+    "avg_satisfaction": 4.24,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 115,
+    "avg_shopping_cost": 101,
+    "avg_transport_cost": 16,
+    "avg_entertainment_cost": 25,
+    "avg_total_cost": 257,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 26,
+      "4": 168,
+      "5": 96
+    },
+    "gender_ratio": {
+      "male": 44.5,
+      "female": 55.5
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "金山嘴渔村",
+    "type": "古镇水乡",
+    "record_count": 289,
+    "avg_satisfaction": 3.13,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 39,
+    "avg_food_cost": 246,
+    "avg_shopping_cost": 331,
+    "avg_transport_cost": 48,
+    "avg_entertainment_cost": 107,
+    "avg_total_cost": 771,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 40,
+      "3": 177,
+      "4": 66,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 47.1,
+      "female": 52.9
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "京杭大运河杭州景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 288,
+    "avg_satisfaction": 3.14,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 162,
+    "avg_food_cost": 268,
+    "avg_shopping_cost": 276,
+    "avg_transport_cost": 150,
+    "avg_entertainment_cost": 120,
+    "avg_total_cost": 977,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 42,
+      "3": 172,
+      "4": 67,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 52.4,
+      "female": 47.6
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "莫干山风景名胜区",
+    "type": "自然公园",
+    "record_count": 288,
+    "avg_satisfaction": 4.79,
+    "avg_stay_hours": 3.3,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 30,
+    "avg_shopping_cost": 19,
+    "avg_transport_cost": 81,
+    "avg_entertainment_cost": 40,
+    "avg_total_cost": 170,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 3,
+      "4": 54,
+      "5": 231
+    },
+    "gender_ratio": {
+      "male": 49.3,
+      "female": 50.7
+    },
+    "avg_age": 36.8
+  },
+  {
+    "name": "陈云故里",
+    "type": "历史文化",
+    "record_count": 287,
+    "avg_satisfaction": 4.82,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 44,
+    "avg_shopping_cost": 87,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 30,
+    "avg_total_cost": 173,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 49,
+      "5": 236
+    },
+    "gender_ratio": {
+      "male": 52.3,
+      "female": 47.7
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "召稼楼古镇",
+    "type": "古镇水乡",
+    "record_count": 287,
+    "avg_satisfaction": 4.24,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 121,
+    "avg_shopping_cost": 106,
+    "avg_transport_cost": 17,
+    "avg_entertainment_cost": 26,
+    "avg_total_cost": 271,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 26,
+      "4": 167,
+      "5": 94
+    },
+    "gender_ratio": {
+      "male": 49.5,
+      "female": 50.5
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "灵山大佛",
+    "type": "风景名胜与休闲度假",
+    "record_count": 286,
+    "avg_satisfaction": 3.12,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 203,
+    "avg_food_cost": 220,
+    "avg_shopping_cost": 226,
+    "avg_transport_cost": 123,
+    "avg_entertainment_cost": 99,
+    "avg_total_cost": 870,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 38,
+      "3": 181,
+      "4": 61,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 54.5,
+      "female": 45.5
+    },
+    "avg_age": 39.5
+  },
+  {
+    "name": "上海辰山植物园",
+    "type": "自然公园",
+    "record_count": 286,
+    "avg_satisfaction": 4.04,
+    "avg_stay_hours": 3.5,
+    "avg_ticket_cost": 58,
+    "avg_food_cost": 73,
+    "avg_shopping_cost": 61,
+    "avg_transport_cost": 152,
+    "avg_entertainment_cost": 75,
+    "avg_total_cost": 419,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 55,
+      "4": 164,
+      "5": 67
+    },
+    "gender_ratio": {
+      "male": 45.1,
+      "female": 54.9
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "南湖景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 284,
+    "avg_satisfaction": 4.13,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 116,
+    "avg_shopping_cost": 121,
+    "avg_transport_cost": 64,
+    "avg_entertainment_cost": 51,
+    "avg_total_cost": 352,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 43,
+      "4": 162,
+      "5": 79
+    },
+    "gender_ratio": {
+      "male": 49.3,
+      "female": 50.7
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "上海奇迹花园",
+    "type": "自然公园",
+    "record_count": 284,
+    "avg_satisfaction": 3.98,
+    "avg_stay_hours": 3.4,
+    "avg_ticket_cost": 77,
+    "avg_food_cost": 76,
+    "avg_shopping_cost": 63,
+    "avg_transport_cost": 158,
+    "avg_entertainment_cost": 78,
+    "avg_total_cost": 453,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 68,
+      "4": 154,
+      "5": 62
+    },
+    "gender_ratio": {
+      "male": 49.3,
+      "female": 50.7
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "留园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 283,
+    "avg_satisfaction": 3.13,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 53,
+    "avg_food_cost": 271,
+    "avg_shopping_cost": 281,
+    "avg_transport_cost": 151,
+    "avg_entertainment_cost": 121,
+    "avg_total_cost": 877,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 41,
+      "3": 170,
+      "4": 66,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 50.5,
+      "female": 49.5
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "盘门景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 282,
+    "avg_satisfaction": 3.1,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 77,
+    "avg_food_cost": 278,
+    "avg_shopping_cost": 292,
+    "avg_transport_cost": 155,
+    "avg_entertainment_cost": 124,
+    "avg_total_cost": 925,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 44,
+      "3": 171,
+      "4": 61,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 46.8,
+      "female": 53.2
+    },
+    "avg_age": 36.5
+  },
+  {
+    "name": "七宝古镇",
+    "type": "古镇水乡",
+    "record_count": 280,
+    "avg_satisfaction": 4.24,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 114,
+    "avg_shopping_cost": 100,
+    "avg_transport_cost": 16,
+    "avg_entertainment_cost": 25,
+    "avg_total_cost": 255,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 19,
+      "4": 175,
+      "5": 86
+    },
+    "gender_ratio": {
+      "male": 50.7,
+      "female": 49.3
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "绍兴柯岩风景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 279,
+    "avg_satisfaction": 3.06,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 93,
+    "avg_food_cost": 275,
+    "avg_shopping_cost": 283,
+    "avg_transport_cost": 155,
+    "avg_entertainment_cost": 124,
+    "avg_total_cost": 930,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 42,
+      "3": 180,
+      "4": 55,
+      "5": 2
+    },
+    "gender_ratio": {
+      "male": 51.6,
+      "female": 48.4
+    },
+    "avg_age": 36.8
+  },
+  {
+    "name": "南通洲际绿博园",
+    "type": "自然公园",
+    "record_count": 278,
+    "avg_satisfaction": 3.99,
+    "avg_stay_hours": 3.5,
+    "avg_ticket_cost": 77,
+    "avg_food_cost": 71,
+    "avg_shopping_cost": 59,
+    "avg_transport_cost": 147,
+    "avg_entertainment_cost": 72,
+    "avg_total_cost": 426,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 61,
+      "4": 159,
+      "5": 58
+    },
+    "gender_ratio": {
+      "male": 48.9,
+      "female": 51.1
+    },
+    "avg_age": 39.1
+  },
+  {
+    "name": "州桥老街",
+    "type": "古镇水乡",
+    "record_count": 278,
+    "avg_satisfaction": 4.25,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 122,
+    "avg_shopping_cost": 106,
+    "avg_transport_cost": 18,
+    "avg_entertainment_cost": 27,
+    "avg_total_cost": 272,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 28,
+      "4": 153,
+      "5": 97
+    },
+    "gender_ratio": {
+      "male": 52.9,
+      "female": 47.1
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "上海杜莎夫人蜡像馆",
+    "type": "博物馆与展馆",
+    "record_count": 277,
+    "avg_satisfaction": 4.05,
+    "avg_stay_hours": 2.8,
+    "avg_ticket_cost": 202,
+    "avg_food_cost": 44,
+    "avg_shopping_cost": 79,
+    "avg_transport_cost": 13,
+    "avg_entertainment_cost": 65,
+    "avg_total_cost": 403,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 47,
+      "4": 168,
+      "5": 62
+    },
+    "gender_ratio": {
+      "male": 54.5,
+      "female": 45.5
+    },
+    "avg_age": 37.4
+  },
+  {
+    "name": "比斯特上海购物村",
+    "type": "风景名胜与休闲度假",
+    "record_count": 277,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 115,
+    "avg_shopping_cost": 119,
+    "avg_transport_cost": 64,
+    "avg_entertainment_cost": 51,
+    "avg_total_cost": 350,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 44,
+      "4": 150,
+      "5": 83
+    },
+    "gender_ratio": {
+      "male": 53.4,
+      "female": 46.6
+    },
+    "avg_age": 36.6
+  },
+  {
+    "name": "蠡园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 277,
+    "avg_satisfaction": 4.1,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 106,
+    "avg_shopping_cost": 111,
+    "avg_transport_cost": 59,
+    "avg_entertainment_cost": 47,
+    "avg_total_cost": 324,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 41,
+      "4": 167,
+      "5": 69
+    },
+    "gender_ratio": {
+      "male": 47.7,
+      "female": 52.3
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "上海共青森林公园",
+    "type": "自然公园",
+    "record_count": 275,
+    "avg_satisfaction": 4.81,
+    "avg_stay_hours": 3.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 30,
+    "avg_shopping_cost": 19,
+    "avg_transport_cost": 82,
+    "avg_entertainment_cost": 40,
+    "avg_total_cost": 170,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 4,
+      "4": 43,
+      "5": 228
+    },
+    "gender_ratio": {
+      "male": 48.7,
+      "female": 51.3
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "高家庄生态园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 274,
+    "avg_satisfaction": 3.02,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 59,
+    "avg_food_cost": 309,
+    "avg_shopping_cost": 319,
+    "avg_transport_cost": 173,
+    "avg_entertainment_cost": 138,
+    "avg_total_cost": 996,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 46,
+      "3": 179,
+      "4": 46,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 55.8,
+      "female": 44.2
+    },
+    "avg_age": 37.3
+  },
+  {
+    "name": "月湖雕塑公园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 272,
+    "avg_satisfaction": 3.08,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 96,
+    "avg_food_cost": 267,
+    "avg_shopping_cost": 277,
+    "avg_transport_cost": 151,
+    "avg_entertainment_cost": 122,
+    "avg_total_cost": 913,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 49,
+      "3": 156,
+      "4": 63,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 51.8,
+      "female": 48.2
+    },
+    "avg_age": 38.8
+  },
+  {
+    "name": "闻道园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 271,
+    "avg_satisfaction": 3.07,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 153,
+    "avg_food_cost": 258,
+    "avg_shopping_cost": 266,
+    "avg_transport_cost": 144,
+    "avg_entertainment_cost": 114,
+    "avg_total_cost": 935,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 38,
+      "3": 179,
+      "4": 51,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 49.1,
+      "female": 50.9
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "长风公园",
+    "type": "自然公园",
+    "record_count": 271,
+    "avg_satisfaction": 4.83,
+    "avg_stay_hours": 3.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 27,
+    "avg_shopping_cost": 16,
+    "avg_transport_cost": 72,
+    "avg_entertainment_cost": 35,
+    "avg_total_cost": 150,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 1,
+      "4": 44,
+      "5": 226
+    },
+    "gender_ratio": {
+      "male": 50.6,
+      "female": 49.4
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "虎丘山风景名胜区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 271,
+    "avg_satisfaction": 3.1,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 68,
+    "avg_food_cost": 279,
+    "avg_shopping_cost": 291,
+    "avg_transport_cost": 157,
+    "avg_entertainment_cost": 124,
+    "avg_total_cost": 918,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 41,
+      "3": 170,
+      "4": 52,
+      "5": 8
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "广富林文化遗址",
+    "type": "历史文化",
+    "record_count": 271,
+    "avg_satisfaction": 4.77,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 47,
+    "avg_shopping_cost": 92,
+    "avg_transport_cost": 12,
+    "avg_entertainment_cost": 31,
+    "avg_total_cost": 183,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 3,
+      "4": 56,
+      "5": 212
+    },
+    "gender_ratio": {
+      "male": 48.3,
+      "female": 51.7
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "雷峰塔",
+    "type": "风景名胜与休闲度假",
+    "record_count": 266,
+    "avg_satisfaction": 4.03,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 120,
+    "avg_shopping_cost": 125,
+    "avg_transport_cost": 68,
+    "avg_entertainment_cost": 54,
+    "avg_total_cost": 367,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 51,
+      "4": 156,
+      "5": 59
+    },
+    "gender_ratio": {
+      "male": 50.4,
+      "female": 49.6
+    },
+    "avg_age": 36.9
+  },
+  {
+    "name": "慈城古县城",
+    "type": "古镇水乡",
+    "record_count": 266,
+    "avg_satisfaction": 3.12,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 73,
+    "avg_food_cost": 231,
+    "avg_shopping_cost": 313,
+    "avg_transport_cost": 45,
+    "avg_entertainment_cost": 103,
+    "avg_total_cost": 765,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 37,
+      "3": 166,
+      "4": 57,
+      "5": 6
+    },
+    "gender_ratio": {
+      "male": 46.6,
+      "female": 53.4
+    },
+    "avg_age": 37.2
+  },
+  {
+    "name": "嵊泗列岛风景名胜区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 265,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 110,
+    "avg_shopping_cost": 115,
+    "avg_transport_cost": 62,
+    "avg_entertainment_cost": 49,
+    "avg_total_cost": 336,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 151,
+      "5": 75
+    },
+    "gender_ratio": {
+      "male": 53.2,
+      "female": 46.8
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "清名桥古运河景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 263,
+    "avg_satisfaction": 4.19,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 104,
+    "avg_shopping_cost": 108,
+    "avg_transport_cost": 59,
+    "avg_entertainment_cost": 46,
+    "avg_total_cost": 318,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 37,
+      "4": 139,
+      "5": 87
+    },
+    "gender_ratio": {
+      "male": 47.5,
+      "female": 52.5
+    },
+    "avg_age": 39.0
+  },
+  {
+    "name": "沙溪古镇",
+    "type": "古镇水乡",
+    "record_count": 261,
+    "avg_satisfaction": 4.28,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 107,
+    "avg_shopping_cost": 93,
+    "avg_transport_cost": 15,
+    "avg_entertainment_cost": 23,
+    "avg_total_cost": 237,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 15,
+      "4": 159,
+      "5": 87
+    },
+    "gender_ratio": {
+      "male": 48.7,
+      "female": 51.3
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "鲁迅故里",
+    "type": "历史文化",
+    "record_count": 261,
+    "avg_satisfaction": 4.79,
+    "avg_stay_hours": 1.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 45,
+    "avg_shopping_cost": 88,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 30,
+    "avg_total_cost": 173,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 50,
+      "5": 209
+    },
+    "gender_ratio": {
+      "male": 52.5,
+      "female": 47.5
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "苏州上方山国家森林公园",
+    "type": "自然公园",
+    "record_count": 259,
+    "avg_satisfaction": 3.97,
+    "avg_stay_hours": 3.5,
+    "avg_ticket_cost": 43,
+    "avg_food_cost": 80,
+    "avg_shopping_cost": 67,
+    "avg_transport_cost": 168,
+    "avg_entertainment_cost": 83,
+    "avg_total_cost": 442,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 63,
+      "4": 142,
+      "5": 54
+    },
+    "gender_ratio": {
+      "male": 49.0,
+      "female": 51.0
+    },
+    "avg_age": 39.0
+  },
+  {
+    "name": "枫泾古镇",
+    "type": "古镇水乡",
+    "record_count": 259,
+    "avg_satisfaction": 4.15,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 127,
+    "avg_shopping_cost": 110,
+    "avg_transport_cost": 18,
+    "avg_entertainment_cost": 28,
+    "avg_total_cost": 283,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 34,
+      "4": 152,
+      "5": 73
+    },
+    "gender_ratio": {
+      "male": 54.8,
+      "female": 45.2
+    },
+    "avg_age": 38.6
+  },
+  {
+    "name": "中国共产党第一次全国代表大会会址",
+    "type": "历史文化",
+    "record_count": 258,
+    "avg_satisfaction": 4.81,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 39,
+    "avg_shopping_cost": 78,
+    "avg_transport_cost": 10,
+    "avg_entertainment_cost": 27,
+    "avg_total_cost": 154,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 1,
+      "4": 48,
+      "5": 209
+    },
+    "gender_ratio": {
+      "male": 50.0,
+      "female": 50.0
+    },
+    "avg_age": 37.2
+  },
+  {
+    "name": "禅意小镇·拈花湾",
+    "type": "风景名胜与休闲度假",
+    "record_count": 255,
+    "avg_satisfaction": 3.03,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 146,
+    "avg_food_cost": 267,
+    "avg_shopping_cost": 278,
+    "avg_transport_cost": 148,
+    "avg_entertainment_cost": 118,
+    "avg_total_cost": 957,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 48,
+      "3": 155,
+      "4": 49,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 49.4,
+      "female": 50.6
+    },
+    "avg_age": 37.3
+  },
+  {
+    "name": "三国水浒景区(中央电视台无锡影视基地)",
+    "type": "主题乐园",
+    "record_count": 255,
+    "avg_satisfaction": 3.2,
+    "avg_stay_hours": 8.9,
+    "avg_ticket_cost": 44,
+    "avg_food_cost": 571,
+    "avg_shopping_cost": 526,
+    "avg_transport_cost": 55,
+    "avg_entertainment_cost": 399,
+    "avg_total_cost": 1595,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 6,
+      "3": 197,
+      "4": 48,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 52.9,
+      "female": 47.1
+    },
+    "avg_age": 37.0
+  },
+  {
+    "name": "安昌古镇",
+    "type": "古镇水乡",
+    "record_count": 255,
+    "avg_satisfaction": 4.22,
+    "avg_stay_hours": 4.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 114,
+    "avg_shopping_cost": 101,
+    "avg_transport_cost": 16,
+    "avg_entertainment_cost": 25,
+    "avg_total_cost": 256,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 24,
+      "4": 150,
+      "5": 81
+    },
+    "gender_ratio": {
+      "male": 47.1,
+      "female": 52.9
+    },
+    "avg_age": 37.0
+  },
+  {
+    "name": "甪直古镇",
+    "type": "古镇水乡",
+    "record_count": 253,
+    "avg_satisfaction": 3.19,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 51,
+    "avg_food_cost": 232,
+    "avg_shopping_cost": 312,
+    "avg_transport_cost": 46,
+    "avg_entertainment_cost": 103,
+    "avg_total_cost": 743,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 23,
+      "3": 167,
+      "4": 56,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 48.2,
+      "female": 51.8
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "绮园景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 253,
+    "avg_satisfaction": 3.11,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 34,
+    "avg_food_cost": 307,
+    "avg_shopping_cost": 319,
+    "avg_transport_cost": 170,
+    "avg_entertainment_cost": 135,
+    "avg_total_cost": 964,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 36,
+      "3": 157,
+      "4": 56,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 39.3
+  },
+  {
+    "name": "东平国家森林公园",
+    "type": "自然公园",
+    "record_count": 252,
+    "avg_satisfaction": 4.0,
+    "avg_stay_hours": 3.4,
+    "avg_ticket_cost": 67,
+    "avg_food_cost": 75,
+    "avg_shopping_cost": 62,
+    "avg_transport_cost": 155,
+    "avg_entertainment_cost": 76,
+    "avg_total_cost": 435,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 51,
+      "4": 149,
+      "5": 52
+    },
+    "gender_ratio": {
+      "male": 45.6,
+      "female": 54.4
+    },
+    "avg_age": 38.7
+  },
+  {
+    "name": "上海薰衣草公园",
+    "type": "自然公园",
+    "record_count": 252,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 3.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 33,
+    "avg_shopping_cost": 20,
+    "avg_transport_cost": 88,
+    "avg_entertainment_cost": 43,
+    "avg_total_cost": 183,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 36,
+      "5": 214
+    },
+    "gender_ratio": {
+      "male": 50.4,
+      "female": 49.6
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "千灯古镇",
+    "type": "古镇水乡",
+    "record_count": 252,
+    "avg_satisfaction": 4.25,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 120,
+    "avg_shopping_cost": 104,
+    "avg_transport_cost": 17,
+    "avg_entertainment_cost": 27,
+    "avg_total_cost": 269,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 21,
+      "4": 148,
+      "5": 83
+    },
+    "gender_ratio": {
+      "male": 54.8,
+      "female": 45.2
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "北外滩国客中心",
+    "type": "现代地标",
+    "record_count": 251,
+    "avg_satisfaction": 4.27,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 80,
+    "avg_shopping_cost": 71,
+    "avg_transport_cost": 47,
+    "avg_entertainment_cost": 34,
+    "avg_total_cost": 232,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 20,
+      "4": 142,
+      "5": 89
+    },
+    "gender_ratio": {
+      "male": 51.8,
+      "female": 48.2
+    },
+    "avg_age": 37.3
+  },
+  {
+    "name": "苏州太湖国家湿地公园",
+    "type": "自然公园",
+    "record_count": 251,
+    "avg_satisfaction": 4.09,
+    "avg_stay_hours": 3.6,
+    "avg_ticket_cost": 57,
+    "avg_food_cost": 72,
+    "avg_shopping_cost": 59,
+    "avg_transport_cost": 151,
+    "avg_entertainment_cost": 75,
+    "avg_total_cost": 415,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 150,
+      "5": 62
+    },
+    "gender_ratio": {
+      "male": 54.2,
+      "female": 45.8
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "东滩湿地公园",
+    "type": "自然公园",
+    "record_count": 250,
+    "avg_satisfaction": 4.0,
+    "avg_stay_hours": 3.6,
+    "avg_ticket_cost": 48,
+    "avg_food_cost": 76,
+    "avg_shopping_cost": 62,
+    "avg_transport_cost": 160,
+    "avg_entertainment_cost": 79,
+    "avg_total_cost": 426,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 47,
+      "4": 155,
+      "5": 48
+    },
+    "gender_ratio": {
+      "male": 57.2,
+      "female": 42.8
+    },
+    "avg_age": 39.0
+  },
+  {
+    "name": "上海宝山国际民间艺术博览馆",
+    "type": "博物馆与展馆",
+    "record_count": 246,
+    "avg_satisfaction": 4.11,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 29,
+    "avg_food_cost": 79,
+    "avg_shopping_cost": 144,
+    "avg_transport_cost": 23,
+    "avg_entertainment_cost": 117,
+    "avg_total_cost": 392,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 142,
+      "5": 65
+    },
+    "gender_ratio": {
+      "male": 46.7,
+      "female": 53.3
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "陈云纪念馆",
+    "type": "历史文化",
+    "record_count": 245,
+    "avg_satisfaction": 4.78,
+    "avg_stay_hours": 2.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 46,
+    "avg_shopping_cost": 91,
+    "avg_transport_cost": 12,
+    "avg_entertainment_cost": 32,
+    "avg_total_cost": 180,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 50,
+      "5": 193
+    },
+    "gender_ratio": {
+      "male": 54.3,
+      "female": 45.7
+    },
+    "avg_age": 37.5
+  },
+  {
+    "name": "上海国际赛车场",
+    "type": "风景名胜与休闲度假",
+    "record_count": 245,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 106,
+    "avg_shopping_cost": 111,
+    "avg_transport_cost": 59,
+    "avg_entertainment_cost": 47,
+    "avg_total_cost": 323,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 36,
+      "4": 138,
+      "5": 71
+    },
+    "gender_ratio": {
+      "male": 48.2,
+      "female": 51.8
+    },
+    "avg_age": 38.3
+  },
+  {
+    "name": "金鸡湖",
+    "type": "风景名胜与休闲度假",
+    "record_count": 244,
+    "avg_satisfaction": 4.16,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 107,
+    "avg_shopping_cost": 112,
+    "avg_transport_cost": 60,
+    "avg_entertainment_cost": 48,
+    "avg_total_cost": 327,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 128,
+      "5": 77
+    },
+    "gender_ratio": {
+      "male": 53.3,
+      "female": 46.7
+    },
+    "avg_age": 38.5
+  },
+  {
+    "name": "汽车博览公园",
+    "type": "博物馆与展馆",
+    "record_count": 243,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 29,
+    "avg_shopping_cost": 52,
+    "avg_transport_cost": 8,
+    "avg_entertainment_cost": 42,
+    "avg_total_cost": 132,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 1,
+      "4": 37,
+      "5": 205
+    },
+    "gender_ratio": {
+      "male": 49.4,
+      "female": 50.6
+    },
+    "avg_age": 37.6
+  },
+  {
+    "name": "无锡市太湖鼋头渚风景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 243,
+    "avg_satisfaction": 3.02,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 88,
+    "avg_food_cost": 271,
+    "avg_shopping_cost": 283,
+    "avg_transport_cost": 151,
+    "avg_entertainment_cost": 122,
+    "avg_total_cost": 916,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 43,
+      "3": 156,
+      "4": 41,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 36.6
+  },
+  {
+    "name": "兰亭景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 242,
+    "avg_satisfaction": 3.05,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 68,
+    "avg_food_cost": 277,
+    "avg_shopping_cost": 287,
+    "avg_transport_cost": 156,
+    "avg_entertainment_cost": 124,
+    "avg_total_cost": 911,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 42,
+      "3": 146,
+      "4": 54
+    },
+    "gender_ratio": {
+      "male": 48.3,
+      "female": 51.7
+    },
+    "avg_age": 38.6
+  },
+  {
+    "name": "东林寺",
+    "type": "风景名胜与休闲度假",
+    "record_count": 242,
+    "avg_satisfaction": 4.21,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 104,
+    "avg_shopping_cost": 107,
+    "avg_transport_cost": 58,
+    "avg_entertainment_cost": 46,
+    "avg_total_cost": 316,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 31,
+      "4": 128,
+      "5": 83
+    },
+    "gender_ratio": {
+      "male": 51.2,
+      "female": 48.8
+    },
+    "avg_age": 41.2
+  },
+  {
+    "name": "上海海湾国家森林公园",
+    "type": "自然公园",
+    "record_count": 241,
+    "avg_satisfaction": 3.98,
+    "avg_stay_hours": 3.4,
+    "avg_ticket_cost": 59,
+    "avg_food_cost": 83,
+    "avg_shopping_cost": 69,
+    "avg_transport_cost": 171,
+    "avg_entertainment_cost": 83,
+    "avg_total_cost": 465,
+    "avg_group_size": 2.8,
+    "satisfaction_distribution": {
+      "3": 57,
+      "4": 132,
+      "5": 52
+    },
+    "gender_ratio": {
+      "male": 47.7,
+      "female": 52.3
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "花鸟岛",
+    "type": "风景名胜与休闲度假",
+    "record_count": 238,
+    "avg_satisfaction": 4.12,
+    "avg_stay_hours": 3.8,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 108,
+    "avg_shopping_cost": 111,
+    "avg_transport_cost": 61,
+    "avg_entertainment_cost": 49,
+    "avg_total_cost": 329,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 42,
+      "4": 126,
+      "5": 70
+    },
+    "gender_ratio": {
+      "male": 51.7,
+      "female": 48.3
+    },
+    "avg_age": 36.8
+  },
+  {
+    "name": "宁波海天一洲景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 238,
+    "avg_satisfaction": 4.11,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 108,
+    "avg_shopping_cost": 112,
+    "avg_transport_cost": 61,
+    "avg_entertainment_cost": 49,
+    "avg_total_cost": 330,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 28,
+      "4": 156,
+      "5": 54
+    },
+    "gender_ratio": {
+      "male": 54.2,
+      "female": 45.8
+    },
+    "avg_age": 37.1
+  },
+  {
+    "name": "天一阁博物院",
+    "type": "博物馆与展馆",
+    "record_count": 238,
+    "avg_satisfaction": 4.02,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 29,
+    "avg_food_cost": 77,
+    "avg_shopping_cost": 143,
+    "avg_transport_cost": 23,
+    "avg_entertainment_cost": 115,
+    "avg_total_cost": 388,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 49,
+      "4": 136,
+      "5": 53
+    },
+    "gender_ratio": {
+      "male": 49.2,
+      "female": 50.8
+    },
+    "avg_age": 36.5
+  },
+  {
+    "name": "南浔古镇",
+    "type": "古镇水乡",
+    "record_count": 237,
+    "avg_satisfaction": 4.21,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 113,
+    "avg_shopping_cost": 99,
+    "avg_transport_cost": 16,
+    "avg_entertainment_cost": 25,
+    "avg_total_cost": 253,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 28,
+      "4": 132,
+      "5": 77
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 37.7
+  },
+  {
+    "name": "浦江郊野公园",
+    "type": "自然公园",
+    "record_count": 237,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 3.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 27,
+    "avg_shopping_cost": 16,
+    "avg_transport_cost": 73,
+    "avg_entertainment_cost": 36,
+    "avg_total_cost": 152,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 33,
+      "5": 202
+    },
+    "gender_ratio": {
+      "male": 46.8,
+      "female": 53.2
+    },
+    "avg_age": 38.9
+  },
+  {
+    "name": "沙家浜风景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 237,
+    "avg_satisfaction": 3.03,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 68,
+    "avg_food_cost": 292,
+    "avg_shopping_cost": 302,
+    "avg_transport_cost": 165,
+    "avg_entertainment_cost": 133,
+    "avg_total_cost": 960,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 39,
+      "3": 155,
+      "4": 41,
+      "5": 2
+    },
+    "gender_ratio": {
+      "male": 54.4,
+      "female": 45.6
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "灵山胜境",
+    "type": "风景名胜与休闲度假",
+    "record_count": 236,
+    "avg_satisfaction": 3.04,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 204,
+    "avg_food_cost": 238,
+    "avg_shopping_cost": 248,
+    "avg_transport_cost": 132,
+    "avg_entertainment_cost": 105,
+    "avg_total_cost": 927,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 48,
+      "3": 133,
+      "4": 53,
+      "5": 2
+    },
+    "gender_ratio": {
+      "male": 50.4,
+      "female": 49.6
+    },
+    "avg_age": 37.6
+  },
+  {
+    "name": "碧海金沙",
+    "type": "风景名胜与休闲度假",
+    "record_count": 236,
+    "avg_satisfaction": 3.01,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 63,
+    "avg_food_cost": 303,
+    "avg_shopping_cost": 315,
+    "avg_transport_cost": 168,
+    "avg_entertainment_cost": 134,
+    "avg_total_cost": 983,
+    "avg_group_size": 2.8,
+    "satisfaction_distribution": {
+      "2": 45,
+      "3": 151,
+      "4": 33,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 49.6,
+      "female": 50.4
+    },
+    "avg_age": 37.2
+  },
+  {
+    "name": "朱家尖风景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 236,
+    "avg_satisfaction": 3.04,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 19,
+    "avg_food_cost": 295,
+    "avg_shopping_cost": 307,
+    "avg_transport_cost": 164,
+    "avg_entertainment_cost": 132,
+    "avg_total_cost": 917,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 46,
+      "3": 139,
+      "4": 47,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 46.6,
+      "female": 53.4
+    },
+    "avg_age": 38.9
+  },
+  {
+    "name": "木渎古镇",
+    "type": "古镇水乡",
+    "record_count": 234,
+    "avg_satisfaction": 3.19,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 76,
+    "avg_food_cost": 228,
+    "avg_shopping_cost": 310,
+    "avg_transport_cost": 44,
+    "avg_entertainment_cost": 101,
+    "avg_total_cost": 759,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 26,
+      "3": 144,
+      "4": 57,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 50.4,
+      "female": 49.6
+    },
+    "avg_age": 37.3
+  },
+  {
+    "name": "龙华烈士陵园",
+    "type": "历史文化",
+    "record_count": 234,
+    "avg_satisfaction": 4.8,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 46,
+    "avg_shopping_cost": 90,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 30,
+    "avg_total_cost": 178,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 6,
+      "4": 34,
+      "5": 194
+    },
+    "gender_ratio": {
+      "male": 48.3,
+      "female": 51.7
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "上海动物园",
+    "type": "动植物园与水族馆",
+    "record_count": 234,
+    "avg_satisfaction": 3.39,
+    "avg_stay_hours": 4.5,
+    "avg_ticket_cost": 39,
+    "avg_food_cost": 295,
+    "avg_shopping_cost": 324,
+    "avg_transport_cost": 191,
+    "avg_entertainment_cost": 205,
+    "avg_total_cost": 1054,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 3,
+      "3": 148,
+      "4": 72,
+      "5": 11
+    },
+    "gender_ratio": {
+      "male": 51.7,
+      "female": 48.3
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "山塘街",
+    "type": "古镇水乡",
+    "record_count": 233,
+    "avg_satisfaction": 4.18,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 121,
+    "avg_shopping_cost": 105,
+    "avg_transport_cost": 17,
+    "avg_entertainment_cost": 27,
+    "avg_total_cost": 270,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 27,
+      "4": 136,
+      "5": 70
+    },
+    "gender_ratio": {
+      "male": 52.8,
+      "female": 47.2
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "东湖景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 232,
+    "avg_satisfaction": 4.22,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 104,
+    "avg_shopping_cost": 107,
+    "avg_transport_cost": 58,
+    "avg_entertainment_cost": 47,
+    "avg_total_cost": 316,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 32,
+      "4": 117,
+      "5": 83
+    },
+    "gender_ratio": {
+      "male": 53.9,
+      "female": 46.1
+    },
+    "avg_age": 38.4
+  },
+  {
+    "name": "顾村公园",
+    "type": "自然公园",
+    "record_count": 231,
+    "avg_satisfaction": 4.84,
+    "avg_stay_hours": 3.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 28,
+    "avg_shopping_cost": 17,
+    "avg_transport_cost": 76,
+    "avg_entertainment_cost": 37,
+    "avg_total_cost": 158,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 1,
+      "4": 34,
+      "5": 196
+    },
+    "gender_ratio": {
+      "male": 50.6,
+      "female": 49.4
+    },
+    "avg_age": 39.1
+  },
+  {
+    "name": "上海植物园",
+    "type": "自然公园",
+    "record_count": 231,
+    "avg_satisfaction": 4.81,
+    "avg_stay_hours": 3.2,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 29,
+    "avg_shopping_cost": 17,
+    "avg_transport_cost": 77,
+    "avg_entertainment_cost": 38,
+    "avg_total_cost": 161,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 4,
+      "4": 36,
+      "5": 191
+    },
+    "gender_ratio": {
+      "male": 57.1,
+      "female": 42.9
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "歌斐颂巧克力小镇",
+    "type": "风景名胜与休闲度假",
+    "record_count": 230,
+    "avg_satisfaction": 3.1,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 96,
+    "avg_food_cost": 271,
+    "avg_shopping_cost": 283,
+    "avg_transport_cost": 151,
+    "avg_entertainment_cost": 121,
+    "avg_total_cost": 922,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 32,
+      "3": 144,
+      "4": 52,
+      "5": 2
+    },
+    "gender_ratio": {
+      "male": 47.0,
+      "female": 53.0
+    },
+    "avg_age": 38.8
+  },
+  {
+    "name": "上海国际时尚中心",
+    "type": "现代地标",
+    "record_count": 230,
+    "avg_satisfaction": 4.27,
+    "avg_stay_hours": 2.8,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 88,
+    "avg_shopping_cost": 77,
+    "avg_transport_cost": 51,
+    "avg_entertainment_cost": 36,
+    "avg_total_cost": 253,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 17,
+      "4": 133,
+      "5": 80
+    },
+    "gender_ratio": {
+      "male": 51.7,
+      "female": 48.3
+    },
+    "avg_age": 39.0
+  },
+  {
+    "name": "网师园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 229,
+    "avg_satisfaction": 3.1,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 38,
+    "avg_food_cost": 278,
+    "avg_shopping_cost": 289,
+    "avg_transport_cost": 156,
+    "avg_entertainment_cost": 125,
+    "avg_total_cost": 886,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 34,
+      "3": 139,
+      "4": 54,
+      "5": 2
+    },
+    "gender_ratio": {
+      "male": 50.2,
+      "female": 49.8
+    },
+    "avg_age": 37.9
+  },
+  {
+    "name": "天平山",
+    "type": "风景名胜与休闲度假",
+    "record_count": 228,
+    "avg_satisfaction": 3.09,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 29,
+    "avg_food_cost": 295,
+    "avg_shopping_cost": 308,
+    "avg_transport_cost": 165,
+    "avg_entertainment_cost": 133,
+    "avg_total_cost": 929,
+    "avg_group_size": 2.8,
+    "satisfaction_distribution": {
+      "2": 27,
+      "3": 157,
+      "4": 41,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 50.9,
+      "female": 49.1
+    },
+    "avg_age": 37.6
+  },
+  {
+    "name": "海宁盐官旅游度假区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 227,
+    "avg_satisfaction": 4.08,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 126,
+    "avg_shopping_cost": 131,
+    "avg_transport_cost": 70,
+    "avg_entertainment_cost": 55,
+    "avg_total_cost": 382,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 45,
+      "4": 119,
+      "5": 63
+    },
+    "gender_ratio": {
+      "male": 45.8,
+      "female": 54.2
+    },
+    "avg_age": 39.1
+  },
+  {
+    "name": "天一阁·月湖景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 227,
+    "avg_satisfaction": 4.15,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 113,
+    "avg_shopping_cost": 117,
+    "avg_transport_cost": 63,
+    "avg_entertainment_cost": 51,
+    "avg_total_cost": 344,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 114,
+      "5": 74
+    },
+    "gender_ratio": {
+      "male": 55.1,
+      "female": 44.9
+    },
+    "avg_age": 39.2
+  },
+  {
+    "name": "虞山景区",
+    "type": "自然公园",
+    "record_count": 226,
+    "avg_satisfaction": 4.05,
+    "avg_stay_hours": 3.5,
+    "avg_ticket_cost": 29,
+    "avg_food_cost": 76,
+    "avg_shopping_cost": 63,
+    "avg_transport_cost": 160,
+    "avg_entertainment_cost": 79,
+    "avg_total_cost": 407,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 39,
+      "4": 136,
+      "5": 51
+    },
+    "gender_ratio": {
+      "male": 50.4,
+      "female": 49.6
+    },
+    "avg_age": 39.4
+  },
+  {
+    "name": "亭林园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 225,
+    "avg_satisfaction": 4.2,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 113,
+    "avg_shopping_cost": 118,
+    "avg_transport_cost": 63,
+    "avg_entertainment_cost": 50,
+    "avg_total_cost": 344,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 34,
+      "4": 113,
+      "5": 78
+    },
+    "gender_ratio": {
+      "male": 48.4,
+      "female": 51.6
+    },
+    "avg_age": 38.7
+  },
+  {
+    "name": "普陀山风景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 224,
+    "avg_satisfaction": 4.13,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 104,
+    "avg_shopping_cost": 107,
+    "avg_transport_cost": 59,
+    "avg_entertainment_cost": 48,
+    "avg_total_cost": 318,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 35,
+      "4": 125,
+      "5": 64
+    },
+    "gender_ratio": {
+      "male": 54.0,
+      "female": 46.0
+    },
+    "avg_age": 37.5
+  },
+  {
+    "name": "中国航海博物馆",
+    "type": "博物馆与展馆",
+    "record_count": 223,
+    "avg_satisfaction": 4.03,
+    "avg_stay_hours": 2.8,
+    "avg_ticket_cost": 29,
+    "avg_food_cost": 80,
+    "avg_shopping_cost": 145,
+    "avg_transport_cost": 23,
+    "avg_entertainment_cost": 118,
+    "avg_total_cost": 396,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 42,
+      "4": 133,
+      "5": 48
+    },
+    "gender_ratio": {
+      "male": 49.8,
+      "female": 50.2
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "狮子林",
+    "type": "风景名胜与休闲度假",
+    "record_count": 223,
+    "avg_satisfaction": 3.16,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 39,
+    "avg_food_cost": 283,
+    "avg_shopping_cost": 298,
+    "avg_transport_cost": 156,
+    "avg_entertainment_cost": 124,
+    "avg_total_cost": 901,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 25,
+      "3": 142,
+      "4": 52,
+      "5": 4
+    },
+    "gender_ratio": {
+      "male": 46.2,
+      "female": 53.8
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "上海大观园",
+    "type": "风景名胜与休闲度假",
+    "record_count": 223,
+    "avg_satisfaction": 3.09,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 53,
+    "avg_food_cost": 270,
+    "avg_shopping_cost": 283,
+    "avg_transport_cost": 152,
+    "avg_entertainment_cost": 121,
+    "avg_total_cost": 880,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "2": 32,
+      "3": 141,
+      "4": 47,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 50.7,
+      "female": 49.3
+    },
+    "avg_age": 38.0
+  },
+  {
+    "name": "南通市濠河景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 222,
+    "avg_satisfaction": 4.14,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 99,
+    "avg_shopping_cost": 102,
+    "avg_transport_cost": 56,
+    "avg_entertainment_cost": 45,
+    "avg_total_cost": 301,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 30,
+      "4": 131,
+      "5": 61
+    },
+    "gender_ratio": {
+      "male": 53.6,
+      "female": 46.4
+    },
+    "avg_age": 37.6
+  },
+  {
+    "name": "上海犹太难民纪念馆",
+    "type": "历史文化",
+    "record_count": 221,
+    "avg_satisfaction": 3.87,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 20,
+    "avg_food_cost": 146,
+    "avg_shopping_cost": 230,
+    "avg_transport_cost": 33,
+    "avg_entertainment_cost": 77,
+    "avg_total_cost": 506,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 59,
+      "4": 132,
+      "5": 30
+    },
+    "gender_ratio": {
+      "male": 53.8,
+      "female": 46.2
+    },
+    "avg_age": 36.4
+  },
+  {
+    "name": "西沙明珠湖景区",
+    "type": "风景名胜与休闲度假",
+    "record_count": 220,
+    "avg_satisfaction": 4.16,
+    "avg_stay_hours": 4.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 103,
+    "avg_shopping_cost": 108,
+    "avg_transport_cost": 58,
+    "avg_entertainment_cost": 46,
+    "avg_total_cost": 315,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 25,
+      "4": 134,
+      "5": 61
+    },
+    "gender_ratio": {
+      "male": 47.3,
+      "female": 52.7
+    },
+    "avg_age": 37.4
+  },
+  {
+    "name": "江苏淹城野生动物世界",
+    "type": "动植物园与水族馆",
+    "record_count": 218,
+    "avg_satisfaction": 4.44,
+    "avg_stay_hours": 4.4,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 108,
+    "avg_shopping_cost": 117,
+    "avg_transport_cost": 71,
+    "avg_entertainment_cost": 75,
+    "avg_total_cost": 371,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "3": 23,
+      "4": 75,
+      "5": 120
+    },
+    "gender_ratio": {
+      "male": 55.5,
+      "female": 44.5
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "徐家汇源",
+    "type": "历史文化",
+    "record_count": 217,
+    "avg_satisfaction": 4.77,
+    "avg_stay_hours": 2.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 44,
+    "avg_shopping_cost": 86,
+    "avg_transport_cost": 11,
+    "avg_entertainment_cost": 30,
+    "avg_total_cost": 171,
+    "avg_group_size": 2.5,
+    "satisfaction_distribution": {
+      "3": 2,
+      "4": 45,
+      "5": 170
+    },
+    "gender_ratio": {
+      "male": 52.1,
+      "female": 47.9
+    },
+    "avg_age": 36.7
+  },
+  {
+    "name": "上海城市规划展示馆",
+    "type": "博物馆与展馆",
+    "record_count": 217,
+    "avg_satisfaction": 4.86,
+    "avg_stay_hours": 2.7,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 27,
+    "avg_shopping_cost": 50,
+    "avg_transport_cost": 8,
+    "avg_entertainment_cost": 41,
+    "avg_total_cost": 126,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "4": 30,
+      "5": 187
+    },
+    "gender_ratio": {
+      "male": 46.5,
+      "female": 53.5
+    },
+    "avg_age": 37.8
+  },
+  {
+    "name": "花开海上生态园",
+    "type": "自然公园",
+    "record_count": 217,
+    "avg_satisfaction": 3.93,
+    "avg_stay_hours": 3.6,
+    "avg_ticket_cost": 29,
+    "avg_food_cost": 85,
+    "avg_shopping_cost": 70,
+    "avg_transport_cost": 178,
+    "avg_entertainment_cost": 88,
+    "avg_total_cost": 449,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 63,
+      "4": 107,
+      "5": 47
+    },
+    "gender_ratio": {
+      "male": 52.5,
+      "female": 47.5
+    },
+    "avg_age": 39.6
+  },
+  {
+    "name": "老外滩",
+    "type": "风景名胜与休闲度假",
+    "record_count": 212,
+    "avg_satisfaction": 4.15,
+    "avg_stay_hours": 3.9,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 114,
+    "avg_shopping_cost": 118,
+    "avg_transport_cost": 64,
+    "avg_entertainment_cost": 51,
+    "avg_total_cost": 347,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 32,
+      "4": 117,
+      "5": 63
+    },
+    "gender_ratio": {
+      "male": 53.3,
+      "female": 46.7
+    },
+    "avg_age": 36.9
+  },
+  {
+    "name": "蓝精灵乐园-上海世茂精灵之城主题乐园",
+    "type": "主题乐园",
+    "record_count": 210,
+    "avg_satisfaction": 3.26,
+    "avg_stay_hours": 8.9,
+    "avg_ticket_cost": 164,
+    "avg_food_cost": 563,
+    "avg_shopping_cost": 517,
+    "avg_transport_cost": 55,
+    "avg_entertainment_cost": 391,
+    "avg_total_cost": 1690,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 6,
+      "3": 151,
+      "4": 45,
+      "5": 8
+    },
+    "gender_ratio": {
+      "male": 51.4,
+      "female": 48.6
+    },
+    "avg_age": 38.1
+  },
+  {
+    "name": "惠山古镇",
+    "type": "古镇水乡",
+    "record_count": 209,
+    "avg_satisfaction": 3.13,
+    "avg_stay_hours": 4.1,
+    "avg_ticket_cost": 68,
+    "avg_food_cost": 231,
+    "avg_shopping_cost": 308,
+    "avg_transport_cost": 44,
+    "avg_entertainment_cost": 103,
+    "avg_total_cost": 755,
+    "avg_group_size": 2.7,
+    "satisfaction_distribution": {
+      "2": 30,
+      "3": 125,
+      "4": 51,
+      "5": 3
+    },
+    "gender_ratio": {
+      "male": 55.0,
+      "female": 45.0
+    },
+    "avg_age": 39.0
+  },
+  {
+    "name": "南通森林野生动物园",
+    "type": "动植物园与水族馆",
+    "record_count": 208,
+    "avg_satisfaction": 3.4,
+    "avg_stay_hours": 4.4,
+    "avg_ticket_cost": 97,
+    "avg_food_cost": 274,
+    "avg_shopping_cost": 296,
+    "avg_transport_cost": 180,
+    "avg_entertainment_cost": 193,
+    "avg_total_cost": 1038,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "2": 1,
+      "3": 129,
+      "4": 71,
+      "5": 7
+    },
+    "gender_ratio": {
+      "male": 56.7,
+      "female": 43.3
+    },
+    "avg_age": 38.2
+  },
+  {
+    "name": "锦江乐园",
+    "type": "主题乐园",
+    "record_count": 207,
+    "avg_satisfaction": 4.29,
+    "avg_stay_hours": 9.0,
+    "avg_ticket_cost": 0,
+    "avg_food_cost": 211,
+    "avg_shopping_cost": 87,
+    "avg_transport_cost": 36,
+    "avg_entertainment_cost": 209,
+    "avg_total_cost": 543,
+    "avg_group_size": 2.6,
+    "satisfaction_distribution": {
+      "3": 29,
+      "4": 88,
+      "5": 90
+    },
+    "gender_ratio": {
+      "male": 51.7,
+      "female": 48.3
+    },
+    "avg_age": 37.6
+  }
+]

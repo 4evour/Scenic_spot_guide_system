@@ -1,0 +1,119 @@
+[
+  {
+    "type": "古镇水乡",
+    "record_count": 31564,
+    "attraction_count": 24,
+    "avg_satisfaction": 3.48,
+    "avg_stay_hours": 4.0,
+    "avg_total_cost": 598,
+    "avg_ticket_cost": 93,
+    "satisfaction_distribution": {
+      "2": 2870,
+      "3": 14156,
+      "4": 11195,
+      "5": 3343
+    }
+  },
+  {
+    "type": "风景名胜与休闲度假",
+    "record_count": 25682,
+    "attraction_count": 59,
+    "avg_satisfaction": 3.58,
+    "avg_stay_hours": 4.0,
+    "avg_total_cost": 651,
+    "avg_ticket_cost": 79,
+    "satisfaction_distribution": {
+      "2": 2099,
+      "3": 10393,
+      "4": 9510,
+      "5": 3680
+    }
+  },
+  {
+    "type": "主题乐园",
+    "record_count": 17524,
+    "attraction_count": 9,
+    "avg_satisfaction": 3.26,
+    "avg_stay_hours": 9.0,
+    "avg_total_cost": 1576,
+    "avg_ticket_cost": 278,
+    "satisfaction_distribution": {
+      "2": 238,
+      "3": 12811,
+      "4": 4083,
+      "5": 392
+    }
+  },
+  {
+    "type": "动植物园与水族馆",
+    "record_count": 16302,
+    "attraction_count": 6,
+    "avg_satisfaction": 3.39,
+    "avg_stay_hours": 4.5,
+    "avg_total_cost": 1068,
+    "avg_ticket_cost": 229,
+    "satisfaction_distribution": {
+      "2": 120,
+      "3": 10463,
+      "4": 4902,
+      "5": 817
+    }
+  },
+  {
+    "type": "现代地标",
+    "record_count": 16257,
+    "attraction_count": 5,
+    "avg_satisfaction": 3.59,
+    "avg_stay_hours": 2.8,
+    "avg_total_cost": 513,
+    "avg_ticket_cost": 184,
+    "satisfaction_distribution": {
+      "2": 1238,
+      "3": 6268,
+      "4": 6618,
+      "5": 2133
+    }
+  },
+  {
+    "type": "博物馆与展馆",
+    "record_count": 12297,
+    "attraction_count": 9,
+    "avg_satisfaction": 4.76,
+    "avg_stay_hours": 2.7,
+    "avg_total_cost": 164,
+    "avg_ticket_cost": 78,
+    "satisfaction_distribution": {
+      "3": 296,
+      "4": 2395,
+      "5": 9606
+    }
+  },
+  {
+    "type": "自然公园",
+    "record_count": 11717,
+    "attraction_count": 26,
+    "avg_satisfaction": 4.6,
+    "avg_stay_hours": 3.2,
+    "avg_total_cost": 235,
+    "avg_ticket_cost": 57,
+    "satisfaction_distribution": {
+      "3": 755,
+      "4": 3233,
+      "5": 7729
+    }
+  },
+  {
+    "type": "历史文化",
+    "record_count": 9104,
+    "attraction_count": 15,
+    "avg_satisfaction": 4.2,
+    "avg_stay_hours": 2.0,
+    "avg_total_cost": 391,
+    "avg_ticket_cost": 38,
+    "satisfaction_distribution": {
+      "3": 1677,
+      "4": 3972,
+      "5": 3455
+    }
+  }
+]

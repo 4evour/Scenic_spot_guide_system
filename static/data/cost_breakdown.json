@@ -1,0 +1,66 @@
+[
+  {
+    "type": "主题乐园",
+    "avg_ticket_pct": 24.4,
+    "avg_food_pct": 27.7,
+    "avg_shopping_pct": 25.4,
+    "avg_transport_pct": 2.8,
+    "avg_entertainment_pct": 20.0
+  },
+  {
+    "type": "博物馆与展馆",
+    "avg_ticket_pct": 27.4,
+    "avg_food_pct": 20.6,
+    "avg_shopping_pct": 38.1,
+    "avg_transport_pct": 6.3,
+    "avg_entertainment_pct": 32.2
+  },
+  {
+    "type": "自然公园",
+    "avg_ticket_pct": 19.9,
+    "avg_food_pct": 16.9,
+    "avg_shopping_pct": 11.4,
+    "avg_transport_pct": 44.3,
+    "avg_entertainment_pct": 22.0
+  },
+  {
+    "type": "风景名胜与休闲度假",
+    "avg_ticket_pct": 13.2,
+    "avg_food_pct": 30.1,
+    "avg_shopping_pct": 31.6,
+    "avg_transport_pct": 17.2,
+    "avg_entertainment_pct": 14.0
+  },
+  {
+    "type": "历史文化",
+    "avg_ticket_pct": 11.1,
+    "avg_food_pct": 26.0,
+    "avg_shopping_pct": 44.8,
+    "avg_transport_pct": 6.2,
+    "avg_entertainment_pct": 15.5
+  },
+  {
+    "type": "古镇水乡",
+    "avg_ticket_pct": 18.8,
+    "avg_food_pct": 31.7,
+    "avg_shopping_pct": 37.3,
+    "avg_transport_pct": 5.7,
+    "avg_entertainment_pct": 11.8
+  },
+  {
+    "type": "动植物园与水族馆",
+    "avg_ticket_pct": 29.6,
+    "avg_food_pct": 20.3,
+    "avg_shopping_pct": 22.5,
+    "avg_transport_pct": 13.5,
+    "avg_entertainment_pct": 14.5
+  },
+  {
+    "type": "现代地标",
+    "avg_ticket_pct": 38.0,
+    "avg_food_pct": 26.0,
+    "avg_shopping_pct": 23.0,
+    "avg_transport_pct": 15.5,
+    "avg_entertainment_pct": 11.1
+  }
+]

@@ -1,0 +1,311 @@
+{
+  "灵山胜境": {
+    "record_count": 236,
+    "monthly_trend": [
+      {
+        "month": "2025-01",
+        "record_count": 5,
+        "avg_satisfaction": 3.0,
+        "avg_total_cost": 1312
+      },
+      {
+        "month": "2025-02",
+        "record_count": 6,
+        "avg_satisfaction": 2.83,
+        "avg_total_cost": 632
+      },
+      {
+        "month": "2025-03",
+        "record_count": 17,
+        "avg_satisfaction": 3.12,
+        "avg_total_cost": 1145
+      },
+      {
+        "month": "2025-04",
+        "record_count": 24,
+        "avg_satisfaction": 2.92,
+        "avg_total_cost": 905
+      },
+      {
+        "month": "2025-05",
+        "record_count": 22,
+        "avg_satisfaction": 2.95,
+        "avg_total_cost": 1043
+      },
+      {
+        "month": "2025-06",
+        "record_count": 19,
+        "avg_satisfaction": 2.95,
+        "avg_total_cost": 974
+      },
+      {
+        "month": "2025-07",
+        "record_count": 17,
+        "avg_satisfaction": 3.24,
+        "avg_total_cost": 668
+      },
+      {
+        "month": "2025-08",
+        "record_count": 29,
+        "avg_satisfaction": 3.07,
+        "avg_total_cost": 1014
+      },
+      {
+        "month": "2025-09",
+        "record_count": 38,
+        "avg_satisfaction": 2.97,
+        "avg_total_cost": 900
+      },
+      {
+        "month": "2025-10",
+        "record_count": 19,
+        "avg_satisfaction": 3.11,
+        "avg_total_cost": 856
+      },
+      {
+        "month": "2025-11",
+        "record_count": 14,
+        "avg_satisfaction": 2.93,
+        "avg_total_cost": 1023
+      },
+      {
+        "month": "2025-12",
+        "record_count": 26,
+        "avg_satisfaction": 3.23,
+        "avg_total_cost": 780
+      }
+    ],
+    "age_distribution": {
+      "19-25": 37,
+      "26-35": 86,
+      "36-45": 54,
+      "46-55": 44,
+      "56+": 15
+    },
+    "cost_structure": {
+      "avg_ticket": 204,
+      "avg_food": 238,
+      "avg_shopping": 248,
+      "avg_transport": 132,
+      "avg_entertainment": 105,
+      "avg_total": 927,
+      "ticket_pct": 22.0,
+      "food_pct": 25.7,
+      "shopping_pct": 26.7,
+      "transport_pct": 14.2,
+      "entertainment_pct": 11.3
+    },
+    "satisfaction_distribution": {
+      "2": 48,
+      "3": 133,
+      "4": 53,
+      "5": 2
+    }
+  },
+  "灵山大佛": {
+    "record_count": 286,
+    "monthly_trend": [
+      {
+        "month": "2025-01",
+        "record_count": 5,
+        "avg_satisfaction": 3.0,
+        "avg_total_cost": 921
+      },
+      {
+        "month": "2025-02",
+        "record_count": 7,
+        "avg_satisfaction": 2.86,
+        "avg_total_cost": 1200
+      },
+      {
+        "month": "2025-03",
+        "record_count": 18,
+        "avg_satisfaction": 3.0,
+        "avg_total_cost": 925
+      },
+      {
+        "month": "2025-04",
+        "record_count": 25,
+        "avg_satisfaction": 3.16,
+        "avg_total_cost": 833
+      },
+      {
+        "month": "2025-05",
+        "record_count": 32,
+        "avg_satisfaction": 3.28,
+        "avg_total_cost": 889
+      },
+      {
+        "month": "2025-06",
+        "record_count": 30,
+        "avg_satisfaction": 3.13,
+        "avg_total_cost": 755
+      },
+      {
+        "month": "2025-07",
+        "record_count": 25,
+        "avg_satisfaction": 2.92,
+        "avg_total_cost": 959
+      },
+      {
+        "month": "2025-08",
+        "record_count": 39,
+        "avg_satisfaction": 3.13,
+        "avg_total_cost": 767
+      },
+      {
+        "month": "2025-09",
+        "record_count": 35,
+        "avg_satisfaction": 3.03,
+        "avg_total_cost": 1026
+      },
+      {
+        "month": "2025-10",
+        "record_count": 19,
+        "avg_satisfaction": 3.32,
+        "avg_total_cost": 616
+      },
+      {
+        "month": "2025-11",
+        "record_count": 17,
+        "avg_satisfaction": 3.47,
+        "avg_total_cost": 842
+      },
+      {
+        "month": "2025-12",
+        "record_count": 34,
+        "avg_satisfaction": 3.03,
+        "avg_total_cost": 926
+      }
+    ],
+    "age_distribution": {
+      "19-25": 43,
+      "26-35": 92,
+      "36-45": 62,
+      "46-55": 51,
+      "56+": 38
+    },
+    "cost_structure": {
+      "avg_ticket": 203,
+      "avg_food": 220,
+      "avg_shopping": 226,
+      "avg_transport": 123,
+      "avg_entertainment": 99,
+      "avg_total": 870,
+      "ticket_pct": 23.3,
+      "food_pct": 25.3,
+      "shopping_pct": 26.0,
+      "transport_pct": 14.1,
+      "entertainment_pct": 11.4
+    },
+    "satisfaction_distribution": {
+      "2": 38,
+      "3": 181,
+      "4": 61,
+      "5": 6
+    }
+  },
+  "禅意小镇·拈花湾": {
+    "record_count": 255,
+    "monthly_trend": [
+      {
+        "month": "2025-01",
+        "record_count": 13,
+        "avg_satisfaction": 3.08,
+        "avg_total_cost": 845
+      },
+      {
+        "month": "2025-02",
+        "record_count": 6,
+        "avg_satisfaction": 3.17,
+        "avg_total_cost": 1251
+      },
+      {
+        "month": "2025-03",
+        "record_count": 24,
+        "avg_satisfaction": 3.04,
+        "avg_total_cost": 988
+      },
+      {
+        "month": "2025-04",
+        "record_count": 21,
+        "avg_satisfaction": 2.86,
+        "avg_total_cost": 846
+      },
+      {
+        "month": "2025-05",
+        "record_count": 36,
+        "avg_satisfaction": 3.0,
+        "avg_total_cost": 909
+      },
+      {
+        "month": "2025-06",
+        "record_count": 14,
+        "avg_satisfaction": 2.86,
+        "avg_total_cost": 945
+      },
+      {
+        "month": "2025-07",
+        "record_count": 31,
+        "avg_satisfaction": 3.19,
+        "avg_total_cost": 1127
+      },
+      {
+        "month": "2025-08",
+        "record_count": 20,
+        "avg_satisfaction": 3.0,
+        "avg_total_cost": 1164
+      },
+      {
+        "month": "2025-09",
+        "record_count": 34,
+        "avg_satisfaction": 2.91,
+        "avg_total_cost": 928
+      },
+      {
+        "month": "2025-10",
+        "record_count": 12,
+        "avg_satisfaction": 3.08,
+        "avg_total_cost": 936
+      },
+      {
+        "month": "2025-11",
+        "record_count": 18,
+        "avg_satisfaction": 3.28,
+        "avg_total_cost": 746
+      },
+      {
+        "month": "2025-12",
+        "record_count": 26,
+        "avg_satisfaction": 3.0,
+        "avg_total_cost": 911
+      }
+    ],
+    "age_distribution": {
+      "19-25": 38,
+      "26-35": 92,
+      "36-45": 74,
+      "46-55": 30,
+      "56+": 21
+    },
+    "cost_structure": {
+      "avg_ticket": 146,
+      "avg_food": 267,
+      "avg_shopping": 278,
+      "avg_transport": 148,
+      "avg_entertainment": 118,
+      "avg_total": 957,
+      "ticket_pct": 15.3,
+      "food_pct": 27.9,
+      "shopping_pct": 29.0,
+      "transport_pct": 15.4,
+      "entertainment_pct": 12.4
+    },
+    "satisfaction_distribution": {
+      "2": 48,
+      "3": 155,
+      "4": 49,
+      "5": 3
+    }
+  }
+}
