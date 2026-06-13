@@ -1,4 +1,4 @@
-package service
+﻿package service
 
 import (
 	"bytes"
@@ -123,11 +123,23 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 
 type BM25FallbackProvider struct {
 	available bool
+
+	// Corpus-level statistics for proper BM25 scoring
+	docFreq    map[string]int     // token -> number of documents containing it
+	docLen     map[string]float64 // docID -> document length (token count)
+	avgDocLen  float64            // average document length across corpus
+	totalDocs  int                // total number of documents
+	bm25K1     float64            // term frequency saturation parameter (default 1.5)
+	bm25B      float64            // length normalization parameter (default 0.75)
 }
 
 func NewBM25FallbackProvider() *BM25FallbackProvider {
 	return &BM25FallbackProvider{
 		available: true,
+		docFreq:   make(map[string]int),
+		docLen:    make(map[string]float64),
+		bm25K1:    1.5,
+		bm25B:     0.75,
 	}
 }
 
@@ -188,6 +200,10 @@ func (p *BM25FallbackProvider) Tokenize(text string) []string {
 }
 
 func (p *BM25FallbackProvider) CalculateScore(queryTokens, docTokens []string) float64 {
+	if len(queryTokens) == 0 || len(docTokens) == 0 {
+		return 0
+	}
+
 	querySet := make(map[string]int)
 	for _, t := range queryTokens {
 		querySet[t]++
@@ -198,27 +214,79 @@ func (p *BM25FallbackProvider) CalculateScore(queryTokens, docTokens []string) f
 		docSet[t]++
 	}
 
+	// Without corpus stats, use simplified scoring
+	if p.totalDocs == 0 {
+		score := 0.0
+		for token, qf := range querySet {
+			if df, ok := docSet[token]; ok {
+				score += float64(qf * df)
+			}
+		}
+		return score / float64(len(docTokens)+1)
+	}
+
+	// Standard BM25 scoring with IDF and document length normalization
+	dl := float64(len(docTokens))
+	normFactor := 1.0 - p.bm25B + p.bm25B*(dl/p.avgDocLen)
+
 	score := 0.0
 	for token, qf := range querySet {
-		if df, ok := docSet[token]; ok {
-			// 对较长的token给予更高权重
-			tokenLen := float64(len(token))
-			weight := 1.0
-			if tokenLen >= 3 {
-				weight = 2.0
-			} else if tokenLen == 2 {
-				weight = 1.5
-			}
-			score += float64(qf*df) * weight
+		df, hasDF := p.docFreq[token]
+		if !hasDF || df == 0 {
+			continue
 		}
+		_, inDoc := docSet[token]
+		if !inDoc {
+			continue
+		}
+
+		// IDF: Robertson-Sparck Jones weight with +0.5 smoothing
+		idf := math.Log((float64(p.totalDocs)-float64(df)+0.5)/(float64(df)+0.5) + 1.0)
+
+		// TF with saturation and length normalization
+		tf := float64(qf * docSet[token])
+		tfNorm := (tf * (p.bm25K1 + 1)) / (tf + p.bm25K1*normFactor)
+
+		score += idf * tfNorm
+	}
+	return score
+}
+
+
+// UpdateCorpusStats recomputes corpus-level statistics (IDF, avg doc length)
+// from the token index and chunk data. Must be called after the knowledge cache changes.
+func (p *BM25FallbackProvider) UpdateCorpusStats(tokenIndex map[string][]string, chunkTokens map[string][]string) {
+	docFreq := make(map[string]int, len(tokenIndex))
+	for token, chunkIDs := range tokenIndex {
+		docFreq[token] = len(chunkIDs)
 	}
 
-	// 使用更稳定的归一化
-	if len(docTokens) == 0 {
-		return 0
+	docLen := make(map[string]float64, len(chunkTokens))
+	totalLen := 0.0
+	for id, tokens := range chunkTokens {
+		dl := float64(len(tokens))
+		docLen[id] = dl
+		totalLen += dl
+	}
+	avgDocLen := 0.0
+	if len(chunkTokens) > 0 {
+		avgDocLen = totalLen / float64(len(chunkTokens))
 	}
 
-	return score / (1.0 + math.Log10(float64(len(docTokens)+1)))
+	p.docFreq = docFreq
+	p.docLen = docLen
+	p.avgDocLen = avgDocLen
+	p.totalDocs = len(chunkTokens)
+}
+
+// GetChunkTokens returns cached tokens for a chunk, or tokenizes on demand.
+func (p *BM25FallbackProvider) GetChunkTokens(chunkID string, title, content string, cache map[string][]string) []string {
+	if tokens, ok := cache[chunkID]; ok {
+		return tokens
+	}
+	tokens := p.Tokenize(title + "\n" + content)
+	cache[chunkID] = tokens
+	return tokens
 }
 
 func (p *BM25FallbackProvider) GenerateEmbedding(text string) ([]float64, error) {

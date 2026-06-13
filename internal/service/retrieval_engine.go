@@ -326,6 +326,8 @@ func (s *RAGService) rebuildBM25IndexLocked(chunks []model.KnowledgeChunk) {
 			s.tokenIndex[token] = append(s.tokenIndex[token], chunk.ID)
 		}
 	}
+	// Update BM25 corpus-level statistics for proper IDF and doc-length normalization
+	s.bm25.UpdateCorpusStats(s.tokenIndex, s.tokenCache)
 }
 
 func (s *RAGService) getBM25CandidateChunks(queryTokens []string, fallback []model.KnowledgeChunk) []model.KnowledgeChunk {

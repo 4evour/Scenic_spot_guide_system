@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"net/http"
@@ -10,6 +10,7 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, handlers *Handlers) {
+	r.Use(bodySizeMiddleware())
 	r.Use(corsMiddleware(handlers.AllowedOrigins))
 	r.Use(securityHeaders())
 	r.Use(pkg.MetricsMiddleware())
@@ -28,12 +29,14 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	}
 	r.GET("/app", vueApp)
 	r.GET("/app/*path", vueApp)
+	r.GET("/scan", vueApp) // 二维码扫码落地页
 	r.GET("/dashboard", vueApp)
 	r.GET("/admin", vueApp)
 	r.GET("/digital-human", vueApp)
 	r.GET("/map", vueApp)
 
 	api := r.Group("/api/v1")
+	api.Use(pkg.LanguageMiddleware())
 	api.Use(pkg.CSRFProtection())
 
 	handlers.ScenicSpot.Routes(api)
@@ -41,42 +44,92 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	handlers.TourRoute.Routes(api)
 	handlers.VisitorQuery.Routes(api)
 	handlers.User.Routes(api)
-	handlers.AI.Routes(api)
 	handlers.TTS.Routes(api)
 	handlers.DigitalHuman.Routes(api)
 	handlers.Admin.Routes(api)
 	handlers.ScenicProfile.Routes(api)
 
+	// 游客认证路由
+	if handlers.Guest != nil {
+		handlers.Guest.Routes(api)
+	}
+
+	// 会话管理路由
+	if handlers.Session != nil {
+		handlers.Session.Routes(api)
+	}
+
+	// 二维码扫码导览路由
+	if handlers.QR != nil {
+		handlers.QR.Routes(api)
+	}
+
+	// AI Chat 路由（带可选认证 + 自动游客登录）
+	if handlers.AI != nil {
+		chatGroup := api.Group("")
+		chatGroup.Use(pkg.OptionalAuthMiddleware())
+		if handlers.Guest != nil {
+			ensureGuest := pkg.NewEnsureGuestMiddleware(handlers.Guest.CreateGuestFunc())
+			chatGroup.Use(ensureGuest.Handle())
+		}
+		chatGroup.POST("/ai/chat", pkg.RateLimitMiddleware(30, time.Minute), handlers.AI.Chat)
+		chatGroup.POST("/ai/feedback", handlers.AI.Feedback)
+		handlers.AI.KnowledgeRoutes(api)
+	}
+
 	// 轻量级行为追踪接口（页面访问、用户操作）
-	api.POST("/track", func(c *gin.Context) {
+	// 轻量级行为追踪接口（页面访问、用户操作）
+	allowedPages := map[string]bool{
+		"/": true, "/map": true, "/digital-human": true,
+		"/dashboard": true, "/admin": true, "/login": true,
+	}
+	allowedActions := map[string]bool{
+		"visit": true, "click": true, "search": true,
+		"chat": true, "feedback": true, "voice": true,
+	}
+	api.POST("/track", getRateLimitMiddleware(30, time.Minute), func(c *gin.Context) {
 		var req struct {
 			Page    string `json:"page"`
 			Action  string `json:"action"`
 			Details string `json:"details"`
-			UserID  uint   `json:"user_id"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(200, gin.H{"code": 0})
 			return
 		}
-		if statsSvc := pkg.GetStatsService(); statsSvc != nil {
-			source := "page_visit"
-			if req.Action != "" {
-				source = "user_action"
+		if req.Page != "" && !allowedPages[req.Page] {
+			pkg.BadRequest(c, "invalid page")
+			return
+		}
+		if req.Action != "" && !allowedActions[req.Action] {
+			pkg.BadRequest(c, "invalid action")
+			return
+		}
+		// user_id 来自认证会话，不从客户端接受
+		var userID uint
+		if uid, exists := c.Get("user_id"); exists {
+			userID, _ = uid.(uint)
+		}
+		if s := pkg.GetStatsService(); s != nil {
+			if statsSvc, ok := s.(*service.StatsService); ok {
+				source := "page_visit"
+				if req.Action != "" {
+					source = "user_action"
+				}
+				statsSvc.RecordInteraction(service.InteractionRecord{
+					UserID:   userID,
+					Query:    req.Page,
+					Response: req.Details,
+					Category: req.Action,
+					Source:   source,
+				})
 			}
-			statsSvc.RecordInteraction(service.InteractionRecord{
-				UserID:   req.UserID,
-				Query:    req.Page,
-				Response: req.Details,
-				Category: req.Action,
-				Source:   source,
-			})
 		}
 		c.JSON(200, gin.H{"code": 0})
 	})
 
 	// OpenAI-compatible endpoint for Open-LLM-VTuber.
-	r.POST("/v1/chat/completions", getRateLimitMiddleware(30, time.Minute), handlers.OpenAIProxy.ChatCompletions)
+	r.POST("/v1/chat/completions", pkg.APIKeyMiddleware(), getRateLimitMiddleware(30, time.Minute), handlers.OpenAIProxy.ChatCompletions)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -120,12 +173,24 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 	}
 }
 
+
+// maxBodySize is the default maximum request body size (12 MB).
+const maxBodySize = 12 << 20
+
+// bodySizeMiddleware wraps the request body with a size limit.
+func bodySizeMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodySize)
+		c.Next()
+	}
+}
+
 func securityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "SAMEORIGIN")
 		c.Header("Referrer-Policy", "no-referrer")
-		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=()")
+		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=(self)")
 		c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' https://webapi.amap.com https://restapi.amap.com; style-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://webapi.amap.com https://*.amap.com; connect-src 'self' ws: wss: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://cdnjs.cloudflare.com; media-src 'self' blob:;")
 		c.Next()
@@ -150,5 +215,8 @@ type Handlers struct {
 	OpenAIProxy    *OpenAIProxyHandler
 	Admin          *AdminHandler
 	ScenicProfile  *ScenicProfileHandler
+	Guest          *GuestHandler
+	Session        *SessionHandler
+	QR             *QRHandler
 	AllowedOrigins []string
 }

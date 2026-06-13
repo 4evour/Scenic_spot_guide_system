@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"time"
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/service"
 )
@@ -27,6 +28,7 @@ func NewAdminHandler(statsService *service.StatsService, evalDir string) *AdminH
 
 func (h *AdminHandler) Routes(api *gin.RouterGroup) {
 	admin := api.Group("/admin")
+	admin.Use(getRateLimitMiddleware(60, time.Minute))
 	admin.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
 	{
 		// 数据大屏
@@ -106,7 +108,13 @@ func (h *AdminHandler) GetSatisfactionTrend(c *gin.Context) {
 // GetRecentConversations 获取最近对话
 func (h *AdminHandler) GetRecentConversations(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "10")
-	limit, _ := strconv.Atoi(limitStr)
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
 	conversations := h.statsService.GetRecentConversations(limit)
 	pkg.Success(c, conversations)
 }
@@ -131,15 +139,15 @@ func (h *AdminHandler) GetDigitalHumanConfig(c *gin.Context) {
 func (h *AdminHandler) UpdateDigitalHumanConfig(c *gin.Context) {
 	var settings service.DigitalHumanSettings
 	if err := c.ShouldBindJSON(&settings); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 	if err := h.statsService.UpdateDigitalHumanConfig(settings); err != nil {
 		slog.Error("更新数字人配置失败", "error", err)
-		pkg.InternalError(c, "保存失败")
+		pkg.InternalError(c, pkg.T(c, "msg_save_failed"))
 		return
 	}
-	pkg.SuccessWithMessage(c, "保存成功", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_save_success"), nil)
 }
 
 // ==================== 系统设置 API ====================
@@ -154,15 +162,15 @@ func (h *AdminHandler) GetSystemSettings(c *gin.Context) {
 func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
 	var settings service.SystemSettings
 	if err := c.ShouldBindJSON(&settings); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 	if err := h.statsService.UpdateSystemSettings(settings); err != nil {
 		slog.Error("更新系统设置失败", "error", err)
-		pkg.InternalError(c, "保存失败")
+		pkg.InternalError(c, pkg.T(c, "msg_save_failed"))
 		return
 	}
-	pkg.SuccessWithMessage(c, "保存成功", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_save_success"), nil)
 }
 
 // ==================== 知识库统计 ====================
@@ -179,14 +187,14 @@ func (h *AdminHandler) GetEvalStats(c *gin.Context) {
 	data, err := os.ReadFile(evalFile)
 	if err != nil {
 		slog.Warn("读取评估结果文件失败", "file", evalFile, "error", err)
-		pkg.Success(c, gin.H{"available": false, "message": "暂无评估数据"})
+		pkg.Success(c, gin.H{"available": false, "message": pkg.T(c, "msg_no_eval_data")})
 		return
 	}
 
 	var result json.RawMessage
 	if err := json.Unmarshal(data, &result); err != nil {
 		slog.Error("解析评估结果失败", "error", err)
-		pkg.InternalError(c, "评估数据格式错误")
+		pkg.InternalError(c, pkg.T(c, "msg_eval_format_error"))
 		return
 	}
 

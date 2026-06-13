@@ -251,3 +251,81 @@ func TestAuthMiddlewareDevAdminBypassDisabledByDefault(t *testing.T) {
 		t.Fatalf("status = %d, want %d", resp.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestCSRFProtectionBlocksPostWithoutToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(CSRFProtection())
+	router.POST("/api/v1/spots", func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+
+	// POST without CSRF cookie or header should be blocked
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/spots", nil)
+	req.RemoteAddr = "192.0.2.50:1234"
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("POST without CSRF token: status = %d, want %d", resp.Code, http.StatusForbidden)
+	}
+}
+
+func TestCSRFProtectionExemptsLoginAndGuestLogin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(CSRFProtection())
+	router.POST("/api/v1/login", func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+	router.POST("/api/v1/auth/guest-login", func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+	router.POST("/api/v1/register", func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+
+	for _, path := range []string{"/api/v1/login", "/api/v1/auth/guest-login", "/api/v1/register"} {
+		req := httptest.NewRequest(http.MethodPost, path, nil)
+		req.RemoteAddr = "192.0.2.51:1234"
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("POST %s without CSRF token: status = %d, want %d (should be exempt)", path, resp.Code, http.StatusOK)
+		}
+	}
+}
+
+func TestCSRFProtectionDoubleSubmitCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(CSRFProtection())
+	router.POST("/api/v1/spots", func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+
+	// With matching cookie + header: should pass
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/spots", nil)
+	req.RemoteAddr = "192.0.2.52:1234"
+	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "test-csrf-abc"})
+	req.Header.Set("X-CSRF-Token", "test-csrf-abc")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("POST with matching CSRF: status = %d, want %d", resp.Code, http.StatusOK)
+	}
+
+	// With mismatched cookie + header: should be blocked
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/spots", nil)
+	req2.RemoteAddr = "192.0.2.52:1234"
+	req2.AddCookie(&http.Cookie{Name: "csrf_token", Value: "cookie-value"})
+	req2.Header.Set("X-CSRF-Token", "different-value")
+	resp2 := httptest.NewRecorder()
+	router.ServeHTTP(resp2, req2)
+
+	if resp2.Code != http.StatusForbidden {
+		t.Fatalf("POST with mismatched CSRF: status = %d, want %d", resp2.Code, http.StatusForbidden)
+	}
+}

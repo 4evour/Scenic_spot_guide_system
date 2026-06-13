@@ -2,18 +2,21 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NCard, NForm, NFormItem, NInput, NButton, NSpace, useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../stores/auth';
 
+const { t } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
 const message = useMessage();
 
 const form = ref({ username: '', password: '' });
 const loading = ref(false);
+const guestLoading = ref(false);
 
 async function handleLogin() {
   if (!form.value.username || !form.value.password) {
-    message.warning('请输入用户名和密码');
+    message.warning(t('login.emptyFields'));
     return;
   }
   loading.value = true;
@@ -27,17 +30,34 @@ async function handleLogin() {
     });
     const data = await res.json();
     if (!res.ok || data.code !== 0) {
-      message.error(data.message || '登录失败');
+      message.error(data.message || t('login.failed'));
       return;
     }
-    message.success('登录成功');
+    message.success(t('login.success'));
     authStore.invalidateAuth();
     await authStore.fetchUser();
     router.push({ name: authStore.isAdmin ? 'dashboard' : 'map' });
   } catch {
-    message.error('网络错误，请重试');
+    message.error(t('login.networkError'));
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleGuestLogin() {
+  guestLoading.value = true;
+  try {
+    const ok = await authStore.ensureGuestSession();
+    if (ok) {
+      message.success('已以游客身份登录');
+      router.push({ name: 'map' });
+    } else {
+      message.error('游客登录失败，请稍后重试');
+    }
+  } catch {
+    message.error('网络错误');
+  } finally {
+    guestLoading.value = false;
   }
 }
 </script>
@@ -60,26 +80,29 @@ async function handleLogin() {
             <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#63e2b7" stroke-width="1.5" fill="none" opacity="0.5"/>
           </svg>
         </div>
-        <h1>景区智能导览系统</h1>
-        <p>Scenic Spot Guide System</p>
+        <h1>{{ $t('login.title') }}</h1>
+        <p>{{ $t('login.subtitle') }}</p>
       </div>
 
       <NForm @submit.prevent="handleLogin">
-        <NFormItem label="用户名">
-          <NInput v-model:value="form.username" placeholder="请输入用户名" size="large" />
+        <NFormItem :label="$t('login.username')">
+          <NInput v-model:value="form.username" :placeholder="$t('login.usernamePlaceholder')" size="large" />
         </NFormItem>
-        <NFormItem label="密码">
-          <NInput v-model:value="form.password" type="password" placeholder="请输入密码" size="large" show-password-on="click" />
+        <NFormItem :label="$t('login.password')">
+          <NInput v-model:value="form.password" type="password" :placeholder="$t('login.passwordPlaceholder')" size="large" show-password-on="click" />
         </NFormItem>
         <NSpace vertical :size="16" style="width: 100%; margin-top: 8px;">
           <NButton type="primary" block size="large" :loading="loading" @click="handleLogin">
-            登 录
+            {{ $t('login.submit') }}
+          </NButton>
+          <NButton block size="large" quaternary :loading="guestLoading" @click="handleGuestLogin">
+            🏖️ 以游客身份继续
           </NButton>
         </NSpace>
       </NForm>
 
-      <p class="login-hint">管理员登录后可访问数据大屏和管理后台</p>
-      <p class="login-version">Scenic Guide v1.0</p>
+      <p class="login-hint">{{ $t('login.hint') }}</p>
+      <p class="login-version">{{ $t('login.version') }}</p>
     </NCard>
   </div>
 </template>

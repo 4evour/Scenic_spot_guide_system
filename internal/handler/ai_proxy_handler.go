@@ -159,7 +159,8 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 
 	// 使用 RAG 服务生成回答
 	startTime := time.Now()
-	response, _, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, query)
+	lang := c.GetString("lang")
+		response, _, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, query, lang)
 	elapsed := time.Since(startTime).Milliseconds()
 	if err != nil {
 		slog.Error("OpenAI 兼容请求 RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)

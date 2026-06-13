@@ -21,13 +21,13 @@ func NewTourRouteHandler(service service.TourRouteService) *TourRouteHandler {
 func (h *TourRouteHandler) CreateRoute(c *gin.Context) {
 	var route model.TourRoute
 	if err := c.ShouldBindJSON(&route); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	if err := h.service.CreateRoute(&route); err != nil {
 		slog.Error("创建游览路线失败", "error", err)
-		pkg.InternalError(c, "创建游览路线失败")
+		pkg.InternalError(c, pkg.T(c, "msg_create_route_failed"))
 		return
 	}
 
@@ -38,13 +38,13 @@ func (h *TourRouteHandler) GetRoute(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
 	route, err := h.service.GetRouteByID(uint(id))
 	if err != nil {
-		pkg.NotFound(c, "游览路线不存在")
+		pkg.NotFound(c, pkg.T(c, "msg_route_not_found"))
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *TourRouteHandler) GetAllRoutes(c *gin.Context) {
 	routes, err := h.service.GetAllRoutes()
 	if err != nil {
 		slog.Error("获取游览路线列表失败", "error", err)
-		pkg.InternalError(c, "获取游览路线列表失败")
+		pkg.InternalError(c, pkg.T(c, "msg_get_routes_failed"))
 		return
 	}
 
@@ -65,14 +65,14 @@ func (h *TourRouteHandler) GetAllRoutes(c *gin.Context) {
 func (h *TourRouteHandler) GetRoutesByDifficulty(c *gin.Context) {
 	difficulty := c.Query("difficulty")
 	if difficulty == "" {
-		pkg.BadRequest(c, "难度参数不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_difficulty_required"))
 		return
 	}
 
 	routes, err := h.service.GetRoutesByDifficulty(difficulty)
 	if err != nil {
 		slog.Error("按难度获取路线失败", "error", err, "difficulty", difficulty)
-		pkg.InternalError(c, "获取游览路线列表失败")
+		pkg.InternalError(c, pkg.T(c, "msg_get_routes_failed"))
 		return
 	}
 
@@ -83,24 +83,24 @@ func (h *TourRouteHandler) UpdateRoute(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
 	var route model.TourRoute
 	if err := c.ShouldBindJSON(&route); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	route.ID = uint(id)
 	if err := h.service.UpdateRoute(&route); err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "游览路线不存在")
+			pkg.NotFound(c, pkg.T(c, "msg_route_not_found"))
 			return
 		}
 		slog.Error("更新游览路线失败", "error", err, "route_id", id)
-		pkg.InternalError(c, "更新游览路线失败")
+		pkg.InternalError(c, pkg.T(c, "msg_update_route_failed"))
 		return
 	}
 
@@ -111,21 +111,21 @@ func (h *TourRouteHandler) DeleteRoute(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
 	if err := h.service.DeleteRoute(uint(id)); err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "游览路线不存在")
+			pkg.NotFound(c, pkg.T(c, "msg_route_not_found"))
 			return
 		}
 		slog.Error("删除游览路线失败", "error", err, "route_id", id)
-		pkg.InternalError(c, "删除游览路线失败")
+		pkg.InternalError(c, pkg.T(c, "msg_delete_route_failed"))
 		return
 	}
 
-	pkg.SuccessWithMessage(c, "删除成功", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_delete_success"), nil)
 }
 
 func (h *TourRouteHandler) Routes(r *gin.RouterGroup) {

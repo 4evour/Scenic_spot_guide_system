@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onErrorCaptured } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { NResult, NButton } from 'naive-ui'
+
+const { t } = useI18n()
 
 const error = ref<Error | null>(null)
 
@@ -19,11 +22,11 @@ function handleRetry() {
     <div class="error-boundary">
       <NResult
         status="error"
-        title="页面出现错误"
+        :title="t('error.title')"
         :description="error.message"
       >
         <template #footer>
-          <NButton type="primary" @click="handleRetry">重试</NButton>
+          <NButton type="primary" @click="handleRetry">{{ t('error.retry') }}</NButton>
         </template>
       </NResult>
     </div>

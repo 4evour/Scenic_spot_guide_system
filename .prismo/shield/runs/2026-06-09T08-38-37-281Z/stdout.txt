@@ -1,0 +1,9 @@
+?   	github.com/scenic-guide	[no test files]
+?   	github.com/scenic-guide/cmd/demo-seed	[no test files]
+ok  	github.com/scenic-guide/cmd/rag-eval	(cached)
+ok  	github.com/scenic-guide/internal/config	(cached)
+ok  	github.com/scenic-guide/internal/handler	1.429s
+?   	github.com/scenic-guide/internal/model	[no test files]
+ok  	github.com/scenic-guide/internal/pkg	2.985s
+ok  	github.com/scenic-guide/internal/repository	(cached)
+ok  	github.com/scenic-guide/internal/service	(cached)

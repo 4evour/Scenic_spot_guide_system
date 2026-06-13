@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+﻿import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const BasicLayout = () => import('../layout/BasicLayout.vue')
@@ -9,7 +9,7 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'login',
     component: LoginView,
-    meta: { requiresAuth: false, title: '登录' },
+    meta: { requiresAuth: false, title: 'login.title' },
   },
   // 带侧边栏 Layout 的管理端路由
   {
@@ -21,59 +21,59 @@ const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('../views/DashboardView.vue'),
-        meta: { title: '数据大屏', requiresAdmin: true },
+        meta: { title: 'nav.dashboard', requiresAdmin: true },
       },
       // 景区管理
       {
         path: 'admin/spots',
         name: 'admin-spots',
         component: () => import('../views/AdminSpots.vue'),
-        meta: { title: '景点管理', parentTitle: '景区管理', requiresAdmin: true },
+        meta: { title: 'nav.spots', parentTitle: 'nav.scenicMgmt', requiresAdmin: true },
       },
       {
         path: 'admin/routes',
         name: 'admin-routes',
         component: () => import('../views/AdminRoutes.vue'),
-        meta: { title: '路线管理', parentTitle: '景区管理', requiresAdmin: true },
+        meta: { title: 'nav.routes', parentTitle: 'nav.scenicMgmt', requiresAdmin: true },
       },
       {
         path: 'admin/content',
         name: 'admin-content',
         component: () => import('../views/AdminContent.vue'),
-        meta: { title: '讲解内容', parentTitle: '景区管理', requiresAdmin: true },
+        meta: { title: 'nav.content', parentTitle: 'nav.scenicMgmt', requiresAdmin: true },
       },
       // 数字人中心
       {
         path: 'admin/avatar',
         name: 'admin-avatar',
         component: () => import('../views/AdminAvatar.vue'),
-        meta: { title: '形象配置', parentTitle: '数字人中心', requiresAdmin: true },
+        meta: { title: 'nav.avatar', parentTitle: 'nav.digitalCenter', requiresAdmin: true },
       },
       {
         path: 'admin/reports',
         name: 'admin-reports',
         component: () => import('../views/AdminReports.vue'),
-        meta: { title: '感受度报告', parentTitle: '数字人中心', requiresAdmin: true },
+        meta: { title: 'nav.reports', parentTitle: 'nav.digitalCenter', requiresAdmin: true },
       },
       // 知识库
       {
         path: 'admin/knowledge',
         name: 'admin-knowledge',
         component: () => import('../views/AdminKnowledge.vue'),
-        meta: { title: '知识库管理', requiresAdmin: true },
+        meta: { title: 'nav.knowledge', requiresAdmin: true },
       },
       // 系统管理
       {
         path: 'admin/users',
         name: 'admin-users',
         component: () => import('../views/AdminUsers.vue'),
-        meta: { title: '用户管理', parentTitle: '系统管理', requiresAdmin: true },
+        meta: { title: 'nav.users', parentTitle: 'nav.systemMgmt', requiresAdmin: true },
       },
       {
         path: 'admin/settings',
         name: 'admin-settings',
         component: () => import('../views/AdminSettings.vue'),
-        meta: { title: '系统设置', parentTitle: '系统管理', requiresAdmin: true },
+        meta: { title: 'nav.settings', parentTitle: 'nav.systemMgmt', requiresAdmin: true },
       },
     ],
   },
@@ -82,13 +82,19 @@ const routes: RouteRecordRaw[] = [
     path: '/map',
     name: 'map',
     component: () => import('../views/MapView.vue'),
-    meta: { title: '地图导览', fullscreen: true },
+    meta: { title: 'map.title', fullscreen: true, requiresAuth: true },
   },
   {
     path: '/digital-human',
     name: 'digital-human',
     component: () => import('../views/DigitalHumanView.vue'),
-    meta: { title: '数字人交互', fullscreen: true },
+    meta: { title: 'dh.title', fullscreen: true, requiresAuth: true },
+  },
+  {
+    path: '/scan',
+    name: 'qr-scan',
+    component: () => import('../views/QRScanView.vue'),
+    meta: { title: 'qr.scanning', fullscreen: true, requiresAuth: false },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -108,11 +114,24 @@ router.beforeEach(async (to) => {
 
   const authStore = useAuthStore()
 
+  // 尝试获取用户信息（Cookie 有效时直接返回）
   const authenticated = await authStore.fetchUser()
-  if (!authenticated) {
+  if (authenticated) {
+    // 管理员页面检查
+    if (to.meta.requiresAdmin && !authStore.isAdmin) {
+      return { name: 'map' }
+    }
+    return true
+  }
+
+  // 未登录时自动创建游客账号（而非重定向到登录页）
+  const guestOk = await authStore.ensureGuestSession()
+  if (!guestOk) {
+    // 游客登录失败，降级到登录页
     return { name: 'login' }
   }
 
+  // 管理员页面不允许游客访问
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return { name: 'map' }
   }
@@ -126,12 +145,17 @@ router.afterEach((to) => {
   trackPageVisit(to.fullPath, title)
 })
 
-/** 上报页面访问（静默失败，不影响用户体验） */
+
+/** 从 cookie 中读取 csrf_token */
+function getCSRFToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}/** 上报页面访问（静默失败，不影响用户体验） */
 export function trackPageVisit(path: string, title: string) {
   const authStore = useAuthStore()
   fetch('/api/v1/track', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCSRFToken() },
     credentials: 'include',
     signal: AbortSignal.timeout(5000),
     body: JSON.stringify({
@@ -148,7 +172,7 @@ export function trackUserAction(action: string, details: string) {
   const authStore = useAuthStore()
   fetch('/api/v1/track', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCSRFToken() },
     credentials: 'include',
     signal: AbortSignal.timeout(5000),
     body: JSON.stringify({

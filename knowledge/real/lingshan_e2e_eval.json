@@ -1,0 +1,177 @@
+[
+  {
+    "id": "e2e-01",
+    "category": "景点事实",
+    "question": "灵山大佛有多高？",
+    "expected_keywords": ["88"],
+    "description": "大佛高度基本事实"
+  },
+  {
+    "id": "e2e-02",
+    "category": "景点事实",
+    "question": "九龙灌浴是什么表演？",
+    "expected_keywords": ["九龙", "灌浴"],
+    "description": "九龙灌浴介绍"
+  },
+  {
+    "id": "e2e-03",
+    "category": "景点事实",
+    "question": "灵山梵宫在哪里？",
+    "expected_keywords": ["梵宫"],
+    "description": "梵宫位置"
+  },
+  {
+    "id": "e2e-04",
+    "category": "景点事实",
+    "question": "五印坛城展示什么文化？",
+    "expected_keywords": ["藏传", "五方五佛"],
+    "description": "五印坛城文化主题"
+  },
+  {
+    "id": "e2e-05",
+    "category": "景点事实",
+    "question": "百子戏弥勒在哪里？",
+    "expected_keywords": ["弥勒"],
+    "description": "百子戏弥勒位置"
+  },
+  {
+    "id": "e2e-06",
+    "category": "开放时间",
+    "question": "景区几点开门？",
+    "expected_keywords": ["官方", "公告"],
+    "description": "开放时间边界问题"
+  },
+  {
+    "id": "e2e-07",
+    "category": "开放时间",
+    "question": "今天灵山大佛开放吗？",
+    "expected_keywords": ["开放"],
+    "description": "实时开放状态"
+  },
+  {
+    "id": "e2e-08",
+    "category": "开放时间",
+    "question": "梵宫什么时候开放？",
+    "expected_keywords": ["开放", "梵宫"],
+    "description": "梵宫开放时间"
+  },
+  {
+    "id": "e2e-09",
+    "category": "路线推荐",
+    "question": "带孩子怎么玩？",
+    "expected_keywords": ["亲子", "百子戏弥勒"],
+    "description": "亲子路线推荐"
+  },
+  {
+    "id": "e2e-10",
+    "category": "路线推荐",
+    "question": "推荐一条适合历史爱好者的路线",
+    "expected_keywords": ["历史", "文化"],
+    "description": "历史路线推荐"
+  },
+  {
+    "id": "e2e-11",
+    "category": "路线推荐",
+    "question": "半天时间能看哪些景点？",
+    "expected_keywords": ["路线", "景点"],
+    "description": "半天行程规划"
+  },
+  {
+    "id": "e2e-12",
+    "category": "路线推荐",
+    "question": "老人适合走哪条路线？",
+    "expected_keywords": ["轻松"],
+    "description": "老人路线推荐"
+  },
+  {
+    "id": "e2e-13",
+    "category": "文化历史",
+    "question": "梵宫有什么特色？",
+    "expected_keywords": ["木雕", "琉璃"],
+    "description": "梵宫艺术特色"
+  },
+  {
+    "id": "e2e-14",
+    "category": "文化历史",
+    "question": "灵山大佛是什么材质做的？",
+    "expected_keywords": ["铜", "青铜"],
+    "description": "大佛材质"
+  },
+  {
+    "id": "e2e-15",
+    "category": "文化历史",
+    "question": "祥符禅寺有什么历史？",
+    "expected_keywords": ["祥符", "禅寺"],
+    "description": "祥符禅寺历史"
+  },
+  {
+    "id": "e2e-16",
+    "category": "文化历史",
+    "question": "灵山胜境是几A级景区？",
+    "expected_keywords": ["5A"],
+    "description": "景区等级"
+  },
+  {
+    "id": "e2e-17",
+    "category": "文化历史",
+    "question": "灵山大照壁有多长？",
+    "expected_keywords": ["照壁"],
+    "description": "照壁尺寸"
+  },
+  {
+    "id": "e2e-18",
+    "category": "服务设施",
+    "question": "景区有餐厅吗？",
+    "expected_keywords": ["餐厅", "素食"],
+    "description": "餐饮服务"
+  },
+  {
+    "id": "e2e-19",
+    "category": "服务设施",
+    "question": "可以坐观光车吗？",
+    "expected_keywords": ["观光车"],
+    "description": "观光车服务"
+  },
+  {
+    "id": "e2e-20",
+    "category": "服务设施",
+    "question": "景区有寄存服务吗？",
+    "expected_keywords": ["寄存"],
+    "description": "寄存服务"
+  },
+  {
+    "id": "e2e-21",
+    "category": "边界问题",
+    "question": "门票多少钱？",
+    "expected_keywords": ["官方", "公告", "为准", "票价", "价格", "元", "票"],
+    "description": "票价边界问题"
+  },
+  {
+    "id": "e2e-22",
+    "category": "边界问题",
+    "question": "今天人多不多？",
+    "expected_keywords": ["官方", "公告"],
+    "description": "实时客流边界"
+  },
+  {
+    "id": "e2e-23",
+    "category": "边界问题",
+    "question": "可以带宠物进去吗？",
+    "expected_keywords": ["不允许", "不建议", "不能", "禁止", "规定", "宠物", "携带"],
+    "description": "宠物政策边界"
+  },
+  {
+    "id": "e2e-24",
+    "category": "边界问题",
+    "question": "能飞无人机吗？",
+    "expected_keywords": ["不允许", "不能", "禁止", "安全", "尊重", "无人机", "飞行"],
+    "description": "无人机政策边界"
+  },
+  {
+    "id": "e2e-25",
+    "category": "边界问题",
+    "question": "停车场在哪里？",
+    "expected_keywords": ["停车"],
+    "description": "停车信息"
+  }
+]

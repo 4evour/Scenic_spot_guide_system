@@ -1,7 +1,8 @@
-package pkg
+﻿package pkg
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -160,6 +161,21 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 		c.Next()
 	}
 }
+// csrfExemptPaths 列出无需 CSRF 校验的认证类端点（用户尚无 CSRF cookie）
+var csrfExemptPaths = []string{
+	"/auth/guest-login",
+	"/login",
+	"/register",
+}
+
+func isCSRFExempt(path string) bool {
+	for _, p := range csrfExemptPaths {
+		if strings.HasSuffix(path, p) {
+			return true
+		}
+	}
+	return false
+}
 
 func csrfProtection() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -167,13 +183,24 @@ func csrfProtection() gin.HandlerFunc {
 			c.Next()
 			return
 		}
+		// 认证类端点（登录/注册/游客登录）豁免 CSRF
+		if isCSRFExempt(c.Request.URL.Path) {
+			c.Next()
+			return
+		}
 		if strings.EqualFold(c.GetHeader("X-Requested-With"), "XMLHttpRequest") {
 			c.Next()
 			return
 		}
-		token, _ := c.Cookie("csrf_token")
-		if strings.TrimSpace(token) == "" {
+		cookieToken, _ := c.Cookie("csrf_token")
+		if strings.TrimSpace(cookieToken) == "" {
 			c.AbortWithStatusJSON(403, Response{Code: 403, Message: "missing csrf token"})
+			return
+		}
+		// Double-submit cookie: header must match cookie value
+		headerToken := c.GetHeader("X-CSRF-Token")
+		if headerToken == "" || headerToken != cookieToken {
+			c.AbortWithStatusJSON(403, Response{Code: 403, Message: "invalid csrf token"})
 			return
 		}
 		c.Next()
@@ -194,6 +221,25 @@ func SetCSRFCookie(c *gin.Context) {
 	c.SetCookie("csrf_token", token, 12*3600, "/", "", secure, false)
 }
 
+
+// APIKeyMiddleware verifies requests carry a valid API key via X-API-Key header.
+// Intended for internal service-to-service endpoints (e.g. OpenAI proxy).
+func APIKeyMiddleware() gin.HandlerFunc {
+	expectedKey := os.Getenv("SCENIC_GUIDE_API_KEY")
+	return func(c *gin.Context) {
+		if expectedKey == "" {
+			c.AbortWithStatusJSON(403, Response{Code: 403, Message: "API key not configured on server"})
+			return
+		}
+		provided := c.GetHeader("X-API-Key")
+		if provided != expectedKey {
+			c.AbortWithStatusJSON(401, Response{Code: 401, Message: "invalid or missing API key"})
+			return
+		}
+		c.Next()
+	}
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if applyDevAdminBypass(c) {
@@ -202,7 +248,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		var token string
-		// 优先从 Authorization header 获取
+		// 优先�?Authorization header 获取
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
 			parts := strings.SplitN(authHeader, " ", 2)
@@ -210,7 +256,7 @@ func AuthMiddleware() gin.HandlerFunc {
 				token = parts[1]
 			}
 		}
-		// 回退到 HttpOnly Cookie
+		// 回退�?HttpOnly Cookie
 		if token == "" {
 			token, _ = c.Cookie("auth_token")
 		}
@@ -218,7 +264,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if token == "" {
 			c.AbortWithStatusJSON(401, Response{
 				Code:    401,
-				Message: "未登录，请先登录",
+				Message: T(c, "err_unauthorized"),
 			})
 			return
 		}
@@ -227,7 +273,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if err != nil {
 			c.AbortWithStatusJSON(401, Response{
 				Code:    401,
-				Message: "token无效或已过期",
+				Message: T(c, "err_token_expired"),
 			})
 			return
 		}
@@ -245,7 +291,7 @@ func AdminMiddleware() gin.HandlerFunc {
 		if !exists || role != "admin" {
 			c.AbortWithStatusJSON(403, Response{
 				Code:    403,
-				Message: "权限不足，需要管理员权限",
+				Message: T(c, "err_forbidden"),
 			})
 			return
 		}
@@ -256,7 +302,7 @@ func AdminMiddleware() gin.HandlerFunc {
 func WSTokenAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var token string
-		// 优先从 Sec-WebSocket-Protocol 子协议提取
+		// 优先�?Sec-WebSocket-Protocol 子协议提�?
 		protocols := c.GetHeader("Sec-WebSocket-Protocol")
 		for _, p := range strings.Split(protocols, ",") {
 			p = strings.TrimSpace(p)
@@ -265,7 +311,7 @@ func WSTokenAuth() gin.HandlerFunc {
 				break
 			}
 		}
-		// 回退到 query 参数（兼容旧客户端）
+		// 回退�?query 参数（兼容旧客户端）
 		if token == "" {
 			token = c.Query("token")
 			if token != "" {
@@ -295,4 +341,93 @@ func WSTokenAuth() gin.HandlerFunc {
 		c.Set("role", claims.Role)
 		c.Next()
 	}
+}
+
+// OptionalAuthMiddleware 尝试解析 JWT，成功则注入用户信息，失败则继续处理（不中断请求）
+func OptionalAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if applyDevAdminBypass(c) {
+			c.Next()
+			return
+		}
+
+		var token string
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				token = parts[1]
+			}
+		}
+		if token == "" {
+			token, _ = c.Cookie("auth_token")
+		}
+		if token == "" {
+			c.Next()
+			return
+		}
+
+		claims, err := ParseToken(token)
+		if err != nil {
+			c.Next()
+			return
+		}
+
+		c.Set("user_id", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("role", claims.Role)
+		c.Next()
+	}
+}
+
+// GuestCreatorFunc 游客创建函数类型（避免 pkg 和 service 循环依赖）
+type GuestCreatorFunc func(fingerprint string) (userID uint, username, displayName, role, token string, err error)
+
+// EnsureGuestMiddleware 确保每个请求都有用户身份
+type EnsureGuestMiddleware struct {
+	CreateGuest GuestCreatorFunc
+}
+
+func NewEnsureGuestMiddleware(createGuest GuestCreatorFunc) *EnsureGuestMiddleware {
+	return &EnsureGuestMiddleware{CreateGuest: createGuest}
+}
+
+func (m *EnsureGuestMiddleware) Handle() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if uid, exists := c.Get("user_id"); exists {
+			if id, ok := uid.(uint); ok && id > 0 {
+				c.Next()
+				return
+			}
+		}
+
+		fp := c.ClientIP() + "|" + c.GetHeader("User-Agent")
+		fingerprint := sha256Hex(fp)
+
+		userID, username, displayName, role, token, err := m.CreateGuest(fingerprint)
+		if err != nil {
+			slog.Warn("自动创建游客失败", "error", err)
+			c.Next()
+			return
+		}
+
+		secureCookie := strings.EqualFold(os.Getenv("SCENIC_GUIDE_COOKIE_SECURE"), "true") || strings.EqualFold(os.Getenv("GIN_MODE"), "release")
+		c.SetSameSite(http.SameSiteStrictMode)
+		c.SetCookie("auth_token", token, 24*3600, "/", "", secureCookie, true)
+		SetCSRFCookie(c)
+
+		c.Set("user_id", userID)
+		c.Set("username", username)
+		c.Set("display_name", displayName)
+		c.Set("role", role)
+
+		slog.Debug("自动创建游客账号", "user_id", userID, "username", username)
+		c.Next()
+	}
+}
+
+func sha256Hex(s string) string {
+	h := sha256.New()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

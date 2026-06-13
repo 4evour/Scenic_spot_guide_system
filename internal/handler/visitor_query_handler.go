@@ -21,13 +21,13 @@ func NewVisitorQueryHandler(service service.VisitorQueryService) *VisitorQueryHa
 func (h *VisitorQueryHandler) CreateQuery(c *gin.Context) {
 	var query model.VisitorQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	if err := h.service.CreateQuery(&query); err != nil {
 		slog.Error("创建游客问题失败", "error", err)
-		pkg.InternalError(c, "创建游客问题失败")
+		pkg.InternalError(c, pkg.T(c, "msg_create_query_failed"))
 		return
 	}
 
@@ -38,13 +38,13 @@ func (h *VisitorQueryHandler) GetQuery(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
 	query, err := h.service.GetQueryByID(uint(id))
 	if err != nil {
-		pkg.NotFound(c, "游客问题不存在")
+		pkg.NotFound(c, pkg.T(c, "msg_query_not_found"))
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *VisitorQueryHandler) GetAllQueries(c *gin.Context) {
 	queries, err := h.service.GetAllQueries()
 	if err != nil {
 		slog.Error("获取游客问题列表失败", "error", err)
-		pkg.InternalError(c, "获取游客问题列表失败")
+		pkg.InternalError(c, pkg.T(c, "msg_get_queries_failed"))
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *VisitorQueryHandler) GetUnansweredQueries(c *gin.Context) {
 	queries, err := h.service.GetUnansweredQueries()
 	if err != nil {
 		slog.Error("获取未回答问题列表失败", "error", err)
-		pkg.InternalError(c, "获取未回答问题列表失败")
+		pkg.InternalError(c, pkg.T(c, "msg_get_unanswered_failed"))
 		return
 	}
 
@@ -77,24 +77,24 @@ func (h *VisitorQueryHandler) UpdateQuery(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
 	var query model.VisitorQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	query.ID = uint(id)
 	if err := h.service.UpdateQuery(&query); err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "游客问题不存在")
+			pkg.NotFound(c, pkg.T(c, "msg_query_not_found"))
 			return
 		}
 		slog.Error("更新游客问题失败", "error", err, "query_id", id)
-		pkg.InternalError(c, "更新游客问题失败")
+		pkg.InternalError(c, pkg.T(c, "msg_update_query_failed"))
 		return
 	}
 
@@ -105,21 +105,21 @@ func (h *VisitorQueryHandler) DeleteQuery(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
 	if err := h.service.DeleteQuery(uint(id)); err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "游客问题不存在")
+			pkg.NotFound(c, pkg.T(c, "msg_query_not_found"))
 			return
 		}
 		slog.Error("删除游客问题失败", "error", err, "query_id", id)
-		pkg.InternalError(c, "删除游客问题失败")
+		pkg.InternalError(c, pkg.T(c, "msg_delete_query_failed"))
 		return
 	}
 
-	pkg.SuccessWithMessage(c, "删除成功", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_delete_success"), nil)
 }
 
 func (h *VisitorQueryHandler) Routes(r *gin.RouterGroup) {

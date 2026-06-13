@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"log/slog"
@@ -37,7 +37,7 @@ func validateEmail(email string) bool {
 }
 
 func validateRole(role string) bool {
-	return role == "admin" || role == "visitor"
+	return role == "admin" || role == "visitor" || role == "guest"
 }
 
 func userPayload(user *model.User) gin.H {
@@ -54,17 +54,17 @@ func userPayload(user *model.User) gin.H {
 func (h *UserHandler) Register(c *gin.Context) {
 	var user model.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	if matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]{3,32}$`, user.Username); !matched {
-		pkg.BadRequest(c, "用户名须为3-32位字母、数字或下划线")
+		pkg.BadRequest(c, pkg.T(c, "msg_username_invalid"))
 		return
 	}
 	if user.Email != "" {
 		if !strings.Contains(user.Email, "@") || len(user.Email) > 254 {
-			pkg.BadRequest(c, "邮箱格式不正确")
+			pkg.BadRequest(c, pkg.T(c, "msg_email_invalid"))
 			return
 		}
 	}
@@ -72,12 +72,12 @@ func (h *UserHandler) Register(c *gin.Context) {
 	user.Role = "visitor"
 
 	if err := h.service.Register(&user); err != nil {
-		slog.Warn("注册失败", "error", err, "username", user.Username)
-		pkg.BadRequest(c, "注册失败")
+		slog.Warn(pkg.T(c, "msg_register_failed"), "error", err, "username", user.Username)
+		pkg.BadRequest(c, pkg.T(c, "msg_register_failed"))
 		return
 	}
 
-	pkg.SuccessWithMessage(c, "注册成功", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_register_success"), nil)
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
@@ -87,19 +87,19 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&loginData); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	user, err := h.service.Login(loginData.Username, loginData.Password)
 	if err != nil {
-		pkg.Unauthorized(c, "用户名或密码错误")
+		pkg.Unauthorized(c, pkg.T(c, "msg_login_failed"))
 		return
 	}
 
 	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, h.tokenExpireHours)
 	if err != nil {
-		pkg.InternalError(c, "生成token失败")
+		pkg.InternalError(c, pkg.T(c, "msg_token_failed"))
 		return
 	}
 
@@ -120,7 +120,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	c.SetSameSite(http.SameSiteStrictMode)
 	secureCookie := os.Getenv("SCENIC_GUIDE_COOKIE_SECURE") == "true" || os.Getenv("GIN_MODE") == "release"
 	c.SetCookie("auth_token", "", -1, "/", "", secureCookie, true)
-	pkg.SuccessWithMessage(c, "已退出登录", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_logout_success"), nil)
 }
 
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
@@ -139,7 +139,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
@@ -148,17 +148,17 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	uid, _ := uidVal.(uint)
 	role, _ := roleVal.(string)
 	if !uidOK || !roleOK {
-		pkg.Unauthorized(c, "未登录")
+		pkg.Unauthorized(c, pkg.T(c, "err_unauthorized"))
 		return
 	}
 	if uid != uint(id) && role != "admin" {
-		pkg.Forbidden(c, "无权访问该用户信息")
+		pkg.Forbidden(c, pkg.T(c, "msg_no_permission_user"))
 		return
 	}
 
 	user, err := h.service.GetUserByID(uint(id))
 	if err != nil {
-		pkg.NotFound(c, "用户不存在")
+		pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
 		return
 	}
 
@@ -174,7 +174,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
@@ -183,26 +183,27 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	uid, _ := uidVal.(uint)
 	role, _ := roleVal.(string)
 	if !uidOK || !roleOK {
-		pkg.Unauthorized(c, "未登录")
+		pkg.Unauthorized(c, pkg.T(c, "err_unauthorized"))
 		return
 	}
 	if uid != uint(id) && role != "admin" {
-		pkg.Forbidden(c, "无权修改该用户信息")
+		pkg.Forbidden(c, pkg.T(c, "msg_no_permission_modify"))
 		return
 	}
 
 	var updateData struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
+		CurrentPassword string `json:"current_password"`
 	}
 	if err := c.ShouldBindJSON(&updateData); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	user, err := h.service.GetUserByID(uint(id))
 	if err != nil {
-		pkg.NotFound(c, "用户不存在")
+		pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
 		return
 	}
 
@@ -210,22 +211,30 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	newEmail := user.Email
 	if updateData.Username != "" {
 		if matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]{3,32}$`, updateData.Username); !matched {
-			pkg.BadRequest(c, "用户名须为3-32位字母、数字或下划线")
+			pkg.BadRequest(c, pkg.T(c, "msg_username_invalid"))
 			return
 		}
 		newUsername = updateData.Username
 	}
-	if updateData.Email != "" {
+	if updateData.Email != "" && updateData.Email != user.Email {
+		if updateData.CurrentPassword == "" {
+			pkg.BadRequest(c, pkg.T(c, "msg_verify_password"))
+			return
+		}
+		if _, err := h.service.Login(user.Username, updateData.CurrentPassword); err != nil {
+			pkg.Unauthorized(c, pkg.T(c, "msg_wrong_password"))
+			return
+		}
 		newEmail = updateData.Email
 	}
 
 	if err := h.service.UpdateProfile(uint(id), newUsername, newEmail); err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "用户不存在")
+			pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
 			return
 		}
 		slog.Error("更新用户失败", "error", err, "user_id", id)
-		pkg.InternalError(c, "更新用户信息失败")
+		pkg.InternalError(c, pkg.T(c, "msg_update_failed"))
 		return
 	}
 
@@ -241,7 +250,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "无效的ID")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
@@ -250,25 +259,25 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	uid, _ := uidVal.(uint)
 	role, _ := roleVal.(string)
 	if !uidOK || !roleOK {
-		pkg.Unauthorized(c, "未登录")
+		pkg.Unauthorized(c, pkg.T(c, "err_unauthorized"))
 		return
 	}
 	if uid != uint(id) && role != "admin" {
-		pkg.Forbidden(c, "无权删除该用户")
+		pkg.Forbidden(c, pkg.T(c, "msg_no_permission_delete"))
 		return
 	}
 
 	if err := h.service.DeleteUser(uint(id)); err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "user not found")
+			pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
 			return
 		}
-		slog.Error("删除用户失败", "error", err, "user_id", id)
-		pkg.InternalError(c, "删除用户失败")
+		slog.Error(pkg.T(c, "msg_delete_failed"), "error", err, "user_id", id)
+		pkg.InternalError(c, pkg.T(c, "msg_delete_failed"))
 		return
 	}
 
-	pkg.SuccessWithMessage(c, "删除成功", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_delete_success"), nil)
 }
 
 func (h *UserHandler) AdminCreateUser(c *gin.Context) {
@@ -279,22 +288,22 @@ func (h *UserHandler) AdminCreateUser(c *gin.Context) {
 		Role     string `json:"role"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "invalid request")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 	if !validateUsername(req.Username) {
-		pkg.BadRequest(c, "invalid username")
+		pkg.BadRequest(c, pkg.T(c, "msg_username_invalid"))
 		return
 	}
 	if !validateEmail(req.Email) {
-		pkg.BadRequest(c, "invalid email")
+		pkg.BadRequest(c, pkg.T(c, "msg_email_invalid"))
 		return
 	}
 	if req.Role == "" {
 		req.Role = "visitor"
 	}
 	if !validateRole(req.Role) {
-		pkg.BadRequest(c, "invalid role")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
@@ -306,7 +315,7 @@ func (h *UserHandler) AdminCreateUser(c *gin.Context) {
 	}
 	if err := h.service.CreateUser(user); err != nil {
 		slog.Warn("admin create user failed", "error", err, "username", req.Username)
-		pkg.BadRequest(c, "create user failed")
+		pkg.BadRequest(c, pkg.T(c, "msg_create_failed"))
 		return
 	}
 
@@ -316,7 +325,7 @@ func (h *UserHandler) AdminCreateUser(c *gin.Context) {
 func (h *UserHandler) AdminUpdateUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		pkg.BadRequest(c, "invalid id")
+		pkg.BadRequest(c, pkg.T(c, "msg_invalid_id"))
 		return
 	}
 
@@ -327,30 +336,30 @@ func (h *UserHandler) AdminUpdateUser(c *gin.Context) {
 		Role     *string `json:"role"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "invalid request")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 	if req.Username != nil && !validateUsername(*req.Username) {
-		pkg.BadRequest(c, "invalid username")
+		pkg.BadRequest(c, pkg.T(c, "msg_username_invalid"))
 		return
 	}
 	if req.Email != nil && !validateEmail(*req.Email) {
-		pkg.BadRequest(c, "invalid email")
+		pkg.BadRequest(c, pkg.T(c, "msg_email_invalid"))
 		return
 	}
 	if req.Role != nil && !validateRole(*req.Role) {
-		pkg.BadRequest(c, "invalid role")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	user, err := h.service.UpdateAdminUser(uint(id), req.Username, req.Email, req.Role, req.Password)
 	if err != nil {
 		if isRecordNotFound(err) {
-			pkg.NotFound(c, "user not found")
+			pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
 			return
 		}
 		slog.Error("admin update user failed", "error", err, "user_id", id)
-		pkg.BadRequest(c, "update user failed")
+		pkg.BadRequest(c, pkg.T(c, "msg_update_failed"))
 		return
 	}
 
@@ -371,8 +380,8 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 
 	users, total, err := h.service.GetAllUsersPaginated(page, pageSize)
 	if err != nil {
-		slog.Error("获取用户列表失败", "error", err)
-		pkg.InternalError(c, "获取用户列表失败")
+		slog.Error(pkg.T(c, "msg_get_users_failed"), "error", err)
+		pkg.InternalError(c, pkg.T(c, "msg_get_users_failed"))
 		return
 	}
 
@@ -393,14 +402,14 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 func (h *UserHandler) GetUsersByRole(c *gin.Context) {
 	role := c.Query("role")
 	if role == "" {
-		pkg.BadRequest(c, "角色参数不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_role_required"))
 		return
 	}
 
 	users, err := h.service.GetUsersByRole(role)
 	if err != nil {
 		slog.Error("按角色获取用户列表失败", "error", err, "role", role)
-		pkg.InternalError(c, "获取用户列表失败")
+		pkg.InternalError(c, pkg.T(c, "msg_get_users_failed"))
 		return
 	}
 

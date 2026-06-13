@@ -1,10 +1,13 @@
-# Scenic Guide - Example Configuration
+﻿# Scenic Guide - Example Configuration
 # Copy this file to config.yaml and fill in your values.
 # NEVER commit config.yaml with real credentials.
+# Sensitive fields (api_key, jwt_secret) MUST be set via environment variables.
 
 server:
   host: "0.0.0.0"
   port: "8080"
+
+scenic_profile: "lingshan"
 
 database:
   # Options: "postgres" (recommended for production), "sqlite" (local dev only)
@@ -26,14 +29,12 @@ logging:
   output: "console"
 
 ai:
-  # Get your key from https://platform.deepseek.com
-  api_key: ""
-  model: "deepseek-chat"
-  base_url: "https://api.deepseek.com/v1"
+  api_key: ""          # 通过 SCENIC_GUIDE_AI_API_KEY 环境变量注入
+  model: "qwen-vl-max"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 embedding:
-  # Get your key from https://dashscope.console.aliyun.com
-  api_key: ""
+  api_key: ""          # 通过 SCENIC_GUIDE_EMBEDDING_API_KEY 环境变量注入
   model: "text-embedding-v2"
   base_url: "https://dashscope.aliyuncs.com/api/v1"
 
@@ -42,11 +43,10 @@ speech:
   region: ""
 
 security:
-  # IMPORTANT: Generate a random 32+ character secret.
-  # Example: openssl rand -hex 32
-  # The placeholder below WILL be rejected at startup.
-  jwt_secret: "REPLACE_WITH_RANDOM_32_CHAR_SECRET"
-  token_expire_hours: 4
+  # IMPORTANT: Set via SCENIC_GUIDE_SECURITY_JWT_SECRET environment variable.
+  # Generate: openssl rand -hex 32
+  jwt_secret: ""       # 通过 SCENIC_GUIDE_SECURITY_JWT_SECRET 环境变量注入
+  token_expire_hours: 24
   # CORS allowed origins. If empty, defaults to localhost:8080 and localhost:5173.
   # Add your production domain here.
   # allowed_origins:

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -14,6 +15,7 @@ type Config struct {
 	AI        AIConfig        `mapstructure:"ai"`
 	Embedding EmbeddingConfig `mapstructure:"embedding"`
 	Speech    SpeechConfig    `mapstructure:"speech"`
+	TTS       TTSConfig       `mapstructure:"tts"`
 	Security  SecurityConfig  `mapstructure:"security"`
 	Redis     RedisConfig     `mapstructure:"redis"`
 }
@@ -64,6 +66,14 @@ type SpeechConfig struct {
 	Region string `mapstructure:"region"`
 }
 
+// TTSConfig holds Text-to-Speech configuration.
+type TTSConfig struct {
+	Provider string `mapstructure:"provider"` // "edge" (default) or "baidu"
+	Voice    string `mapstructure:"voice"`    // e.g. "female_xiaoxiao"
+	Rate     string `mapstructure:"rate"`     // e.g. "+0%", "-10%", "+20%"
+	Timeout  int    `mapstructure:"timeout"`  // seconds, default 30
+}
+
 type SecurityConfig struct {
 	JWTSecret        string   `mapstructure:"jwt_secret"`
 	TokenExpireHours int      `mapstructure:"token_expire_hours"`
@@ -91,6 +101,14 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if origins := os.Getenv("SCENIC_GUIDE_SECURITY_ALLOWED_ORIGINS"); origins != "" {
 		config.Security.AllowedOrigins = splitCSV(origins)
+	}
+
+	// startup validation: sensitive fields must not be empty
+	if config.AI.APIKey == "" {
+		return nil, fmt.Errorf("ai.api_key is not configured, set SCENIC_GUIDE_AI_API_KEY environment variable")
+	}
+	if config.Security.JWTSecret == "" {
+		return nil, fmt.Errorf("security.jwt_secret is not configured, set SCENIC_GUIDE_SECURITY_JWT_SECRET environment variable")
 	}
 
 	return &config, nil

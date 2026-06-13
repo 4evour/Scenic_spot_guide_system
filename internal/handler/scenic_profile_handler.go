@@ -18,7 +18,7 @@ func NewScenicProfileHandler(profile *config.ScenicProfile) *ScenicProfileHandle
 
 func (h *ScenicProfileHandler) GetProfile(c *gin.Context) {
 	if h.profile == nil {
-		pkg.InternalError(c, "景区配置未加载")
+		pkg.InternalError(c, pkg.T(c, "msg_profile_not_loaded"))
 		return
 	}
 	pkg.Success(c, gin.H{
@@ -46,7 +46,7 @@ func (h *ScenicProfileHandler) GetQuickAsks(c *gin.Context) {
 
 func (h *ScenicProfileHandler) GetPersonaPrompt(c *gin.Context) {
 	if h.profile == nil {
-		pkg.InternalError(c, "景区配置未加载")
+		pkg.InternalError(c, pkg.T(c, "msg_profile_not_loaded"))
 		return
 	}
 

@@ -1,0 +1,10 @@
+FAIL	github.com/scenic-guide [build failed]
+?   	github.com/scenic-guide/cmd/demo-seed	[no test files]
+ok  	github.com/scenic-guide/cmd/rag-eval	0.299s
+ok  	github.com/scenic-guide/internal/config	(cached)
+FAIL	github.com/scenic-guide/internal/handler [build failed]
+?   	github.com/scenic-guide/internal/model	[no test files]
+ok  	github.com/scenic-guide/internal/pkg	2.595s
+ok  	github.com/scenic-guide/internal/repository	(cached)
+ok  	github.com/scenic-guide/internal/service	0.998s
+FAIL

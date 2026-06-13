@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "command": "go test ./...",
+  "cwd": "D:\\go web 01\\scenic-guide",
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "startedAt": "2026-06-09T08:55:39.654Z",
+  "finishedAt": "2026-06-09T08:55:51.093Z",
+  "durationMs": 11439,
+  "output": {
+    "stdoutBytes": 480,
+    "stderrBytes": 0,
+    "totalBytes": 480,
+    "estimatedTokens": 120,
+    "interestingLines": [
+      "?   \tgithub.com/scenic-guide\t[no test files]",
+      "?   \tgithub.com/scenic-guide/cmd/demo-seed\t[no test files]",
+      "ok  \tgithub.com/scenic-guide/cmd/rag-eval\t0.187s",
+      "ok  \tgithub.com/scenic-guide/internal/config\t(cached)",
+      "ok  \tgithub.com/scenic-guide/internal/handler\t1.133s",
+      "?   \tgithub.com/scenic-guide/internal/model\t[no test files]",
+      "ok  \tgithub.com/scenic-guide/internal/pkg\t2.942s",
+      "ok  \tgithub.com/scenic-guide/internal/repository\t(cached)",
+      "ok  \tgithub.com/scenic-guide/internal/service\t1.323s"
+    ]
+  },
+  "stored": {
+    "stdout": ".prismo/shield/runs/2026-06-09T08-55-39-654Z/stdout.txt",
+    "stderr": ".prismo/shield/runs/2026-06-09T08-55-39-654Z/stderr.txt",
+    "directory": ".prismo/shield/runs/2026-06-09T08-55-39-654Z"
+  },
+  "next": [
+    "Feed the summary to the agent first; inspect full output only if needed.",
+    "Read stdout: sed -n '1,160p' \".prismo/shield/runs/2026-06-09T08-55-39-654Z/stdout.txt\"",
+    "Read stderr: sed -n '1,160p' \".prismo/shield/runs/2026-06-09T08-55-39-654Z/stderr.txt\""
+  ],
+  "index": {
+    "mode": "jsonl",
+    "sqlite": {
+      "available": false,
+      "reason": "sqlite3-not-found"
+    }
+  }
+}

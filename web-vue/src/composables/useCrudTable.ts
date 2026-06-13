@@ -1,4 +1,5 @@
 import { ref, reactive, type Ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useMessage, useDialog } from 'naive-ui'
 import { apiFetch } from '../services/api'
 
@@ -23,6 +24,7 @@ interface CrudOptions<T extends Record<string, unknown>> {
 }
 
 export function useCrudTable<T extends Record<string, unknown>>(options: CrudOptions<T>) {
+  const { t } = useI18n()
   const message = useMessage()
   const dialog = useDialog()
 
@@ -63,7 +65,7 @@ export function useCrudTable<T extends Record<string, unknown>>(options: CrudOpt
       tableData.value = items
       pagination.page = params.page
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '加载失败')
+      message.error(error instanceof Error ? error.message : t('common.loadFailed'))
     } finally {
       loading.value = false
     }
@@ -95,11 +97,11 @@ export function useCrudTable<T extends Record<string, unknown>>(options: CrudOpt
       const { path, method } = options.saveApi(formData.value, isEditing.value)
       const body = formData.value as Record<string, unknown>
       await apiFetch(path, { method, body: JSON.stringify(body) })
-      message.success(isEditing.value ? '更新成功' : '创建成功')
+      message.success(isEditing.value ? t('common.updateSuccess') : t('common.createSuccess'))
       closeDrawer()
       await fetchData()
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '保存失败')
+      message.error(error instanceof Error ? error.message : t('common.saveFailed'))
     } finally {
       saving.value = false
     }
@@ -109,18 +111,18 @@ export function useCrudTable<T extends Record<string, unknown>>(options: CrudOpt
     if (!options.deleteApi) return
     const id = String(row[idField] || '')
     dialog.warning({
-      title: '确认删除',
-      content: '删除后不可恢复，确定要删除吗？',
-      positiveText: '删除',
-      negativeText: '取消',
+      title: t('common.confirmDelete'),
+      content: t('common.deleteWarning'),
+      positiveText: t('common.delete'),
+      negativeText: t('common.cancel'),
       onPositiveClick: async () => {
         try {
           const { path } = options.deleteApi!(id)
           await apiFetch(path, { method: 'DELETE' })
-          message.success('删除成功')
+          message.success(t('common.deleteSuccess'))
           await fetchData()
         } catch (error) {
-          message.error(error instanceof Error ? error.message : '删除失败')
+          message.error(error instanceof Error ? error.message : t('common.deleteFailed'))
         }
       },
     })

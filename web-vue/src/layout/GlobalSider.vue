@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { h, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { NLayoutSider, NMenu, NIcon, NScrollbar } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { useAppStore } from '../stores/app'
 import { useAuthStore } from '../stores/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
@@ -17,37 +19,37 @@ function renderIcon(icon: string) {
 
 const menuOptions = computed<MenuOption[]>(() => {
   const items: MenuOption[] = [
-    { label: '数据大屏', key: 'dashboard', icon: renderIcon('📊') },
+    { label: t('nav.dashboard'), key: 'dashboard', icon: renderIcon('📊') },
     {
-      label: '景区管理',
+      label: t('nav.scenicMgmt'),
       key: 'scenic-group',
       icon: renderIcon('📋'),
       children: [
-        { label: '景点管理', key: 'admin-spots', icon: renderIcon('🏛️') },
-        { label: '路线管理', key: 'admin-routes', icon: renderIcon('🛤️') },
-        { label: '讲解内容', key: 'admin-content', icon: renderIcon('📝') },
+        { label: t('nav.spots'), key: 'admin-spots', icon: renderIcon('🏛️') },
+        { label: t('nav.routes'), key: 'admin-routes', icon: renderIcon('🛤️') },
+        { label: t('nav.content'), key: 'admin-content', icon: renderIcon('📝') },
       ],
     },
     {
-      label: '数字人中心',
+      label: t('nav.digitalCenter'),
       key: 'dh-group',
       icon: renderIcon('🤖'),
       children: [
-        { label: '形象配置', key: 'admin-avatar', icon: renderIcon('👤') },
-        { label: '感受度报告', key: 'admin-reports', icon: renderIcon('📈') },
+        { label: t('nav.avatar'), key: 'admin-avatar', icon: renderIcon('👤') },
+        { label: t('nav.reports'), key: 'admin-reports', icon: renderIcon('📈') },
       ],
     },
-    { label: '知识库', key: 'admin-knowledge', icon: renderIcon('📚') },
+    { label: t('nav.knowledge'), key: 'admin-knowledge', icon: renderIcon('📚') },
   ]
 
   if (authStore.isAdmin) {
     items.push({
-      label: '系统管理',
+      label: t('nav.systemMgmt'),
       key: 'system-group',
       icon: renderIcon('⚙️'),
       children: [
-        { label: '用户管理', key: 'admin-users', icon: renderIcon('👥') },
-        { label: '系统设置', key: 'admin-settings', icon: renderIcon('🔧') },
+        { label: t('nav.users'), key: 'admin-users', icon: renderIcon('👥') },
+        { label: t('nav.settings'), key: 'admin-settings', icon: renderIcon('🔧') },
       ],
     })
   }
@@ -55,8 +57,8 @@ const menuOptions = computed<MenuOption[]>(() => {
   // 添加游客端入口
   items.push(
     { label: '', key: 'divider', type: 'divider', icon: undefined },
-    { label: '地图导览', key: 'map', icon: renderIcon('🗺️') },
-    { label: '数字人交互', key: 'digital-human', icon: renderIcon('💬') },
+    { label: t('map.title'), key: 'map', icon: renderIcon('🗺️') },
+    { label: t('dh.title'), key: 'digital-human', icon: renderIcon('💬') },
   )
 
   return items
@@ -87,7 +89,7 @@ function handleMenuUpdate(key: string) {
         <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#63e2b7" opacity="0.9"/>
         <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#63e2b7" stroke-width="1.5" fill="none" opacity="0.5"/>
       </svg>
-      <span v-if="!appStore.siderCollapsed" class="logo-text">景区智能导览</span>
+      <span v-if="!appStore.siderCollapsed" class="logo-text">{{ $t('nav.brand') }}</span>
     </div>
 
     <NScrollbar style="flex: 1; overflow: auto;">

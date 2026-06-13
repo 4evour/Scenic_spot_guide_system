@@ -7,19 +7,22 @@ import (
 )
 
 type ScenicSpot struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	Name        string    `gorm:"size:255;not null" json:"name"`
-	Description string    `gorm:"text" json:"description"`
-	Location    string    `gorm:"size:500" json:"location"`
-	Category    string    `gorm:"size:100;index:idx_scenic_spots_category_updated" json:"category"`
-	Rating      float64   `gorm:"default:0" json:"rating"`
-	Price       float64   `gorm:"default:0" json:"price"`
-	ImageURL    string    `gorm:"size:500" json:"image_url"`
-	Latitude    float64   `gorm:"column:latitude;default:0" json:"latitude"`
-	Longitude   float64   `gorm:"column:longitude;default:0" json:"longitude"`
-	SortOrder   int       `gorm:"column:sort_order;default:0" json:"sort_order"`
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated" json:"updated_at"`
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	Name         string    `gorm:"size:255;not null" json:"name"`
+	Description  string    `gorm:"text" json:"description"`
+	Location     string    `gorm:"size:500" json:"location"`
+	Category     string    `gorm:"size:100;index:idx_scenic_spots_category_updated" json:"category"`
+	Rating       float64   `gorm:"default:0" json:"rating"`
+	Price        float64   `gorm:"default:0" json:"price"`
+	ImageURL     string    `gorm:"size:500" json:"image_url"`
+	Latitude     float64   `gorm:"column:latitude;default:0" json:"latitude"`
+	Longitude    float64   `gorm:"column:longitude;default:0" json:"longitude"`
+	SortOrder    int       `gorm:"column:sort_order;default:0" json:"sort_order"`
+	QRCode       string    `gorm:"size:100;uniqueIndex:idx_scenic_spots_qr_code,where:qr_code != ''" json:"qr_code"`
+	QRIntroText  string    `gorm:"text" json:"qr_intro_text"`
+	QREnabled    bool      `gorm:"default:false" json:"qr_enabled"`
+	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated" json:"updated_at"`
 }
 
 type GuideContent struct {
@@ -56,13 +59,15 @@ type VisitorQuery struct {
 }
 
 type User struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Username  string    `gorm:"size:100;uniqueIndex;not null" json:"username"`
-	Password  string    `gorm:"size:255;not null" json:"password,omitempty"`
-	Email     string    `gorm:"size:255" json:"email"`
-	Role      string    `gorm:"size:50;default:'visitor'" json:"role"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	Username    string    `gorm:"size:100;uniqueIndex;not null" json:"username"`
+	Password    string    `gorm:"size:255;not null" json:"password,omitempty"`
+	Email       string    `gorm:"size:255" json:"email"`
+	Role        string    `gorm:"size:50;default:'visitor'" json:"role"` // admin | visitor | guest
+	GuestToken  string    `gorm:"size:100;uniqueIndex:idx_guest_token,where:guest_token != ''" json:"-"` // 游客设备绑定标识
+	DisplayName string    `gorm:"size:100" json:"display_name"`          // 游客显示名
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 type VisitRecord struct {
@@ -94,6 +99,32 @@ type InteractionLog struct {
 	Category       string    `gorm:"size:100"`                                          // 问题分类
 	Source         string    `gorm:"size:50;index:idx_interaction_logs_source_created"` // 来源: web/voice/digital_human
 	CreatedAt      time.Time `gorm:"autoCreateTime;index:idx_interaction_logs_source_created;index:idx_interaction_logs_created"`
+}
+
+// ChatSession 聊天会话 - 持久化用户对话
+type ChatSession struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	UserID       uint      `gorm:"index;not null" json:"user_id"`
+	SessionID    string    `gorm:"size:100;uniqueIndex;not null" json:"session_id"`
+	Title        string    `gorm:"size:255" json:"title"`
+	Source       string    `gorm:"size:50;default:'web'" json:"source"` // web | digital_human | api
+	MessageCount int       `gorm:"default:0" json:"message_count"`
+	LastActiveAt time.Time `gorm:"index" json:"last_active_at"`
+	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+// ChatMessage 聊天消息 - 持久化每轮对话内容
+type ChatMessage struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	ChatSessionID  uint      `gorm:"index;not null" json:"chat_session_id"`
+	UserID         uint      `gorm:"index;not null" json:"user_id"`
+	Role           string    `gorm:"size:20;not null" json:"role"` // user | assistant | system
+	Content        string    `gorm:"text;not null" json:"content"`
+	Emotion        string    `gorm:"size:50" json:"emotion"`
+	Metadata       string    `gorm:"type:text" json:"metadata,omitempty"`
+	ResponseTimeMs int64     `gorm:"default:0" json:"response_time_ms"`
+	CreatedAt      time.Time `gorm:"autoCreateTime;index" json:"created_at"`
 }
 
 // SystemSetting 系统设置 - 键值对存储
@@ -136,5 +167,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&InteractionLog{},
 		&SystemSetting{},
 		&DigitalHumanConfig{},
+		&ChatSession{},
+		&ChatMessage{},
 	)
 }

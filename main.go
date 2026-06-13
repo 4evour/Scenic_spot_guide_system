@@ -242,6 +242,18 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	statsService := service.NewStatsService(interactionRepo, settingRepo, dhConfigRepo, knowledgeRepo)
 	pkg.SetStatsService(statsService)
 
+	// 会话持久化仓储
+	chatSessionRepo := repository.NewChatSessionRepository(db)
+	chatMessageRepo := repository.NewChatMessageRepository(db)
+
+	// 会话持久化服务
+	chatSessionService := service.NewChatSessionService(chatSessionRepo, chatMessageRepo)
+
+	// 将会话持久化服务注入 RAGService
+	if ragService != nil {
+		ragService.SetChatSessionService(chatSessionService)
+	}
+
 	scenicSpotRepo := repository.NewScenicSpotRepository(db)
 	scenicSpotService := service.NewScenicSpotService(scenicSpotRepo)
 	scenicSpotHandler := handler.NewScenicSpotHandler(scenicSpotService)
@@ -261,6 +273,16 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService, tokenExpireHours)
+
+	// 游客服务
+	guestService := service.NewGuestService(userRepo, chatSessionRepo, tokenExpireHours)
+	guestHandler := handler.NewGuestHandler(guestService, tokenExpireHours)
+
+	// 会话管理 Handler
+	sessionHandler := handler.NewSessionHandler(chatSessionService)
+
+	// 二维码扫码导览 Handler
+	qrHandler := handler.NewQRHandler(scenicSpotService, ragService, statsService)
 
 	aiHandler := handler.NewAIHandler(ragService, statsService)
 	ttsHandler := handler.NewTTSHandler()
@@ -292,6 +314,9 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 		OpenAIProxy:   openAIProxyHandler,
 		Admin:         adminHandler,
 		ScenicProfile: scenicProfileHandler,
+		Guest:         guestHandler,
+		Session:       sessionHandler,
+		QR:            qrHandler,
 		AllowedOrigins: origins,
 	}
 }

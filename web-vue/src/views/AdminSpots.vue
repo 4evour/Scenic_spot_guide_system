@@ -14,6 +14,7 @@ import {
   NTag,
   NSpace,
   NPopconfirm,
+  NSwitch,
 } from 'naive-ui'
 import { useCrudTable } from '../composables/useCrudTable'
 
@@ -29,6 +30,9 @@ interface SpotForm {
   latitude: number
   longitude: number
   sort_order: number
+  qr_code: string
+  qr_intro_text: string
+  qr_enabled: boolean
 }
 
 const categoryOptions = [
@@ -57,6 +61,9 @@ function defaultForm(): SpotForm {
     latitude: 0,
     longitude: 0,
     sort_order: 0,
+    qr_code: '',
+    qr_intro_text: '',
+    qr_enabled: false,
   }
 }
 
@@ -150,6 +157,17 @@ const columns: DataTableColumns<Record<string, unknown>> = [
     render(row) {
       const price = Number(row.price ?? 0)
       return price > 0 ? `¥${price.toFixed(0)}` : '免费'
+    },
+  },
+  {
+    title: '二维码',
+    key: 'qr_code',
+    width: 140,
+    render(row) {
+      const code = String(row.qr_code || '')
+      const enabled = Boolean(row.qr_enabled)
+      if (!code) return h('span', { style: 'color:rgba(255,255,255,.25);font-size:12px' }, '未配置')
+      return h(NTag, { type: enabled ? 'success' : 'default', size: 'small', bordered: false }, { default: () => code })
     },
   },
   {
@@ -340,6 +358,33 @@ onMounted(fetchData)
               style="width: 100%"
               @update:value="(v: number | null) => { getForm().sort_order = v ?? 0 }"
             />
+          </NFormItem>
+          <NFormItem label="二维码 ID" path="qr_code">
+            <NInput
+              :value="getForm().qr_code"
+              placeholder="留空则自动生成，如 SPOT-0001"
+              @update:value="(v: string) => { getForm().qr_code = v }"
+            />
+          </NFormItem>
+
+          <NFormItem label="开场白" path="qr_intro_text">
+            <NInput
+              :value="getForm().qr_intro_text"
+              type="textarea"
+              :rows="2"
+              placeholder="扫码后数字人自动说的开场白（留空则自动AI生成）"
+              @update:value="(v: string) => { getForm().qr_intro_text = v }"
+            />
+          </NFormItem>
+
+          <NFormItem label="启用扫码" path="qr_enabled">
+            <NSwitch
+              :value="getForm().qr_enabled"
+              @update:value="(v: boolean) => { getForm().qr_enabled = v }"
+            />
+            <span style="margin-left:8px;font-size:12px;color:rgba(255,255,255,.4)">
+              {{ getForm().qr_enabled ? '游客可扫码触发讲解' : '扫码功能已关闭' }}
+            </span>
           </NFormItem>
         </NForm>
 

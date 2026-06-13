@@ -1,0 +1,6 @@
+<script src="/static/digital-human/libs/live2dcubismcore.min.js"> in "/index.html" can't be bundled without type="module" attribute
+[33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "command": "powershell -NoProfile -Command npm run build",
+  "cwd": "D:\\go web 01\\scenic-guide\\web-vue",
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "startedAt": "2026-06-09T08:48:38.403Z",
+  "finishedAt": "2026-06-09T08:48:50.073Z",
+  "durationMs": 11670,
+  "output": {
+    "stdoutBytes": 5564,
+    "stderrBytes": 474,
+    "totalBytes": 6038,
+    "estimatedTokens": 1490,
+    "interestingLines": [
+      "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\u001b[39m"
+    ]
+  },
+  "stored": {
+    "stdout": ".prismo/shield/runs/2026-06-09T08-48-38-403Z/stdout.txt",
+    "stderr": ".prismo/shield/runs/2026-06-09T08-48-38-403Z/stderr.txt",
+    "directory": ".prismo/shield/runs/2026-06-09T08-48-38-403Z"
+  },
+  "next": [
+    "Feed the summary to the agent first; inspect full output only if needed.",
+    "Read stdout: sed -n '1,160p' \".prismo/shield/runs/2026-06-09T08-48-38-403Z/stdout.txt\"",
+    "Read stderr: sed -n '1,160p' \".prismo/shield/runs/2026-06-09T08-48-38-403Z/stderr.txt\""
+  ],
+  "index": {
+    "mode": "jsonl",
+    "sqlite": {
+      "available": false,
+      "reason": "sqlite3-not-found"
+    }
+  }
+}

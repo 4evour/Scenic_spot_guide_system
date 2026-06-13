@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"encoding/json"
@@ -42,6 +42,7 @@ type ChatRequest struct {
 	Message   string `json:"message"`
 	SessionID string `json:"session_id,omitempty"`
 	Stream    bool   `json:"stream,omitempty"`
+	Lang      string `json:"lang,omitempty"` // 可选语言偏好: zh-CN / en-US
 }
 
 type KnowledgeRequest struct {
@@ -55,7 +56,7 @@ type KnowledgeRequest struct {
 
 func (h *AIHandler) ensureRAG(c *gin.Context) bool {
 	if h.ragService == nil {
-		pkg.InternalError(c, "知识库服务未初始化")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_not_init"))
 		return false
 	}
 	return true
@@ -82,29 +83,112 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20) // 1MB
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	if req.Message == "" {
-		pkg.BadRequest(c, "消息内容不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_empty_message"))
 		return
 	}
 
-	slog.Info("收到 AI Chat 请求", "message_len", len([]rune(req.Message)), "stream", req.Stream, "rag_available", h.ragService != nil)
+	// 语言优先级: 请求体 > gin context (LanguageMiddleware) > 默认 zh-CN
+	lang := req.Lang
+	if lang == "" {
+		lang = c.GetString("lang")
+	}
+
+	// 从认证上下文获取用户 ID（可选，由 OptionalAuth + EnsureGuest 注入）
+	var userID uint
+	if uid, exists := c.Get("user_id"); exists {
+		userID, _ = uid.(uint)
+	}
+
+	slog.Info("收到 AI Chat 请求", "message_len", len([]rune(req.Message)), "stream", req.Stream, "rag_available", h.ragService != nil, "lang", lang, "user_id", userID)
 
 	startTime := time.Now()
 
-	if h.ragService != nil {
-		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Message)
+	if h.ragService == nil {
+		if req.Stream {
+			h.writeSSEError(c, pkg.T(c, "msg_rag_not_init"))
+		} else {
+			pkg.InternalError(c, pkg.T(c, "msg_rag_not_init"))
+		}
+		return
+	}
+
+	if req.Stream {
+		// 真正的 token-by-token 流式
+		c.Header("Content-Type", "text/event-stream")
+		c.Header("Cache-Control", "no-cache")
+		c.Header("Connection", "keep-alive")
+		c.Header("X-Accel-Buffering", "no")
+		c.Status(http.StatusOK)
+
+		writer := c.Writer
+		flusher, ok := writer.(http.Flusher)
+		if !ok {
+			slog.Error("SSE 流式响应失败，ResponseWriter 不支持 Flusher")
+			return
+		}
+
+		doneCh := make(chan struct{})
+		go func() {
+			defer close(doneCh)
+			response, route, trace, err := h.ragService.QueryWithRAGStreaming(
+				req.SessionID, req.Message, lang,
+				func(token string) {
+					data, _ := json.Marshal(gin.H{"token": token, "done": false})
+					fmt.Fprintf(writer, "data: %s\n\n", string(data))
+					flusher.Flush()
+				},
+			)
+			elapsed := time.Since(startTime).Milliseconds()
+			if err != nil {
+				slog.Error("AI Chat RAG 流式查询失败", "error", err, "elapsed_ms", elapsed)
+				errData, _ := json.Marshal(gin.H{"error": pkg.T(c, "msg_ai_failed")})
+				fmt.Fprintf(writer, "data: %s\n\n", string(errData))
+				flusher.Flush()
+				return
+			}
+			slog.Info("AI Chat RAG 流式查询完成",
+				"trace_id", trace.TraceID,
+				"response_len", len([]rune(response)),
+				"total_ms", trace.TotalMs,
+				"elapsed_ms", elapsed,
+			)
+
+			// 异步持久化
+			if userID > 0 {
+				go h.ragService.AppendSessionTurnWithUser(req.SessionID, userID, req.Message, response)
+			}
+			if h.statsService != nil {
+				h.statsService.RecordInteraction(service.InteractionRecord{
+					UserID:         userID,
+					SessionID:      req.SessionID,
+					Query:          req.Message,
+					Response:       response,
+					Emotion:        detectEmotion(response),
+					ResponseTimeMs: elapsed,
+					Category:       service.DetectCategory(req.Message),
+					Source:         "web",
+				})
+			}
+
+			// 发送完成标记（含路由和 trace_id）
+			doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": trace.TraceID, "route": route})
+			fmt.Fprintf(writer, "data: %s\n\n", string(doneData))
+			fmt.Fprintf(writer, "data: [DONE]\n\n")
+			flusher.Flush()
+		}()
+		<-doneCh
+	} else {
+		// 非流式：阻塞等待完整响应
+		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Message, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("AI Chat RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
-			if req.Stream {
-				h.writeSSEError(c, "调用AI服务失败")
-			} else {
-				pkg.InternalError(c, "调用AI服务失败")
-			}
+			pkg.InternalError(c, pkg.T(c, "msg_ai_failed"))
 			return
 		}
 		slog.Info("AI Chat RAG 查询完成",
@@ -115,9 +199,12 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			"total_ms", trace.TotalMs,
 			"elapsed_ms", elapsed,
 		)
-
+		if userID > 0 {
+			go h.ragService.AppendSessionTurnWithUser(req.SessionID, userID, req.Message, response)
+		}
 		if h.statsService != nil {
 			h.statsService.RecordInteraction(service.InteractionRecord{
+				UserID:         userID,
 				SessionID:      req.SessionID,
 				Query:          req.Message,
 				Response:       response,
@@ -127,25 +214,14 @@ func (h *AIHandler) Chat(c *gin.Context) {
 				Source:         "web",
 			})
 		}
-
-		if req.Stream {
-			h.writeSSEResponse(c, response, route, trace.TraceID)
-		} else {
-			responseData := gin.H{
-				"response": response,
-				"trace_id": trace.TraceID,
-			}
-			if route != nil {
-				responseData["route"] = route
-			}
-			pkg.Success(c, responseData)
+		responseData := gin.H{
+			"response": response,
+			"trace_id": trace.TraceID,
 		}
-	} else {
-		if req.Stream {
-			h.writeSSEError(c, "RAG服务未初始化")
-		} else {
-			pkg.InternalError(c, "RAG服务未初始化")
+		if route != nil {
+			responseData["route"] = route
 		}
+		pkg.Success(c, responseData)
 	}
 }
 
@@ -208,7 +284,7 @@ type ChatFeedbackRequest struct {
 func (h *AIHandler) Feedback(c *gin.Context) {
 	var req ChatFeedbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
@@ -229,7 +305,7 @@ func (h *AIHandler) Feedback(c *gin.Context) {
 	}
 
 	slog.Info("收到用户反馈", "helpful", req.Helpful, "rating", rating, "query_len", len([]rune(req.Query)))
-	pkg.SuccessWithMessage(c, "感谢您的反馈", nil)
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_feedback_thanks"), nil)
 }
 
 func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
@@ -241,23 +317,23 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		pkg.BadRequest(c, "获取文件失败")
+		pkg.BadRequest(c, pkg.T(c, "msg_file_get_failed"))
 		return
 	}
 
 	if file.Size > maxKnowledgeUploadSize {
-		pkg.BadRequest(c, "上传文件不能超过 10MB")
+		pkg.BadRequest(c, pkg.T(c, "msg_file_too_large"))
 		return
 	}
 	if _, ok := allowedKnowledgeUploadExts[strings.ToLower(filepath.Ext(file.Filename))]; !ok {
-		pkg.BadRequest(c, "仅支持 JSONL、JSON、Markdown 或 TXT 文件")
+		pkg.BadRequest(c, pkg.T(c, "msg_file_type_unsupported"))
 		return
 	}
 
 	f, err := file.Open()
 	if err != nil {
 		slog.Error("打开上传文件失败", "error", err)
-		pkg.BadRequest(c, "打开文件失败")
+		pkg.BadRequest(c, pkg.T(c, "msg_file_open_failed"))
 		return
 	}
 	defer f.Close()
@@ -265,28 +341,47 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 	data, err := io.ReadAll(f)
 	if err != nil {
 		slog.Error("读取上传文件失败", "error", err)
-		pkg.BadRequest(c, "读取文件失败")
+		pkg.BadRequest(c, pkg.T(c, "msg_file_read_failed"))
 		return
 	}
 
+
+	// MIME type sniffing: reject files whose content does not match declared extension
+	contentType := http.DetectContentType(data)
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	validMIME := true
+	switch ext {
+	case ".json", ".jsonl":
+		if !strings.Contains(contentType, "text/plain") && !strings.Contains(contentType, "application/json") && !strings.HasPrefix(contentType, "text/") {
+			validMIME = false
+		}
+	case ".md", ".markdown", ".txt":
+		if !strings.HasPrefix(contentType, "text/") {
+			validMIME = false
+		}
+	}
+	if !validMIME {
+		pkg.BadRequest(c, pkg.T(c, "msg_file_ext_mismatch"))
+		return
+	}
 	_, err = h.ragService.SaveUploadedFile(file.Filename, data)
 	if err != nil {
 		slog.Error("保存上传文件失败", "error", err)
-		pkg.InternalError(c, "保存文件失败")
+		pkg.InternalError(c, pkg.T(c, "msg_file_save_failed"))
 		return
 	}
 
 	loadedCount, err := h.ragService.LoadKnowledgeDocument(file.Filename, data, c.PostForm("category"))
 	if err != nil {
 		slog.Error("加载知识文档失败", "error", err)
-		pkg.InternalError(c, "加载知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_load_failed"))
 		return
 	}
 
 	pkg.Success(c, gin.H{
 		"filename":     file.Filename,
 		"loaded_count": loadedCount,
-		"message":      "知识上传并加载成功",
+		"message":      pkg.T(c, "msg_knowledge_uploaded"),
 	})
 }
 
@@ -311,7 +406,7 @@ func (h *AIHandler) ListKnowledge(c *gin.Context) {
 	list, total, err := h.ragService.ListKnowledge(page, pageSize, c.Query("keyword"), c.Query("category"))
 	if err != nil {
 		slog.Error("查询知识列表失败", "error", err)
-		pkg.InternalError(c, "查询知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_query_failed"))
 		return
 	}
 
@@ -330,18 +425,18 @@ func (h *AIHandler) CreateKnowledge(c *gin.Context) {
 
 	var req KnowledgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		pkg.BadRequest(c, "知识内容不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_knowledge_content_empty"))
 		return
 	}
 
 	knowledge, err := h.ragService.CreateKnowledge(req.toServiceInput())
 	if err != nil {
 		slog.Error("创建知识失败", "error", err)
-		pkg.InternalError(c, "保存知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_save_failed"))
 		return
 	}
 	pkg.Success(c, gin.H{"knowledge": knowledge})
@@ -355,18 +450,18 @@ func (h *AIHandler) UpdateKnowledge(c *gin.Context) {
 	id := c.Param("id")
 	var req KnowledgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		pkg.BadRequest(c, "知识内容不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_knowledge_content_empty"))
 		return
 	}
 
 	knowledge, err := h.ragService.UpdateKnowledge(id, req.toServiceInput())
 	if err != nil {
 		slog.Error("更新知识失败", "error", err, "id", id)
-		pkg.InternalError(c, "更新知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_update_failed"))
 		return
 	}
 	pkg.Success(c, gin.H{"knowledge": knowledge})
@@ -379,19 +474,19 @@ func (h *AIHandler) GetKnowledge(c *gin.Context) {
 
 	id := c.Param("id")
 	if id == "" {
-		pkg.BadRequest(c, "ID不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_id_empty"))
 		return
 	}
 
 	knowledge, err := h.ragService.GetKnowledge(id)
 	if err != nil {
 		slog.Error("查询知识详情失败", "error", err, "id", id)
-		pkg.InternalError(c, "查询知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_query_failed"))
 		return
 	}
 
 	if knowledge == nil {
-		pkg.NotFound(c, "知识不存在")
+		pkg.NotFound(c, pkg.T(c, "msg_knowledge_not_found"))
 		return
 	}
 
@@ -415,18 +510,18 @@ func (h *AIHandler) DeleteKnowledge(c *gin.Context) {
 
 	id := c.Param("id")
 	if id == "" {
-		pkg.BadRequest(c, "ID不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_id_empty"))
 		return
 	}
 
 	if err := h.ragService.DeleteKnowledge(id); err != nil {
 		slog.Error("删除知识失败", "error", err, "id", id)
-		pkg.InternalError(c, "删除知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_delete_failed"))
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"message": "知识删除成功",
+		"message": pkg.T(c, "msg_knowledge_deleted"),
 	})
 }
 
@@ -445,19 +540,22 @@ func (h *AIHandler) DeleteAllKnowledge(c *gin.Context) {
 
 	if err := h.ragService.DeleteAllKnowledge(); err != nil {
 		slog.Error("清空知识库失败", "error", err)
-		pkg.InternalError(c, "清空知识失败")
+		pkg.InternalError(c, pkg.T(c, "msg_knowledge_clear_failed"))
 		return
 	}
 
 	pkg.Success(c, gin.H{
-		"message": "知识清空成功",
+		"message": pkg.T(c, "msg_knowledge_cleared"),
 	})
 }
 
 func (h *AIHandler) Routes(r *gin.RouterGroup) {
-	r.POST("/ai/chat", pkg.RateLimitMiddleware(30, time.Minute), h.Chat)
-	r.POST("/ai/feedback", h.Feedback)
+	// Chat 和 Feedback 路由已移至 routes.go（带 OptionalAuth + EnsureGuest 中间件）
+	// 此处保留兼容性的空注册，避免调用方报错
+}
 
+// KnowledgeRoutes 注册知识库管理路由（需管理员认证）
+func (h *AIHandler) KnowledgeRoutes(r *gin.RouterGroup) {
 	knowledge := r.Group("/knowledge")
 	knowledge.Use(pkg.AuthMiddleware(), pkg.AdminMiddleware())
 	{

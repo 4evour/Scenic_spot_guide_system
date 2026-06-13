@@ -1,6 +1,7 @@
-package service
+﻿package service
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -99,15 +100,15 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 }
 
 func (s *RAGService) QueryWithRAG(query string) (string, error) {
-	answer, _, err := s.QueryWithRAGTrace(query)
+	answer, _, err := s.QueryWithRAGTrace(query, "")
 	return answer, err
 }
 
-func (s *RAGService) QueryWithRAGTrace(query string) (answer string, trace RAGTrace, err error) {
-	return s.queryWithRAGTraceInternal(query, query, "")
+func (s *RAGService) QueryWithRAGTrace(query, lang string) (answer string, trace RAGTrace, err error) {
+	return s.queryWithRAGTraceInternal(query, query, "", lang)
 }
 
-func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sessionContext string) (answer string, trace RAGTrace, err error) {
+func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sessionContext, lang string) (answer string, trace RAGTrace, err error) {
 	retrievalQuery = strings.TrimSpace(retrievalQuery)
 	promptQuery = strings.TrimSpace(promptQuery)
 	if promptQuery == "" {
@@ -124,7 +125,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	}
 	defer func() {
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
-		trace.SlowRequest = trace.TotalMs > 5000
+		trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
 		logAttrs := []any{
 			"trace_id", trace.TraceID,
 			"provider", trace.Provider,
@@ -155,7 +156,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(promptQuery)))
 		trace.CacheHit = true
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
-		trace.SlowRequest = trace.TotalMs > 5000
+		trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
 		return cachedResp, trace, nil
 	}
 
@@ -170,7 +171,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	if len(chunks) == 0 {
 		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(promptQuery)))
 		generationStart := time.Now()
-		answer, err := s.QueryGeneralChat(promptQuery)
+		answer, err := s.QueryGeneralChat(promptQuery, lang)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
 		return answer, trace, err
 	}
@@ -195,7 +196,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 		}{
 			{
 				Role:    "system",
-				Content: s.getSystemPromptOrDefault(),
+				Content: s.getSystemPromptOrDefault(lang),
 			},
 			{
 				Role:    "user",
@@ -296,6 +297,78 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
 	s.setCachedResponse(cacheKey, answer)
 	return answer, trace, nil
+}
+
+
+// openAIStreamChunk represents a single chunk from the OpenAI streaming API.
+type openAIStreamChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content string `json:"content"`
+		} `json:"delta"`
+		FinishReason *string `json:"finish_reason"`
+	} `json:"choices"`
+}
+
+// CallLLMStreaming calls the LLM API with stream=true and invokes onToken for each token.
+func (s *RAGService) CallLLMStreaming(systemPrompt, userPrompt string, onToken func(string)) (string, error) {
+	reqBody := map[string]interface{}{
+		"model":  s.chatModel,
+		"stream": true,
+		"messages": []map[string]string{
+			{"role": "system", "content": systemPrompt},
+			{"role": "user", "content": userPrompt},
+		},
+	}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("stream request marshal failed: %w", err)
+	}
+
+	apiURL := s.chatBaseURL + "/chat/completions"
+	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return "", fmt.Errorf("stream request creation failed: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("stream LLM call failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := readLimitedBody(resp.Body)
+		return "", fmt.Errorf("stream LLM returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var fullResponse strings.Builder
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+		data := strings.TrimPrefix(line, "data: ")
+		if data == "[DONE]" {
+			break
+		}
+		var chunk openAIStreamChunk
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			continue
+		}
+		if len(chunk.Choices) > 0 {
+			token := chunk.Choices[0].Delta.Content
+			if token != "" {
+				fullResponse.WriteString(token)
+				onToken(token)
+			}
+		}
+	}
+	return fullResponse.String(), nil
 }
 
 const maxAPIResponseBytes = 20 << 20 // 20MB
@@ -433,7 +506,7 @@ func splitKnowledgeSentences(content string) []string {
 	}))
 }
 
-func (s *RAGService) QueryGeneralChat(query string) (string, error) {
+func (s *RAGService) QueryGeneralChat(query, lang string) (string, error) {
 	if cachedResp, ok := s.getCachedResponse(query); ok {
 		slog.Debug("通用 Chat 命中查询缓存", "query_len", len([]rune(query)))
 		return cachedResp, nil
@@ -470,7 +543,7 @@ func (s *RAGService) QueryGeneralChat(query string) (string, error) {
 		}{
 			{
 				Role:    "system",
-				Content: s.getSystemPromptOrDefault(),
+				Content: s.getSystemPromptOrDefault(lang),
 			},
 			{
 				Role:    "user",

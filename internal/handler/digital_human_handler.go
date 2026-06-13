@@ -50,7 +50,7 @@ type SessionCreateResponse struct {
 func (h *DigitalHumanHandler) CreateSession(c *gin.Context) {
 	var req SessionCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
@@ -93,12 +93,12 @@ type RoutePayload struct {
 func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	var req ChatTextRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	if req.InputText == "" {
-		pkg.BadRequest(c, "输入文本不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_empty_input"))
 		return
 	}
 
@@ -115,11 +115,12 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	var emotion string
 
 	if h.ragService != nil {
-		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.InputText)
+		lang := c.GetString("lang")
+		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.InputText, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("数字人文本聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
-			answer = "抱歉，我暂时无法回答这个问题。"
+			answer = pkg.T(c, "msg_fallback_answer")
 			emotion = "sadness"
 		} else {
 			answer = response
@@ -139,7 +140,7 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 			}
 		}
 	} else {
-		answer = "抱歉，智能服务暂不可用。"
+		answer = pkg.T(c, "msg_service_unavailable")
 		emotion = "sadness"
 	}
 
@@ -182,12 +183,12 @@ type VoiceTranscriptResponse struct {
 func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	var req VoiceTranscriptRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	if req.Transcript == "" {
-		pkg.BadRequest(c, "语音识别结果不能为空")
+		pkg.BadRequest(c, pkg.T(c, "msg_empty_speech"))
 		return
 	}
 
@@ -205,11 +206,12 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	var emotion string
 
 	if h.ragService != nil {
-		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Transcript)
+		lang := c.GetString("lang")
+		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Transcript, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("数字人语音聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
-			answer = "抱歉，我暂时无法回答这个问题。"
+			answer = pkg.T(c, "msg_fallback_answer")
 			emotion = "sadness"
 		} else {
 			answer = response
@@ -229,7 +231,7 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 			}
 		}
 	} else {
-		answer = "抱歉，智能服务暂不可用。"
+		answer = pkg.T(c, "msg_service_unavailable")
 		emotion = "sadness"
 	}
 
@@ -265,7 +267,7 @@ type FeedbackRequest struct {
 func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 	var req FeedbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.BadRequest(c, "参数错误")
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
@@ -288,7 +290,7 @@ func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 		}
 	}
 
-	pkg.Success(c, gin.H{"message": "反馈已接收"})
+	pkg.Success(c, gin.H{"message": pkg.T(c, "msg_feedback_received")})
 }
 
 func (h *DigitalHumanHandler) Health(c *gin.Context) {

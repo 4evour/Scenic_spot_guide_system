@@ -10,11 +10,13 @@ type UserRepository interface {
 	FindByID(id uint) (*model.User, error)
 	FindByUsername(username string) (*model.User, error)
 	FindByEmail(email string) (*model.User, error)
+	FindByGuestToken(guestToken string) (*model.User, error)
 	FindAll() ([]model.User, error)
 	FindAllPaginated(page, pageSize int) ([]model.User, int64, error)
 	FindByRole(role string) ([]model.User, error)
 	Update(user *model.User) error
 	UpdateFields(id uint, fields map[string]interface{}) error
+	UpgradeGuest(userID uint, fields map[string]interface{}) error
 	Delete(id uint) error
 }
 
@@ -91,6 +93,25 @@ func (r *userRepository) FindByRole(role string) ([]model.User, error) {
 	var users []model.User
 	err := r.db.Where("role = ?", role).Find(&users).Error
 	return users, err
+}
+
+func (r *userRepository) FindByGuestToken(guestToken string) (*model.User, error) {
+	var user model.User
+	err := r.db.Where("guest_token = ?", guestToken).First(&user).Error
+	return &user, err
+}
+
+func (r *userRepository) UpgradeGuest(userID uint, fields map[string]interface{}) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		if err := tx.First(&user, userID).Error; err != nil {
+			return err
+		}
+		// 清除游客标识，更新为正式用户
+		fields["guest_token"] = ""
+		fields["display_name"] = ""
+		return tx.Model(&user).Updates(fields).Error
+	})
 }
 
 func (r *userRepository) Delete(id uint) error {

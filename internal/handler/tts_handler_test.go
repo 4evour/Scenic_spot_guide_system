@@ -28,15 +28,15 @@ func (h *testTTSHandler) TTS(c *gin.Context) {
 
 	req.Text = trimSpace(req.Text)
 	if req.Text == "" {
-		pkg.BadRequest(c, "文本内容不能为空")
+		pkg.BadRequest(c, "合成文本不能为空")
 		return
 	}
 
 	if req.Voice == "" {
 		req.Voice = "female_tianmei"
 	}
-	if req.Speed == "" {
-		req.Speed = "1.0"
+	if req.Rate == "" {
+		req.Rate = "1.0"
 	}
 
 	values := make(map[string]string)
@@ -158,7 +158,7 @@ func TestTTSSuccessfulRequest(t *testing.T) {
 	defer mockServer.Close()
 
 	router := newTestTTSRouter(t, mockServer.URL)
-	body := bytes.NewBufferString(`{"text":"灵山大佛有多高","voice":"female_zhiling","speed":"1.2"}`)
+	body := bytes.NewBufferString(`{"text":"灵山大佛有多高","voice":"female_zhiling","rate":"+20%"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/ai/tts", body)
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
@@ -227,8 +227,8 @@ func TestTTSEmptyText(t *testing.T) {
 			if err := json.Unmarshal(resp.Body.Bytes(), &result); err != nil {
 				t.Fatalf("unmarshal: %v", err)
 			}
-			if result.Message != "文本内容不能为空" {
-				t.Fatalf("message = %q, want %q", result.Message, "文本内容不能为空")
+			if result.Message != "合成文本不能为空" {
+				t.Fatalf("message = %q, want %q", result.Message, "合成文本不能为空")
 			}
 		})
 	}

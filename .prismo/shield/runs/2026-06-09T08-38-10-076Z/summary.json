@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "command": "go test ./...",
+  "cwd": "D:\\go web 01\\scenic-guide",
+  "exitCode": 1,
+  "signal": null,
+  "error": null,
+  "startedAt": "2026-06-09T08:38:10.076Z",
+  "finishedAt": "2026-06-09T08:38:13.482Z",
+  "durationMs": 3406,
+  "output": {
+    "stdoutBytes": 503,
+    "stderrBytes": 237,
+    "totalBytes": 740,
+    "estimatedTokens": 186,
+    "interestingLines": [
+      "FAIL\tgithub.com/scenic-guide [build failed]",
+      "FAIL\tgithub.com/scenic-guide/cmd/demo-seed [build failed]",
+      "FAIL\tgithub.com/scenic-guide/internal/handler [build failed]",
+      "FAIL\tgithub.com/scenic-guide/internal/pkg [build failed]"
+    ]
+  },
+  "stored": {
+    "stdout": ".prismo/shield/runs/2026-06-09T08-38-10-076Z/stdout.txt",
+    "stderr": ".prismo/shield/runs/2026-06-09T08-38-10-076Z/stderr.txt",
+    "directory": ".prismo/shield/runs/2026-06-09T08-38-10-076Z"
+  },
+  "next": [
+    "Feed the summary to the agent first; inspect full output only if needed.",
+    "Read stdout: sed -n '1,160p' \".prismo/shield/runs/2026-06-09T08-38-10-076Z/stdout.txt\"",
+    "Read stderr: sed -n '1,160p' \".prismo/shield/runs/2026-06-09T08-38-10-076Z/stderr.txt\""
+  ],
+  "index": {
+    "mode": "jsonl",
+    "sqlite": {
+      "available": false,
+      "reason": "sqlite3-not-found"
+    }
+  }
+}

@@ -1,22 +1,31 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { NBreadcrumb, NBreadcrumbItem } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
+import { switchLocale } from '../i18n'
 
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
 const breadcrumbs = computed(() => {
-  const items: Array<{ label: string; to: string }> = [{ label: '首页', to: '/dashboard' }]
+  const items: Array<{ label: string; to: string }> = [{ label: t('common.home'), to: '/dashboard' }]
   for (const r of route.matched) {
     if (r.meta?.title && !r.meta?.hideBreadcrumb) {
-      items.push({ label: r.meta.title as string, to: r.path })
+      items.push({ label: t(r.meta.title as string), to: r.path })
     }
   }
   return items
 })
+
+const nextLocale = computed(() => locale.value === 'zh-CN' ? 'en-US' : 'zh-CN')
+
+function toggleLang() {
+  switchLocale(nextLocale.value as 'zh-CN' | 'en-US')
+}
 
 async function handleLogout() {
   await authStore.logout()
@@ -38,8 +47,9 @@ async function handleLogout() {
     </NBreadcrumb>
 
     <div class="header-actions">
+      <button class="lang-switch" @click="toggleLang">{{ $t('lang.switch') }}</button>
       <span class="header-user" v-if="authStore.user">{{ authStore.user.username }}</span>
-      <button class="header-logout" @click="handleLogout">退出</button>
+      <button class="header-logout" @click="handleLogout">{{ $t('nav.logout') }}</button>
     </div>
   </header>
 </template>
@@ -78,5 +88,18 @@ async function handleLogout() {
   background: rgba(232, 128, 128, 0.1);
   color: #e88080;
   border-color: rgba(232, 128, 128, 0.2);
+}
+.lang-switch {
+  padding: 4px 12px;
+  background: rgba(99, 226, 183, 0.06);
+  border: 1px solid rgba(99, 226, 183, 0.2);
+  border-radius: 6px;
+  color: var(--sg-jade-bright, #63e2b7);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lang-switch:hover {
+  background: rgba(99, 226, 183, 0.15);
 }
 </style>

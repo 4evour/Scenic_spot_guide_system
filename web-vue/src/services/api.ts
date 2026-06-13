@@ -1,12 +1,20 @@
-import router from '../router';
+﻿import router from '../router';
 import { useAuthStore } from '../stores/auth';
+
+/** 从 cookie 中读取 csrf_token（Double-Submit Cookie 模式） */
+function getCSRFToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
 
 export async function apiFetch<T = unknown>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const csrfToken = getCSRFToken();
   const headers: HeadersInit = {
     ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
     ...(options?.headers || {}),
   };
   const timeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
@@ -39,3 +47,59 @@ export async function apiFetch<T = unknown>(
   }
   return payload.data as T;
 }
+
+// ============ 游客认证 API ============
+
+export const guestApi = {
+  /** 游客自动登录 */
+  async login(deviceFingerprint: string) {
+    return apiFetch<{ id: number; username: string; display_name: string; role: string }>(
+      '/auth/guest-login',
+      {
+        method: 'POST',
+        body: JSON.stringify({ device_fingerprint: deviceFingerprint }),
+      },
+    );
+  },
+
+  /** 游客升级为正式账号 */
+  async upgrade(data: { username: string; password: string; email?: string }) {
+    return apiFetch<{ id: number; username: string; email: string; role: string }>(
+      '/auth/upgrade-guest',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    );
+  },
+};
+
+// ============ 会话管理 API ============
+
+export const sessionApi = {
+  /** 获取当前用户的会话列表 */
+  async list(page = 1, pageSize = 20) {
+    return apiFetch<{ list: unknown[]; total: number; page: number; page_size: number }>(
+      `/sessions?page=${page}&page_size=${pageSize}`,
+    );
+  },
+
+  /** 获取会话消息历史 */
+  async getMessages(sessionId: string, limit = 50, beforeId = 0) {
+    return apiFetch<{ messages: unknown[] }>(
+      `/sessions/${sessionId}/messages?limit=${limit}&before_id=${beforeId}`,
+    );
+  },
+
+  /** 删除会话 */
+  async delete(sessionId: string) {
+    return apiFetch(`/sessions/${sessionId}`, { method: 'DELETE' });
+  },
+
+  /** 搜索历史消息 */
+  async search(keyword: string, page = 1, pageSize = 20) {
+    return apiFetch<{ list: unknown[]; total: number }>(
+      `/sessions/search?keyword=${encodeURIComponent(keyword)}&page=${page}&page_size=${pageSize}`,
+    );
+  },
+};

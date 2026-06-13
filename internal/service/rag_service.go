@@ -21,7 +21,9 @@ const (
 	MaxCacheSize           = 1000
 	MaxSessionIDLength     = 128
 	MaxSessionHistorySize  = 1000
+	MaxCachedTurns         = 10 // 内存缓存每会话最大轮数
 	SessionHistoryTTL      = 30 * time.Minute
+	SlowRequestThresholdMs = 5000
 )
 
 type RetrievalMode string
@@ -106,25 +108,26 @@ func (s *RAGService) isScenicRelatedQuestion(query string) bool {
 }
 
 type RAGService struct {
-	repo           *repository.KnowledgeRepository
-	chatAPIKey     string
-	chatModel      string
-	chatBaseURL    string
-	embedding      EmbeddingProvider
-	bm25           *BM25FallbackProvider
-	useBM25        bool
-	uploadDir      string
-	httpClient     *http.Client
-	queryCache     map[string]CacheEntry
-	embeddingCache map[string][]float64
-	knowledgeCache []model.KnowledgeChunk
-	tokenCache     map[string][]string
-	tokenIndex     map[string][]string
-	chunkByID      map[string]model.KnowledgeChunk
-	sessionHistory map[string][]sessionTurn
-	cacheMutex     sync.RWMutex
-	lastCacheTime  time.Time
-	profile        *iconfig.ScenicProfile // 景区配置
+	repo               *repository.KnowledgeRepository
+	chatAPIKey         string
+	chatModel          string
+	chatBaseURL        string
+	embedding          EmbeddingProvider
+	bm25               *BM25FallbackProvider
+	useBM25            bool
+	uploadDir          string
+	httpClient         *http.Client
+	queryCache         map[string]CacheEntry
+	embeddingCache     map[string][]float64
+	knowledgeCache     []model.KnowledgeChunk
+	tokenCache         map[string][]string
+	tokenIndex         map[string][]string
+	chunkByID          map[string]model.KnowledgeChunk
+	sessionHistory     map[string][]sessionTurn
+	cacheMutex         sync.RWMutex
+	lastCacheTime      time.Time
+	profile            *iconfig.ScenicProfile // 景区配置
+	chatSessionService *ChatSessionService    // 会话持久化服务
 }
 
 type sessionTurn struct {
@@ -377,11 +380,28 @@ func (s *RAGService) getConditionalBoosts() []iconfig.ConditionalBoost {
 }
 
 // getSystemPromptOrDefault 获取系统 prompt，优先使用 profile 配置
-func (s *RAGService) getSystemPromptOrDefault() string {
+func (s *RAGService) getSystemPromptOrDefault(lang string) string {
+	base := "你是一位专业的景区数字人导览员，负责为游客提供导览服务。回答要热情友好、准确专业。\n\n" +
+		"在回答时，请在文本适当位置插入情感标签，用于驱动虚拟形象的面部表情。可用标签：[joy]、[sadness]、[surprise]、[anger]、[fear]、[disgust]、[neutral]。\n" +
+		"例如：\"[joy]欢迎来到灵山景区！灵山大佛高88米，非常壮观。[surprise]值得一提的是，这里还有一项吉尼斯世界纪录。\"\n" +
+		"标签放置原则：\n" +
+		"- [joy] 放在欢迎、赞美、推荐等热情语句前\n" +
+		"- [sadness] 放在道歉、遗憾、无法满足要求处\n" +
+		"- [surprise] 放在提醒、亮点介绍、有趣事实前\n" +
+		"- [anger] 很少使用，仅在回应用户明显不满时\n" +
+		"- [fear] 放在安全提醒、注意事项前\n" +
+		"- [disgust] 几乎不使用\n" +
+		"- [neutral] 放在纯事实陈述前\n"
 	if s.profile != nil && s.profile.Prompts.SystemRole != "" {
-		return s.profile.GetSystemPrompt()
+		base = s.profile.GetSystemPrompt()
 	}
-	return "你是一位专业的景区数字人导览员，负责为游客提供导览服务。回答要热情友好、准确专业。"
+	// 追加语言指令：强制 LLM 用指定语言回答
+	if lang == "en-US" {
+		base += "\n\nYou MUST respond in English. Use only English in your answer."
+	} else if lang != "" && lang != "zh-CN" {
+		base += fmt.Sprintf("\n\nYou MUST respond in %s. Use only that language in your answer.", lang)
+	}
+	return base
 }
 
 
@@ -465,7 +485,7 @@ func routeConfigToTourRoute(rc iconfig.RouteConfig) TourRoute {
 	}
 }
 
-func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, error) {
+func (s *RAGService) QueryWithRAGAndRoute(query, lang string) (string, *TourRoute, error) {
 	response, err := s.QueryWithRAG(query)
 	if err != nil {
 		return "", nil, err
@@ -475,8 +495,8 @@ func (s *RAGService) QueryWithRAGAndRoute(query string) (string, *TourRoute, err
 	return response, route, nil
 }
 
-func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query string) (string, *TourRoute, error) {
-	response, _, err := s.QueryWithRAGTraceInSession(sessionID, query)
+func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query, lang string) (string, *TourRoute, error) {
+	response, _, err := s.QueryWithRAGTraceInSession(sessionID, query, lang)
 	if err != nil {
 		return "", nil, err
 	}
@@ -485,14 +505,82 @@ func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query string) (str
 	return response, route, nil
 }
 
-func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query string) (string, *TourRoute, RAGTrace, error) {
-	response, trace, err := s.QueryWithRAGTraceInSession(sessionID, query)
+func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query, lang string) (string, *TourRoute, RAGTrace, error) {
+	response, trace, err := s.QueryWithRAGTraceInSession(sessionID, query, lang)
 	if err != nil {
 		return "", nil, trace, err
 	}
 
 	route := s.GenerateTourRoute(query)
 	return response, route, trace, nil
+}
+
+
+// QueryWithRAGStreaming performs RAG retrieval then streams the LLM response via onToken callback.
+// Returns the full answer, tour route, trace, and error.
+func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToken func(string)) (string, *TourRoute, RAGTrace, error) {
+	sessionID = normalizeSessionID(sessionID)
+
+	// 1. 追问改写
+	retrievalQuery := query
+	if sessionID != "" {
+		retrievalQuery = s.RewriteFollowUpQuery(sessionID, query)
+	}
+
+	sessionContext := ""
+	if sessionID != "" {
+		sessionContext = s.buildSessionContextText(sessionID, query)
+	}
+
+	// 2. 检索 + prompt 构建（复用现有逻辑）
+	trace := RAGTrace{
+		TraceID:       fmt.Sprintf("rag-%d", time.Now().UnixNano()),
+		Provider:      map[bool]string{true: "bm25-local", false: "embedding"}[s.useBM25],
+		RetrievalMode: string(normalizeRetrievalMode(RetrievalModeDefault, s.embedding != nil && s.embedding.IsAvailable(), s.useBM25)),
+	}
+	totalStart := time.Now()
+
+	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
+	trace.ChunkCount = len(chunks)
+	if err != nil {
+		trace.TotalMs = time.Since(totalStart).Milliseconds()
+		return "", nil, trace, fmt.Errorf("检索相关知识失败: %v", err)
+	}
+
+	var answer string
+
+	if len(chunks) == 0 {
+		// 无知识命中，使用通用 Chat 流式
+		trace.RetrievalMs = time.Since(totalStart).Milliseconds()
+		genStart := time.Now()
+		systemPrompt := s.getSystemPromptOrDefault(lang)
+		answer, err = s.CallLLMStreaming(systemPrompt, query, onToken)
+		trace.GenerationMs = time.Since(genStart).Milliseconds()
+	} else if s.chatAPIKey == "" {
+		// 无 API key，使用本地生成
+		answer = s.generateAnswerFromChunksWithContext(query, chunks, sessionContext)
+		if onToken != nil {
+			onToken(answer)
+		}
+	} else {
+		// 有知识 + 有 API key，流式 LLM
+		prompt := s.BuildRAGPromptWithContext(query, chunks, sessionContext)
+		systemPrompt := s.getSystemPromptOrDefault(lang)
+		genStart := time.Now()
+		answer, err = s.CallLLMStreaming(systemPrompt, prompt, onToken)
+		trace.GenerationMs = time.Since(genStart).Milliseconds()
+	}
+
+	if err != nil {
+		trace.TotalMs = time.Since(totalStart).Milliseconds()
+		return "", nil, trace, err
+	}
+
+	trace.TotalMs = time.Since(totalStart).Milliseconds()
+	trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
+
+	route := s.GenerateTourRoute(query)
+	return answer, route, trace, nil
 }
 
 func (s *RAGService) RunEvaluation(evalFile string) error {

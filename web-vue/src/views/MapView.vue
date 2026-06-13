@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { NInput, NButton, NTag, NEmpty, NSpin, NAlert } from 'naive-ui';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { NInput, NButton, NTag, NEmpty, NSpin, NAlert, useMessage } from 'naive-ui';
+import { useGeolocation } from '../composables/useGeolocation';
+import { useProximityGuide, type SpotWithCoords } from '../composables/useProximityGuide';
+import { AudioPlaybackController } from '../services/audioPlayback';
+import { streamTTS } from '../services/ttsApi';
+import { apiFetch } from '../services/api';
+
+const { t } = useI18n();
 
 declare const AMap: Record<string, unknown>;
 
@@ -49,7 +57,7 @@ const state = reactive({
   loading: false,
   error: '',
   spots: [] as ScenicSpot[],
-  source: '演示数据',
+  source: '',
   selectedSpot: null as ScenicSpot | null,
   mapReady: false,
   search: '',
@@ -67,6 +75,40 @@ const mapContainer = ref<HTMLDivElement>();
 let map: unknown = null;
 let markers: unknown[] = [];
 let infoWindow: unknown = null;
+
+// === GPS 主动导览 ===
+const message = useMessage();
+const autoGuideEnabled = ref(false);
+
+const {
+  currentPosition,
+  error: geoError,
+  startWatch,
+  stopWatch,
+  permissionGranted,
+} = useGeolocation({
+  enableHighAccuracy: true,
+  maximumAge: 5000,
+  timeout: 10000,
+});
+
+const {
+  nearbySpot,
+  resetTriggered,
+  setSpots,
+} = useProximityGuide(currentPosition, {
+  triggerRadiusM: 100,
+});
+
+// 音频播放器（单例，页面生命周期内复用）
+const audioPlayer = new AudioPlaybackController({
+  onStart: (text) => {
+    console.log('[AutoGuide] 开始播放:', text?.substring(0, 50));
+  },
+  onEnd: () => {
+    console.log('[AutoGuide] 播放结束');
+  },
+});
 
 async function loadSpots() {
   state.loading = true;
@@ -88,14 +130,23 @@ async function loadSpots() {
     }));
     if (spots.length > 0 && spots.some(s => s.lng > 100)) {
       state.spots = spots;
-      state.source = '实时数据';
+      state.source = t('map.liveData');
     } else {
       state.spots = [...fallbackSpots];
-      state.source = '演示数据（景点未配置经纬度）';
+      state.source = t('map.demoDataNoCoord');
     }
+    // 注入景点坐标到近场检测
+    setSpots(
+      state.spots.map(s => ({
+        id: s.id,
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+      })),
+    );
   } catch {
     state.spots = [...fallbackSpots];
-    state.source = '演示数据';
+    state.source = t('map.demoData');
   } finally {
     state.loading = false;
   }
@@ -104,7 +155,7 @@ async function loadSpots() {
 function loadAmapScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof AMap !== 'undefined') { resolve(); return; }
-    if (!AMAP_KEY) { reject(new Error('地图配置缺失')); return; }
+    if (!AMAP_KEY) { reject(new Error(t('map.configMissing'))); return; }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (AMAP_SECURITY) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,7 +164,7 @@ function loadAmapScript(): Promise<void> {
     const script = document.createElement('script');
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.Walking,AMap.Geolocation`;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('高德地图加载失败'));
+    script.onerror = () => reject(new Error(t('map.amapLoadFailed')));
     document.head.appendChild(script);
   });
 }
@@ -177,7 +228,7 @@ function initMap() {
 function showSpotInfo(spot: ScenicSpot) {
   state.selectedSpot = spot;
   if (infoWindow && map) {
-    const priceText = spot.price > 0 ? `¥${spot.price}` : '免费';
+    const priceText = spot.price > 0 ? `¥${spot.price}` : t('map.free');
     const content = `<div style="
       background: rgba(6,16,18,0.96); color: rgba(255,255,255,0.88);
       padding: 16px 20px; border-radius: 12px; min-width: 240px; max-width: 320px;
@@ -225,17 +276,91 @@ function locateMe() {
     });
 }
 
+function toggleAutoGuide() {
+  autoGuideEnabled.value = !autoGuideEnabled.value;
+  if (autoGuideEnabled.value) {
+    resetTriggered();
+    setSpots(
+      state.spots.map(s => ({
+        id: s.id,
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+      })),
+    );
+    startWatch();
+  } else {
+    stopWatch();
+    audioPlayer.interrupt();
+  }
+}
+
+// 监听近场检测结果，自动触发讲解
+watch(nearbySpot, async (spot) => {
+  if (!spot || !autoGuideEnabled.value) return;
+
+  // 1. 弹出通知
+  message.info(t('map.autoGuideArrived', { name: spot.name }), { duration: 4000 });
+
+  // 2. 地图定位到该景点
+  if (map) {
+    (map as { setCenter: (pos: number[]) => void }).setCenter([spot.lng, spot.lat]);
+    (map as { setZoom: (z: number) => void }).setZoom(17);
+  }
+
+  // 3. 获取讲解内容
+  try {
+    const contents = await apiFetch<Array<{ id: number; title: string; content: string }>>(
+      `/contents/spot/${spot.id}`,
+    );
+
+    if (!contents || contents.length === 0) {
+      console.warn('[AutoGuide] 该景点无讲解内容:', spot.name);
+      return;
+    }
+
+    const guide = contents[0];
+    if (!guide.content) {
+      console.warn('[AutoGuide] 讲解内容为空:', spot.name);
+      return;
+    }
+
+    // 4. 打断当前播放
+    audioPlayer.interrupt();
+
+    // 5. 调用流式 TTS 并播放
+    try {
+      const ttsResponse = await streamTTS({
+        text: guide.content,
+        voice: 'female_xiaoxiao',
+        rate: '+0%',
+      });
+      const enqueued = await audioPlayer.enqueueStream(ttsResponse, guide.content, {});
+      if (!enqueued) {
+        audioPlayer.playTextFallback(guide.content, {});
+      }
+    } catch (ttsErr) {
+      console.warn('[AutoGuide] TTS 失败，回退到浏览器语音合成:', ttsErr);
+      audioPlayer.playTextFallback(guide.content, {});
+    }
+  } catch (contentErr) {
+    console.error('[AutoGuide] 获取讲解内容失败:', contentErr);
+  }
+});
+
 onMounted(async () => {
   await loadSpots();
   try {
     await loadAmapScript();
     initMap();
   } catch (e) {
-    state.error = e instanceof Error ? e.message : '地图加载失败';
+    state.error = e instanceof Error ? e.message : t('map.mapLoadFailed');
   }
 });
 
 onUnmounted(() => {
+  stopWatch();
+  audioPlayer.interrupt();
   if (map) {
     (map as { destroy: () => void }).destroy();
     map = null;
@@ -247,12 +372,12 @@ onUnmounted(() => {
   <main class="map-view">
     <header class="map-header">
       <div>
-        <h1>游客实时导览地图</h1>
-        <p>点击查看景点详情，支持定位和步行导航</p>
+        <h1>{{ $t('map.title') }}</h1>
+        <p>{{ $t('map.subtitle') }}</p>
       </div>
       <div class="map-status" :class="state.mapReady ? 'ready' : 'loading'">
         <span class="status-dot"></span>
-        {{ state.mapReady ? '地图就绪' : '加载中' }}
+        {{ state.mapReady ? $t('map.ready') : $t('map.loading') }}
         <small>{{ state.source }}</small>
       </div>
     </header>
@@ -265,10 +390,26 @@ onUnmounted(() => {
         <div ref="mapContainer" class="amap-container"></div>
         <div class="map-toolbar">
           <NButton size="small" quaternary @click="locateMe">
-            📍 我的位置
+            {{ $t('map.myLocation') }}
           </NButton>
+          <NButton
+            size="small"
+            :type="autoGuideEnabled ? 'primary' : 'default'"
+            @click="toggleAutoGuide"
+          >
+            {{ autoGuideEnabled ? '⏸ ' + $t('map.autoGuideOff') : '▶ ' + $t('map.autoGuideOn') }}
+          </NButton>
+          <span
+            v-if="autoGuideEnabled && currentPosition"
+            class="gps-indicator"
+          >
+            {{ $t('map.gpsLabel', { accuracy: Math.round(currentPosition.accuracy) }) }}
+          </span>
+          <span v-if="autoGuideEnabled && geoError" class="gps-error">
+            {{ geoError }}
+          </span>
           <NSpin v-if="state.loading" size="small" />
-          <span v-if="state.loading" class="loading-text">加载景点数据...</span>
+          <span v-if="state.loading" class="loading-text">{{ $t('map.loadingSpots') }}</span>
         </div>
       </article>
 
@@ -284,18 +425,18 @@ onUnmounted(() => {
           <p class="spot-desc">{{ state.selectedSpot.description }}</p>
           <div class="spot-meta">
             <span class="spot-rating">⭐ {{ state.selectedSpot.rating }}</span>
-            <span class="spot-price">{{ state.selectedSpot.price > 0 ? '¥' + state.selectedSpot.price : '免费' }}</span>
+            <span class="spot-price">{{ state.selectedSpot.price > 0 ? '¥' + state.selectedSpot.price : $t('map.free') }}</span>
           </div>
         </article>
 
         <!-- 搜索 + 景点列表 -->
         <article class="spot-list-card">
           <div class="spot-list-header">
-            <h3>景点 <small>({{ filteredSpots.length }})</small></h3>
+            <h3>{{ $t('map.spots') }} <small>({{ filteredSpots.length }})</small></h3>
           </div>
           <NInput
             v-model:value="state.search"
-            placeholder="搜索景点..."
+            :placeholder="$t('map.searchPlaceholder')"
             size="small"
             clearable
             style="margin-bottom: 10px;"
@@ -311,7 +452,7 @@ onUnmounted(() => {
               <span class="spot-item-name">{{ spot.name }}</span>
               <span class="spot-item-meta">{{ spot.category }} · ⭐{{ spot.rating }}</span>
             </button>
-            <NEmpty v-if="filteredSpots.length === 0" description="没有匹配的景点" size="small" />
+            <NEmpty v-if="filteredSpots.length === 0" :description="$t('map.noResults')" size="small" />
           </div>
         </article>
       </aside>
@@ -393,6 +534,23 @@ onUnmounted(() => {
   border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
 }
 .loading-text { color: var(--sg-text-faint, rgba(255,255,255,0.3)); font-size: 12px; }
+
+.gps-indicator {
+  font-size: 11px;
+  color: var(--sg-jade-bright, #63e2b7);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--sg-jade-bg, rgba(99,226,183,0.06));
+  border: 1px solid var(--sg-jade-border, rgba(99,226,183,0.15));
+}
+.gps-error {
+  font-size: 11px;
+  color: var(--sg-red-bright, #e88080);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(232,128,128,0.06);
+  border: 1px solid rgba(232,128,128,0.15);
+}
 
 .map-sidebar {
   display: flex;

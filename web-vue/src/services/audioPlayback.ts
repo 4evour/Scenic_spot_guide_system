@@ -48,6 +48,86 @@ export class AudioPlaybackController {
     return true;
   }
 
+  /**
+   * 流式播放：从 fetch Response 的 ReadableStream 渐进消费音频分片，
+   * 边下载边播放，降低首音等待时间。
+   * 使用 MediaSource API 实现。
+   */
+  async enqueueStream(fetchResponse: Response, text?: string, cue: PlaybackCue = {}): Promise<boolean> {
+    if (this.interrupted) return false;
+    const token = this.playbackToken;
+
+    try {
+      const mediaSource = new MediaSource();
+      const url = URL.createObjectURL(mediaSource);
+      const audio = new Audio(url);
+
+      const queueItem: QueueItem = { url, text, ...cue };
+      // Push to queue — the standard playNext will handle it when it's this item's turn.
+      this.queue.push(queueItem);
+
+      // If nothing is playing, kick off playback now.
+      const shouldStart = !this.audio;
+      if (shouldStart) {
+        void this.playNext();
+      }
+
+      // Wait for the MediaSource to open, then feed chunks.
+      mediaSource.addEventListener('sourceopen', async () => {
+        if (this.interrupted || token !== this.playbackToken) {
+          mediaSource.endOfStream();
+          return;
+        }
+
+        const mimeType = 'audio/mpeg';
+        if (!MediaSource.isTypeSupported(mimeType)) {
+          mediaSource.endOfStream();
+          return;
+        }
+
+        const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+        const reader = fetchResponse.body?.getReader();
+        if (!reader) {
+          mediaSource.endOfStream();
+          return;
+        }
+
+        try {
+          while (true) {
+            if (this.interrupted || token !== this.playbackToken) {
+              reader.cancel();
+              break;
+            }
+
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Wait for any pending append to finish
+            await waitForSourceBufferUpdate(sourceBuffer);
+            if (this.interrupted || token !== this.playbackToken) {
+              reader.cancel();
+              break;
+            }
+
+            sourceBuffer.appendBuffer(value);
+          }
+        } catch {
+          // Stream aborted or error — end gracefully
+        } finally {
+          await waitForSourceBufferUpdate(sourceBuffer);
+          if (mediaSource.readyState === 'open') {
+            try { mediaSource.endOfStream(); } catch { /* ignore */ }
+          }
+        }
+      });
+
+      return true;
+    } catch {
+      // MediaSource 不支持时降级到 URL 播放
+      return false;
+    }
+  }
+
   async playTextFallback(text: string, cue: PlaybackCue = {}) {
     if (!('speechSynthesis' in window)) return;
     if (this.interrupted) return;
@@ -230,4 +310,22 @@ export class AudioPlaybackController {
     if (!Number.isFinite(volume)) return 0;
     return Math.min(1, Math.max(0, volume));
   }
+}
+
+/**
+ * 等待 SourceBuffer 完成上一次 append/remove 操作。
+ * SourceBuffer 不能并发 append，必须等 updateend 事件。
+ */
+function waitForSourceBufferUpdate(buffer: SourceBuffer): Promise<void> {
+  return new Promise((resolve) => {
+    if (!buffer.updating) {
+      resolve();
+      return;
+    }
+    const onEnd = () => {
+      buffer.removeEventListener('updateend', onEnd);
+      resolve();
+    };
+    buffer.addEventListener('updateend', onEnd);
+  });
 }

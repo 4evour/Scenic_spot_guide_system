@@ -1,0 +1,21 @@
+{
+  "name": "灵山景区 AI 数字人导览",
+  "short_name": "灵山导览",
+  "description": "灵山景区智能导览系统 — AI 数字人讲解、实时地图、景点推荐",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "/static/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

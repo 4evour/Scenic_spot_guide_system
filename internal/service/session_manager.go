@@ -1,24 +1,37 @@
-package service
+﻿package service
 
 import (
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
 )
 
-func (s *RAGService) QueryWithRAGInSession(sessionID, query string) (string, error) {
-	answer, _, err := s.QueryWithRAGTraceInSession(sessionID, query)
+// SetChatSessionService 注入会话持久化服务（后期注入，避免循环依赖）
+func (s *RAGService) SetChatSessionService(svc *ChatSessionService) {
+	s.chatSessionService = svc
+}
+
+func (s *RAGService) QueryWithRAGInSession(sessionID, query, lang string) (string, error) {
+	answer, _, err := s.QueryWithRAGTraceInSession(sessionID, query, lang)
 	return answer, err
 }
 
-func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query string) (string, RAGTrace, error) {
+func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query, lang string) (string, RAGTrace, error) {
 	sessionID = normalizeSessionID(sessionID)
 	if sessionID == "" {
-		return s.QueryWithRAGTrace(query)
+		return s.QueryWithRAGTrace(query, lang)
+	}
+	// 缓存未命中时尝试从 DB 加载历史
+	s.cacheMutex.RLock()
+	_, hasHistory := s.sessionHistory[sessionID]
+	s.cacheMutex.RUnlock()
+	if !hasHistory {
+		s.LoadSessionHistoryFromDB(sessionID)
 	}
 	rewritten := s.RewriteFollowUpQuery(sessionID, query)
 	sessionContext := s.buildSessionContextText(sessionID, query)
-	answer, trace, err := s.queryWithRAGTraceInternal(rewritten, query, sessionContext)
+	answer, trace, err := s.queryWithRAGTraceInternal(rewritten, query, sessionContext, lang)
 	if rewritten != query {
 		trace.RewrittenQuery = rewritten
 	}
@@ -49,13 +62,7 @@ func (s *RAGService) RewriteFollowUpQuery(sessionID, query string) string {
 	return s.buildFollowUpRewrite(query, history)
 }
 
-func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
-	sessionID = normalizeSessionID(sessionID)
-	if sessionID == "" {
-		return
-	}
-	s.cacheMutex.Lock()
-	defer s.cacheMutex.Unlock()
+func (s *RAGService) appendTurnLocked(sessionID, query, answer string) {
 	now := time.Now()
 	ctx := s.inferConversationContext(query, answer)
 	turns := append(s.sessionHistory[sessionID], sessionTurn{
@@ -66,12 +73,100 @@ func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
 		Boundary: ctx.Boundary,
 		Updated:  now,
 	})
-	if len(turns) > 5 {
-		turns = turns[len(turns)-5:]
+	if len(turns) > MaxCachedTurns {
+		turns = turns[len(turns)-MaxCachedTurns:]
 	}
 	s.sessionHistory[sessionID] = turns
 	s.cleanupSessionHistoryLocked(now)
 }
+
+func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
+	sessionID = normalizeSessionID(sessionID)
+	if sessionID == "" {
+		return
+	}
+	s.cacheMutex.Lock()
+	s.appendTurnLocked(sessionID, query, answer)
+	s.cacheMutex.Unlock()
+
+	// 异步持久化到数据库
+	if s.chatSessionService != nil {
+		go func() {
+			if err := s.chatSessionService.AddMessages(sessionID, 0, query, answer, "", 0); err != nil {
+				slog.Warn("会话持久化失败", "session_id", sessionID, "error", err)
+			}
+		}()
+	}
+}
+
+// AppendSessionTurnWithUser 带用户ID的会话写入（供 Handler 层调用）
+func (s *RAGService) AppendSessionTurnWithUser(sessionID string, userID uint, query, answer string) {
+	sessionID = normalizeSessionID(sessionID)
+	if sessionID == "" {
+		return
+	}
+	s.cacheMutex.Lock()
+	s.appendTurnLocked(sessionID, query, answer)
+	s.cacheMutex.Unlock()
+
+	// 异步持久化到数据库
+	if s.chatSessionService != nil {
+		go func() {
+			if err := s.chatSessionService.AddMessages(sessionID, userID, query, answer, "", 0); err != nil {
+				slog.Warn("会话持久化失败", "session_id", sessionID, "user_id", userID, "error", err)
+			}
+		}()
+	}
+}
+
+// LoadSessionHistoryFromDB 从数据库加载会话历史到内存缓存
+func (s *RAGService) LoadSessionHistoryFromDB(sessionID string) {
+	sessionID = normalizeSessionID(sessionID)
+	if sessionID == "" || s.chatSessionService == nil {
+		return
+	}
+
+	// 检查内存缓存是否已有数据
+	s.cacheMutex.RLock()
+	if turns, ok := s.sessionHistory[sessionID]; ok && len(turns) > 0 {
+		s.cacheMutex.RUnlock()
+		return
+	}
+	s.cacheMutex.RUnlock()
+
+	// 从 DB 加载最近消息
+	msgs, err := s.chatSessionService.GetRecentMessages(sessionID, MaxCachedTurns*2)
+	if err != nil || len(msgs) == 0 {
+		return
+	}
+
+	// 将消息对转换为 sessionTurn
+	var turns []sessionTurn
+	for i := 0; i+1 < len(msgs); i += 2 {
+		if msgs[i].Role == "user" && msgs[i+1].Role == "assistant" {
+			ctx := s.inferConversationContext(msgs[i].Content, msgs[i+1].Content)
+			turns = append(turns, sessionTurn{
+				Query:    msgs[i].Content,
+				Answer:   msgs[i+1].Content,
+				Topic:    ctx.Topic,
+				Intent:   ctx.Intent,
+				Boundary: ctx.Boundary,
+				Updated:  msgs[i+1].CreatedAt,
+			})
+		}
+	}
+	if len(turns) > MaxCachedTurns {
+		turns = turns[len(turns)-MaxCachedTurns:]
+	}
+
+	s.cacheMutex.Lock()
+	// 再次检查（避免并发加载覆盖）
+	if existing, ok := s.sessionHistory[sessionID]; !ok || len(existing) == 0 {
+		s.sessionHistory[sessionID] = turns
+	}
+	s.cacheMutex.Unlock()
+}
+
 
 func normalizeSessionID(sessionID string) string {
 	sessionID = strings.TrimSpace(sessionID)

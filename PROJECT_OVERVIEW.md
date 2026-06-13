@@ -100,3 +100,46 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - 3000/300 RAG 验证集是合成闭集 fixture，适合说明检索链路可评估、可复现；真实景区落地仍需要真实资料、独立人工标注、来源引用、向量数据库/pgvector、监控和运营闭环。
 - `static/digital-human` 保留了旧数字人静态前端及运行库，删除前需确认没有外部入口依赖。
 - 服务启动日志在部分 Windows 终端可能出现编码显示问题，但 Go 编译和测试不受影响。
+
+## 当前开发进展 (2026-06-10)
+
+### 已完成
+
+- **Phase 0 (全部10步)**: Emotion 测试、路线配置化、DI 依赖注入、AdminView 拆分、Design Tokens、测试补充、Redis 限流、数字人配置、WS 代理、集成测试
+- **前端架构迁移 Phase A**: vue-router + Pinia 替代自制 hash 路由
+- **前端生产级迭代 M1**: 布局重构完成，M2 CRUD 页面创建中
+- **代码审查修复**: 38/63 项已完成
+
+### 竞争调研 (2026-06-10)
+
+对 GitHub/Gitee 上 6 个景区导览相关开源项目完成深度调研：
+
+| 参考项目 | 亮点 | 借鉴方向 |
+|---------|------|---------|
+| [TripStar](https://github.com/1sdv/TripStar) (⭐1,800+) | 多Agent旅行规划、i18n、双地图 | 多语言、异步轮询 |
+| [WeTravel](https://github.com/nanbouking/WeTravel) (⭐265) | 微信小程序、预约管理 | 小程序架构、预约系统 |
+| [TravelGuide3D](https://github.com/kiranbaby14/Travel-Guide-3D) | 3D路线飞越 | 地图视觉 |
+| [CyberVerse](https://github.com/Lynpoint/CyberVerse) | WebRTC实时语音、会话持久化 | 语音交互 |
+| [Open-LLM-VTuber+RAG](https://github.com/HappynessI/Open-LLM-VTuber-with-rag) | Live2D+RAG、视觉感知 | 同赛道参考 |
+
+**核心差异化优势**: Live2D 数字人 + RAG 知识引擎组合在开源社区无直接竞品。
+
+### 路线图
+
+详见 [docs/ROADMAP.md](docs/ROADMAP.md)
+
+**短期优先 (6项)**:
+1. WebRTC 实时语音升级 — 替换"转写→文本→TTS"为流式方案
+2. 微信小程序跨平台 — uni-app/Taro 多端覆盖
+3. 地图体验优化 — 景点配图、标注美化
+4. 多语言 i18n — 中/英双语
+5. 游客账号 + 会话持久化 — 注册/登录 + 跨访问记忆
+6. GPS 定位主动导览 — 到达景点自动触发讲解
+
+**长期计划 (2项)**:
+- 预约订阅板块（独立票务系统）
+- Docker 一键部署
+
+**明确不采用**: 多 Agent 架构（单 Agent 已够）、知识图谱可视化、离线模式
+
+> 每次改动需同步更新 `docs/ROADMAP.md` 的变更日志。
