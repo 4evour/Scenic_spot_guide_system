@@ -7,7 +7,7 @@ export async function generateDeviceFingerprint(): Promise<string> {
   const components = [
     navigator.userAgent,
     navigator.language,
-    ${screen.width}xx,
+    `${screen.width}x${screen.height}`,
     new Date().getTimezoneOffset().toString(),
     navigator.hardwareConcurrency?.toString() || 'unknown',
     navigator.platform || 'unknown',

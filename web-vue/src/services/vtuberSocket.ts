@@ -101,5 +101,5 @@ export class VtuberSocketClient {
 
 function defaultVtuberWsUrl() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return ${protocol}///vtuber-ws/client-ws;
+  return `${protocol}//${window.location.host}/vtuber-ws/client-ws`;
 }

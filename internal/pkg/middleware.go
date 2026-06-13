@@ -248,7 +248,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		var token string
-		// 优先�?Authorization header 获取
+		// 优先从 Authorization header 获取
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
 			parts := strings.SplitN(authHeader, " ", 2)
@@ -256,7 +256,7 @@ func AuthMiddleware() gin.HandlerFunc {
 				token = parts[1]
 			}
 		}
-		// 回退�?HttpOnly Cookie
+		// 回退到 HttpOnly Cookie
 		if token == "" {
 			token, _ = c.Cookie("auth_token")
 		}
@@ -302,7 +302,7 @@ func AdminMiddleware() gin.HandlerFunc {
 func WSTokenAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var token string
-		// 优先�?Sec-WebSocket-Protocol 子协议提�?
+		// 优先从 Sec-WebSocket-Protocol 子协议提取
 		protocols := c.GetHeader("Sec-WebSocket-Protocol")
 		for _, p := range strings.Split(protocols, ",") {
 			p = strings.TrimSpace(p)
@@ -311,7 +311,7 @@ func WSTokenAuth() gin.HandlerFunc {
 				break
 			}
 		}
-		// 回退�?query 参数（兼容旧客户端）
+		// 回退到 query 参数（兼容旧客户端）
 		if token == "" {
 			token = c.Query("token")
 			if token != "" {
