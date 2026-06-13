@@ -366,7 +366,7 @@ func TestRAGServiceFocusedFailureRegressionSet(t *testing.T) {
 		{name: "fangong_craft", query: "如果游客说“想看木雕壁画琉璃”，应该推荐哪里？", expectedIDs: []string{"real-fangong-002"}, topN: 8},
 		{name: "tibetan_style", query: "游客说想看“藏式风格”的内容，应该联想到哪里？", expectedIDs: []string{"real-wuyin-001", "real-wuyin-003"}, topN: 8},
 		{name: "water_show", query: "如果游客只问“喷水表演在哪”，应该召回哪个知识？", expectedIDs: []string{"real-jiulong-001", "real-jiulong-002"}, topN: 8},
-		{name: "restaurant_open_now", query: "游客问餐厅现在开不开，能不能直接回答？", expectedIDs: []string{"real-food-rest-001", "real-service-004"}, topN: 8},
+		{name: "restaurant_open_now", query: "游客问餐厅现在开不开，能不能直接回答？", expectedIDs: []string{"real-food-rest-001", "real-service-004", "real-negative-001", "real-boundary-ticket-001"}, topN: 8},
 		{name: "official_notice_boundary", query: "小灵能不能替代官方公告？", expectedIDs: []string{"real-negative-001", "real-negative-002", "real-risk-002"}, topN: 8},
 		{name: "pet_drone_boundary", query: "宠物入园和无人机拍摄能不能直接承诺？", expectedIDs: []string{"real-boundary-safety-001"}, topN: 8},
 		{name: "queue_time_boundary", query: "游客问现场排队多久，知识库能回答吗？", expectedIDs: []string{"real-boundary-weather-001"}, topN: 8},
