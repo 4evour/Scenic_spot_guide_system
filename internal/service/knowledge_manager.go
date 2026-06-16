@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/scenic-guide/internal/model"
+	"github.com/scenic-guide/internal/repository"
 )
 
 func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
@@ -54,12 +55,15 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 		metadataJSON, _ := json.Marshal(chunk.Metadata)
 
 		knowledge := &model.KnowledgeChunk{
-			ID:       chunk.ID,
-			Content:  chunk.Content,
-			Source:   chunk.Source,
-			Title:    chunk.Title,
-			Metadata: string(metadataJSON),
-			Vector:   vector,
+			ID:                chunk.ID,
+			Content:           chunk.Content,
+			Source:            chunk.Source,
+			Title:             chunk.Title,
+			Metadata:          string(metadataJSON),
+			KnowledgeCategory: chunk.KnowledgeCategory,
+			SpotID:            chunk.SpotID,
+			SpotCategory:      chunk.SpotCategory,
+			Vector:            vector,
 		}
 
 		if err := s.repo.Create(knowledge); err != nil {
@@ -69,6 +73,9 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 		loadedCount++
 	}
 
+	if loadedCount > 0 {
+		s.invalidateKnowledgeCaches()
+	}
 	return nil
 }
 
@@ -89,12 +96,15 @@ func (s *RAGService) upsertChunkData(chunk *ChunkData) (*model.KnowledgeChunk, e
 
 	metadataJSON, _ := json.Marshal(chunk.Metadata)
 	knowledge := &model.KnowledgeChunk{
-		ID:       chunk.ID,
-		Content:  chunk.Content,
-		Source:   chunk.Source,
-		Title:    chunk.Title,
-		Metadata: string(metadataJSON),
-		Vector:   vector,
+		ID:                chunk.ID,
+		Content:           chunk.Content,
+		Source:            chunk.Source,
+		Title:             chunk.Title,
+		Metadata:          string(metadataJSON),
+		KnowledgeCategory: chunk.KnowledgeCategory,
+		SpotID:            chunk.SpotID,
+		SpotCategory:      chunk.SpotCategory,
+		Vector:            vector,
 	}
 
 	exists, err := s.repo.Exists(chunk.ID)
@@ -116,11 +126,14 @@ func (s *RAGService) upsertChunkData(chunk *ChunkData) (*model.KnowledgeChunk, e
 
 func (s *RAGService) CreateKnowledge(input KnowledgeUpsertInput) (*model.KnowledgeChunk, error) {
 	chunk := ChunkData{
-		ID:       input.ID,
-		Title:    input.Title,
-		Source:   input.Source,
-		Content:  input.Content,
-		Metadata: input.Metadata,
+		ID:                input.ID,
+		Title:             input.Title,
+		Source:            input.Source,
+		Content:           input.Content,
+		KnowledgeCategory: input.KnowledgeCategory,
+		SpotID:            input.SpotID,
+		SpotCategory:      input.SpotCategory,
+		Metadata:          input.Metadata,
 	}
 	knowledge, err := s.upsertChunkData(&chunk)
 	if err != nil {
@@ -217,10 +230,11 @@ func (s *RAGService) LoadPlainTextKnowledge(filename, content, category string) 
 		}
 
 		chunk := ChunkData{
-			Title:    fmt.Sprintf("%s-%02d", title, i+1),
-			Source:   filename,
-			Content:  paragraph,
-			Metadata: metadata,
+			Title:             fmt.Sprintf("%s-%02d", title, i+1),
+			Source:            filename,
+			Content:           paragraph,
+			KnowledgeCategory: strings.TrimSpace(category),
+			Metadata:          metadata,
 		}
 		if _, err := s.upsertChunkData(&chunk); err != nil {
 			return loadedCount, err
@@ -306,6 +320,10 @@ func (s *RAGService) DeleteAllKnowledge() error {
 
 func (s *RAGService) ListKnowledge(page, pageSize int, keyword, category string) ([]model.KnowledgeChunk, int64, error) {
 	return s.repo.List(page, pageSize, keyword, category)
+}
+
+func (s *RAGService) ListKnowledgeAdvanced(filter repository.KnowledgeListFilter) ([]model.KnowledgeChunk, int64, error) {
+	return s.repo.ListAdvanced(filter)
 }
 
 func (s *RAGService) GetKnowledge(id string) (*model.KnowledgeChunk, error) {

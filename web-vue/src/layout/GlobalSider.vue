@@ -28,6 +28,7 @@ const menuOptions = computed<MenuOption[]>(() => {
         { label: t('nav.spots'), key: 'admin-spots', icon: renderIcon('🏛️') },
         { label: t('nav.routes'), key: 'admin-routes', icon: renderIcon('🛤️') },
         { label: t('nav.content'), key: 'admin-content', icon: renderIcon('📝') },
+        { label: t('nav.qrcode'), key: 'admin-qrcode', icon: renderIcon('▦') },
       ],
     },
     {

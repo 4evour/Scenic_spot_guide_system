@@ -29,11 +29,17 @@ export interface SpotWithCoords {
   name: string;
   lat: number;
   lng: number;
+  triggerEnabled?: boolean;
+  triggerRadiusM?: number;
+  introText?: string;
+  cooldownMinutes?: number;
 }
 
 export interface UseProximityGuideOptions {
   /** 触发半径（米），默认 100m */
   triggerRadiusM?: number;
+  /** 跨页面本地冷却记录 key */
+  storageKey?: string;
 }
 
 export interface UseProximityGuideReturn {
@@ -51,7 +57,7 @@ export function useProximityGuide(
   currentPosition: Ref<GeolocationPosition | null>,
   options: UseProximityGuideOptions = {},
 ): UseProximityGuideReturn {
-  const { triggerRadiusM = 100 } = options;
+  const { triggerRadiusM = 100, storageKey = 'sg_geofence_triggered_at' } = options;
 
   const spots = ref<SpotWithCoords[]>([]);
   const nearbySpot = ref<SpotWithCoords | null>(null);
@@ -75,11 +81,14 @@ export function useProximityGuide(
     let closest: { spot: SpotWithCoords; dist: number } | null = null;
 
     for (const spot of spots.value) {
+      if (spot.triggerEnabled === false) continue;
       // 跳过已触发的景点（每页生命周期内只触发一次）
       if (triggeredSpots.value.has(spot.id)) continue;
+      if (isCoolingDown(spot, storageKey)) continue;
 
       const dist = haversineDistance(pos.lat, pos.lng, spot.lat, spot.lng);
-      if (dist <= triggerRadiusM) {
+      const radius = spot.triggerRadiusM && spot.triggerRadiusM > 0 ? spot.triggerRadiusM : triggerRadiusM;
+      if (dist <= radius) {
         if (!closest || dist < closest.dist) {
           closest = { spot, dist };
         }
@@ -89,6 +98,7 @@ export function useProximityGuide(
     if (closest) {
       // 标记为已触发
       triggeredSpots.value.add(closest.spot.id);
+      markTriggered(closest.spot, storageKey);
       nearbySpot.value = closest.spot;
     } else {
       nearbySpot.value = null;
@@ -101,4 +111,24 @@ export function useProximityGuide(
     resetTriggered,
     setSpots,
   };
+}
+
+function readTriggered(storageKey: string): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem(storageKey) || '{}') as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+
+function markTriggered(spot: SpotWithCoords, storageKey: string) {
+  const data = readTriggered(storageKey);
+  data[String(spot.id)] = Date.now();
+  localStorage.setItem(storageKey, JSON.stringify(data));
+}
+
+function isCoolingDown(spot: SpotWithCoords, storageKey: string) {
+  const cooldownMinutes = spot.cooldownMinutes && spot.cooldownMinutes > 0 ? spot.cooldownMinutes : 1440;
+  const last = readTriggered(storageKey)[String(spot.id)];
+  return Boolean(last && Date.now() - last < cooldownMinutes * 60 * 1000);
 }

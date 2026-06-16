@@ -35,8 +35,9 @@ func (h *ScenicProfileHandler) GetProfile(c *gin.Context) {
 			"tts_voice":   h.profile.DigitalHuman.TTSVoice,
 			"tts_speed":   h.profile.DigitalHuman.TTSSpeed,
 		},
-		"quick_asks": h.getQuickAsks(),
-		"routes":     h.GetRoutes(),
+		"quick_asks":      h.getQuickAsks(),
+		"routes":          h.GetRoutes(),
+		"topic_entities":  h.getTopicEntities(),
 	})
 }
 
@@ -90,19 +91,39 @@ func (h *ScenicProfileHandler) GetRoutes() []gin.H {
 	return routes
 }
 
-func (h *ScenicProfileHandler) getQuickAsks() []string {
-	scenicName := "景区"
-	if h.profile != nil {
-		scenicName = h.profile.ShortName
+func (h *ScenicProfileHandler) getTopicEntities() []string {
+	if h.profile == nil {
+		return nil
 	}
-	return []string{
-		scenicName + "大佛有多高？",
-		"推荐一条路线",
+	return h.profile.Keywords.TopicEntities
+}
+
+func (h *ScenicProfileHandler) getQuickAsks() []string {
+	asks := []string{
+		"推荐一条游览路线",
 		"带孩子怎么玩？",
 		"开放时间是什么？",
 		"有什么好吃的？",
-		"梵宫有什么特色？",
 	}
+
+	// Dynamically add entity-specific questions from profile topic entities
+	if h.profile != nil {
+		entities := h.profile.Keywords.TopicEntities
+		for i, entity := range entities {
+			if i >= 2 {
+				break
+			}
+			asks = append(asks, entity+"有什么特色？")
+		}
+		if len(asks) < 6 && h.profile.ShortName != "" {
+			asks = append([]string{h.profile.ShortName + "有哪些必看景点？"}, asks...)
+		}
+	}
+
+	if len(asks) > 6 {
+		asks = asks[:6]
+	}
+	return asks
 }
 
 func (h *ScenicProfileHandler) Routes(r *gin.RouterGroup) {

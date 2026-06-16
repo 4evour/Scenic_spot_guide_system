@@ -7,9 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
-
 type KnowledgeRepository struct {
 	db *gorm.DB
+}
+
+type KnowledgeListFilter struct {
+	Page              int
+	PageSize          int
+	Keyword           string
+	Category          string
+	KnowledgeCategory string
+	SpotCategory      string
+	SpotID            uint
 }
 
 func NewKnowledgeRepository(db *gorm.DB) *KnowledgeRepository {
@@ -40,6 +49,17 @@ func (r *KnowledgeRepository) GetAll() ([]model.KnowledgeChunk, error) {
 }
 
 func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string) ([]model.KnowledgeChunk, int64, error) {
+	return r.ListAdvanced(KnowledgeListFilter{
+		Page:     page,
+		PageSize: pageSize,
+		Keyword:  keyword,
+		Category: category,
+	})
+}
+
+func (r *KnowledgeRepository) ListAdvanced(filter KnowledgeListFilter) ([]model.KnowledgeChunk, int64, error) {
+	page := filter.Page
+	pageSize := filter.PageSize
 	if page < 1 {
 		page = 1
 	}
@@ -48,7 +68,7 @@ func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string)
 	}
 
 	query := r.db.Model(&model.KnowledgeChunk{})
-	keyword = strings.TrimSpace(keyword)
+	keyword := strings.TrimSpace(filter.Keyword)
 	if keyword != "" {
 		escaped := escapeLike(strings.ToLower(keyword))
 		like := "%" + escaped + "%"
@@ -58,11 +78,21 @@ func (r *KnowledgeRepository) List(page, pageSize int, keyword, category string)
 		)
 	}
 
-	category = strings.TrimSpace(category)
+	category := strings.TrimSpace(filter.Category)
 	if category != "" {
 		escaped := escapeLike(strings.ToLower(category))
 		like := "%" + escaped + "%"
-		query = query.Where("LOWER(metadata) LIKE ? OR LOWER(source) LIKE ?", like, like)
+		query = query.Where("LOWER(metadata) LIKE ? OR LOWER(source) LIKE ? OR LOWER(knowledge_category) LIKE ?", like, like, like)
+	}
+
+	if v := strings.TrimSpace(filter.KnowledgeCategory); v != "" {
+		query = query.Where("knowledge_category = ?", v)
+	}
+	if v := strings.TrimSpace(filter.SpotCategory); v != "" {
+		query = query.Where("spot_category = ?", v)
+	}
+	if filter.SpotID > 0 {
+		query = query.Where("spot_id = ?", filter.SpotID)
 	}
 
 	var total int64

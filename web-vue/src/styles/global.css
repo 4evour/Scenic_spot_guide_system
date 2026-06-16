@@ -25,6 +25,43 @@ body {
   background-size: 34px 34px, 34px 34px, cover, cover, cover, cover;
 }
 
+.senior-mode-page {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.senior-mode-page button,
+.senior-mode-page input,
+.senior-mode-page textarea,
+.senior-mode-page .n-button {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.senior-mode-page .msg-bubble,
+.senior-mode-page .subtitle-bubble,
+.senior-mode-page .spot-intro,
+.senior-mode-page .spot-desc,
+.senior-mode-page .spot-item-name,
+.senior-mode-page .spot-item-meta,
+.senior-mode-page .map-header p {
+  font-size: 18px !important;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.senior-mode-page .map-header h1,
+.senior-mode-page .spot-name,
+.senior-mode-page .chat-header-top h2 {
+  font-size: 24px !important;
+}
+
+.senior-mode-page .spot-item,
+.senior-mode-page .follow-up-btn,
+.senior-mode-page .action-btn {
+  min-height: 48px;
+}
+
 button,
 input,
 select,

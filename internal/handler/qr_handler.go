@@ -3,6 +3,8 @@ package handler
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/service"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 // QRHandler 二维码扫码导览接口
@@ -19,9 +22,9 @@ type QRHandler struct {
 	statsService *service.StatsService
 
 	// 扫码结果缓存：同一景点短时间内多人扫码时复用结果
-	cacheMu   sync.RWMutex
-	qrCache   map[string]*qrCacheEntry
-	cacheTTL  time.Duration
+	cacheMu  sync.RWMutex
+	qrCache  map[string]*qrCacheEntry
+	cacheTTL time.Duration
 }
 
 type qrCacheEntry struct {
@@ -38,6 +41,7 @@ type spotResponse struct {
 	ImageURL    string  `json:"image_url"`
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
+	QRCode      string  `json:"qr_code"`
 	QRIntroText string  `json:"qr_intro_text"`
 }
 
@@ -50,6 +54,7 @@ func spotToResponse(s *model.ScenicSpot) spotResponse {
 		ImageURL:    s.ImageURL,
 		Latitude:    s.Latitude,
 		Longitude:   s.Longitude,
+		QRCode:      s.QRCode,
 		QRIntroText: s.QRIntroText,
 	}
 }
@@ -99,9 +104,9 @@ func (h *QRHandler) ScanAndIntro(c *gin.Context) {
 	if cached := h.getCache(code); cached != nil {
 		h.recordScan(code, nil, "qr_intro_cache")
 		pkg.Success(c, gin.H{
-			"spot":     cached.Spot,
-			"intro":    cached.IntroText,
-			"cached":   true,
+			"spot":                cached.Spot,
+			"intro":               cached.IntroText,
+			"cached":              true,
 			"follow_up_questions": h.buildFollowUpQuestions(cached.Spot),
 		})
 		return
@@ -125,9 +130,9 @@ func (h *QRHandler) ScanAndIntro(c *gin.Context) {
 	h.recordScan(code, spot, "qr_intro")
 
 	pkg.Success(c, gin.H{
-		"spot":     spotToResponse(spot),
-		"intro":    introText,
-		"cached":   false,
+		"spot":                spotToResponse(spot),
+		"intro":               introText,
+		"cached":              false,
 		"follow_up_questions": h.buildFollowUpQuestions(spotToResponse(spot)),
 	})
 }
@@ -243,9 +248,9 @@ func (h *QRHandler) GetQRStats(c *gin.Context) {
 	spotsWithQR, _ := h.spotService.GetAllSpotsWithQR()
 
 	pkg.Success(c, gin.H{
-		"spots_with_qr":  len(spotsWithQR),
-		"cache_entries":  cacheSize,
-		"cache_ttl_min":  int(h.cacheTTL.Minutes()),
+		"spots_with_qr": len(spotsWithQR),
+		"cache_entries": cacheSize,
+		"cache_ttl_min": int(h.cacheTTL.Minutes()),
 	})
 }
 
@@ -264,9 +269,80 @@ func (h *QRHandler) Routes(r *gin.RouterGroup) {
 	{
 		admin.GET("/spots", h.ListQRSpots)
 		admin.PUT("/spots/:id", h.UpdateQRCode)
+		admin.GET("/spots/:id/image", h.GetQRCodeImage)
 		admin.POST("/batch-generate", h.BulkGenerateQR)
 		admin.GET("/stats", h.GetQRStats)
 	}
+}
+
+func (h *QRHandler) GetQRCodeImage(c *gin.Context) {
+	var id uint
+	if _, err := parseUintParam(c.Param("id"), &id); err != nil {
+		pkg.BadRequest(c, "ID 参数无效")
+		return
+	}
+	spot, err := h.spotService.GetSpotByID(id)
+	if err != nil {
+		pkg.NotFound(c, "景点不存在")
+		return
+	}
+	if spot.QRCode == "" {
+		spot.QRCode = generateQRCode(spot.ID, spot.Name)
+	}
+	scanURL := fmt.Sprintf("%s/scan?id=%s", publicBaseURL(c), spot.QRCode)
+	format := c.DefaultQuery("format", "png")
+	if format == "svg" {
+		code, err := qrcode.New(scanURL, qrcode.Medium)
+		if err != nil {
+			pkg.InternalError(c, "生成二维码失败")
+			return
+		}
+		c.Header("Content-Type", "image/svg+xml")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s.svg", spot.QRCode))
+		c.String(http.StatusOK, qrCodeSVG(code.Bitmap(), 8))
+		return
+	}
+	png, err := qrcode.Encode(scanURL, qrcode.Medium, 256)
+	if err != nil {
+		pkg.InternalError(c, "生成二维码失败")
+		return
+	}
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s.png", spot.QRCode))
+	c.Data(http.StatusOK, "image/png", png)
+}
+
+func qrCodeSVG(bitmap [][]bool, moduleSize int) string {
+	if moduleSize <= 0 {
+		moduleSize = 8
+	}
+	quietZone := 4
+	size := len(bitmap) + quietZone*2
+	pixels := size * moduleSize
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d">`, pixels, pixels, pixels, pixels))
+	b.WriteString(`<rect width="100%" height="100%" fill="#fff"/>`)
+	for y, row := range bitmap {
+		for x, dark := range row {
+			if !dark {
+				continue
+			}
+			b.WriteString(fmt.Sprintf(`<rect x="%d" y="%d" width="%d" height="%d" fill="#000"/>`, (x+quietZone)*moduleSize, (y+quietZone)*moduleSize, moduleSize, moduleSize))
+		}
+	}
+	b.WriteString(`</svg>`)
+	return b.String()
+}
+
+func publicBaseURL(c *gin.Context) string {
+	scheme := "http"
+	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	host := c.Request.Host
+	if forwardedHost := c.GetHeader("X-Forwarded-Host"); forwardedHost != "" {
+		host = forwardedHost
+	}
+	return scheme + "://" + host
 }
 
 // --- 内部方法 ---
@@ -383,4 +459,3 @@ func parseUintParam(s string, out *uint) (bool, error) {
 }
 
 // fmt 包在此文件中使用（generateQRCode）
-

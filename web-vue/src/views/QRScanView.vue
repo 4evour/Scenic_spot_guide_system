@@ -2,10 +2,12 @@
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { useSeniorMode } from '../composables/useSeniorMode';
 import { apiFetch } from '../services/api';
 
 const { t } = useI18n();
 const router = useRouter();
+const { seniorModeEnabled, toggleSeniorMode } = useSeniorMode();
 
 interface SpotInfo {
   id: number;
@@ -64,7 +66,7 @@ onMounted(async () => {
 function startTour() {
   if (!spot.value) return;
   // 跳转到数字人页面，带上景点名作为自动提问
-  const query = encodeURIComponent(`请详细介绍${spot.value.name}这个景点`);
+  const query = `请详细介绍${spot.value.name}这个景点`;
   router.push({ name: 'digital-human', query: { qr: spot.value.qr_intro_text || spot.value.name, auto_ask: query } });
 }
 
@@ -74,7 +76,10 @@ function chatNow() {
 </script>
 
 <template>
-  <main class="qr-scan-view">
+  <main class="qr-scan-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
+    <button class="senior-toggle" @click="toggleSeniorMode">
+      {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+    </button>
     <!-- Loading -->
     <div v-if="loading" class="scan-loading">
       <div class="pulse-ring"></div>
@@ -141,6 +146,20 @@ function chatNow() {
   justify-content: center;
   padding: 24px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.senior-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.82);
+  font-size: 14px;
+  cursor: pointer;
 }
 
 /* Loading */

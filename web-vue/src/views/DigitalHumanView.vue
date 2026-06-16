@@ -1,17 +1,75 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, onUnmounted, onErrorCaptured, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, onErrorCaptured, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { useGeolocation } from '../composables/useGeolocation';
+import { useProximityGuide, type SpotWithCoords } from '../composables/useProximityGuide';
+import { useSeniorMode } from '../composables/useSeniorMode';
 import { AudioPlaybackController, type PlaybackCue } from '../services/audioPlayback';
 import { VtuberSocketClient } from '../services/vtuberSocket';
 import { streamTTS } from '../services/ttsApi';
+import { apiFetch } from '../services/api';
 import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression } from '../types/digitalHuman';
 import Live2DStage from '../components/Live2DStage.vue';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import { useSessionStore } from '../stores/session';
+import { useAuthStore } from '../stores/auth';
+import { getCSRFToken } from '../utils/csrf';
 
 const { t } = useI18n();
 const route = useRoute();
+const authStore = useAuthStore();
+const AUTO_GUIDE_KEY = 'sg_auto_geofence_enabled';
+const autoGuideEnabled = ref(localStorage.getItem(AUTO_GUIDE_KEY) === 'true');
+const geofenceSpots = ref<SpotWithCoords[]>([]);
+const { seniorModeEnabled, ttsRate, toggleSeniorMode } = useSeniorMode();
+const {
+  currentPosition,
+  error: geoError,
+  startWatch,
+  stopWatch,
+} = useGeolocation({
+  enableHighAccuracy: true,
+  maximumAge: 5000,
+  timeout: 10000,
+});
+const { nearbySpot, resetTriggered, setSpots } = useProximityGuide(currentPosition, {
+  triggerRadiusM: 100,
+});
+
+// Guest upgrade state
+const showUpgradeModal = ref(false);
+const upgradeForm = reactive({ username: '', password: '', email: '' });
+const upgradeLoading = ref(false);
+const upgradeError = ref('');
+
+async function handleUpgrade() {
+  if (!upgradeForm.username || !upgradeForm.password) {
+    upgradeError.value = t('auth.usernamePasswordRequired') || '请填写用户名和密码';
+    return;
+  }
+  if (upgradeForm.password.length < 6) {
+    upgradeError.value = t('auth.passwordTooShort') || '密码至少6位';
+    return;
+  }
+  upgradeLoading.value = true;
+  upgradeError.value = '';
+  try {
+    const ok = await authStore.upgradeAccount(upgradeForm.username, upgradeForm.password, upgradeForm.email || undefined);
+    if (ok) {
+      showUpgradeModal.value = false;
+      upgradeForm.username = '';
+      upgradeForm.password = '';
+      upgradeForm.email = '';
+    } else {
+      upgradeError.value = t('auth.upgradeFailed') || '升级失败，用户名可能已被占用';
+    }
+  } catch {
+    upgradeError.value = t('auth.upgradeFailed') || '升级失败';
+  } finally {
+    upgradeLoading.value = false;
+  }
+}
 
 const uid = (): string =>
   typeof crypto.randomUUID === 'function'
@@ -37,6 +95,7 @@ function getOrCreateSessionId(): string {
 const input = ref('');
 const mouthOpen = ref(0);
 const transcriptBuffer = ref('');
+const topicEntities = ref<string[]>([]);
 const hasActiveTurn = ref(false);
 const isPlaybackActive = ref(false);
 const isVoiceListening = ref(false);
@@ -49,6 +108,11 @@ const searchResults = ref<{ text: string; time: string }[]>([]);
 const typewriterStreaming = ref(false);
 const mobileTab = ref<'avatar' | 'chat'>('avatar');
 const isMobileView = ref(window.innerWidth < 768);
+const audioStatus = ref<'locked' | 'ready' | 'playing' | 'error'>('locked');
+const audioNotice = ref('点击“启用声音”后，我会朗读回答并驱动口型。');
+const storedChatWidth = Number(localStorage.getItem('sg_dh_chat_width') || 420);
+const chatWidth = ref(Number.isFinite(storedChatWidth) ? storedChatWidth : 420);
+const isChatResizing = ref(false);
 function onWindowResize() { isMobileView.value = window.innerWidth < 768; }
 
 const state = reactive({
@@ -75,18 +139,27 @@ let fallbackTimer = 0;
 let blockIncomingPlayback = false;
 let waitingForFreshServerTurn = false;
 let lastAssistantSpeechText = '';
+let activeAssistantMessageId = '';
+let activeAssistantText = '';
 let searchDebounceTimer = 0;
+let lastAudioNotice = '';
 
 const audio = new AudioPlaybackController({
   onStart: (text: string | undefined, cue: PlaybackCue | undefined) => {
+    audioStatus.value = 'playing';
+    audioNotice.value = '正在播放语音，口型会跟随音频变化。';
     isPlaybackActive.value = true;
     hasActiveTurn.value = true;
     typewriterStreaming.value = true;
-    if (text) showAssistantSpeech(text);
+    if (text && cue?.showText !== false) showAssistantSpeech(text);
     state.conversation = 'speaking';
     state.expression = resolveSpeechExpression(cue?.expression, text);
   },
   onEnd: () => {
+    if (audioStatus.value === 'playing') {
+      audioStatus.value = 'ready';
+      audioNotice.value = '声音已启用。';
+    }
     isPlaybackActive.value = false;
     mouthOpen.value = 0;
     typewriterStreaming.value = false;
@@ -97,6 +170,9 @@ const audio = new AudioPlaybackController({
   },
   onVolume: (volume: number) => {
     mouthOpen.value = volume;
+  },
+  onError: (message: string) => {
+    showAudioNotice('error', message);
   },
 });
 
@@ -119,11 +195,31 @@ const canInterrupt = computed(
     ['speaking', 'thinking', 'listening'].includes(state.conversation),
 );
 
+const chatPanelStyle = computed(() => {
+  if (isMobileView.value) return {};
+  const width = Math.min(620, Math.max(320, chatWidth.value));
+  return { width: `${width}px` };
+});
+
 function nowTime() {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function showAudioNotice(status: typeof audioStatus.value, message: string) {
+  audioStatus.value = status;
+  audioNotice.value = message;
+  if (message && message !== lastAudioNotice) {
+    lastAudioNotice = message;
+    addMessage('system', message);
+  }
+}
+
 const ALL_EMOTION_TOKENS = ['neutral', 'joy', 'sadness', 'surprise', 'anger', 'fear', 'disgust'];
+
+type BackendChatResponse = {
+  response?: string;
+  trace_id?: string;
+};
 
 function stripEmotionTags(text: string) {
   const pattern = new RegExp(`\\[(${ALL_EMOTION_TOKENS.join('|')})\\]\\s*`, 'gi');
@@ -179,11 +275,51 @@ function resolveSpeechExpression(cueExpression?: string, text?: string): Live2DE
   return expressionFromToken(cueExpression) || expressionFromText(text) || 'happy';
 }
 
+function resetAssistantTurn() {
+  activeAssistantMessageId = '';
+  activeAssistantText = '';
+  lastAssistantSpeechText = '';
+}
+
+function localMessagesKey(sessionId = getOrCreateSessionId()) {
+  return `sg_dh_msgs_${sessionId}`;
+}
+
+function saveLocalMessagesSnapshot(sessionId = getOrCreateSessionId()) {
+  try {
+    const snapshot = state.messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role, content: m.text, time: Date.now() }));
+    localStorage.setItem(localMessagesKey(sessionId), JSON.stringify(snapshot.slice(-200)));
+  } catch {
+    // localStorage 只是离线备份，写入失败不影响当前会话。
+  }
+}
+
+function mergeAssistantText(existing: string, chunk: string) {
+  const current = existing.trimEnd();
+  const next = chunk.trim();
+  if (!next) return current;
+  if (!current) return next;
+  if (current === next || current.endsWith(next) || current.includes(next)) return current;
+  if (next.startsWith(current)) return next;
+
+  const maxOverlap = Math.min(current.length, next.length);
+  for (let size = maxOverlap; size >= 8; size -= 1) {
+    if (current.endsWith(next.slice(0, size))) {
+      return current + next.slice(size);
+    }
+  }
+
+  const separator = /[。！？!?]$/.test(current) ? '\n\n' : '';
+  return current + separator + next;
+}
+
 /** Persist message to both localStorage and backend */
 async function persistMessage(role: ChatMessage['role'], content: string) {
   // localStorage backup (always works offline)
   try {
-    const key = `sg_dh_msgs_${getOrCreateSessionId()}`;
+    const key = localMessagesKey();
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
     existing.push({ role, content, time: Date.now() });
     // Keep only last 200 messages
@@ -205,12 +341,7 @@ async function persistMessage(role: ChatMessage['role'], content: string) {
     }
   } catch { /* ignore */ }
 
-  // Backend persistence
   sessionStore.appendMessage(role, content);
-  // Try to save to backend via session store
-  try {
-    await sessionStore.saveMessage(getOrCreateSessionId(), role, content);
-  } catch { /* silent retry next time */ }
 }
 
 function addMessage(role: ChatMessage['role'], text: string) {
@@ -231,6 +362,7 @@ function showAssistantSpeech(text: string) {
   const displayText = stripEmotionTags(text);
   state.subtitle = displayText;
   if (displayText === lastAssistantSpeechText) return;
+  resetAssistantTurn();
   lastAssistantSpeechText = displayText;
   typewriterStreaming.value = true;
   state.messages.push({
@@ -240,6 +372,41 @@ function showAssistantSpeech(text: string) {
     time: nowTime(),
   });
   void persistMessage('assistant', displayText);
+}
+
+function appendAssistantSpeechChunk(text: string) {
+  const displayText = stripEmotionTags(text);
+  if (!displayText || displayText === 'Thinking...') return;
+
+  activeAssistantText = mergeAssistantText(activeAssistantText, displayText);
+  lastAssistantSpeechText = activeAssistantText;
+  state.subtitle = displayText;
+  typewriterStreaming.value = true;
+
+  if (!activeAssistantMessageId) {
+    activeAssistantMessageId = uid();
+    state.messages.push({
+      id: activeAssistantMessageId,
+      role: 'assistant',
+      text: activeAssistantText,
+      time: nowTime(),
+    });
+  } else {
+    const msg = state.messages.find(m => m.id === activeAssistantMessageId);
+    if (msg) {
+      msg.text = activeAssistantText;
+    } else {
+      activeAssistantMessageId = uid();
+      state.messages.push({
+        id: activeAssistantMessageId,
+        role: 'assistant',
+        text: activeAssistantText,
+        time: nowTime(),
+      });
+    }
+  }
+
+  saveLocalMessagesSnapshot();
 }
 
 function connectSocket() {
@@ -282,6 +449,7 @@ function handleSocketMessage(message: VtuberMessage) {
     if (blockIncomingPlayback && !waitingForFreshServerTurn) return;
     conversationTurn += 1;
     interruptedTurn = -1;
+    resetAssistantTurn();
     hasActiveTurn.value = true;
     blockIncomingPlayback = false;
     waitingForFreshServerTurn = false;
@@ -294,6 +462,7 @@ function handleSocketMessage(message: VtuberMessage) {
   if (message.type === 'control' && message.text === 'conversation-chain-end') {
     hasActiveTurn.value = isPlaybackActive.value;
     typewriterStreaming.value = false;
+    saveLocalMessagesSnapshot();
     if (state.conversation !== 'interrupted') {
       state.conversation = 'idle';
       state.expression = 'neutral';
@@ -314,6 +483,7 @@ function handleSocketMessage(message: VtuberMessage) {
     blockIncomingPlayback = true;
     waitingForFreshServerTurn = false;
     interruptedTurn = conversationTurn;
+    resetAssistantTurn();
     state.conversation = 'interrupted';
     state.expression = 'interrupted';
     state.subtitle = t('dh.interruptReceived');
@@ -328,8 +498,10 @@ function handleSocketMessage(message: VtuberMessage) {
       volumes: message.volumes,
       sliceLengthMs: message.slice_length,
       expression,
+      showText: false,
     };
     typewriterStreaming.value = true;
+    appendAssistantSpeechChunk(text);
     if (message.audio) audio.enqueueBase64Wav(message.audio, text, cue);
     else void audio.playTextFallback(text, cue);
   }
@@ -337,6 +509,7 @@ function handleSocketMessage(message: VtuberMessage) {
   if (message.type === 'backend-synth-complete') {
     hasActiveTurn.value = isPlaybackActive.value;
     typewriterStreaming.value = false;
+    saveLocalMessagesSnapshot();
     if (state.conversation === 'thinking') {
       state.conversation = 'idle';
       state.expression = 'neutral';
@@ -359,42 +532,143 @@ function sendText() {
   conversationTurn += 1;
   interruptedTurn = -1;
   hasActiveTurn.value = true;
-  const shouldWaitForServerTurn = Boolean(blockIncomingPlayback && socket);
   addMessage('user', text);
-  lastAssistantSpeechText = '';
+  resetAssistantTurn();
   input.value = '';
   state.conversation = 'thinking';
   state.expression = 'thinking';
   state.subtitle = t('dh.thinking');
   transcriptBuffer.value = '';
 
-  const sent = socket?.sendText(text);
-  if (!shouldWaitForServerTurn || !sent) {
-    blockIncomingPlayback = false;
-    waitingForFreshServerTurn = false;
-    audio.resume();
-  } else {
-    waitingForFreshServerTurn = true;
-  }
-  if (!sent) {
-    const fallback = buildFallbackAnswer(text);
-    const turn = conversationTurn;
-    fallbackTimer = window.setTimeout(async () => {
-      if (interruptedTurn === turn) return;
-      showAssistantSpeech(fallback);
-      const cue = { expression: expressionFromText(fallback) || 'happy' as const };
+  blockIncomingPlayback = true;
+  waitingForFreshServerTurn = false;
+  audio.resume();
+  const turn = conversationTurn;
+  void answerWithBackendText(text, turn);
+}
 
-      try {
-        const response = await streamTTS({ text: fallback, voice: 'female_xiaoxiao' });
-        const streamed = await audio.enqueueStream(response, fallback, cue);
-        if (!streamed) {
-          void audio.playTextFallback(fallback, cue);
-        }
-      } catch {
-        void audio.playTextFallback(fallback, cue);
-      }
-    }, 420);
+async function answerWithBackendText(text: string, turn: number) {
+  try {
+    const data = await apiFetch<BackendChatResponse>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        session_id: getOrCreateSessionId(),
+        message: text,
+      }),
+    });
+    if (interruptedTurn === turn) return;
+    const answer = data.response?.trim() || buildFallbackAnswer(text);
+    showAssistantSpeech(answer);
+    await playAnswerAudio(answer);
+  } catch {
+    if (interruptedTurn === turn) return;
+    const fallback = buildFallbackAnswer(text);
+    showAssistantSpeech(fallback);
+    await playAnswerAudio(fallback);
+  } finally {
+    blockIncomingPlayback = false;
+    if (interruptedTurn !== turn && !isPlaybackActive.value && state.conversation === 'thinking') {
+      state.conversation = 'idle';
+      state.expression = 'neutral';
+      typewriterStreaming.value = false;
+      hasActiveTurn.value = false;
+    }
   }
+}
+
+async function playAnswerAudio(answer: string) {
+  const cue = { expression: expressionFromText(answer) || 'happy' as const };
+  if (audioStatus.value === 'locked') {
+    showAudioNotice('locked', '请先点击“启用声音”，之后我会朗读回答并驱动口型。');
+    return;
+  }
+  try {
+    if (!getCSRFToken()) {
+      await authStore.ensureGuestSession();
+    }
+    const response = await streamTTS({ text: answer, voice: 'female_xiaoxiao', rate: ttsRate.value });
+    const streamed = await audio.enqueueStream(response, answer, cue);
+    if (!streamed) {
+      await audio.playTextFallback(answer, cue);
+    }
+  } catch (err) {
+    const message = err instanceof Error && err.message
+      ? `语音合成暂时不可用，已切换为浏览器朗读：${err.message}`
+      : '语音合成暂时不可用，已切换为浏览器朗读。';
+    showAudioNotice('error', message);
+    await audio.playTextFallback(answer, cue);
+  }
+}
+
+async function loadGeofenceSpots() {
+  try {
+    const data = await apiFetch<Array<Record<string, unknown>>>('/spots');
+    geofenceSpots.value = data
+      .map((raw, index) => ({
+        id: String(raw.id || raw.ID || `spot-${index}`),
+        name: String(raw.name || raw.Name || `景点${index + 1}`),
+        lat: Number(raw.latitude || raw.Latitude || 0),
+        lng: Number(raw.longitude || raw.Longitude || 0),
+        triggerEnabled: Boolean(raw.geofence_enabled || raw.GeofenceEnabled),
+        triggerRadiusM: Number(raw.geofence_radius_m || raw.GeofenceRadiusM || 100),
+        introText: String(raw.geofence_intro_text || raw.GeofenceIntroText || ''),
+        cooldownMinutes: Number(raw.geofence_cooldown_minutes || raw.GeofenceCooldownMinutes || 1440),
+      }))
+      .filter(spot => spot.lat !== 0 && spot.lng !== 0 && spot.triggerEnabled);
+    setSpots(geofenceSpots.value);
+  } catch {
+    geofenceSpots.value = [];
+  }
+}
+
+function toggleAutoGuide() {
+  autoGuideEnabled.value = !autoGuideEnabled.value;
+  localStorage.setItem(AUTO_GUIDE_KEY, String(autoGuideEnabled.value));
+  if (autoGuideEnabled.value) {
+    resetTriggered();
+    setSpots(geofenceSpots.value);
+    startWatch();
+  } else {
+    stopWatch();
+  }
+}
+
+watch(nearbySpot, async (spot) => {
+  if (!spot || !autoGuideEnabled.value) return;
+  const text = spot.introText || `欢迎来到${spot.name}，我来为您介绍这里的看点。`;
+  addMessage('system', `已到达${spot.name}，自动讲解已触发。`);
+  showAssistantSpeech(text);
+  await playAnswerAudio(text);
+});
+
+async function enableSound() {
+  const ok = await audio.unlock();
+  if (ok) {
+    audioStatus.value = 'ready';
+    audioNotice.value = '声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。';
+    lastAudioNotice = '';
+  }
+}
+
+function startChatResize(event: PointerEvent) {
+  if (isMobileView.value) return;
+  isChatResizing.value = true;
+  (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+  window.addEventListener('pointermove', onChatResize);
+  window.addEventListener('pointerup', stopChatResize, { once: true });
+}
+
+function onChatResize(event: PointerEvent) {
+  if (!isChatResizing.value) return;
+  const nextWidth = window.innerWidth - event.clientX;
+  chatWidth.value = Math.min(620, Math.max(320, nextWidth));
+}
+
+function stopChatResize() {
+  if (!isChatResizing.value) return;
+  isChatResizing.value = false;
+  localStorage.setItem('sg_dh_chat_width', String(Math.round(chatWidth.value)));
+  window.removeEventListener('pointermove', onChatResize);
 }
 
 function interruptAnswer() {
@@ -409,6 +683,7 @@ function interruptAnswer() {
   blockIncomingPlayback = true;
   waitingForFreshServerTurn = false;
   audio.interrupt();
+  resetAssistantTurn();
   const serverInterrupted = socket?.interrupt(state.subtitle) || false;
   mouthOpen.value = 0;
   state.interruptCount += 1;
@@ -529,8 +804,12 @@ const followUpQuestions = computed(() => {
   if (text.includes('历史') || text.includes('history')) {
     questions.push({ label: t('dh.quickAsk.historyDetail'), query: '能讲讲这里的历史故事吗？' });
   }
-  if (text.includes('大佛') || text.includes('Buddha')) {
-    questions.push({ label: t('dh.quickAsk.buddhaStory'), query: '灵山大佛有什么特别之处？' });
+  // 动态匹配景点实体（从 profile API 获取，而非硬编码）
+  for (const entity of topicEntities.value) {
+    if (text.includes(entity)) {
+      questions.push({ label: `${entity}的详细介绍`, query: `能详细介绍一下${entity}吗？` });
+      break;
+    }
   }
   return questions.slice(0, 3);
 });
@@ -592,14 +871,20 @@ async function switchSession(sessionId: string) {
         text: m.content,
         time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
       }));
+    } else {
+      const localMsgs = loadLocalMessages(sessionId);
+      if (localMsgs.length > 0) state.messages = localMsgs;
     }
   } catch {
-    state.messages = [{
-      id: uid(),
-      role: 'assistant',
-      text: t('dh.greeting'),
-      time: nowTime(),
-    }];
+    const localMsgs = loadLocalMessages(sessionId);
+    state.messages = localMsgs.length > 0
+      ? localMsgs
+      : [{
+          id: uid(),
+          role: 'assistant',
+          text: t('dh.greeting'),
+          time: nowTime(),
+        }];
   }
   showSessionDrawer.value = false;
 }
@@ -625,10 +910,9 @@ function onBodyClick() {
 }
 
 // --- LocalStorage recovery ---
-function loadLocalMessages(): ChatMessage[] {
+function loadLocalMessages(sessionId = getOrCreateSessionId()): ChatMessage[] {
   try {
-    const key = `sg_dh_msgs_${getOrCreateSessionId()}`;
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(localMessagesKey(sessionId));
     if (!raw) return [];
     const items = JSON.parse(raw) as Array<{ role: string; content: string; time: number }>;
     return items.map(item => ({
@@ -642,33 +926,10 @@ function loadLocalMessages(): ChatMessage[] {
   }
 }
 
-function buildFallbackAnswer(text: string) {
-  const lower = text.toLowerCase();
-  const isEn = lower.match(/[a-z]/) && !/[一-鿿]/.test(lower);
-
-  if (isEn) {
-    if (lower.includes('route') || lower.includes('recommend')) {
-      return 'I recommend the "Gate – Cultural Corridor – Core Landscapes – Viewing Platform – Creative Station" route, about 90 minutes. History lovers should focus on inscriptions, architecture, and local legends.';
-    }
-    if (lower.includes('hour') || lower.includes('open') || lower.includes('time')) {
-      return 'The scenic area is open from 8:00 AM to 5:30 PM. Last entry at 4:30 PM. Morning and evening visits are recommended on holidays.';
-    }
-    if (lower.includes('history') || lower.includes('culture')) {
-      return 'Lingshan Scenic Area features ancient pathways, traditional architecture, and folk culture exhibits. Best explored as "nature + cultural stories."';
-    }
-    return 'I\'ve prepared a demo narration based on your question. It combines local knowledge, visitor interests, and real-time conditions to recommend the best route and focus.';
-  }
-
-  if (text.includes('路线') || text.includes('推荐')) {
-    return '推荐你走"山门迎宾-文化长廊-核心景观-观景台-文创驿站"路线，全程约 90 分钟。喜欢历史的游客可以把讲解重点放在碑刻、建筑形制和地方传说上。';
-  }
-  if (text.includes('开放') || text.includes('时间')) {
-    return '景区开放时间为 08:00 到 17:30，建议 16:30 前入园。节假日客流较高，可以优先选择上午或傍晚时段。';
-  }
-  if (text.includes('历史') || text.includes('文化')) {
-    return '灵山景区以山水格局和地方历史文化为核心，沿线包含古道遗存、传统建筑和民俗展示点，适合用"自然景观加人文故事"的方式游览。';
-  }
-  return '我已根据你的问题生成一段演示讲解：这里会结合本地知识库、游客兴趣和实时客流，为你推荐更合适的景点顺序与讲解重点。';
+function buildFallbackAnswer(_text: string) {
+  // 通用兜底：当 WebSocket 不可用时引导用户使用文字聊天
+  // 具体景区信息已通过 RAG 知识库 + ScenicProfile 配置化，不再硬编码景区内容
+  return t('dh.fallbackGeneric') || '语音服务暂时不可用，请尝试文字聊天，我会根据知识库为您解答。';
 }
 
 onErrorCaptured((err) => {
@@ -690,30 +951,51 @@ onMounted(async () => {
         text: m.content,
         time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
       }));
+    } else {
+      const localMsgs = loadLocalMessages(sessionId);
+      if (localMsgs.length > 0) {
+        state.messages = localMsgs;
+      }
     }
   } catch {
     // Try localStorage fallback
-    const localMsgs = loadLocalMessages();
+    const localMsgs = loadLocalMessages(sessionId);
     if (localMsgs.length > 0) {
       state.messages = localMsgs;
     }
   }
+  // 加载景区配置（topic_entities 用于动态关键词匹配）
+  try {
+    const profile = await apiFetch<{ topic_entities?: string[] }>('/scenic/profile');
+    topicEntities.value = profile.topic_entities || [];
+  } catch {
+    // 静默失败，topicEntities 保持空数组
+  }
+
   connectSocket();
+  await loadGeofenceSpots();
+  if (autoGuideEnabled.value) startWatch();
   window.addEventListener('resize', onWindowResize);
 
   // QR 扫码后自动提问
   const autoAsk = route.query.auto_ask as string;
   if (autoAsk) {
-    // 等待 socket 连接后自动发送
+    let autoAsked = false;
     const waitForSocket = setInterval(() => {
       if (socket && state.connected) {
         clearInterval(waitForSocket);
+        autoAsked = true;
         input.value = autoAsk;
         sendText();
       }
     }, 200);
-    // 最多等 5 秒
-    setTimeout(() => clearInterval(waitForSocket), 5000);
+    setTimeout(() => {
+      clearInterval(waitForSocket);
+      if (!autoAsked) {
+        input.value = autoAsk;
+        sendText();
+      }
+    }, 1500);
   }
 });
 
@@ -723,6 +1005,7 @@ onUnmounted(() => {
   window.clearTimeout(searchDebounceTimer);
   socket?.disconnect();
   recognition?.stop();
+  stopWatch();
   audio.interrupt();
   hasActiveTurn.value = false;
   isPlaybackActive.value = false;
@@ -730,11 +1013,13 @@ onUnmounted(() => {
   isVoiceStarting.value = false;
   mouthOpen.value = 0;
   window.removeEventListener('resize', onWindowResize);
+  window.removeEventListener('pointermove', onChatResize);
+  window.removeEventListener('pointerup', stopChatResize);
 });
 </script>
 
 <template>
-  <main class="dh-view">
+  <main class="dh-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
     <!-- 左侧：数字人展示区 -->
     <section class="dh-stage" v-show="mobileTab === 'avatar' || !isMobileView">
       <div class="dh-status">
@@ -770,16 +1055,41 @@ onUnmounted(() => {
 
       <!-- 控制栏 -->
       <div class="dh-controls">
+        <button
+          class="ctrl-btn sound"
+          :class="{ ready: audioStatus === 'ready' || audioStatus === 'playing', error: audioStatus === 'error' }"
+          @click="enableSound"
+        >
+          {{ audioStatus === 'playing' ? '播放中' : audioStatus === 'ready' ? '声音已启用' : '启用声音' }}
+        </button>
         <button class="ctrl-btn danger" :disabled="!canInterrupt" @click="interruptAnswer">
           {{ $t('dh.interrupt') }}
         </button>
         <button class="ctrl-btn" @click="connectSocket">{{ $t('dh.reconnect') }}</button>
+        <button class="ctrl-btn" :class="{ ready: autoGuideEnabled }" @click="toggleAutoGuide">
+          {{ autoGuideEnabled ? '到点讲解已开' : '到点讲解' }}
+        </button>
+        <button class="ctrl-btn" :class="{ ready: seniorModeEnabled }" @click="toggleSeniorMode">
+          {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+        </button>
+        <span v-if="autoGuideEnabled && geoError" class="interrupt-count">{{ geoError }}</span>
         <span class="interrupt-count">{{ $t('dh.interruptCount', { count: state.interruptCount }) }}</span>
+      </div>
+      <div class="audio-hint" :class="{ error: audioStatus === 'error', ready: audioStatus === 'ready' || audioStatus === 'playing' }">
+        {{ audioNotice }}
       </div>
     </section>
 
+    <div
+      v-if="!isMobileView"
+      class="chat-resizer"
+      :class="{ resizing: isChatResizing }"
+      title="拖动调整聊天框宽度"
+      @pointerdown.prevent="startChatResize"
+    ></div>
+
     <!-- 右侧：聊天面板 -->
-    <aside class="dh-chat" v-show="mobileTab === 'chat' || !isMobileView">
+    <aside class="dh-chat" :style="chatPanelStyle" v-show="mobileTab === 'chat' || !isMobileView">
       <div class="chat-header">
         <div class="chat-header-top">
           <h2>{{ $t('dh.title') }}</h2>
@@ -789,6 +1099,14 @@ onUnmounted(() => {
             </button>
             <button class="icon-btn" @click="toggleSessionDrawer" title="历史会话">
               📋
+            </button>
+            <button
+              v-if="authStore.isGuest"
+              class="icon-btn upgrade-btn"
+              @click="showUpgradeModal = true"
+              title="注册账号"
+            >
+              👤
             </button>
           </div>
         </div>
@@ -910,6 +1228,28 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
+
+    <!-- 游客升级弹窗 -->
+    <Teleport to="body">
+      <div v-if="showUpgradeModal" class="drawer-overlay" @click.self="showUpgradeModal = false">
+        <div class="upgrade-modal">
+          <div class="drawer-header">
+            <h3>📝 {{ $t('auth.upgradeTitle') || '注册正式账号' }}</h3>
+            <button class="drawer-close" @click="showUpgradeModal = false">✕</button>
+          </div>
+          <div class="upgrade-form">
+            <p class="upgrade-hint">{{ $t('auth.upgradeHint') || '升级后可保存所有对话记录，跨设备同步。' }}</p>
+            <input v-model="upgradeForm.username" :placeholder="$t('auth.usernamePlaceholder') || '用户名'" autocomplete="username" />
+            <input v-model="upgradeForm.password" type="password" :placeholder="$t('auth.passwordPlaceholder') || '密码（至少6位）'" autocomplete="new-password" />
+            <input v-model="upgradeForm.email" type="email" :placeholder="$t('auth.emailPlaceholder') || '邮箱（可选）'" autocomplete="email" />
+            <p v-if="upgradeError" class="upgrade-error">{{ upgradeError }}</p>
+            <button class="upgrade-submit" :disabled="upgradeLoading" @click="handleUpgrade">
+              {{ upgradeLoading ? '...' : ($t('auth.upgradeButton') || '确认注册') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
     <!-- Mobile 底部 Tab 切换 -->
     <nav v-if="isMobileView" class="mobile-tabs">
       <button
@@ -1024,6 +1364,8 @@ function highlightMatch(text: string, query: string): string {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 .ctrl-btn {
   padding: 6px 14px;
@@ -1038,13 +1380,53 @@ function highlightMatch(text: string, query: string): string {
 .ctrl-btn:hover { background: rgba(255, 255, 255, 0.08); color: var(--sg-text-body, rgba(255, 255, 255, 0.88)); }
 .ctrl-btn.danger { border-color: rgba(232, 128, 128, 0.3); color: var(--sg-red-bright, #e88080); }
 .ctrl-btn.danger:hover { background: rgba(232, 128, 128, 0.1); }
+.ctrl-btn.sound { border-color: rgba(99, 226, 183, 0.28); color: var(--sg-jade-bright, #63e2b7); }
+.ctrl-btn.sound.ready { background: rgba(99, 226, 183, 0.12); }
+.ctrl-btn.sound.error { border-color: rgba(248, 190, 82, 0.36); color: #f8be52; }
 .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .interrupt-count { font-size: 11px; color: rgba(255, 255, 255, 0.25); }
+.audio-hint {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 68px;
+  min-height: 20px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+.audio-hint.ready { color: rgba(99, 226, 183, 0.72); }
+.audio-hint.error { color: rgba(248, 190, 82, 0.86); }
+
+.chat-resizer {
+  width: 10px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex: none;
+}
+.chat-resizer::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 4px;
+  width: 1px;
+  background: rgba(99, 226, 183, 0.16);
+}
+.chat-resizer:hover::after,
+.chat-resizer.resizing::after {
+  left: 3px;
+  width: 3px;
+  background: rgba(99, 226, 183, 0.55);
+}
 
 /* 右侧聊天面板 */
 .dh-chat {
   width: min(420px, 40vw);
   min-width: 320px;
+  max-width: 620px;
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
@@ -1317,6 +1699,8 @@ function highlightMatch(text: string, query: string): string {
 @media (max-width: 768px) {
   .dh-view {
     flex-direction: column;
+    height: calc(100dvh - 44px);
+    padding-bottom: calc(42px + env(safe-area-inset-bottom, 0));
   }
   .dh-stage {
     flex: none;
@@ -1324,11 +1708,22 @@ function highlightMatch(text: string, query: string): string {
   }
   .dh-chat {
     width: 100%;
+    max-width: none;
     min-width: unset;
     flex: 1;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     min-height: 0;
+  }
+  .dh-controls {
+    left: 12px;
+    right: 12px;
+    bottom: 14px;
+  }
+  .audio-hint {
+    left: 16px;
+    right: 16px;
+    bottom: 56px;
   }
   .subtitle-bubble { max-width: 90%; }
   .emotion-bar { gap: 4px; }
@@ -1366,5 +1761,67 @@ function highlightMatch(text: string, query: string): string {
 .mobile-tabs button.active {
   color: var(--sg-jade-bright, #63e2b7);
   background: rgba(99, 226, 183, 0.06);
+}
+
+/* Upgrade modal */
+.upgrade-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, 90vw);
+  background: var(--sg-bg-card, #1a1a2e);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.upgrade-form {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.upgrade-hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+.upgrade-form input {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+  outline: none;
+}
+.upgrade-form input:focus {
+  border-color: var(--sg-jade-bright, #63e2b7);
+}
+.upgrade-error {
+  font-size: 12px;
+  color: #e88080;
+  margin: 0;
+}
+.upgrade-submit {
+  padding: 10px;
+  background: var(--sg-jade-bright, #63e2b7);
+  border: none;
+  border-radius: 8px;
+  color: #1a1a2e;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.upgrade-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.upgrade-btn {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 </style>

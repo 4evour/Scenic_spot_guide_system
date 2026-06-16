@@ -7,22 +7,26 @@ import (
 )
 
 type ScenicSpot struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	Name         string    `gorm:"size:255;not null" json:"name"`
-	Description  string    `gorm:"text" json:"description"`
-	Location     string    `gorm:"size:500" json:"location"`
-	Category     string    `gorm:"size:100;index:idx_scenic_spots_category_updated" json:"category"`
-	Rating       float64   `gorm:"default:0" json:"rating"`
-	Price        float64   `gorm:"default:0" json:"price"`
-	ImageURL     string    `gorm:"size:500" json:"image_url"`
-	Latitude     float64   `gorm:"column:latitude;default:0" json:"latitude"`
-	Longitude    float64   `gorm:"column:longitude;default:0" json:"longitude"`
-	SortOrder    int       `gorm:"column:sort_order;default:0" json:"sort_order"`
-	QRCode       string    `gorm:"size:100;uniqueIndex:idx_scenic_spots_qr_code,where:qr_code != ''" json:"qr_code"`
-	QRIntroText  string    `gorm:"text" json:"qr_intro_text"`
-	QREnabled    bool      `gorm:"default:false" json:"qr_enabled"`
-	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt    time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated" json:"updated_at"`
+	ID                      uint      `gorm:"primaryKey" json:"id"`
+	Name                    string    `gorm:"size:255;not null" json:"name"`
+	Description             string    `gorm:"text" json:"description"`
+	Location                string    `gorm:"size:500" json:"location"`
+	Category                string    `gorm:"size:100;index:idx_scenic_spots_category_updated" json:"category"`
+	Rating                  float64   `gorm:"default:0" json:"rating"`
+	Price                   float64   `gorm:"default:0" json:"price"`
+	ImageURL                string    `gorm:"size:500" json:"image_url"`
+	Latitude                float64   `gorm:"column:latitude;default:0" json:"latitude"`
+	Longitude               float64   `gorm:"column:longitude;default:0" json:"longitude"`
+	SortOrder               int       `gorm:"column:sort_order;default:0" json:"sort_order"`
+	QRCode                  string    `gorm:"size:100;uniqueIndex:idx_scenic_spots_qr_code,where:qr_code != ''" json:"qr_code"`
+	QRIntroText             string    `gorm:"text" json:"qr_intro_text"`
+	QREnabled               bool      `gorm:"default:false" json:"qr_enabled"`
+	GeofenceEnabled         bool      `gorm:"default:false" json:"geofence_enabled"`
+	GeofenceRadiusM         int       `gorm:"default:100" json:"geofence_radius_m"`
+	GeofenceIntroText       string    `gorm:"text" json:"geofence_intro_text"`
+	GeofenceCooldownMinutes int       `gorm:"default:1440" json:"geofence_cooldown_minutes"`
+	CreatedAt               time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt               time.Time `gorm:"autoUpdateTime;index:idx_scenic_spots_category_updated" json:"updated_at"`
 }
 
 type GuideContent struct {
@@ -63,9 +67,9 @@ type User struct {
 	Username    string    `gorm:"size:100;uniqueIndex;not null" json:"username"`
 	Password    string    `gorm:"size:255;not null" json:"password,omitempty"`
 	Email       string    `gorm:"size:255" json:"email"`
-	Role        string    `gorm:"size:50;default:'visitor'" json:"role"` // admin | visitor | guest
+	Role        string    `gorm:"size:50;default:'visitor'" json:"role"`                                 // admin | visitor | guest
 	GuestToken  string    `gorm:"size:100;uniqueIndex:idx_guest_token,where:guest_token != ''" json:"-"` // 游客设备绑定标识
-	DisplayName string    `gorm:"size:100" json:"display_name"`          // 游客显示名
+	DisplayName string    `gorm:"size:100" json:"display_name"`                                          // 游客显示名
 	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
@@ -127,6 +131,54 @@ type ChatMessage struct {
 	CreatedAt      time.Time `gorm:"autoCreateTime;index" json:"created_at"`
 }
 
+type UserFeedback struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"index" json:"user_id"`
+	SessionID string    `gorm:"size:100;index" json:"session_id"`
+	MessageID uint      `gorm:"index" json:"message_id"`
+	TraceID   string    `gorm:"size:100;index" json:"trace_id"`
+	Query     string    `gorm:"text" json:"query"`
+	Response  string    `gorm:"text" json:"response"`
+	Helpful   bool      `gorm:"default:false" json:"helpful"`
+	Rating    int       `gorm:"default:0" json:"rating"`
+	Reason    string    `gorm:"size:255" json:"reason"`
+	Comment   string    `gorm:"text" json:"comment"`
+	Source    string    `gorm:"size:50;index" json:"source"`
+	SpotID    uint      `gorm:"index" json:"spot_id"`
+	CreatedAt time.Time `gorm:"autoCreateTime;index" json:"created_at"`
+}
+
+type VisitorInsightAnalysis struct {
+	ID                uint      `gorm:"primaryKey" json:"id"`
+	UserID            uint      `gorm:"index" json:"user_id"`
+	SessionID         string    `gorm:"size:100;index" json:"session_id"`
+	Summary           string    `gorm:"text" json:"summary"`
+	SatisfactionScore int       `gorm:"default:0" json:"satisfaction_score"`
+	NegativeReasons   string    `gorm:"type:text" json:"negative_reasons"`
+	AttentionPoints   string    `gorm:"type:text" json:"attention_points"`
+	RawResult         string    `gorm:"type:text" json:"raw_result"`
+	Status            string    `gorm:"size:30;default:'completed';index" json:"status"`
+	CreatedAt         time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt         time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+type KnowledgeCandidate struct {
+	ID                uint       `gorm:"primaryKey" json:"id"`
+	AnalysisID        uint       `gorm:"index" json:"analysis_id"`
+	SessionID         string     `gorm:"size:100;index" json:"session_id"`
+	Title             string     `gorm:"size:255;not null" json:"title"`
+	Content           string     `gorm:"text;not null" json:"content"`
+	Source            string     `gorm:"size:255;default:'chat-insight'" json:"source"`
+	KnowledgeCategory string     `gorm:"size:100;index" json:"knowledge_category"`
+	SpotID            uint       `gorm:"index" json:"spot_id"`
+	SpotCategory      string     `gorm:"size:100;index" json:"spot_category"`
+	Status            string     `gorm:"size:30;default:'pending';index" json:"status"`
+	RejectReason      string     `gorm:"text" json:"reject_reason"`
+	CreatedAt         time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt         time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	ApprovedAt        *time.Time `json:"approved_at,omitempty"`
+}
+
 // SystemSetting 系统设置 - 键值对存储
 type SystemSetting struct {
 	ID        uint      `gorm:"primaryKey"`
@@ -169,5 +221,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&DigitalHumanConfig{},
 		&ChatSession{},
 		&ChatMessage{},
+		&UserFeedback{},
+		&VisitorInsightAnalysis{},
+		&KnowledgeCandidate{},
 	)
 }

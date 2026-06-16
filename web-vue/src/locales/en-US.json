@@ -112,6 +112,7 @@
     "offline": "Offline demo mode",
     "online": "Guide online",
     "fallbackSpeech": "I've prepared a guided tour for you. Let's explore this route together.",
+    "fallbackGeneric": "Voice service is temporarily unavailable. Please try text chat — I'll answer from the knowledge base.",
     "speechError": "Guide service returned an error.",
     "browserNotSupported": "Web Speech recognition not supported in this browser. Please use Chrome or Edge.",
     "noMicPermission": "Microphone access denied. Please allow microphone permission and retry.",
@@ -164,6 +165,7 @@
     "spots": "Attractions",
     "routes": "Routes",
     "content": "Guide Content",
+    "qrcode": "QR Codes",
     "digitalCenter": "Digital Guide",
     "avatar": "Avatar Config",
     "reports": "Feedback Reports",
@@ -191,5 +193,16 @@
     "msg_knowledge_uploaded": "Knowledge uploaded successfully",
     "msg_knowledge_deleted": "Knowledge deleted",
     "msg_knowledge_cleared": "Knowledge cleared"
+  },
+  "auth": {
+    "upgradeTitle": "Register Account",
+    "upgradeHint": "Save all conversations and sync across devices.",
+    "upgradeButton": "Register",
+    "usernamePlaceholder": "Username",
+    "passwordPlaceholder": "Password (min 6 chars)",
+    "emailPlaceholder": "Email (optional)",
+    "usernamePasswordRequired": "Username and password are required",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "upgradeFailed": "Upgrade failed, username may already be taken"
   }
 }

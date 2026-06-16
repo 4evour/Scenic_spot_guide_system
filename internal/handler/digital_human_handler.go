@@ -19,6 +19,7 @@ type DigitalHumanHandler struct {
 	routeService        service.TourRouteService
 	visitorQueryService service.VisitorQueryService
 	statsService        *service.StatsService
+	insightService      *service.VisitorInsightService
 }
 
 func NewDigitalHumanHandler(
@@ -26,12 +27,18 @@ func NewDigitalHumanHandler(
 	routeService service.TourRouteService,
 	visitorQueryService service.VisitorQueryService,
 	statsService *service.StatsService,
+	insightService ...*service.VisitorInsightService,
 ) *DigitalHumanHandler {
+	var insights *service.VisitorInsightService
+	if len(insightService) > 0 {
+		insights = insightService[0]
+	}
 	return &DigitalHumanHandler{
 		ragService:          ragService,
 		routeService:        routeService,
 		visitorQueryService: visitorQueryService,
 		statsService:        statsService,
+		insightService:      insights,
 	}
 }
 
@@ -261,7 +268,10 @@ type FeedbackRequest struct {
 	QuestionType string `json:"question_type,omitempty"`
 	ResponseTime int    `json:"response_time_ms,omitempty"`
 	Rating       int    `json:"rating,omitempty"`
+	Reason       string `json:"reason,omitempty"`
 	Comment      string `json:"comment,omitempty"`
+	MessageID    uint   `json:"message_id,omitempty"`
+	SpotID       uint   `json:"spot_id,omitempty"`
 }
 
 func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
@@ -287,6 +297,27 @@ func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 		err := h.visitorQueryService.CreateQuery(query)
 		if err != nil {
 			slog.Error("数字人反馈保存失败", "error", err, "trace_id", req.TraceID)
+		}
+	}
+	if h.insightService != nil {
+		var userID uint
+		if uid, exists := c.Get("user_id"); exists {
+			userID, _ = uid.(uint)
+		}
+		if err := h.insightService.SaveFeedback(&model.UserFeedback{
+			UserID:    userID,
+			SessionID: req.SessionID,
+			MessageID: req.MessageID,
+			TraceID:   req.TraceID,
+			Query:     req.QuestionType,
+			Helpful:   req.Rating >= 4,
+			Rating:    req.Rating,
+			Reason:    req.Reason,
+			Comment:   req.Comment,
+			Source:    "digital_human",
+			SpotID:    req.SpotID,
+		}); err != nil {
+			slog.Error("数字人反馈保存到满意度表失败", "error", err, "trace_id", req.TraceID)
 		}
 	}
 

@@ -33,6 +33,10 @@ interface SpotForm {
   qr_code: string
   qr_intro_text: string
   qr_enabled: boolean
+  geofence_enabled: boolean
+  geofence_radius_m: number
+  geofence_intro_text: string
+  geofence_cooldown_minutes: number
 }
 
 const categoryOptions = [
@@ -64,6 +68,10 @@ function defaultForm(): SpotForm {
     qr_code: '',
     qr_intro_text: '',
     qr_enabled: false,
+    geofence_enabled: false,
+    geofence_radius_m: 100,
+    geofence_intro_text: '',
+    geofence_cooldown_minutes: 1440,
   }
 }
 
@@ -168,6 +176,16 @@ const columns: DataTableColumns<Record<string, unknown>> = [
       const enabled = Boolean(row.qr_enabled)
       if (!code) return h('span', { style: 'color:rgba(255,255,255,.25);font-size:12px' }, '未配置')
       return h(NTag, { type: enabled ? 'success' : 'default', size: 'small', bordered: false }, { default: () => code })
+    },
+  },
+  {
+    title: '电子围栏',
+    key: 'geofence_enabled',
+    width: 120,
+    render(row) {
+      return h(NTag, { type: row.geofence_enabled ? 'success' : 'default', size: 'small', bordered: false }, {
+        default: () => row.geofence_enabled ? `${Number(row.geofence_radius_m || 100)}m` : '未启用',
+      })
     },
   },
   {
@@ -385,6 +403,49 @@ onMounted(fetchData)
             <span style="margin-left:8px;font-size:12px;color:rgba(255,255,255,.4)">
               {{ getForm().qr_enabled ? '游客可扫码触发讲解' : '扫码功能已关闭' }}
             </span>
+          </NFormItem>
+
+          <NFormItem label="到点讲解" path="geofence_enabled">
+            <NSwitch
+              :value="getForm().geofence_enabled"
+              @update:value="(v: boolean) => { getForm().geofence_enabled = v }"
+            />
+            <span style="margin-left:8px;font-size:12px;color:rgba(255,255,255,.4)">
+              {{ getForm().geofence_enabled ? '游客到达附近自动触发' : '电子围栏已关闭' }}
+            </span>
+          </NFormItem>
+
+          <div class="coord-row">
+            <NFormItem label="半径(m)" path="geofence_radius_m" class="coord-item">
+              <NInputNumber
+                :value="getForm().geofence_radius_m"
+                :min="20"
+                :max="1000"
+                :precision="0"
+                style="width: 100%"
+                @update:value="(v: number | null) => { getForm().geofence_radius_m = v ?? 100 }"
+              />
+            </NFormItem>
+            <NFormItem label="冷却(分)" path="geofence_cooldown_minutes" class="coord-item">
+              <NInputNumber
+                :value="getForm().geofence_cooldown_minutes"
+                :min="1"
+                :max="10080"
+                :precision="0"
+                style="width: 100%"
+                @update:value="(v: number | null) => { getForm().geofence_cooldown_minutes = v ?? 1440 }"
+              />
+            </NFormItem>
+          </div>
+
+          <NFormItem label="触发文案" path="geofence_intro_text">
+            <NInput
+              :value="getForm().geofence_intro_text"
+              type="textarea"
+              :rows="2"
+              placeholder="到达该景点时优先播报的数字人语音文案，留空则使用讲解内容"
+              @update:value="(v: string) => { getForm().geofence_intro_text = v }"
+            />
           </NFormItem>
         </NForm>
 

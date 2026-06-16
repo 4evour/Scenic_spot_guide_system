@@ -112,6 +112,7 @@
     "offline": "离线演示模式",
     "online": "数字人在线",
     "fallbackSpeech": "我已经整理好讲解内容，请跟我一起看这条路线。",
+    "fallbackGeneric": "语音服务暂时不可用，请尝试文字聊天，我会根据知识库为您解答。",
     "speechError": "数字人服务返回异常。",
     "browserNotSupported": "当前浏览器不支持 Web Speech 语音识别，请使用 Chrome 或 Edge。",
     "noMicPermission": "浏览器没有麦克风权限，请允许后重试。",
@@ -164,6 +165,7 @@
     "spots": "景点管理",
     "routes": "路线管理",
     "content": "讲解内容",
+    "qrcode": "二维码管理",
     "digitalCenter": "数字人中心",
     "avatar": "形象配置",
     "reports": "感受度报告",
@@ -191,5 +193,16 @@
     "msg_knowledge_uploaded": "知识上传并加载成功",
     "msg_knowledge_deleted": "知识删除成功",
     "msg_knowledge_cleared": "知识清空成功"
+  },
+  "auth": {
+    "upgradeTitle": "注册正式账号",
+    "upgradeHint": "升级后可保存所有对话记录，跨设备同步。",
+    "upgradeButton": "确认注册",
+    "usernamePlaceholder": "用户名",
+    "passwordPlaceholder": "密码（至少6位）",
+    "emailPlaceholder": "邮箱（可选）",
+    "usernamePasswordRequired": "请填写用户名和密码",
+    "passwordTooShort": "密码至少6位",
+    "upgradeFailed": "升级失败，用户名可能已被占用"
   }
 }

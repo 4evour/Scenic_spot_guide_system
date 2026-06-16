@@ -58,14 +58,19 @@ func seedDemoData(configDir, adminPassword string) error {
 		return err
 	}
 
-	knowledgeRepo := repository.NewKnowledgeRepository(pkg.GetDB())
-	count, err := knowledgeRepo.Count()
-	if err != nil {
-		return fmt.Errorf("统计知识库失败: %w", err)
+	rag := service.NewRAGService(repository.NewKnowledgeRepository(pkg.GetDB()), "", "", "", nil, nil)
+	if err := seedKnowledgeFiles(rag, []string{
+		"./knowledge/lingshan_chunks.jsonl",
+		"./knowledge/real/lingshan_real_chunks.jsonl",
+	}); err != nil {
+		return err
 	}
-	if count == 0 {
-		rag := service.NewRAGService(knowledgeRepo, "", "", "", nil, nil)
-		if err := rag.LoadKnowledgeFromFile("./knowledge/lingshan_chunks.jsonl"); err != nil {
+	return nil
+}
+
+func seedKnowledgeFiles(rag *service.RAGService, files []string) error {
+	for _, file := range files {
+		if err := rag.LoadKnowledgeFromFile(file); err != nil {
 			return fmt.Errorf("导入演示知识库失败: %w", err)
 		}
 	}

@@ -64,19 +64,23 @@ func (r *scenicSpotRepository) Update(spot *model.ScenicSpot) error {
 			return err
 		}
 		return tx.Model(&model.ScenicSpot{}).Where("id = ?", spot.ID).Updates(map[string]interface{}{
-			"name":          spot.Name,
-			"description":   spot.Description,
-			"location":      spot.Location,
-			"category":      spot.Category,
-			"rating":        spot.Rating,
-			"price":         spot.Price,
-			"image_url":     spot.ImageURL,
-			"latitude":      spot.Latitude,
-			"longitude":     spot.Longitude,
-			"sort_order":    spot.SortOrder,
-			"qr_code":       spot.QRCode,
-			"qr_intro_text": spot.QRIntroText,
-			"qr_enabled":    spot.QREnabled,
+			"name":                      spot.Name,
+			"description":               spot.Description,
+			"location":                  spot.Location,
+			"category":                  spot.Category,
+			"rating":                    spot.Rating,
+			"price":                     spot.Price,
+			"image_url":                 spot.ImageURL,
+			"latitude":                  spot.Latitude,
+			"longitude":                 spot.Longitude,
+			"sort_order":                spot.SortOrder,
+			"qr_code":                   spot.QRCode,
+			"qr_intro_text":             spot.QRIntroText,
+			"qr_enabled":                spot.QREnabled,
+			"geofence_enabled":          spot.GeofenceEnabled,
+			"geofence_radius_m":         spot.GeofenceRadiusM,
+			"geofence_intro_text":       spot.GeofenceIntroText,
+			"geofence_cooldown_minutes": spot.GeofenceCooldownMinutes,
 		}).Error
 	})
 }

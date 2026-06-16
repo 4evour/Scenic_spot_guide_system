@@ -6,24 +6,29 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"time"
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/service"
 )
 
 // AdminHandler 管理后台 API
 type AdminHandler struct {
-	statsService *service.StatsService
-	evalDir      string
+	statsService   *service.StatsService
+	insightService *service.VisitorInsightService
+	evalDir        string
 }
 
-func NewAdminHandler(statsService *service.StatsService, evalDir string) *AdminHandler {
+func NewAdminHandler(statsService *service.StatsService, evalDir string, insightService ...*service.VisitorInsightService) *AdminHandler {
 	if evalDir == "" {
 		evalDir = "docs/eval-results"
 	}
-	return &AdminHandler{statsService: statsService, evalDir: evalDir}
+	var insights *service.VisitorInsightService
+	if len(insightService) > 0 {
+		insights = insightService[0]
+	}
+	return &AdminHandler{statsService: statsService, insightService: insights, evalDir: evalDir}
 }
 
 func (h *AdminHandler) Routes(api *gin.RouterGroup) {
@@ -56,6 +61,13 @@ func (h *AdminHandler) Routes(api *gin.RouterGroup) {
 
 		// RAG 评估指标
 		admin.GET("/knowledge/eval-stats", h.GetEvalStats)
+
+		// 游客满意度 AI 分析与知识候选
+		admin.POST("/insights/sessions/:session_id/analyze", h.AnalyzeSession)
+		admin.GET("/insights/analyses", h.ListInsightAnalyses)
+		admin.GET("/knowledge/candidates", h.ListKnowledgeCandidates)
+		admin.POST("/knowledge/candidates/:id/approve", h.ApproveKnowledgeCandidate)
+		admin.POST("/knowledge/candidates/:id/reject", h.RejectKnowledgeCandidate)
 	}
 }
 
@@ -199,4 +211,104 @@ func (h *AdminHandler) GetEvalStats(c *gin.Context) {
 	}
 
 	pkg.Success(c, gin.H{"available": true, "data": result})
+}
+
+func (h *AdminHandler) ensureInsightService(c *gin.Context) bool {
+	if h.insightService == nil {
+		pkg.InternalError(c, "游客洞察服务未初始化")
+		return false
+	}
+	return true
+}
+
+func (h *AdminHandler) AnalyzeSession(c *gin.Context) {
+	if !h.ensureInsightService(c) {
+		return
+	}
+	analysis, err := h.insightService.AnalyzeSession(c.Param("session_id"))
+	if err != nil {
+		pkg.BadRequest(c, err.Error())
+		return
+	}
+	pkg.Success(c, analysis)
+}
+
+func (h *AdminHandler) ListInsightAnalyses(c *gin.Context) {
+	if !h.ensureInsightService(c) {
+		return
+	}
+	page, pageSize := parsePageQuery(c)
+	list, total, err := h.insightService.ListAnalyses(page, pageSize)
+	if err != nil {
+		pkg.InternalError(c, "查询分析结果失败")
+		return
+	}
+	pkg.Success(c, gin.H{"list": list, "total": total, "page": page, "page_size": pageSize})
+}
+
+func (h *AdminHandler) ListKnowledgeCandidates(c *gin.Context) {
+	if !h.ensureInsightService(c) {
+		return
+	}
+	page, pageSize := parsePageQuery(c)
+	list, total, err := h.insightService.ListCandidates(c.Query("status"), page, pageSize)
+	if err != nil {
+		pkg.InternalError(c, "查询知识候选失败")
+		return
+	}
+	pkg.Success(c, gin.H{"list": list, "total": total, "page": page, "page_size": pageSize})
+}
+
+func (h *AdminHandler) ApproveKnowledgeCandidate(c *gin.Context) {
+	if !h.ensureInsightService(c) {
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		pkg.BadRequest(c, "ID 参数无效")
+		return
+	}
+	var req service.KnowledgeCandidateApprovalInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
+		return
+	}
+	knowledge, err := h.insightService.ApproveCandidate(uint(id), req)
+	if err != nil {
+		pkg.BadRequest(c, err.Error())
+		return
+	}
+	pkg.Success(c, gin.H{"knowledge": knowledge})
+}
+
+func (h *AdminHandler) RejectKnowledgeCandidate(c *gin.Context) {
+	if !h.ensureInsightService(c) {
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		pkg.BadRequest(c, "ID 参数无效")
+		return
+	}
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	if err := h.insightService.RejectCandidate(uint(id), req.Reason); err != nil {
+		pkg.BadRequest(c, err.Error())
+		return
+	}
+	pkg.Success(c, gin.H{"status": "rejected"})
+}
+
+func parsePageQuery(c *gin.Context) (int, int) {
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	return page, pageSize
 }

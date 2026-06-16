@@ -199,34 +199,28 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 
 	ragService := service.NewRAGService(knowledgeRepo, cfg.AI.APIKey, cfg.AI.Model, cfg.AI.BaseURL, embeddingProvider, profile)
 
-	// 检查现有知识库
 	count, _ := knowledgeRepo.Count()
-	if count > 0 {
-		slog.Info("知识库已有数据，无需重新加载", "count", count)
-	} else {
-		slog.Info("知识库为空，开始加载默认知识库")
-		// 从景区配置读取知识库路径，无配置时使用默认路径
-		knowledgeFiles := []string{
-			"./knowledge/lingshan_chunks.jsonl",
-			"./knowledge/real/lingshan_real_chunks.jsonl",
-		}
-		if profile != nil {
-			knowledgeFiles = nil
-			if profile.Knowledge.ChunksFile != "" {
-				knowledgeFiles = append(knowledgeFiles, profile.Knowledge.ChunksFile)
-			}
-			if profile.Knowledge.RealChunksFile != "" {
-				knowledgeFiles = append(knowledgeFiles, profile.Knowledge.RealChunksFile)
-			}
-		}
-		for _, file := range knowledgeFiles {
-			if err := ragService.LoadKnowledgeFromFile(file); err != nil {
-				slog.Error("加载知识库文件失败", "file", file, "error", err)
-			}
-		}
-		count, _ = knowledgeRepo.Count()
-		slog.Info("知识库加载完成", "count", count)
+	slog.Info("开始补齐默认知识库", "existing_count", count)
+	knowledgeFiles := []string{
+		"./knowledge/lingshan_chunks.jsonl",
+		"./knowledge/real/lingshan_real_chunks.jsonl",
 	}
+	if profile != nil {
+		knowledgeFiles = nil
+		if profile.Knowledge.ChunksFile != "" {
+			knowledgeFiles = append(knowledgeFiles, profile.Knowledge.ChunksFile)
+		}
+		if profile.Knowledge.RealChunksFile != "" {
+			knowledgeFiles = append(knowledgeFiles, profile.Knowledge.RealChunksFile)
+		}
+	}
+	for _, file := range knowledgeFiles {
+		if err := ragService.LoadKnowledgeFromFile(file); err != nil {
+			slog.Error("加载知识库文件失败", "file", file, "error", err)
+		}
+	}
+	count, _ = knowledgeRepo.Count()
+	slog.Info("知识库补齐完成", "count", count)
 
 	return ragService
 }
@@ -248,6 +242,7 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 
 	// 会话持久化服务
 	chatSessionService := service.NewChatSessionService(chatSessionRepo, chatMessageRepo)
+	insightService := service.NewVisitorInsightService(db, ragService)
 
 	// 将会话持久化服务注入 RAGService
 	if ragService != nil {
@@ -284,11 +279,11 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	// 二维码扫码导览 Handler
 	qrHandler := handler.NewQRHandler(scenicSpotService, ragService, statsService)
 
-	aiHandler := handler.NewAIHandler(ragService, statsService)
+	aiHandler := handler.NewAIHandler(ragService, statsService, insightService)
 	ttsHandler := handler.NewTTSHandler()
-	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService, statsService)
+	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService, statsService, insightService)
 	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService, statsService)
-	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results")
+	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results", insightService)
 	scenicProfileHandler := handler.NewScenicProfileHandler(scenicProfile)
 
 	// Default allowed origins for local development
@@ -303,20 +298,20 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	}
 
 	return &handler.Handlers{
-		ScenicSpot:    scenicSpotHandler,
-		GuideContent:  guideContentHandler,
-		TourRoute:     tourRouteHandler,
-		VisitorQuery:  visitorQueryHandler,
-		User:          userHandler,
-		AI:            aiHandler,
-		TTS:           ttsHandler,
-		DigitalHuman:  digitalHumanHandler,
-		OpenAIProxy:   openAIProxyHandler,
-		Admin:         adminHandler,
-		ScenicProfile: scenicProfileHandler,
-		Guest:         guestHandler,
-		Session:       sessionHandler,
-		QR:            qrHandler,
+		ScenicSpot:     scenicSpotHandler,
+		GuideContent:   guideContentHandler,
+		TourRoute:      tourRouteHandler,
+		VisitorQuery:   visitorQueryHandler,
+		User:           userHandler,
+		AI:             aiHandler,
+		TTS:            ttsHandler,
+		DigitalHuman:   digitalHumanHandler,
+		OpenAIProxy:    openAIProxyHandler,
+		Admin:          adminHandler,
+		ScenicProfile:  scenicProfileHandler,
+		Guest:          guestHandler,
+		Session:        sessionHandler,
+		QR:             qrHandler,
 		AllowedOrigins: origins,
 	}
 }

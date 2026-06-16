@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { NInput, NButton, NTag, NEmpty, NSpin, NAlert, useMessage } from 'naive-ui';
 import { useGeolocation } from '../composables/useGeolocation';
 import { useProximityGuide, type SpotWithCoords } from '../composables/useProximityGuide';
+import { useSeniorMode } from '../composables/useSeniorMode';
 import { AudioPlaybackController } from '../services/audioPlayback';
 import { streamTTS } from '../services/ttsApi';
 import { apiFetch } from '../services/api';
@@ -22,24 +23,21 @@ type ScenicSpot = {
   rating: number;
   price: number;
   imageUrl: string;
+  geofenceEnabled: boolean;
+  geofenceRadiusM: number;
+  geofenceIntroText: string;
+  geofenceCooldownMinutes: number;
 };
 
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '';
 const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY || '';
 
 const fallbackSpots: ScenicSpot[] = [
-  { id: 'gate', name: '景区入口', category: '服务设施', description: '游客服务中心，购票和咨询', lng: 120.4155, lat: 31.5720, rating: 4.5, price: 0, imageUrl: '' },
-  { id: 'wall', name: '灵山大照壁', category: '文化建筑', description: '灵山胜境的文化序厅', lng: 120.4168, lat: 31.5705, rating: 4.6, price: 0, imageUrl: '' },
-  { id: 'bridge', name: '五明桥', category: '景观', description: '通往景区核心的山水步道', lng: 120.4182, lat: 31.5690, rating: 4.5, price: 0, imageUrl: '' },
-  { id: 'foot', name: '佛足坛', category: '核心景点', description: '释迦牟尼足印圣迹', lng: 120.4195, lat: 31.5678, rating: 4.7, price: 0, imageUrl: '' },
-  { id: 'jiulong', name: '九龙灌浴', category: '演艺体验', description: '再现释迦牟尼诞生的动态音乐喷泉', lng: 120.4208, lat: 31.5665, rating: 4.8, price: 0, imageUrl: '' },
-  { id: 'hand', name: '天下第一掌', category: '互动体验', description: '灵山大佛右手复制件，摸佛手增福添寿', lng: 120.4215, lat: 31.5655, rating: 4.7, price: 0, imageUrl: '' },
-  { id: 'mile', name: '百子戏弥勒', category: '文化景观', description: '轻松亲和的铜雕群', lng: 120.4220, lat: 31.5648, rating: 4.6, price: 0, imageUrl: '' },
-  { id: 'temple', name: '祥符禅寺', category: '宗教场所', description: '千年古刹，灵山佛教文化源头', lng: 120.4228, lat: 31.5638, rating: 4.7, price: 0, imageUrl: '' },
-  { id: 'buddha', name: '灵山大佛', category: '核心景点', description: '高88米的青铜立佛，灵山标志性景点', lng: 120.4235, lat: 31.5625, rating: 4.9, price: 0, imageUrl: '' },
-  { id: 'fangong', name: '灵山梵宫', category: '文化建筑', description: '汇集东阳木雕、琉璃等工艺的佛教艺术殿堂', lng: 120.4200, lat: 31.5658, rating: 4.9, price: 0, imageUrl: '' },
-  { id: 'wuyin', name: '五印坛城', category: '文化建筑', description: '藏传佛教文化主题展示', lng: 120.4218, lat: 31.5640, rating: 4.7, price: 0, imageUrl: '' },
-  { id: 'rest', name: '文创驿站', category: '服务设施', description: '文创商品、饮品和休憩服务', lng: 120.4190, lat: 31.5680, rating: 4.5, price: 0, imageUrl: '' },
+  { id: 'gate', name: '景区入口', category: '服务设施', description: '游客服务中心，购票和咨询', lng: 0, lat: 0, rating: 4.5, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
+  { id: 'spot-1', name: '主景点', category: '核心景点', description: '景区标志性景观', lng: 0, lat: 0, rating: 4.8, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
+  { id: 'spot-2', name: '文化展馆', category: '文化建筑', description: '展示景区历史与文化底蕴', lng: 0, lat: 0, rating: 4.7, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
+  { id: 'spot-3', name: '观景台', category: '核心景点', description: '俯瞰景区全貌的最佳位置', lng: 0, lat: 0, rating: 4.6, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
+  { id: 'rest', name: '服务区', category: '服务设施', description: '文创商品、饮品和休憩服务', lng: 0, lat: 0, rating: 4.5, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
 ];
 
 function escapeHtml(str: string): string {
@@ -78,7 +76,9 @@ let infoWindow: unknown = null;
 
 // === GPS 主动导览 ===
 const message = useMessage();
-const autoGuideEnabled = ref(false);
+const AUTO_GUIDE_KEY = 'sg_auto_geofence_enabled';
+const autoGuideEnabled = ref(localStorage.getItem(AUTO_GUIDE_KEY) === 'true');
+const { seniorModeEnabled, ttsRate, toggleSeniorMode } = useSeniorMode();
 
 const {
   currentPosition,
@@ -127,6 +127,10 @@ async function loadSpots() {
       rating: Number(raw.rating || raw.Rating || 4.5),
       price: Number(raw.price || raw.Price || 0),
       imageUrl: String(raw.image_url || raw.ImageURL || ''),
+      geofenceEnabled: Boolean(raw.geofence_enabled || raw.GeofenceEnabled),
+      geofenceRadiusM: Number(raw.geofence_radius_m || raw.GeofenceRadiusM || 100),
+      geofenceIntroText: String(raw.geofence_intro_text || raw.GeofenceIntroText || ''),
+      geofenceCooldownMinutes: Number(raw.geofence_cooldown_minutes || raw.GeofenceCooldownMinutes || 1440),
     }));
     if (spots.length > 0 && spots.some(s => s.lng > 100)) {
       state.spots = spots;
@@ -142,6 +146,10 @@ async function loadSpots() {
         name: s.name,
         lat: s.lat,
         lng: s.lng,
+        triggerEnabled: s.geofenceEnabled,
+        triggerRadiusM: s.geofenceRadiusM,
+        introText: s.geofenceIntroText,
+        cooldownMinutes: s.geofenceCooldownMinutes,
       })),
     );
   } catch {
@@ -278,6 +286,7 @@ function locateMe() {
 
 function toggleAutoGuide() {
   autoGuideEnabled.value = !autoGuideEnabled.value;
+  localStorage.setItem(AUTO_GUIDE_KEY, String(autoGuideEnabled.value));
   if (autoGuideEnabled.value) {
     resetTriggered();
     setSpots(
@@ -286,6 +295,10 @@ function toggleAutoGuide() {
         name: s.name,
         lat: s.lat,
         lng: s.lng,
+        triggerEnabled: s.geofenceEnabled,
+        triggerRadiusM: s.geofenceRadiusM,
+        introText: s.geofenceIntroText,
+        cooldownMinutes: s.geofenceCooldownMinutes,
       })),
     );
     startWatch();
@@ -319,8 +332,8 @@ watch(nearbySpot, async (spot) => {
       return;
     }
 
-    const guide = contents[0];
-    if (!guide.content) {
+    const guideText = spot.introText || contents[0]?.content || '';
+    if (!guideText) {
       console.warn('[AutoGuide] 讲解内容为空:', spot.name);
       return;
     }
@@ -331,17 +344,17 @@ watch(nearbySpot, async (spot) => {
     // 5. 调用流式 TTS 并播放
     try {
       const ttsResponse = await streamTTS({
-        text: guide.content,
+        text: guideText,
         voice: 'female_xiaoxiao',
-        rate: '+0%',
+        rate: ttsRate.value,
       });
-      const enqueued = await audioPlayer.enqueueStream(ttsResponse, guide.content, {});
+      const enqueued = await audioPlayer.enqueueStream(ttsResponse, guideText, {});
       if (!enqueued) {
-        audioPlayer.playTextFallback(guide.content, {});
+        audioPlayer.playTextFallback(guideText, {});
       }
     } catch (ttsErr) {
       console.warn('[AutoGuide] TTS 失败，回退到浏览器语音合成:', ttsErr);
-      audioPlayer.playTextFallback(guide.content, {});
+      audioPlayer.playTextFallback(guideText, {});
     }
   } catch (contentErr) {
     console.error('[AutoGuide] 获取讲解内容失败:', contentErr);
@@ -350,6 +363,7 @@ watch(nearbySpot, async (spot) => {
 
 onMounted(async () => {
   await loadSpots();
+  if (autoGuideEnabled.value) startWatch();
   try {
     await loadAmapScript();
     initMap();
@@ -369,7 +383,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="map-view">
+  <main class="map-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
     <header class="map-header">
       <div>
         <h1>{{ $t('map.title') }}</h1>
@@ -398,6 +412,13 @@ onUnmounted(() => {
             @click="toggleAutoGuide"
           >
             {{ autoGuideEnabled ? '⏸ ' + $t('map.autoGuideOff') : '▶ ' + $t('map.autoGuideOn') }}
+          </NButton>
+          <NButton
+            size="small"
+            :type="seniorModeEnabled ? 'primary' : 'default'"
+            @click="toggleSeniorMode"
+          >
+            {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
           </NButton>
           <span
             v-if="autoGuideEnabled && currentPosition"

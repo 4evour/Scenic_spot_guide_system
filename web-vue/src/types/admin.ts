@@ -4,8 +4,26 @@ export type KnowledgeItem = {
   source: string
   content: string
   category: string
+  knowledge_category: string
+  spot_id: number
+  spot_category: string
   metadata: string
   updated: string
+}
+
+export type KnowledgeCandidate = {
+  id: number
+  analysis_id: number
+  session_id: string
+  title: string
+  content: string
+  source: string
+  knowledge_category: string
+  spot_id: number
+  spot_category: string
+  status: string
+  reject_reason: string
+  created_at: string
 }
 
 export type AvatarConfig = {
@@ -56,12 +74,12 @@ export const defaultAvatarConfig: AvatarConfig = {
   costume: '古典汉服',
   style: '古典汉服',
   color: '#D4AF37',
-  culture_theme: '灵山佛教文化与江南山水意境',
+  culture_theme: '',
   voice_type: '温柔自然女声',
   voice_tone: '温暖、端庄、亲切',
   speed: 0.8,
   volume: 80,
-  greeting: '欢迎来到灵山胜境，我是您的数字导览员小灵。',
+  greeting: '',
   default_emotion: 'joy',
   emotion_level: 3,
 }
@@ -82,9 +100,9 @@ export const defaultVisitorReport: VisitorReport = {
 }
 
 export const defaultSettings: SystemSettings = {
-  scenic_name: '灵山胜境',
-  scenic_desc: '灵山胜境是著名的佛教文化景区，集自然风光与人文景观于一体。',
-  service_hotline: '400-168-0303',
+  scenic_name: '',
+  scenic_desc: '',
+  service_hotline: '',
   enable_login: true,
   enable_voice: true,
   enable_filter: true,

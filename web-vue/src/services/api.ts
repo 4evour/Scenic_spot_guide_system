@@ -1,11 +1,6 @@
 ﻿import router from '../router';
 import { useAuthStore } from '../stores/auth';
-
-/** 从 cookie 中读取 csrf_token（Double-Submit Cookie 模式） */
-function getCSRFToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
-}
+import { getCSRFToken } from '../utils/csrf';
 
 export async function apiFetch<T = unknown>(
   path: string,
