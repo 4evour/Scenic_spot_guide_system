@@ -1,5 +1,6 @@
 ﻿import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { getCSRFToken } from '../utils/csrf'
 
 const BasicLayout = () => import('../layout/BasicLayout.vue')
 const LoginView = () => import('../views/LoginView.vue')
@@ -41,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-content',
         component: () => import('../views/AdminContent.vue'),
         meta: { title: 'nav.content', parentTitle: 'nav.scenicMgmt', requiresAdmin: true },
+      },
+      {
+        path: 'admin/qrcode',
+        name: 'admin-qrcode',
+        component: () => import('../views/AdminQRCode.vue'),
+        meta: { title: 'nav.qrcode', parentTitle: 'nav.scenicMgmt', requiresAdmin: true },
       },
       // 数字人中心
       {
@@ -146,42 +153,43 @@ router.afterEach((to) => {
 })
 
 
-/** 从 cookie 中读取 csrf_token */
-function getCSRFToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
-}/** 上报页面访问（静默失败，不影响用户体验） */
+/** 上报页面访问（静默失败，不影响用户体验） */
 export function trackPageVisit(path: string, title: string) {
-  const authStore = useAuthStore()
+  const csrfToken = getCSRFToken()
+  if (!csrfToken) return
   fetch('/api/v1/track', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCSRFToken() },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
     credentials: 'include',
     signal: AbortSignal.timeout(5000),
     body: JSON.stringify({
-      page: path,
+      page: normalizeTrackPage(path),
       action: 'visit',
       details: title,
-      user_id: authStore.user?.userId ? Number(authStore.user.userId) : 0,
     }),
   }).catch(() => {})
 }
 
 /** 上报用户操作（静默失败） */
 export function trackUserAction(action: string, details: string) {
-  const authStore = useAuthStore()
+  const csrfToken = getCSRFToken()
+  if (!csrfToken) return
   fetch('/api/v1/track', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCSRFToken() },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
     credentials: 'include',
     signal: AbortSignal.timeout(5000),
     body: JSON.stringify({
-      page: window.location.hash || '/',
+      page: normalizeTrackPage(window.location.hash.replace(/^#/, '') || '/'),
       action,
       details,
-      user_id: authStore.user?.userId ? Number(authStore.user.userId) : 0,
     }),
   }).catch(() => {})
+}
+
+function normalizeTrackPage(path: string) {
+  const normalized = (path || '/').split('?')[0] || '/'
+  return normalized.startsWith('/admin/') ? '/admin' : normalized
 }
 
 export default router

@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
+import { apiFetch } from '../services/api'
 
 export interface ChatSession {
   id: number
@@ -23,28 +22,6 @@ export interface ChatMessage {
   emotion?: string
   response_time_ms?: number
   created_at: string
-}
-
-/** 从 cookie 中读取 csrf_token */
-function getCSRFToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
-}
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
-    credentials: 'include',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': getCSRFToken(),
-      ...options?.headers,
-    },
-  });
-  const payload = await response.json();
-  if (!response.ok || payload.code !== 0) throw new Error(payload.message || 'API error');
-  return payload.data as T;
 }
 
 export const useSessionStore = defineStore('session', () => {

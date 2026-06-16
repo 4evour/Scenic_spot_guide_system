@@ -87,6 +87,12 @@ watch(() => props.text, async (newText) => {
   }
 }, { immediate: true });
 
+watch(() => props.streaming, async (streaming) => {
+  if (!streaming) {
+    await completeTypewriter();
+  }
+});
+
 onMounted(() => {
   // Initial render
   if (!props.streaming) {

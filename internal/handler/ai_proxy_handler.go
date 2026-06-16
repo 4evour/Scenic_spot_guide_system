@@ -157,18 +157,19 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	lang := c.GetString("lang")
+	if req.Stream {
+		h.writeRAGStreamResponse(c, req.Model, req.SessionID, query, lang)
+		return
+	}
+
 	// 使用 RAG 服务生成回答
 	startTime := time.Now()
-	lang := c.GetString("lang")
-		response, _, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, query, lang)
+	response, _, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, query, lang)
 	elapsed := time.Since(startTime).Milliseconds()
 	if err != nil {
 		slog.Error("OpenAI 兼容请求 RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
-		if req.Stream {
-			h.writeStreamError(c, "RAG query failed")
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "RAG query failed"})
-		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "RAG query failed"})
 		return
 	}
 
@@ -199,11 +200,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		"elapsed_ms", elapsed,
 	)
 
-	if req.Stream {
-		h.writeStreamResponse(c, req.Model, responseWithEmotion)
-	} else {
-		h.writeNonStreamResponse(c, req.Model, responseWithEmotion)
-	}
+	h.writeNonStreamResponse(c, req.Model, responseWithEmotion)
 }
 
 // ==================== 非流式响应 ====================
@@ -247,8 +244,8 @@ func (h *OpenAIProxyHandler) writeNonStreamResponse(c *gin.Context, model, conte
 
 // ==================== SSE 流式响应 ====================
 
-// writeStreamResponse 返回 SSE 流式响应 (Open-LLM-VTuber 需要 stream=true)
-func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content string) {
+// writeRAGStreamResponse 返回真正的 RAG + LLM SSE 流式响应。
+func (h *OpenAIProxyHandler) writeRAGStreamResponse(c *gin.Context, model, sessionID, query, lang string) {
 	now := time.Now().Unix()
 	chatID := fmt.Sprintf("chatcmpl-%d", now)
 
@@ -267,7 +264,6 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 		return
 	}
 
-	// 辅助函数：发送一个 SSE data 行
 	sendChunk := func(chunk ChatCompletionChunk) {
 		data, _ := json.Marshal(chunk)
 		fmt.Fprintf(writer, "data: %s\n\n", string(data))
@@ -301,21 +297,12 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 		},
 	})
 
-	// 2. 将内容按字符分批发送
-	runes := []rune(content)
-	chunkSize := 12
-	for i := 0; i < len(runes); i += chunkSize {
-		end := i + chunkSize
-		if end > len(runes) {
-			end = len(runes)
+	var streamed strings.Builder
+	sendContent := func(content string) {
+		if content == "" {
+			return
 		}
-
-		var finishReason *string
-		if end >= len(runes) {
-			reason := "stop"
-			finishReason = &reason
-		}
-
+		streamed.WriteString(content)
 		sendChunk(ChatCompletionChunk{
 			ID:      chatID,
 			Object:  "chat.completion.chunk",
@@ -335,20 +322,83 @@ func (h *OpenAIProxyHandler) writeStreamResponse(c *gin.Context, model, content 
 						Role    string `json:"role,omitempty"`
 						Content string `json:"content,omitempty"`
 					}{
-						Content: string(runes[i:end]),
+						Content: content,
 					},
-					FinishReason: finishReason,
+					FinishReason: nil,
 				},
 			},
 		})
-
 	}
 
-	// 3. 发送 [DONE] 标记
+	startTime := time.Now()
+	response, _, trace, err := h.ragService.QueryWithRAGStreaming(sessionID, query, lang, sendContent)
+	elapsed := time.Since(startTime).Milliseconds()
+	if err != nil {
+		slog.Error("OpenAI 兼容流式 RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
+		h.writeStreamErrorChunk(writer, flusher, "RAG query failed")
+		return
+	}
+
+	if response == "" {
+		response = streamed.String()
+	}
+	if response != "" && streamed.Len() == 0 {
+		sendContent(response)
+	}
+	if sessionID != "" {
+		h.ragService.AppendSessionTurnWithUser(sessionID, 0, query, response)
+	}
+
+	reason := "stop"
+	sendChunk(ChatCompletionChunk{
+		ID:      chatID,
+		Object:  "chat.completion.chunk",
+		Created: now,
+		Model:   model,
+		Choices: []struct {
+			Index int `json:"index"`
+			Delta struct {
+				Role    string `json:"role,omitempty"`
+				Content string `json:"content,omitempty"`
+			} `json:"delta"`
+			FinishReason *string `json:"finish_reason"`
+		}{
+			{
+				Index: 0,
+				Delta: struct {
+					Role    string `json:"role,omitempty"`
+					Content string `json:"content,omitempty"`
+				}{},
+				FinishReason: &reason,
+			},
+		},
+	})
+
 	fmt.Fprintf(writer, "data: [DONE]\n\n")
 	flusher.Flush()
 
-	slog.Info("OpenAI 兼容 SSE 流式响应完成", "chars", len(runes))
+	emotion := detectEmotion(response)
+	if h.statsService != nil {
+		h.statsService.RecordInteraction(service.InteractionRecord{
+			SessionID:      sessionID,
+			Query:          query,
+			Response:       response,
+			Emotion:        emotion,
+			ResponseTimeMs: elapsed,
+			Category:       service.DetectCategory(query),
+			Source:         "digital_human",
+		})
+	}
+
+	slog.Info("OpenAI 兼容 SSE 流式响应完成",
+		"trace_id", trace.TraceID,
+		"emotion", emotion,
+		"response_len", len([]rune(response)),
+		"retrieval_ms", trace.RetrievalMs,
+		"generation_ms", trace.GenerationMs,
+		"total_ms", trace.TotalMs,
+		"elapsed_ms", elapsed,
+	)
 }
 
 // writeStreamError 以 SSE 格式返回错误
@@ -360,12 +410,16 @@ func (h *OpenAIProxyHandler) writeStreamError(c *gin.Context, errMsg string) {
 	writer := c.Writer
 	flusher, ok := writer.(http.Flusher)
 	if ok {
-		errPayload, _ := json.Marshal(gin.H{"error": errMsg})
-		fmt.Fprintf(writer, "data: %s\n\n", string(errPayload))
-		flusher.Flush()
-		fmt.Fprintf(writer, "data: [DONE]\n\n")
-		flusher.Flush()
+		h.writeStreamErrorChunk(writer, flusher, errMsg)
 	}
+}
+
+func (h *OpenAIProxyHandler) writeStreamErrorChunk(writer http.ResponseWriter, flusher http.Flusher, errMsg string) {
+	errPayload, _ := json.Marshal(gin.H{"error": errMsg})
+	fmt.Fprintf(writer, "data: %s\n\n", string(errPayload))
+	flusher.Flush()
+	fmt.Fprintf(writer, "data: [DONE]\n\n")
+	flusher.Flush()
 }
 
 // ==================== 工具函数 ====================

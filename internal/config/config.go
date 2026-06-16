@@ -68,7 +68,7 @@ type SpeechConfig struct {
 
 // TTSConfig holds Text-to-Speech configuration.
 type TTSConfig struct {
-	Provider string `mapstructure:"provider"` // "edge" (default) or "baidu"
+	Provider string `mapstructure:"provider"` // "edge" (default, currently the only supported provider)
 	Voice    string `mapstructure:"voice"`    // e.g. "female_xiaoxiao"
 	Rate     string `mapstructure:"rate"`     // e.g. "+0%", "-10%", "+20%"
 	Timeout  int    `mapstructure:"timeout"`  // seconds, default 30

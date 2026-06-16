@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"bufio"
@@ -33,7 +33,7 @@ type openAIError struct {
 
 type openAIResponse struct {
 	Choices []struct {
-		Index int `json:"index"`
+		Index   int `json:"index"`
 		Message struct {
 			Role    string `json:"role"`
 			Content string `json:"content"`
@@ -70,12 +70,19 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 		conversation.WriteString("- 如果涉及票价、开放、演出、客流、排队、无人机、宠物等实时或现场规则，必须说明不能直接承诺，以官方最新公告或现场公示为准。\n\n")
 	}
 
+	answerStyleGuard := `【回答要求】
+- 直接回答游客当前问题，不要先解释你检索到了什么。
+- 知识库资料里如果出现“游客常问”“回答策略”“问答素材”“资料来源”等元说明，只把它们当内部参考，不要复述给游客。
+- 用真人导游口吻组织成自然讲解，避免罗列知识库原文。
+`
+
 	// 使用 profile 配置的 prompt 模板（支持任意景区）
 	if s.profile != nil && s.profile.Prompts.RAGPrompt != "" {
 		prompt := s.profile.RenderPrompt(s.profile.Prompts.RAGPrompt)
 		prompt = strings.ReplaceAll(prompt, "{knowledge_context}", context.String())
 		prompt = strings.ReplaceAll(prompt, "{session_context}", conversation.String())
 		prompt = strings.ReplaceAll(prompt, "{query}", query)
+		prompt += "\n\n" + answerStyleGuard
 
 		// 注入个性化路线推荐（当查询匹配路线关键词时）
 		routeHint := s.buildRouteRecommendation(query)
@@ -96,6 +103,7 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 %s
 
 请基于以上资料回答：`, context.String(), conversation.String(), query)
+	prompt += "\n\n" + answerStyleGuard
 	return prompt
 }
 
@@ -208,11 +216,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		slog.Error("RAG 请求序列化失败", "error", err)
-		generationStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG Chat API 请求序列化失败: %w", err)
 	}
 
 	apiURL := s.chatBaseURL + "/chat/completions"
@@ -220,11 +224,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		slog.Error("RAG 创建 HTTP 请求失败", "error", err)
-		generationStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG Chat API 创建 HTTP 请求失败: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -235,42 +235,26 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	trace.GenerationMs = time.Since(generationStart).Milliseconds()
 	if err != nil {
 		slog.Error("RAG 调用 Chat API 失败", "error", err)
-		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG Chat API 调用失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := readLimitedBody(resp.Body)
 		slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
-		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG Chat API 返回非 200: status=%d", resp.StatusCode)
 	}
 
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		slog.Error("RAG 读取 Chat API 响应失败", "error", readErr)
-		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG 读取 Chat API 响应失败: %w", readErr)
 	}
 
 	var openAIResp openAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
 		slog.Error("RAG 解析 Chat API 响应失败", "error", err)
-		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG 解析 Chat API 响应失败: %w", err)
 	}
 
 	if openAIResp.Error != nil {
@@ -279,11 +263,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 			"code", openAIResp.Error.Code,
 			"message", openAIResp.Error.Message,
 		)
-		fallbackStart := time.Now()
-		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
-		return answer, trace, nil
+		return "", trace, fmt.Errorf("RAG Chat API 返回业务错误: %s", openAIResp.Error.Message)
 	}
 
 	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
@@ -292,13 +272,8 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 		return answer, trace, nil
 	}
 
-	fallbackStart := time.Now()
-	answer = s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
-	trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
-	s.setCachedResponse(cacheKey, answer)
-	return answer, trace, nil
+	return "", trace, fmt.Errorf("RAG Chat API 未返回有效回答")
 }
-
 
 // openAIStreamChunk represents a single chunk from the OpenAI streaming API.
 type openAIStreamChunk struct {
@@ -364,9 +339,14 @@ func (s *RAGService) CallLLMStreaming(systemPrompt, userPrompt string, onToken f
 			token := chunk.Choices[0].Delta.Content
 			if token != "" {
 				fullResponse.WriteString(token)
-				onToken(token)
+				if onToken != nil {
+					onToken(token)
+				}
 			}
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return fullResponse.String(), fmt.Errorf("stream response scan failed: %w", err)
 	}
 	return fullResponse.String(), nil
 }
@@ -619,6 +599,59 @@ func (s *RAGService) QueryGeneralChat(query, lang string) (string, error) {
 	return answer, nil
 }
 
+func (s *RAGService) HasConfiguredLLM() bool {
+	return s != nil && strings.TrimSpace(s.chatAPIKey) != "" && strings.TrimSpace(s.chatBaseURL) != ""
+}
+
+func (s *RAGService) CallLLM(systemPrompt, userPrompt string) (string, error) {
+	if !s.HasConfiguredLLM() {
+		return "", fmt.Errorf("AI API Key 未配置，无法执行 AI 分析")
+	}
+	req := openAIRequest{
+		Model: s.chatModel,
+		Messages: []struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		}{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: userPrompt},
+		},
+	}
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("AI 分析请求序列化失败: %w", err)
+	}
+	httpReq, err := http.NewRequest(http.MethodPost, strings.TrimRight(s.chatBaseURL, "/")+"/chat/completions", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return "", fmt.Errorf("AI 分析请求创建失败: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("AI 分析调用失败: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := readLimitedBody(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("AI 分析响应读取失败: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("AI 分析返回错误状态码: %d", resp.StatusCode)
+	}
+	var parsed openAIResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return "", fmt.Errorf("AI 分析响应解析失败: %w", err)
+	}
+	if parsed.Error != nil {
+		return "", fmt.Errorf("AI 分析返回错误: %s", parsed.Error.Message)
+	}
+	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
+		return "", fmt.Errorf("AI 分析响应为空")
+	}
+	return strings.TrimSpace(parsed.Choices[0].Message.Content), nil
+}
+
 // buildRouteRecommendation 根据用户查询匹配路线关键词，返回路线推荐信息
 func (s *RAGService) buildRouteRecommendation(query string) string {
 	if s.profile == nil || len(s.profile.Routes) == 0 {
@@ -627,13 +660,13 @@ func (s *RAGService) buildRouteRecommendation(query string) string {
 
 	// 路线匹配关键词映射
 	routeKeywords := map[string][]string{
-		"历史":  {"历史", "文化", "古迹", "建筑", "佛教", "寺庙"},
-		"自然":  {"自然", "风景", "拍照", "山水", "湖"},
-		"亲子":  {"亲子", "儿童", "孩子", "家庭", "小朋友", "带孩子"},
-		"美食":  {"美食", "小吃", "吃饭", "餐厅", "素食"},
-		"路线":  {"路线", "推荐", "怎么玩", "怎么走", "规划", "行程"},
-		"轻松":  {"轻松", "老人", "长辈", "不累"},
-		"深度":  {"深度", "详细", "全面", "全部"},
+		"历史": {"历史", "文化", "古迹", "建筑", "佛教", "寺庙"},
+		"自然": {"自然", "风景", "拍照", "山水", "湖"},
+		"亲子": {"亲子", "儿童", "孩子", "家庭", "小朋友", "带孩子"},
+		"美食": {"美食", "小吃", "吃饭", "餐厅", "素食"},
+		"路线": {"路线", "推荐", "怎么玩", "怎么走", "规划", "行程"},
+		"轻松": {"轻松", "老人", "长辈", "不累"},
+		"深度": {"深度", "详细", "全面", "全部"},
 	}
 
 	// 检查查询匹配哪些路线类别
@@ -697,4 +730,3 @@ func (s *RAGService) buildRouteRecommendation(query string) string {
 }
 
 // contains 检查字符串是否包含子串
-

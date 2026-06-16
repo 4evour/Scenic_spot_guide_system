@@ -212,6 +212,26 @@ func TestWSTokenAuthReadsAuthTokenCookie(t *testing.T) {
 	}
 }
 
+func TestAPIKeyMiddlewareAcceptsBearerToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	t.Setenv("SCENIC_GUIDE_API_KEY", "not-needed")
+
+	router := gin.New()
+	router.POST("/v1/chat/completions", APIKeyMiddleware(), func(c *gin.Context) {
+		Success(c, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req.RemoteAddr = "192.0.2.60:1234"
+	req.Header.Set("Authorization", "Bearer not-needed")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.Code, http.StatusOK)
+	}
+}
+
 func TestAuthMiddlewareDevAdminBypassIgnoresForwardedLoopback(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS", "true")

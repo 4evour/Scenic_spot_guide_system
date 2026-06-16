@@ -1,4 +1,4 @@
-﻿package pkg
+package pkg
 
 import (
 	"context"
@@ -161,6 +161,7 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
 // csrfExemptPaths 列出无需 CSRF 校验的认证类端点（用户尚无 CSRF cookie）
 var csrfExemptPaths = []string{
 	"/auth/guest-login",
@@ -221,7 +222,6 @@ func SetCSRFCookie(c *gin.Context) {
 	c.SetCookie("csrf_token", token, 12*3600, "/", "", secure, false)
 }
 
-
 // APIKeyMiddleware verifies requests carry a valid API key via X-API-Key header.
 // Intended for internal service-to-service endpoints (e.g. OpenAI proxy).
 func APIKeyMiddleware() gin.HandlerFunc {
@@ -232,6 +232,12 @@ func APIKeyMiddleware() gin.HandlerFunc {
 			return
 		}
 		provided := c.GetHeader("X-API-Key")
+		if provided == "" {
+			authHeader := c.GetHeader("Authorization")
+			if parts := strings.SplitN(authHeader, " ", 2); len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+				provided = strings.TrimSpace(parts[1])
+			}
+		}
 		if provided != expectedKey {
 			c.AbortWithStatusJSON(401, Response{Code: 401, Message: "invalid or missing API key"})
 			return

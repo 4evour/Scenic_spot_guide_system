@@ -1,4 +1,4 @@
-import { apiFetch } from './api';
+import { getCSRFToken } from '../utils/csrf';
 
 export interface TTSOptions {
   text: string;
@@ -11,8 +11,7 @@ export interface TTSOptions {
  * 后端以 chunked transfer 逐块返回 audio/mpeg 数据。
  */
 export async function streamTTS(options: TTSOptions): Promise<Response> {
-  const csrfMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : '';
+  const csrfToken = getCSRFToken();
 
   const response = await fetch('/api/v1/ai/tts/stream', {
     method: 'POST',
@@ -40,8 +39,7 @@ export async function streamTTS(options: TTSOptions): Promise<Response> {
  * 非流式 TTS：等待完整音频后返回 Blob URL。
  */
 export async function synthesizeTTS(options: TTSOptions): Promise<string> {
-  const csrfMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : '';
+  const csrfToken = getCSRFToken();
 
   const response = await fetch('/api/v1/ai/tts', {
     method: 'POST',

@@ -1,13 +1,17 @@
+import { getBrowserSpeechRate } from '../composables/useSeniorMode';
+
 export type PlaybackHooks = {
   onStart?: (text?: string, cue?: PlaybackCue) => void;
   onEnd?: () => void;
   onVolume?: (volume: number) => void;
+  onError?: (message: string) => void;
 };
 
 export type PlaybackCue = {
   volumes?: number[];
   sliceLengthMs?: number;
   expression?: string;
+  showText?: boolean;
 };
 
 type QueueItem = {
@@ -58,9 +62,13 @@ export class AudioPlaybackController {
     const token = this.playbackToken;
 
     try {
+      const responseBody = fetchResponse.body;
+      if (!responseBody || !('MediaSource' in window) || !MediaSource.isTypeSupported('audio/mpeg')) {
+        return false;
+      }
       const mediaSource = new MediaSource();
       const url = URL.createObjectURL(mediaSource);
-      const audio = new Audio(url);
+      let appendedBytes = 0;
 
       const queueItem: QueueItem = { url, text, ...cue };
       // Push to queue — the standard playNext will handle it when it's this item's turn.
@@ -79,18 +87,8 @@ export class AudioPlaybackController {
           return;
         }
 
-        const mimeType = 'audio/mpeg';
-        if (!MediaSource.isTypeSupported(mimeType)) {
-          mediaSource.endOfStream();
-          return;
-        }
-
-        const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-        const reader = fetchResponse.body?.getReader();
-        if (!reader) {
-          mediaSource.endOfStream();
-          return;
-        }
+        const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+        const reader = responseBody.getReader();
 
         try {
           while (true) {
@@ -101,6 +99,7 @@ export class AudioPlaybackController {
 
             const { done, value } = await reader.read();
             if (done) break;
+            appendedBytes += value.byteLength;
 
             // Wait for any pending append to finish
             await waitForSourceBufferUpdate(sourceBuffer);
@@ -118,6 +117,10 @@ export class AudioPlaybackController {
           if (mediaSource.readyState === 'open') {
             try { mediaSource.endOfStream(); } catch { /* ignore */ }
           }
+          if (appendedBytes === 0 && !this.interrupted && token === this.playbackToken) {
+            this.hooks.onError?.('语音合成没有返回音频，已切换为浏览器朗读。');
+            void this.playTextFallback(text || '', cue);
+          }
         }
       });
 
@@ -131,11 +134,12 @@ export class AudioPlaybackController {
   async playTextFallback(text: string, cue: PlaybackCue = {}) {
     if (!('speechSynthesis' in window)) return;
     if (this.interrupted) return;
+    if (!text.trim()) return;
     const token = this.playbackToken;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
-    utterance.rate = 0.95;
+    utterance.rate = getBrowserSpeechRate();
     utterance.pitch = 1.05;
     utterance.onstart = () => {
       if (this.interrupted || token !== this.playbackToken) return;
@@ -151,6 +155,7 @@ export class AudioPlaybackController {
       if (token !== this.playbackToken) return;
       this.stopVolumeTracking();
       this.hooks.onEnd?.();
+      this.hooks.onError?.('浏览器朗读被阻止，请点击“启用声音”后重试。');
     };
     window.speechSynthesis.speak(utterance);
   }
@@ -158,6 +163,31 @@ export class AudioPlaybackController {
   resume() {
     this.interrupted = false;
     this.playbackToken += 1;
+    if (this.audioContext?.state === 'suspended') {
+      void this.audioContext.resume();
+    }
+  }
+
+  async unlock(): Promise<boolean> {
+    this.interrupted = false;
+    try {
+      const AudioContextCtor = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextCtor) {
+        this.audioContext ??= new AudioContextCtor();
+        if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(' ');
+        utterance.volume = 0;
+        window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.cancel();
+      }
+      return true;
+    } catch {
+      this.hooks.onError?.('浏览器未允许播放声音，请检查站点声音权限。');
+      return false;
+    }
   }
 
   interrupt() {
@@ -206,9 +236,10 @@ export class AudioPlaybackController {
 
     try {
       await this.audio.play();
-    } catch {
+    } catch (err) {
       if (this.interrupted || token !== this.playbackToken) return;
       this.stopVolumeTracking();
+      this.hooks.onError?.(isAutoplayError(err) ? '浏览器阻止了自动播放，请点击“启用声音”。' : '音频播放失败，已尝试播放下一段。');
       this.audio = null;
       void this.playNext();
     }
@@ -310,6 +341,10 @@ export class AudioPlaybackController {
     if (!Number.isFinite(volume)) return 0;
     return Math.min(1, Math.max(0, volume));
   }
+}
+
+function isAutoplayError(err: unknown) {
+  return err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'NotSupportedError');
 }
 
 /**

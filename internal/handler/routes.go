@@ -1,7 +1,8 @@
-﻿package handler
+package handler
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -78,11 +79,6 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	}
 
 	// 轻量级行为追踪接口（页面访问、用户操作）
-	// 轻量级行为追踪接口（页面访问、用户操作）
-	allowedPages := map[string]bool{
-		"/": true, "/map": true, "/digital-human": true,
-		"/dashboard": true, "/admin": true, "/login": true,
-	}
 	allowedActions := map[string]bool{
 		"visit": true, "click": true, "search": true,
 		"chat": true, "feedback": true, "voice": true,
@@ -97,7 +93,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 			c.JSON(200, gin.H{"code": 0})
 			return
 		}
-		if req.Page != "" && !allowedPages[req.Page] {
+		if req.Page != "" && !isAllowedTrackingPage(req.Page) {
 			pkg.BadRequest(c, "invalid page")
 			return
 		}
@@ -158,7 +154,7 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 			c.Header("Access-Control-Allow-Credentials", "true")
 			c.Header("Vary", "Origin")
 			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Requested-With")
+			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Requested-With, X-CSRF-Token")
 			c.Header("Access-Control-Max-Age", "86400")
 		} else {
 			c.AbortWithStatus(http.StatusForbidden)
@@ -172,7 +168,6 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 		c.Next()
 	}
 }
-
 
 // maxBodySize is the default maximum request body size (12 MB).
 const maxBodySize = 12 << 20
@@ -192,9 +187,27 @@ func securityHeaders() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=(self)")
 		c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' https://webapi.amap.com https://restapi.amap.com; style-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://webapi.amap.com https://*.amap.com; connect-src 'self' ws: wss: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://cdnjs.cloudflare.com; media-src 'self' blob:;")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://webapi.amap.com https://*.amap.com; connect-src 'self' ws: wss: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://cdnjs.cloudflare.com; media-src 'self' blob:;")
 		c.Next()
 	}
+}
+
+func isAllowedTrackingPage(page string) bool {
+	page = strings.TrimSpace(page)
+	if page == "" {
+		return true
+	}
+	if index := strings.IndexAny(page, "?#"); index >= 0 {
+		page = page[:index]
+	}
+	allowedPages := map[string]bool{
+		"/": true, "/map": true, "/digital-human": true,
+		"/dashboard": true, "/admin": true, "/login": true,
+	}
+	if allowedPages[page] {
+		return true
+	}
+	return strings.HasPrefix(page, "/admin/")
 }
 
 // getRateLimitMiddleware returns the Redis-based rate limiter when Redis is

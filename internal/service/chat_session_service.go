@@ -125,6 +125,9 @@ func (s *ChatSessionService) GetSessionMessages(sessionID string, userID uint, l
 
 	session, err := s.sessionRepo.FindBySessionID(sessionID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []model.ChatMessage{}, nil
+		}
 		return nil, fmt.Errorf("会话不存在: %w", err)
 	}
 

@@ -129,16 +129,6 @@ func hijackClient(w http.ResponseWriter) (net.Conn, *bufio.ReadWriter, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-
-	resp := "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n"
-	if _, err := buf.WriteString(resp); err != nil {
-		conn.Close()
-		return nil, nil, err
-	}
-	if err := buf.Flush(); err != nil {
-		conn.Close()
-		return nil, nil, err
-	}
 	return conn, buf, nil
 }
 
@@ -182,6 +172,7 @@ func performBackendUpgrade(clientConn net.Conn, clientBuf *bufio.ReadWriter, bac
 	}
 
 	hasUpgrade, hasConnectionUpgrade := false, false
+	headers := make([]string, 0, 8)
 	for {
 		line, err := readLine(backendReader)
 		if err != nil {
@@ -190,6 +181,7 @@ func performBackendUpgrade(clientConn net.Conn, clientBuf *bufio.ReadWriter, bac
 		if line == "" {
 			break
 		}
+		headers = append(headers, line)
 		key, val := parseHeaderLine(line)
 		lower := strings.ToLower(key)
 		if lower == "upgrade" && strings.EqualFold(val, "websocket") {
@@ -204,6 +196,27 @@ func performBackendUpgrade(clientConn net.Conn, clientBuf *bufio.ReadWriter, bac
 	}
 	if !hasConnectionUpgrade {
 		return fmt.Errorf("backend response missing 'Connection: Upgrade' header")
+	}
+
+	if _, err := clientBuf.WriteString(respLine + "\r\n"); err != nil {
+		return fmt.Errorf("write client status: %w", err)
+	}
+	for _, header := range headers {
+		if _, err := clientBuf.WriteString(header + "\r\n"); err != nil {
+			return fmt.Errorf("write client header: %w", err)
+		}
+	}
+	if _, err := clientBuf.WriteString("\r\n"); err != nil {
+		return fmt.Errorf("write client header terminator: %w", err)
+	}
+	if err := clientBuf.Flush(); err != nil {
+		return fmt.Errorf("flush client handshake: %w", err)
+	}
+
+	if backendReader.Buffered() > 0 {
+		if _, err := io.CopyN(clientConn, backendReader, int64(backendReader.Buffered())); err != nil {
+			return fmt.Errorf("forward buffered backend data: %w", err)
+		}
 	}
 
 	// Discard any buffered data from the hijacked client reader to avoid leaks.
@@ -370,17 +383,26 @@ func relay(src, dst net.Conn, direction string) {
 
 func forwardOpaque(src, dst net.Conn, hdr []byte, payloadLen uint64, maskLen int) error {
 	total := int64(payloadLen) + int64(maskLen)
+	extLen := 0
+	switch {
+	case payloadLen <= 125:
+		extLen = 0
+	case payloadLen <= 65535:
+		extLen = 2
+	default:
+		extLen = 8
+	}
 
-	frame := make([]byte, 2+len(hdr)-2+int(total))
+	frame := make([]byte, 2+extLen+int(total))
 	copy(frame, hdr)
 
 	offset := 2
-	switch payloadLen {
-	case 126:
+	switch extLen {
+	case 2:
 		frame[offset] = byte(payloadLen >> 8)
 		frame[offset+1] = byte(payloadLen)
 		offset += 2
-	case 127:
+	case 8:
 		for i := 7; i >= 0; i-- {
 			frame[offset+(7-i)] = byte(payloadLen >> (8 * uint(i)))
 		}

@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"crypto/sha1"
@@ -24,6 +24,7 @@ const (
 	MaxCachedTurns         = 10 // 内存缓存每会话最大轮数
 	SessionHistoryTTL      = 30 * time.Minute
 	SlowRequestThresholdMs = 5000
+	EmbeddingCacheTTL      = 10 * time.Minute
 )
 
 type RetrievalMode string
@@ -75,6 +76,11 @@ type CacheEntry struct {
 	ExpireTime time.Time
 }
 
+type embeddingCacheEntry struct {
+	Vector     []float64
+	ExpireTime time.Time
+}
+
 type TourRouteStep struct {
 	Number int    `json:"number"`
 	Name   string `json:"name"`
@@ -118,7 +124,7 @@ type RAGService struct {
 	uploadDir          string
 	httpClient         *http.Client
 	queryCache         map[string]CacheEntry
-	embeddingCache     map[string][]float64
+	embeddingCache     map[string]embeddingCacheEntry
 	knowledgeCache     []model.KnowledgeChunk
 	tokenCache         map[string][]string
 	tokenIndex         map[string][]string
@@ -164,7 +170,7 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		uploadDir:      "./knowledge",
 		httpClient:     createHTTPClient(),
 		queryCache:     make(map[string]CacheEntry),
-		embeddingCache: make(map[string][]float64),
+		embeddingCache: make(map[string]embeddingCacheEntry),
 		knowledgeCache: nil,
 		tokenCache:     make(map[string][]string),
 		tokenIndex:     make(map[string][]string),
@@ -249,9 +255,9 @@ func (s *RAGService) getCachedKnowledge() ([]model.KnowledgeChunk, error) {
 
 func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 	s.cacheMutex.RLock()
-	if vec, ok := s.embeddingCache[text]; ok {
+	if entry, ok := s.embeddingCache[text]; ok && time.Now().Before(entry.ExpireTime) {
 		s.cacheMutex.RUnlock()
-		return vec, nil
+		return entry.Vector, nil
 	}
 	s.cacheMutex.RUnlock()
 
@@ -262,9 +268,18 @@ func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 
 	s.cacheMutex.Lock()
 	if len(s.embeddingCache) >= MaxCacheSize {
-		s.embeddingCache = make(map[string][]float64)
+		// Lazy eviction: remove expired entries first, then clear all if still full
+		now := time.Now()
+		for k, entry := range s.embeddingCache {
+			if now.After(entry.ExpireTime) {
+				delete(s.embeddingCache, k)
+			}
+		}
+		if len(s.embeddingCache) >= MaxCacheSize {
+			s.embeddingCache = make(map[string]embeddingCacheEntry)
+		}
 	}
-	s.embeddingCache[text] = vec
+	s.embeddingCache[text] = embeddingCacheEntry{Vector: vec, ExpireTime: time.Now().Add(EmbeddingCacheTTL)}
 	s.cacheMutex.Unlock()
 
 	return vec, nil
@@ -304,19 +319,25 @@ func (s *RAGService) setCachedResponse(query, response string) {
 }
 
 type ChunkData struct {
-	ID       string                 `json:"id"`
-	Content  string                 `json:"content"`
-	Source   string                 `json:"source"`
-	Title    string                 `json:"title"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID                string                 `json:"id"`
+	Content           string                 `json:"content"`
+	Source            string                 `json:"source"`
+	Title             string                 `json:"title"`
+	KnowledgeCategory string                 `json:"knowledge_category"`
+	SpotID            uint                   `json:"spot_id"`
+	SpotCategory      string                 `json:"spot_category"`
+	Metadata          map[string]interface{} `json:"metadata"`
 }
 
 type KnowledgeUpsertInput struct {
-	ID       string                 `json:"id"`
-	Title    string                 `json:"title"`
-	Source   string                 `json:"source"`
-	Content  string                 `json:"content"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID                string                 `json:"id"`
+	Title             string                 `json:"title"`
+	Source            string                 `json:"source"`
+	Content           string                 `json:"content"`
+	KnowledgeCategory string                 `json:"knowledge_category"`
+	SpotID            uint                   `json:"spot_id"`
+	SpotCategory      string                 `json:"spot_category"`
+	Metadata          map[string]interface{} `json:"metadata"`
 }
 
 func (s *RAGService) invalidateKnowledgeCaches() {
@@ -335,6 +356,8 @@ func normalizeKnowledgeChunk(chunk *ChunkData) {
 	chunk.Title = strings.TrimSpace(chunk.Title)
 	chunk.Source = strings.TrimSpace(chunk.Source)
 	chunk.Content = strings.TrimSpace(chunk.Content)
+	chunk.KnowledgeCategory = strings.TrimSpace(chunk.KnowledgeCategory)
+	chunk.SpotCategory = strings.TrimSpace(chunk.SpotCategory)
 
 	if chunk.ID == "" {
 		sum := sha1.Sum([]byte(chunk.Title + "\n" + chunk.Source + "\n" + chunk.Content))
@@ -353,8 +376,60 @@ func normalizeKnowledgeChunk(chunk *ChunkData) {
 	if chunk.Metadata == nil {
 		chunk.Metadata = map[string]interface{}{}
 	}
+	if chunk.KnowledgeCategory == "" {
+		chunk.KnowledgeCategory = firstStringMetadata(chunk.Metadata, "knowledge_category", "category", "type")
+	}
+	if chunk.SpotCategory == "" {
+		chunk.SpotCategory = firstStringMetadata(chunk.Metadata, "spot_category")
+	}
+	if chunk.SpotID == 0 {
+		chunk.SpotID = uintFromMetadata(chunk.Metadata, "spot_id")
+	}
+	if chunk.KnowledgeCategory != "" {
+		chunk.Metadata["knowledge_category"] = chunk.KnowledgeCategory
+		chunk.Metadata["category"] = chunk.KnowledgeCategory
+	}
+	if chunk.SpotCategory != "" {
+		chunk.Metadata["spot_category"] = chunk.SpotCategory
+	}
+	if chunk.SpotID > 0 {
+		chunk.Metadata["spot_id"] = chunk.SpotID
+	}
 }
 
+func firstStringMetadata(metadata map[string]interface{}, keys ...string) string {
+	for _, key := range keys {
+		if val, ok := metadata[key]; ok {
+			if s, ok := val.(string); ok && strings.TrimSpace(s) != "" {
+				return strings.TrimSpace(s)
+			}
+		}
+	}
+	return ""
+}
+
+func uintFromMetadata(metadata map[string]interface{}, key string) uint {
+	val, ok := metadata[key]
+	if !ok {
+		return 0
+	}
+	switch v := val.(type) {
+	case float64:
+		if v > 0 {
+			return uint(v)
+		}
+	case int:
+		if v > 0 {
+			return uint(v)
+		}
+	case string:
+		var parsed uint64
+		if _, err := fmt.Sscanf(v, "%d", &parsed); err == nil {
+			return uint(parsed)
+		}
+	}
+	return 0
+}
 
 func (s *RAGService) getRelatedKeywords() []string {
 	if s.profile == nil {
@@ -403,7 +478,6 @@ func (s *RAGService) getSystemPromptOrDefault(lang string) string {
 	}
 	return base
 }
-
 
 func (s *RAGService) GenerateTourRoute(query string) *TourRoute {
 	routes := s.getTourRoutes()
@@ -515,7 +589,6 @@ func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query, lang s
 	return response, route, trace, nil
 }
 
-
 // QueryWithRAGStreaming performs RAG retrieval then streams the LLM response via onToken callback.
 // Returns the full answer, tour route, trace, and error.
 func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToken func(string)) (string, *TourRoute, RAGTrace, error) {
@@ -540,7 +613,9 @@ func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToke
 	}
 	totalStart := time.Now()
 
+	retrievalStart := time.Now()
 	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
+	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
 	trace.ChunkCount = len(chunks)
 	if err != nil {
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
@@ -551,7 +626,6 @@ func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToke
 
 	if len(chunks) == 0 {
 		// 无知识命中，使用通用 Chat 流式
-		trace.RetrievalMs = time.Since(totalStart).Milliseconds()
 		genStart := time.Now()
 		systemPrompt := s.getSystemPromptOrDefault(lang)
 		answer, err = s.CallLLMStreaming(systemPrompt, query, onToken)
@@ -615,4 +689,3 @@ func (s *RAGService) RunEvaluation(evalFile string) error {
 	)
 	return nil
 }
-

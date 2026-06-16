@@ -1,6 +1,7 @@
 ﻿import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { generateDeviceFingerprint } from '../utils/fingerprint'
+import { getCSRFToken } from '../utils/csrf'
 
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
 
@@ -14,12 +15,6 @@ interface CachedAuth {
 }
 
 const AUTH_CACHE_TTL = 5 * 60 * 1000
-
-/** 从 cookie 中读取 csrf_token */
-function getCSRFToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
-}
 
 export const useAuthStore = defineStore('auth', () => {
   const cache = ref<CachedAuth | null>(null)

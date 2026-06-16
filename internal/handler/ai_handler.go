@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"encoding/json"
@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/pkg"
+	"github.com/scenic-guide/internal/repository"
 	"github.com/scenic-guide/internal/service"
 )
 
@@ -30,12 +33,17 @@ var allowedKnowledgeUploadExts = map[string]struct{}{
 }
 
 type AIHandler struct {
-	ragService   *service.RAGService
-	statsService *service.StatsService
+	ragService     *service.RAGService
+	statsService   *service.StatsService
+	insightService *service.VisitorInsightService
 }
 
-func NewAIHandler(ragService *service.RAGService, statsService *service.StatsService) *AIHandler {
-	return &AIHandler{ragService: ragService, statsService: statsService}
+func NewAIHandler(ragService *service.RAGService, statsService *service.StatsService, insightService ...*service.VisitorInsightService) *AIHandler {
+	var insights *service.VisitorInsightService
+	if len(insightService) > 0 {
+		insights = insightService[0]
+	}
+	return &AIHandler{ragService: ragService, statsService: statsService, insightService: insights}
 }
 
 type ChatRequest struct {
@@ -46,12 +54,15 @@ type ChatRequest struct {
 }
 
 type KnowledgeRequest struct {
-	ID       string                 `json:"id"`
-	Title    string                 `json:"title"`
-	Source   string                 `json:"source"`
-	Content  string                 `json:"content"`
-	Category string                 `json:"category"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID                string                 `json:"id"`
+	Title             string                 `json:"title"`
+	Source            string                 `json:"source"`
+	Content           string                 `json:"content"`
+	Category          string                 `json:"category"`
+	KnowledgeCategory string                 `json:"knowledge_category"`
+	SpotID            uint                   `json:"spot_id"`
+	SpotCategory      string                 `json:"spot_category"`
+	Metadata          map[string]interface{} `json:"metadata"`
 }
 
 func (h *AIHandler) ensureRAG(c *gin.Context) bool {
@@ -70,12 +81,29 @@ func (req KnowledgeRequest) toServiceInput() service.KnowledgeUpsertInput {
 	if strings.TrimSpace(req.Category) != "" {
 		metadata["category"] = strings.TrimSpace(req.Category)
 	}
+	knowledgeCategory := strings.TrimSpace(req.KnowledgeCategory)
+	if knowledgeCategory == "" {
+		knowledgeCategory = strings.TrimSpace(req.Category)
+	}
+	if knowledgeCategory != "" {
+		metadata["knowledge_category"] = knowledgeCategory
+		metadata["category"] = knowledgeCategory
+	}
+	if strings.TrimSpace(req.SpotCategory) != "" {
+		metadata["spot_category"] = strings.TrimSpace(req.SpotCategory)
+	}
+	if req.SpotID > 0 {
+		metadata["spot_id"] = req.SpotID
+	}
 	return service.KnowledgeUpsertInput{
-		ID:       req.ID,
-		Title:    req.Title,
-		Source:   req.Source,
-		Content:  req.Content,
-		Metadata: metadata,
+		ID:                req.ID,
+		Title:             req.Title,
+		Source:            req.Source,
+		Content:           req.Content,
+		KnowledgeCategory: knowledgeCategory,
+		SpotID:            req.SpotID,
+		SpotCategory:      strings.TrimSpace(req.SpotCategory),
+		Metadata:          metadata,
 	}
 }
 
@@ -132,23 +160,49 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			return
 		}
 
+		ctx := c.Request.Context()
 		doneCh := make(chan struct{})
+		var writeMu sync.Mutex
+
+		// 心跳 goroutine：每 15 秒发送 SSE 注释保持连接
+		go func() {
+			ticker := time.NewTicker(15 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					writeMu.Lock()
+					fmt.Fprintf(writer, ": heartbeat\n\n")
+					flusher.Flush()
+					writeMu.Unlock()
+				case <-doneCh:
+					return
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+
 		go func() {
 			defer close(doneCh)
 			response, route, trace, err := h.ragService.QueryWithRAGStreaming(
 				req.SessionID, req.Message, lang,
 				func(token string) {
 					data, _ := json.Marshal(gin.H{"token": token, "done": false})
+					writeMu.Lock()
 					fmt.Fprintf(writer, "data: %s\n\n", string(data))
 					flusher.Flush()
+					writeMu.Unlock()
 				},
 			)
 			elapsed := time.Since(startTime).Milliseconds()
 			if err != nil {
 				slog.Error("AI Chat RAG 流式查询失败", "error", err, "elapsed_ms", elapsed)
 				errData, _ := json.Marshal(gin.H{"error": pkg.T(c, "msg_ai_failed")})
+				writeMu.Lock()
 				fmt.Fprintf(writer, "data: %s\n\n", string(errData))
 				flusher.Flush()
+				writeMu.Unlock()
 				return
 			}
 			slog.Info("AI Chat RAG 流式查询完成",
@@ -177,9 +231,11 @@ func (h *AIHandler) Chat(c *gin.Context) {
 
 			// 发送完成标记（含路由和 trace_id）
 			doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": trace.TraceID, "route": route})
+			writeMu.Lock()
 			fmt.Fprintf(writer, "data: %s\n\n", string(doneData))
 			fmt.Fprintf(writer, "data: [DONE]\n\n")
 			flusher.Flush()
+			writeMu.Unlock()
 		}()
 		<-doneCh
 	} else {
@@ -225,41 +281,6 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	}
 }
 
-// writeSSEResponse 以 SSE 流式返回 RAG 回答（打字机效果）
-func (h *AIHandler) writeSSEResponse(c *gin.Context, response string, route interface{}, traceID string) {
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("X-Accel-Buffering", "no")
-	c.Status(http.StatusOK)
-
-	writer := c.Writer
-	flusher, ok := writer.(http.Flusher)
-	if !ok {
-		slog.Error("SSE 流式响应失败，ResponseWriter 不支持 Flusher")
-		return
-	}
-
-	runes := []rune(response)
-	chunkSize := 12
-	for i := 0; i < len(runes); i += chunkSize {
-		end := i + chunkSize
-		if end > len(runes) {
-			end = len(runes)
-		}
-		chunk := string(runes[i:end])
-		data, _ := json.Marshal(gin.H{"token": chunk, "done": false})
-		fmt.Fprintf(writer, "data: %s\n\n", string(data))
-		flusher.Flush()
-	}
-
-	// 发送完成标记（含路由和 trace_id）
-	doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": traceID, "route": route})
-	fmt.Fprintf(writer, "data: %s\n\n", string(doneData))
-	fmt.Fprintf(writer, "data: [DONE]\n\n")
-	flusher.Flush()
-}
-
 // writeSSEError 以 SSE 格式返回错误
 func (h *AIHandler) writeSSEError(c *gin.Context, errMsg string) {
 	c.Header("Content-Type", "text/event-stream")
@@ -276,9 +297,17 @@ func (h *AIHandler) writeSSEError(c *gin.Context, errMsg string) {
 }
 
 type ChatFeedbackRequest struct {
-	Query    string `json:"query"`
-	Response string `json:"response"`
-	Helpful  bool   `json:"helpful"`
+	SessionID string `json:"session_id"`
+	MessageID uint   `json:"message_id"`
+	TraceID   string `json:"trace_id"`
+	Query     string `json:"query"`
+	Response  string `json:"response"`
+	Helpful   bool   `json:"helpful"`
+	Rating    int    `json:"rating"`
+	Reason    string `json:"reason"`
+	Comment   string `json:"comment"`
+	Source    string `json:"source"`
+	SpotID    uint   `json:"spot_id"`
 }
 
 func (h *AIHandler) Feedback(c *gin.Context) {
@@ -292,20 +321,55 @@ func (h *AIHandler) Feedback(c *gin.Context) {
 	if req.Helpful {
 		rating = 5
 	}
+	if req.Rating > 0 {
+		rating = req.Rating
+	}
+	var userID uint
+	if uid, exists := c.Get("user_id"); exists {
+		userID, _ = uid.(uint)
+	}
+	if h.insightService != nil {
+		if err := h.insightService.SaveFeedback(&model.UserFeedback{
+			UserID:    userID,
+			SessionID: req.SessionID,
+			MessageID: req.MessageID,
+			TraceID:   req.TraceID,
+			Query:     req.Query,
+			Response:  req.Response,
+			Helpful:   req.Helpful,
+			Rating:    rating,
+			Reason:    req.Reason,
+			Comment:   req.Comment,
+			Source:    firstNonEmpty(req.Source, "web"),
+			SpotID:    req.SpotID,
+		}); err != nil {
+			slog.Error("保存用户反馈失败", "error", err)
+		}
+	}
 
 	if h.statsService != nil {
 		h.statsService.RecordInteraction(service.InteractionRecord{
-			SessionID: "feedback-" + fmt.Sprintf("%d", time.Now().UnixMilli()),
+			UserID:    userID,
+			SessionID: firstNonEmpty(req.SessionID, "feedback-"+fmt.Sprintf("%d", time.Now().UnixMilli())),
 			Query:     req.Query,
-			Response:  req.Response,
+			Response:  firstNonEmpty(req.Comment, req.Response),
 			Emotion:   "neutral",
 			Category:  "feedback",
-			Source:    "feedback",
+			Source:    firstNonEmpty(req.Source, "feedback"),
 		})
 	}
 
 	slog.Info("收到用户反馈", "helpful", req.Helpful, "rating", rating, "query_len", len([]rune(req.Query)))
 	pkg.SuccessWithMessage(c, pkg.T(c, "msg_feedback_thanks"), nil)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
@@ -344,7 +408,6 @@ func (h *AIHandler) UploadKnowledgeFile(c *gin.Context) {
 		pkg.BadRequest(c, pkg.T(c, "msg_file_read_failed"))
 		return
 	}
-
 
 	// MIME type sniffing: reject files whose content does not match declared extension
 	contentType := http.DetectContentType(data)
@@ -403,7 +466,16 @@ func (h *AIHandler) ListKnowledge(c *gin.Context) {
 		pageSize = 20
 	}
 
-	list, total, err := h.ragService.ListKnowledge(page, pageSize, c.Query("keyword"), c.Query("category"))
+	spotID, _ := strconv.ParseUint(c.Query("spot_id"), 10, 32)
+	list, total, err := h.ragService.ListKnowledgeAdvanced(repository.KnowledgeListFilter{
+		Page:              page,
+		PageSize:          pageSize,
+		Keyword:           c.Query("keyword"),
+		Category:          c.Query("category"),
+		KnowledgeCategory: c.Query("knowledge_category"),
+		SpotCategory:      c.Query("spot_category"),
+		SpotID:            uint(spotID),
+	})
 	if err != nil {
 		slog.Error("查询知识列表失败", "error", err)
 		pkg.InternalError(c, pkg.T(c, "msg_knowledge_query_failed"))
@@ -492,13 +564,16 @@ func (h *AIHandler) GetKnowledge(c *gin.Context) {
 
 	pkg.Success(c, gin.H{
 		"knowledge": gin.H{
-			"id":         knowledge.ID,
-			"title":      knowledge.Title,
-			"content":    knowledge.Content,
-			"source":     knowledge.Source,
-			"metadata":   knowledge.Metadata,
-			"created_at": knowledge.CreatedAt,
-			"updated_at": knowledge.UpdatedAt,
+			"id":                 knowledge.ID,
+			"title":              knowledge.Title,
+			"content":            knowledge.Content,
+			"source":             knowledge.Source,
+			"metadata":           knowledge.Metadata,
+			"knowledge_category": knowledge.KnowledgeCategory,
+			"spot_id":            knowledge.SpotID,
+			"spot_category":      knowledge.SpotCategory,
+			"created_at":         knowledge.CreatedAt,
+			"updated_at":         knowledge.UpdatedAt,
 		},
 	})
 }

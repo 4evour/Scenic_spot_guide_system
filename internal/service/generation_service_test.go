@@ -1,6 +1,8 @@
-﻿package service
+package service
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -27,6 +29,48 @@ func TestBuildRAGPromptWithContext(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "灵山大佛有多高") {
 		t.Error("prompt should contain the query")
+	}
+}
+
+func TestBuildRAGPromptInstructsGuideAnswerNotKnowledgeMeta(t *testing.T) {
+	svc := &RAGService{}
+
+	prompt := svc.BuildRAGPromptWithContext("灵山大佛有什么特色？", []model.KnowledgeChunk{
+		{
+			Title:   "灵山大佛问答素材",
+			Content: "游客常问灵山大佛多高、是不是景区最代表性的景点。",
+			Source:  "test",
+		},
+	}, "")
+
+	for _, want := range []string{"直接回答游客当前问题", "不要复述", "游客常问"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("prompt should contain guide-answer constraint %q, got: %s", want, prompt)
+		}
+	}
+}
+
+func TestQueryWithRAGReturnsErrorWhenConfiguredLLMFails(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"meta-answer","title":"灵山大佛问答素材","source":"test","content":"游客常问灵山大佛多高、是不是景区最代表性的景点。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":{"message":"bad key"}}`, http.StatusUnauthorized)
+	}))
+	defer server.Close()
+	rag.chatAPIKey = "configured-key"
+	rag.chatModel = "deepseek-chat"
+	rag.chatBaseURL = server.URL
+
+	answer, _, err := rag.QueryWithRAGTrace("灵山大佛有什么特色？", "zh-CN")
+	if err == nil {
+		t.Fatalf("expected LLM failure error, got answer: %s", answer)
+	}
+	if strings.Contains(answer, "游客常问") {
+		t.Fatalf("failed LLM should not return knowledge meta as answer: %s", answer)
 	}
 }
 

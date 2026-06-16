@@ -99,7 +99,14 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 		return nil, nil
 	}
 
-	retrievalText, addedTerms := s.configBasedQueryExpansion(s.profile, query)
+	// Use LLM query rewrite when API key is available, fallback to config-based expansion
+	var retrievalText string
+	var addedTerms []string
+	if s.chatAPIKey != "" && s.profile != nil {
+		retrievalText, addedTerms = s.LLMQueryRewrite(s.profile, query)
+	} else {
+		retrievalText, addedTerms = s.configBasedQueryExpansion(s.profile, query)
+	}
 	expandedQuery := retrievalQueryExpansion{Original: query, RetrievalText: retrievalText, AddedTerms: addedTerms}
 	queryTokens := s.bm25.Tokenize(expandedQuery.RetrievalText)
 	var queryVec []float64
@@ -146,6 +153,11 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 	result := make([]model.KnowledgeChunk, 0, options.TopK)
 	for i := 0; i < min(options.TopK, len(scoredChunks)); i++ {
 		result = append(result, scoredChunks[i].chunk)
+	}
+
+	// Apply LLM reranking when API key is available (enhances retrieval quality)
+	if s.chatAPIKey != "" && len(result) > 1 {
+		result = s.LLMRerank(query, result, options.TopK)
 	}
 
 	return result, nil
@@ -451,4 +463,3 @@ func conditionalTermBoost(query, haystack string, queryTerms, contentTerms []str
 	}
 	return boost
 }
-
