@@ -582,6 +582,90 @@
       "saveFailed": "Save failed"
     }
   },
+  "adminSpots": {
+    "title": "Scenic Spot Management",
+    "subtitle": "Manage scenic spot details, categories, and locations",
+    "actions": {
+      "create": "Create Spot",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "submitCreate": "Create Spot"
+    },
+    "drawer": {
+      "createTitle": "Create Spot",
+      "editTitle": "Edit Spot"
+    },
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "location": "Location",
+      "rating": "Rating",
+      "price": "Price",
+      "qrCode": "QR Code",
+      "geofence": "Geofence",
+      "actions": "Actions"
+    },
+    "categories": {
+      "core": "Core Attraction",
+      "performance": "Performance",
+      "culture": "Cultural Site",
+      "service": "Service Facility"
+    },
+    "price": {
+      "free": "Free"
+    },
+    "status": {
+      "notConfigured": "Not configured",
+      "disabled": "Disabled"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "location": "Location",
+      "category": "Category",
+      "rating": "Rating",
+      "price": "Price",
+      "imageURL": "Image URL",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "sortOrder": "Sort Order",
+      "qrCode": "QR Code ID",
+      "qrIntro": "Opening Line",
+      "qrEnabled": "Enable Scan",
+      "geofenceEnabled": "Arrival Guide",
+      "geofenceRadius": "Radius (m)",
+      "geofenceCooldown": "Cooldown (min)",
+      "geofenceIntro": "Trigger Copy"
+    },
+    "placeholders": {
+      "name": "Enter scenic spot name",
+      "description": "Enter scenic spot description",
+      "location": "Enter location",
+      "category": "Select a category",
+      "price": "0 means free",
+      "imageURL": "Optional image URL",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "sortOrder": "Lower numbers appear first",
+      "qrCode": "Leave blank to generate automatically, e.g. SPOT-0001",
+      "qrIntro": "Opening line spoken after scanning; leave blank for AI generation",
+      "geofenceIntro": "Preferred voice line when visitors arrive; leave blank to use guide content"
+    },
+    "validation": {
+      "nameRequired": "Enter scenic spot name",
+      "locationRequired": "Enter location",
+      "categoryRequired": "Select a category",
+      "ratingRange": "Rating must be between 0 and 5"
+    },
+    "switches": {
+      "qrEnabled": "Visitors can scan to trigger the guide",
+      "qrDisabled": "Scan is disabled",
+      "geofenceEnabled": "Triggers automatically when visitors arrive nearby",
+      "geofenceDisabled": "Geofence is disabled"
+    }
+  },
   "adminContent": {
     "title": "Guide Content Management",
     "actions": {

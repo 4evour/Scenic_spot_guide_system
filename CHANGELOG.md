@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 17:24 - 补齐景点管理国际化
+
+### 变更内容
+- scripts/check-admin-spots-i18n.mjs、web-vue/package.json、Makefile — 新增景点管理页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminSpots.vue — 将页面标题、说明、按钮、表格列、分类标签、价格/二维码/电子围栏状态、抽屉表单、开关说明、占位符和校验文案接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminSpots` 中英文文案。
+
+### 原因
+- 景点管理页包含二维码和电子围栏配置，但主体文案仍硬编码中文，未落实路线图中新增管理页和错误文案持续补齐 i18n 的要求。
+
+### 影响范围
+- 影响景点管理页中英文切换展示、表单校验提示和统一验证入口；不改变景点 CRUD、二维码、电子围栏接口和保存到后端的分类值。
+
 ## 2026-06-18 17:23 - 刷新景点删除修正构建产物
 
 ### 变更内容

@@ -582,6 +582,90 @@
       "saveFailed": "保存失败"
     }
   },
+  "adminSpots": {
+    "title": "景点管理",
+    "subtitle": "管理景区内的所有景点信息、分类与位置",
+    "actions": {
+      "create": "新增景点",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存修改",
+      "submitCreate": "确认新增"
+    },
+    "drawer": {
+      "createTitle": "新增景点",
+      "editTitle": "编辑景点"
+    },
+    "columns": {
+      "name": "名称",
+      "category": "分类",
+      "location": "位置",
+      "rating": "评分",
+      "price": "价格",
+      "qrCode": "二维码",
+      "geofence": "电子围栏",
+      "actions": "操作"
+    },
+    "categories": {
+      "core": "核心景点",
+      "performance": "演艺体验",
+      "culture": "文化建筑",
+      "service": "服务设施"
+    },
+    "price": {
+      "free": "免费"
+    },
+    "status": {
+      "notConfigured": "未配置",
+      "disabled": "未启用"
+    },
+    "form": {
+      "name": "名称",
+      "description": "描述",
+      "location": "位置",
+      "category": "分类",
+      "rating": "评分",
+      "price": "价格",
+      "imageURL": "图片链接",
+      "longitude": "经度",
+      "latitude": "纬度",
+      "sortOrder": "排序",
+      "qrCode": "二维码 ID",
+      "qrIntro": "开场白",
+      "qrEnabled": "启用扫码",
+      "geofenceEnabled": "到点讲解",
+      "geofenceRadius": "半径(m)",
+      "geofenceCooldown": "冷却(分)",
+      "geofenceIntro": "触发文案"
+    },
+    "placeholders": {
+      "name": "请输入景点名称",
+      "description": "请输入景点描述",
+      "location": "请输入位置信息",
+      "category": "请选择分类",
+      "price": "0 为免费",
+      "imageURL": "可选，图片 URL",
+      "longitude": "经度",
+      "latitude": "纬度",
+      "sortOrder": "数值越小越靠前",
+      "qrCode": "留空则自动生成，如 SPOT-0001",
+      "qrIntro": "扫码后数字人自动说的开场白（留空则自动 AI 生成）",
+      "geofenceIntro": "到达该景点时优先播报的数字人语音文案，留空则使用讲解内容"
+    },
+    "validation": {
+      "nameRequired": "请输入景点名称",
+      "locationRequired": "请输入位置信息",
+      "categoryRequired": "请选择分类",
+      "ratingRange": "评分范围为 0-5"
+    },
+    "switches": {
+      "qrEnabled": "游客可扫码触发讲解",
+      "qrDisabled": "扫码功能已关闭",
+      "geofenceEnabled": "游客到达附近自动触发",
+      "geofenceDisabled": "电子围栏已关闭"
+    }
+  },
   "adminContent": {
     "title": "讲解内容管理",
     "actions": {
