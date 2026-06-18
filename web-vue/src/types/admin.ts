@@ -27,6 +27,8 @@ export type KnowledgeCandidate = {
 }
 
 export type AvatarConfig = {
+  default_avatar_id: string
+  allow_avatar_switch: boolean
   name: string
   appearance: string
   costume: string
@@ -43,9 +45,14 @@ export type AvatarConfig = {
 }
 
 export type VisitorReport = {
+  period?: '7d' | '30d'
   attention_analysis: Array<{ label: string; value: number }>
   emotion_distribution: Array<{ label: string; icon: string; count: number; percent: number }>
   emotion_trend: Array<{ date: string; positive_rate: number; negative_rate: number; total: number }>
+  negative_reasons?: Array<{ label: string; value: number }>
+  audience_profiles?: Array<{ label: string; percent: number; route: string; satisfaction: number }>
+  route_satisfaction?: Array<{ label: string; clickRate: number; satisfaction: number }>
+  word_cloud?: Array<{ label: string; value: number }>
   suggestions: Array<{ content: string }>
   peak_hours: Array<{ hour: string; count: number }>
   summary: {
@@ -55,6 +62,16 @@ export type VisitorReport = {
     top_concern: string
     peak_hour: string
   }
+}
+
+export type VisitorQuery = {
+  [key: string]: unknown
+  id: number
+  query: string
+  response: string
+  spot_id: number
+  is_answered: boolean
+  created_at: string
 }
 
 export type SystemSettings = {
@@ -69,6 +86,8 @@ export type SystemSettings = {
 }
 
 export const defaultAvatarConfig: AvatarConfig = {
+  default_avatar_id: 'mao_pro',
+  allow_avatar_switch: true,
   name: '小灵',
   appearance: '亲和型国风讲解员',
   costume: '古典汉服',
@@ -88,6 +107,10 @@ export const defaultVisitorReport: VisitorReport = {
   attention_analysis: [],
   emotion_distribution: [],
   emotion_trend: [],
+  negative_reasons: [],
+  audience_profiles: [],
+  route_satisfaction: [],
+  word_cloud: [],
   suggestions: [],
   peak_hours: [],
   summary: {
