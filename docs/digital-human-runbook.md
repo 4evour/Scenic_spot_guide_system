@@ -2,42 +2,19 @@
 
 ## 1. 快速启动
 
-### 1.1 启动 Go 后端
+### 1.1 一键启动本地联调
 
-```bash
-cd d:\go web 01\scenic-guide
-
-# 安装依赖
-go mod tidy
-
-# 启动服务
-go run main.go
+```powershell
+cd "D:\go web 01\scenic-guide"
+.\scripts\start-local.ps1 -Restart
 ```
 
-**预期输出：**
-```
-=== 启动景区导览服务 ===
-步骤1: 加载配置...
-配置加载成功
-步骤2: 初始化日志...
-日志初始化成功
-步骤2.5: 初始化JWT...
-JWT初始化成功
-步骤3: 初始化数据库...
-数据库连接成功
-步骤4: 数据库迁移...
-数据库迁移成功
-步骤4.5: 初始化RAG知识库...
-RAG知识库初始化成功
-步骤5: 设置路由...
-路由设置成功
-步骤6: 启动服务器，监听地址: 0.0.0.0:8080
-```
+脚本会启动 Open-LLM-VTuber、初始化本地 SQLite 演示数据、启动 Go 服务，并把日志写入 `..\tmp\scenic-guide-start`。
 
 ### 1.2 验证服务
 
 ```bash
-# 检查健康状态
+curl http://localhost:8080/health
 curl http://localhost:8080/api/v1/dh/health
 ```
 
@@ -51,15 +28,40 @@ curl http://localhost:8080/api/v1/dh/health
 }
 ```
 
+### 1.3 打开主入口
+
+```text
+http://127.0.0.1:8080/digital-human#/digital-human
+```
+
+Open-LLM-VTuber 自带页面 `http://127.0.0.1:12393/` 只用于确认外部服务是否启动，不是本项目的主交付入口。
+
 ## 2. API 测试
+
+`/api/v1/dh/session/create`、`/api/v1/dh/chat/text`、`/api/v1/dh/chat/voice-transcript` 和 `/api/v1/dh/feedback` 都是登录后接口。浏览器主路径使用 `auth_token` HttpOnly Cookie；POST 请求还需要 `csrf_token` Cookie 对应的 `X-CSRF-Token` 请求头。命令行调试时先登录并保存 Cookie。
+
+### 2.0 登录并保存 Cookie
+
+```bash
+curl -i -c cookies.txt -X POST http://localhost:8080/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"visitor","password":"ScenicDemo123456"}'
+```
+
+从 `cookies.txt` 读取 `csrf_token` 后写入环境变量：
+
+```bash
+CSRF_TOKEN=$(awk '$6 == "csrf_token" {print $7}' cookies.txt)
+```
 
 ### 2.1 创建会话
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/dh/session/create \
+  -b cookies.txt \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "test_user",
     "scene": "lingshan",
     "location": "入口广场",
     "preferences": ["亲子", "2小时"]
@@ -78,6 +80,8 @@ curl -X POST http://localhost:8080/api/v1/dh/session/create \
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/dh/chat/text \
+  -b cookies.txt \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "abc123",
@@ -101,6 +105,8 @@ curl -X POST http://localhost:8080/api/v1/dh/chat/text \
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/dh/chat/voice-transcript \
+  -b cookies.txt \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "abc123",
@@ -127,6 +133,8 @@ curl -X POST http://localhost:8080/api/v1/dh/chat/voice-transcript \
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/dh/feedback \
+  -b cookies.txt \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "abc123",
@@ -149,26 +157,16 @@ cd Open-LLM-VTuber
 
 ### 3.2 配置环境变量
 
-创建 `.env` 文件：
+本项目的 Vue 页面默认连接同源 `/vtuber-ws/client-ws`，Go 后端会代理到本机 `127.0.0.1:12393`。Open-LLM-VTuber 调用 Go 的 OpenAI 兼容接口时，需要指向：
 
 ```env
-GO_BACKEND_BASE_URL=http://127.0.0.1:8080
-GO_DH_SESSION_API=/api/v1/dh/session/create
-GO_DH_TEXT_API=/api/v1/dh/chat/text
-GO_DH_VOICE_API=/api/v1/dh/chat/voice-transcript
-GO_DH_FEEDBACK_API=/api/v1/dh/feedback
-
-ASR_ENGINE=faster_whisper
-ASR_LANGUAGE=zh
-ASR_MODEL_SIZE=small
-
-TTS_ENGINE=edge_tts
-TTS_VOICE=zh-CN-XiaoxiaoNeural
+LLM_API_URL=http://127.0.0.1:8080/v1/chat/completions
+LLM_API_KEY=not-needed
 ```
 
 ### 3.3 启动数字人前端
 
-参考 Open-LLM-VTuber 官方文档启动。
+参考 Open-LLM-VTuber 官方文档启动外部服务即可。本项目主交付页面仍使用 Go 托管的 Vue 数字人页。
 
 ## 4. 常见问题
 
@@ -241,6 +239,8 @@ curl http://localhost:8080/health
 curl -w "Time: %{time_total}s\n" http://localhost:8080/api/v1/dh/health
 ```
 
+Prometheus 指标端点为 `/metrics`，需要管理员 Cookie 或 Bearer token 鉴权。
+
 ## 6. 部署建议
 
 ### 6.1 开发环境
@@ -260,13 +260,10 @@ go build -o scenic-guide .
 ./scenic-guide
 ```
 
-### 6.3 Docker部署（可选）
+### 6.3 Docker部署
 
-```dockerfile
-FROM golang:1.21-alpine
-WORKDIR /app
-COPY . .
-RUN go build -o scenic-guide .
-EXPOSE 8080
-CMD ["./scenic-guide"]
+```bash
+docker compose up --build
 ```
+
+`docker-compose.yml` 已包含 PostgreSQL healthcheck 和应用 `/health` healthcheck。生产环境需通过环境变量提供 `SCENIC_GUIDE_DATABASE_PASSWORD` 和 `SCENIC_GUIDE_SECURITY_JWT_SECRET`。

@@ -12,6 +12,7 @@
     "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",
     "check:dashboard-i18n": "node ../scripts/check-dashboard-i18n.mjs",
     "check:data-boundaries": "node ../scripts/check-dashboard-data-boundaries.mjs",
+    "check:digital-human-docs": "node ../scripts/check-digital-human-docs.mjs",
     "check:encoding": "node ../scripts/check-encoding.mjs",
     "lint": "eslint . --ext .vue,.ts,.tsx",
     "format": "prettier --write ."

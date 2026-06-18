@@ -2,7 +2,7 @@
 
 ## 1. 概述
 
-本文档描述了数字人导游系统与 Go 后端的集成方案。系统采用模块化设计，支持语音/文本交互、情感表达和口型同步。
+本文档描述当前 Web/Vue 数字人导览页与 Go 后端、Open-LLM-VTuber 的集成方式。项目主入口是 Go 服务托管的 Vue 页面 `/digital-human#/digital-human`，Open-LLM-VTuber 作为外部语音、Live2D 和口型驱动服务，通过 Go 的 `/vtuber-ws/*` 代理接入。
 
 ## 2. 架构设计
 
@@ -10,23 +10,24 @@
 
 ```mermaid
 flowchart LR
-    U["游客前端"] --> V["Open-LLM-VTuber Web"]
-    V --> G["Go API Gateway (/api/v1/dh/*)"]
+    U["游客浏览器"] --> V["Vue 数字人页 (/digital-human)"]
+    V --> G["Go API (/api/v1/dh/*, /api/v1/ai/chat)"]
+    V --> W["Go WebSocket 代理 (/vtuber-ws/*)"]
+    W --> O["Open-LLM-VTuber ws://127.0.0.1:12393/client-ws"]
     G --> R["RAG问答服务"]
     G --> P["路线推荐服务"]
     G --> F["反馈分析服务"]
-    V --> A["ASR(faster-whisper)"]
-    V --> T["TTS(Edge-TTS)"]
+    V --> T["Go Edge TTS / 浏览器朗读兜底"]
 ```
 
 ### 2.2 模块职责
 
 | 模块 | 职责 | 技术栈 |
 |------|------|--------|
-| Open-LLM-VTuber | 数字人渲染、表情控制、口型同步 | Python/React |
-| Go 后端 | 业务逻辑、RAG问答、路线推荐 | Go/Gin |
-| ASR | 语音转文字 | faster-whisper/FunASR |
-| TTS | 文字转语音 | Edge-TTS/MeloTTS |
+| Vue 数字人页 | Live2D 展示、文本问答、语音播放、打断、会话历史和游客形象切换 | Vue 3 / PixiJS / Live2D |
+| Go 后端 | Cookie 鉴权、业务逻辑、RAG 问答、路线推荐、会话消息保存和 WebSocket 代理 | Go/Gin |
+| Open-LLM-VTuber | 外部数字人语音和 Live2D 协议服务，默认监听 `127.0.0.1:12393` | Python |
+| TTS | Go 后端流式 TTS，失败时前端降级到浏览器朗读 | Edge TTS |
 
 ## 3. API 接口规范
 
@@ -34,7 +35,7 @@ flowchart LR
 
 #### POST /api/v1/dh/session/create
 
-创建数字人会话。
+创建数字人会话。该接口需要登录后的 `auth_token` Cookie，并且 POST 请求需要 `csrf_token` Cookie 对应的 `X-CSRF-Token` 请求头。浏览器端由 Vue API 客户端自动携带。
 
 **请求体：**
 ```json
@@ -58,7 +59,7 @@ flowchart LR
 
 #### POST /api/v1/dh/chat/text
 
-处理文本输入，返回回答和情感状态。
+处理文本输入，返回回答和情感状态。该接口需要登录后的 `auth_token` Cookie 与 `X-CSRF-Token` 请求头。
 
 **请求体：**
 ```json
@@ -89,7 +90,7 @@ flowchart LR
 
 #### POST /api/v1/dh/chat/voice-transcript
 
-处理语音识别结果，返回回答和情感状态。
+处理语音识别结果，返回回答和情感状态。该接口接收前端或外部语音服务给出的转写文本，本项目当前不在 Go 后端内置 ASR。该接口需要登录后的 `auth_token` Cookie 与 `X-CSRF-Token` 请求头。
 
 **请求体：**
 ```json
@@ -117,7 +118,7 @@ flowchart LR
 
 #### POST /api/v1/dh/feedback
 
-上报会话反馈数据。
+上报会话反馈数据。该接口需要登录后的 `auth_token` Cookie 与 `X-CSRF-Token` 请求头。
 
 **请求体：**
 ```json
@@ -175,7 +176,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant D as 数字人前端
+    participant D as Vue数字人页
     participant G as Go后端
     participant R as RAG服务
 
@@ -184,8 +185,8 @@ sequenceDiagram
     G->>R: 查询问答
     R-->>G: 返回回答
     G-->>D: {answer_text, emotion, trace_id}
-    D->>D: TTS合成语音
-    D->>D: 切换表情
+    D->>D: TTS合成/浏览器朗读兜底
+    D->>D: 切换表情和口型
     D-->>U: 语音播报+表情展示
 ```
 
@@ -194,8 +195,8 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant D as 数字人前端
-    participant A as ASR引擎
+    participant D as Vue数字人页
+    participant A as 浏览器语音识别或外部ASR
     participant G as Go后端
 
     U->>D: 语音输入
@@ -209,18 +210,13 @@ sequenceDiagram
 
 ## 6. 配置说明
 
-配置文件路径：`configs/digital_human.yaml`
+当前仓库没有 `configs/digital_human.yaml`。数字人相关配置分散在以下位置：
 
-```yaml
-digital_human:
-  provider: open_llm_vtuber
-  go_backend:
-    base_url: "http://127.0.0.1:8080"
-    session_api: "/api/v1/dh/session/create"
-    text_api: "/api/v1/dh/chat/text"
-    voice_api: "/api/v1/dh/chat/voice-transcript"
-    feedback_api: "/api/v1/dh/feedback"
-```
+- Go 后端配置：`configs/config.example.yaml` 与 `SCENIC_GUIDE_*` 环境变量。
+- 景区与数字人角色配置：`configs/scenic_profiles/*.yaml`。
+- 管理端默认数字人和游客是否允许切换：`/api/v1/admin/digital-human/config`。
+- 游客可选 Live2D 形象：`/api/v1/digital-human/avatar-options`，当前为 `mao_pro` 和 `shizuku`。
+- Open-LLM-VTuber WebSocket 代理：Vue 端连接同源 `/vtuber-ws/client-ws`，Go 后端转发到 `127.0.0.1:12393`。
 
 ## 7. 错误处理
 

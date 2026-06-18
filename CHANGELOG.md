@@ -1,5 +1,17 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 15:25 - 校准数字人联调文档
+
+### 变更内容
+- docs/digital-human-integration.md、docs/digital-human-runbook.md、docs/digital-human-production-check.md — 将数字人主入口校准为 Go 托管的 Vue 页面，补充受保护 `/api/v1/dh/*` POST 接口需要 `auth_token` Cookie 和 `X-CSRF-Token`，移除不存在的 `configs/digital_human.yaml` 配置口径。
+- scripts/check-digital-human-docs.mjs、web-vue/package.json、Makefile — 新增数字人文档漂移检查，并接入前端契约检查和 `make check`。
+
+### 原因
+- 审查发现数字人文档仍按旧 Open-LLM-VTuber 直连入口和无登录 curl 示例描述，和当前 Vue 主路径、Cookie 鉴权、CSRF 防护以及 Go WebSocket 代理实现不一致。
+
+### 影响范围
+- 影响数字人联调文档、生产检查说明和统一验证入口；不改变数字人运行时代码和接口行为。
+
 ## 2026-06-18 14:43 - 补齐游客问题页面国际化
 
 ### 变更内容
