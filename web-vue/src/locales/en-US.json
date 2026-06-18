@@ -582,6 +582,61 @@
       "saveFailed": "Save failed"
     }
   },
+  "adminRoutes": {
+    "title": "Route Management",
+    "actions": {
+      "create": "Create Route",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "update": "Update"
+    },
+    "drawer": {
+      "createTitle": "Create Route",
+      "editTitle": "Edit Route"
+    },
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "spotCount": "Spots",
+      "duration": "Duration",
+      "difficulty": "Difficulty",
+      "rating": "Rating",
+      "actions": "Actions"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Challenging"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "spots": "Spot List",
+      "duration": "Duration (min)",
+      "difficulty": "Difficulty",
+      "rating": "Rating"
+    },
+    "placeholders": {
+      "name": "Enter route name",
+      "description": "Enter route description",
+      "spots": "Separate spot names with commas, e.g. Grand Buddha, Brahma Palace",
+      "duration": "Enter duration",
+      "difficulty": "Select difficulty",
+      "rating": "Enter rating"
+    },
+    "validation": {
+      "nameRequired": "Route name is required",
+      "durationRequired": "Duration is required",
+      "durationMin": "Duration must be at least 1 minute",
+      "difficultyRequired": "Select a difficulty",
+      "ratingRange": "Rating must be between 0 and 5"
+    },
+    "units": {
+      "hour": "h",
+      "minute": "min"
+    }
+  },
   "error": {
     "title": "Something went wrong",
     "subtitle": "Try refreshing the page or contact the system administrator",

@@ -15,6 +15,7 @@
     "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",
     "check:admin-qrcode-i18n": "node ../scripts/check-admin-qrcode-i18n.mjs",
     "check:admin-reports-i18n": "node ../scripts/check-admin-reports-i18n.mjs",
+    "check:admin-routes-i18n": "node ../scripts/check-admin-routes-i18n.mjs",
     "check:admin-users-i18n": "node ../scripts/check-admin-users-i18n.mjs",
     "check:dashboard-i18n": "node ../scripts/check-dashboard-i18n.mjs",
     "check:data-boundaries": "node ../scripts/check-dashboard-data-boundaries.mjs",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, h } from 'vue'
+import { computed, ref, h } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   NButton,
   NDataTable,
@@ -29,6 +30,8 @@ type TourRoute = {
   created_at: string
   updated_at: string
 }
+
+const { t } = useI18n()
 
 const {
   loading,
@@ -65,24 +68,31 @@ const {
 
 const formRef = ref<FormInst | null>(null)
 
-const difficultyOptions = [
-  { label: '轻松', value: 'easy' },
-  { label: '中等', value: 'medium' },
-  { label: '挑战', value: 'hard' },
-]
+const difficultyOptions = computed(() => [
+  { label: t('adminRoutes.difficulty.easy'), value: 'easy' },
+  { label: t('adminRoutes.difficulty.medium'), value: 'medium' },
+  { label: t('adminRoutes.difficulty.hard'), value: 'hard' },
+])
 
-const difficultyTagMap: Record<string, { label: string; type: 'success' | 'warning' | 'error' }> = {
-  easy: { label: '轻松', type: 'success' },
-  medium: { label: '中等', type: 'warning' },
-  hard: { label: '挑战', type: 'error' },
+const difficultyTagType: Record<string, 'success' | 'warning' | 'error'> = {
+  easy: 'success',
+  medium: 'warning',
+  hard: 'error',
+}
+
+function difficultyLabel(value: string) {
+  if (value === 'easy') return t('adminRoutes.difficulty.easy')
+  if (value === 'medium') return t('adminRoutes.difficulty.medium')
+  if (value === 'hard') return t('adminRoutes.difficulty.hard')
+  return value
 }
 
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
-  if (hours > 0 && mins > 0) return `${hours}小时${mins}分钟`
-  if (hours > 0) return `${hours}小时`
-  return `${mins}分钟`
+  if (hours > 0 && mins > 0) return `${hours}${t('adminRoutes.units.hour')}${mins}${t('adminRoutes.units.minute')}`
+  if (hours > 0) return `${hours}${t('adminRoutes.units.hour')}`
+  return `${mins}${t('adminRoutes.units.minute')}`
 }
 
 function countSpots(spots: string): number {
@@ -90,22 +100,22 @@ function countSpots(spots: string): number {
   return spots.split(',').filter((s) => s.trim()).length
 }
 
-const rules: FormRules = {
-  name: [{ required: true, message: '请输入路线名称', trigger: 'blur' }],
+const rules = computed<FormRules>(() => ({
+  name: [{ required: true, message: t('adminRoutes.validation.nameRequired'), trigger: 'blur' }],
   duration: [
-    { type: 'number', required: true, message: '请输入时长', trigger: 'blur' },
-    { type: 'number', min: 1, message: '时长至少为 1 分钟', trigger: 'blur' },
+    { type: 'number', required: true, message: t('adminRoutes.validation.durationRequired'), trigger: 'blur' },
+    { type: 'number', min: 1, message: t('adminRoutes.validation.durationMin'), trigger: 'blur' },
   ],
-  difficulty: [{ required: true, message: '请选择难度', trigger: 'change' }],
+  difficulty: [{ required: true, message: t('adminRoutes.validation.difficultyRequired'), trigger: 'change' }],
   rating: [
-    { type: 'number', min: 0, max: 5, message: '评分范围 0-5', trigger: 'blur' },
+    { type: 'number', min: 0, max: 5, message: t('adminRoutes.validation.ratingRange'), trigger: 'blur' },
   ],
-}
+}))
 
-const columns: DataTableColumns<TourRoute> = [
-  { title: '名称', key: 'name', ellipsis: { tooltip: true } },
+const columns = computed<DataTableColumns<TourRoute>>(() => [
+  { title: t('adminRoutes.columns.name'), key: 'name', ellipsis: { tooltip: true } },
   {
-    title: '描述',
+    title: t('adminRoutes.columns.description'),
     key: 'description',
     ellipsis: { tooltip: true },
     render(row) {
@@ -114,7 +124,7 @@ const columns: DataTableColumns<TourRoute> = [
     },
   },
   {
-    title: '景点数',
+    title: t('adminRoutes.columns.spotCount'),
     key: 'spots',
     width: 80,
     align: 'center',
@@ -123,7 +133,7 @@ const columns: DataTableColumns<TourRoute> = [
     },
   },
   {
-    title: '时长',
+    title: t('adminRoutes.columns.duration'),
     key: 'duration',
     width: 120,
     render(row) {
@@ -131,18 +141,18 @@ const columns: DataTableColumns<TourRoute> = [
     },
   },
   {
-    title: '难度',
+    title: t('adminRoutes.columns.difficulty'),
     key: 'difficulty',
     width: 80,
     align: 'center',
     render(row) {
-      const tag = difficultyTagMap[row.difficulty]
-      if (!tag) return row.difficulty
-      return h(NTag, { type: tag.type, size: 'small', round: true }, { default: () => tag.label })
+      const type = difficultyTagType[row.difficulty]
+      if (!type) return row.difficulty
+      return h(NTag, { type, size: 'small', round: true }, { default: () => difficultyLabel(row.difficulty) })
     },
   },
   {
-    title: '评分',
+    title: t('adminRoutes.columns.rating'),
     key: 'rating',
     width: 70,
     align: 'center',
@@ -151,20 +161,20 @@ const columns: DataTableColumns<TourRoute> = [
     },
   },
   {
-    title: '操作',
+    title: t('adminRoutes.columns.actions'),
     key: 'actions',
     width: 150,
     align: 'center',
     render(row) {
       return h(NSpace, { justify: 'center', size: 'small' }, {
         default: () => [
-          h(NButton, { size: 'small', type: 'info', onClick: () => openEdit(row) }, { default: () => '编辑' }),
-          h(NButton, { size: 'small', type: 'error', onClick: () => handleDelete(row) }, { default: () => '删除' }),
+          h(NButton, { size: 'small', type: 'info', onClick: () => openEdit(row) }, { default: () => t('adminRoutes.actions.edit') }),
+          h(NButton, { size: 'small', type: 'error', onClick: () => handleDelete(row) }, { default: () => t('adminRoutes.actions.delete') }),
         ],
       })
     },
   },
-]
+])
 
 async function onSubmit() {
   try {
@@ -181,8 +191,8 @@ fetchData()
 <template>
   <div class="admin-routes">
     <div class="admin-routes__header">
-      <h2 class="admin-routes__title">路线管理</h2>
-      <NButton type="primary" @click="openCreate">新增路线</NButton>
+      <h2 class="admin-routes__title">{{ t('adminRoutes.title') }}</h2>
+      <NButton type="primary" @click="openCreate">{{ t('adminRoutes.actions.create') }}</NButton>
     </div>
 
     <NDataTable
@@ -197,7 +207,7 @@ fetchData()
     />
 
     <NDrawer v-model:show="drawerVisible" :width="600" placement="right">
-      <NDrawerContent :title="isEditing ? '编辑路线' : '新增路线'">
+      <NDrawerContent :title="isEditing ? t('adminRoutes.drawer.editTitle') : t('adminRoutes.drawer.createTitle')">
         <NForm
           ref="formRef"
           :model="formData"
@@ -206,53 +216,53 @@ fetchData()
           label-width="80"
           require-mark-placement="right-hanging"
         >
-          <NFormItem label="名称" path="name">
-            <NInput v-model:value="formData.name" placeholder="请输入路线名称" />
+          <NFormItem :label="t('adminRoutes.form.name')" path="name">
+            <NInput v-model:value="formData.name" :placeholder="t('adminRoutes.placeholders.name')" />
           </NFormItem>
 
-          <NFormItem label="描述" path="description">
+          <NFormItem :label="t('adminRoutes.form.description')" path="description">
             <NInput
               v-model:value="formData.description"
               type="textarea"
-              placeholder="请输入路线描述"
+              :placeholder="t('adminRoutes.placeholders.description')"
               :rows="3"
             />
           </NFormItem>
 
-          <NFormItem label="景点列表" path="spots">
+          <NFormItem :label="t('adminRoutes.form.spots')" path="spots">
             <NInput
               v-model:value="formData.spots"
               type="textarea"
-              placeholder="景点名称用逗号分隔，如：西湖,断桥,雷峰塔"
+              :placeholder="t('adminRoutes.placeholders.spots')"
               :rows="3"
             />
           </NFormItem>
 
-          <NFormItem label="时长(分钟)" path="duration">
+          <NFormItem :label="t('adminRoutes.form.duration')" path="duration">
             <NInputNumber
               v-model:value="formData.duration"
               :min="1"
-              placeholder="请输入时长"
+              :placeholder="t('adminRoutes.placeholders.duration')"
               style="width: 100%"
             />
           </NFormItem>
 
-          <NFormItem label="难度" path="difficulty">
+          <NFormItem :label="t('adminRoutes.form.difficulty')" path="difficulty">
             <NSelect
               v-model:value="formData.difficulty"
               :options="difficultyOptions"
-              placeholder="请选择难度"
+              :placeholder="t('adminRoutes.placeholders.difficulty')"
             />
           </NFormItem>
 
-          <NFormItem label="评分" path="rating">
+          <NFormItem :label="t('adminRoutes.form.rating')" path="rating">
             <NInputNumber
               v-model:value="formData.rating"
               :min="0"
               :max="5"
               :step="0.1"
               :precision="1"
-              placeholder="请输入评分"
+              :placeholder="t('adminRoutes.placeholders.rating')"
               style="width: 100%"
             />
           </NFormItem>
@@ -260,9 +270,9 @@ fetchData()
 
         <template #footer>
           <NSpace>
-            <NButton @click="closeDrawer">取消</NButton>
+            <NButton @click="closeDrawer">{{ t('adminRoutes.actions.cancel') }}</NButton>
             <NButton type="primary" :loading="saving" @click="onSubmit">
-              {{ isEditing ? '更新' : '创建' }}
+              {{ isEditing ? t('adminRoutes.actions.update') : t('adminRoutes.actions.create') }}
             </NButton>
           </NSpace>
         </template>

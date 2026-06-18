@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 17:18 - 补齐路线管理国际化
+
+### 变更内容
+- scripts/check-admin-routes-i18n.mjs、web-vue/package.json、Makefile — 新增路线管理页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminRoutes.vue — 将路线管理页标题、按钮、表格列、难度标签、时长单位、抽屉表单、占位符和校验文案接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminRoutes` 中英文文案。
+
+### 原因
+- 路线管理接口和页面已存在，但管理页主体文案仍硬编码中文，未落实路线图中新增页面和错误文案持续补齐 i18n 的要求。
+
+### 影响范围
+- 影响路线管理页中英文切换展示、表单校验提示和统一验证入口；不改变路线 CRUD 接口和字段结构。
+
 ## 2026-06-18 17:08 - 刷新知识库分析构建产物
 
 ### 变更内容

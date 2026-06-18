@@ -582,6 +582,61 @@
       "saveFailed": "保存失败"
     }
   },
+  "adminRoutes": {
+    "title": "路线管理",
+    "actions": {
+      "create": "新增路线",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "update": "更新"
+    },
+    "drawer": {
+      "createTitle": "新增路线",
+      "editTitle": "编辑路线"
+    },
+    "columns": {
+      "name": "名称",
+      "description": "描述",
+      "spotCount": "景点数",
+      "duration": "时长",
+      "difficulty": "难度",
+      "rating": "评分",
+      "actions": "操作"
+    },
+    "difficulty": {
+      "easy": "轻松",
+      "medium": "中等",
+      "hard": "挑战"
+    },
+    "form": {
+      "name": "名称",
+      "description": "描述",
+      "spots": "景点列表",
+      "duration": "时长(分钟)",
+      "difficulty": "难度",
+      "rating": "评分"
+    },
+    "placeholders": {
+      "name": "请输入路线名称",
+      "description": "请输入路线描述",
+      "spots": "景点名称用逗号分隔，如：灵山大佛,梵宫",
+      "duration": "请输入时长",
+      "difficulty": "请选择难度",
+      "rating": "请输入评分"
+    },
+    "validation": {
+      "nameRequired": "请输入路线名称",
+      "durationRequired": "请输入时长",
+      "durationMin": "时长至少为 1 分钟",
+      "difficultyRequired": "请选择难度",
+      "ratingRange": "评分范围 0-5"
+    },
+    "units": {
+      "hour": "小时",
+      "minute": "分钟"
+    }
+  },
   "error": {
     "title": "页面出现了异常",
     "subtitle": "可尝试刷新页面，或联系系统管理员",
