@@ -169,11 +169,138 @@
     "digitalCenter": "数字人中心",
     "avatar": "形象配置",
     "reports": "感受度报告",
+    "queries": "游客问题",
     "knowledge": "知识库管理",
     "systemMgmt": "系统管理",
     "users": "用户管理",
     "settings": "系统设置",
     "logout": "退出"
+  },
+  "dashboard": {
+    "title": "数据大屏",
+    "subtitle": "实时运营数据概览",
+    "common": {
+      "none": "暂无"
+    },
+    "kpis": {
+      "todayVisitors": "今日服务人次",
+      "weeklyChats": "本周问答次数",
+      "satisfaction": "用户满意度",
+      "avgResponseTime": "平均响应延迟",
+      "knowledgeItems": "知识库条目"
+    },
+    "sections": {
+      "hotSpots": "热门景点 TOP5",
+      "questionCloud": "热门问答云图",
+      "crowdHeat": "实时人流热力",
+      "activityStatus": "演出/活动状态",
+      "terminalStatus": "数字人终端状态",
+      "knowledgeOps": "知识库运营",
+      "hourlyTrend": "24 小时流量趋势",
+      "categoryDistribution": "关注点分布",
+      "satisfactionTrend": "7 日满意度趋势",
+      "topQuestions": "热门问题 Top 10",
+      "recentConversations": "最近对话"
+    },
+    "empty": {
+      "hotSpots": "暂无真实热门景点数据",
+      "questionCloud": "暂无热门问答云图数据",
+      "crowdHeat": "暂无实时人流热力数据",
+      "activityStatus": "暂无真实演出/活动状态数据",
+      "terminalStatus": "暂无真实终端状态数据",
+      "knowledgeGaps": "暂无真实知识缺口数据",
+      "avatarSummary": "暂无真实配置摘要数据",
+      "satisfactionTrend": "暂无满意度趋势数据",
+      "topQuestions": "暂无热门问题数据",
+      "recentConversations": "暂无对话记录"
+    },
+    "labels": {
+      "lastUpdated": "最近更新",
+      "avatarPreview": "数字人配置预览"
+    },
+    "columns": {
+      "time": "时间",
+      "visitorQuery": "游客问题",
+      "aiResponse": "AI 回答",
+      "emotion": "情绪",
+      "hotQuestion": "热门问题",
+      "count": "次数"
+    },
+    "emotions": {
+      "joy": "正面",
+      "surprise": "惊喜",
+      "neutral": "中性",
+      "sadness": "负面",
+      "fear": "恐惧"
+    },
+    "units": {
+      "times": "{count} 次"
+    },
+    "tooltips": {
+      "satisfaction": "满意度",
+      "conversations": "对话数"
+    }
+  },
+  "adminQueries": {
+    "title": "游客问题处理",
+    "subtitle": "承接数字人问答和游客反馈中需要人工处理的问题。",
+    "filters": {
+      "unanswered": "未回答",
+      "all": "全部"
+    },
+    "status": {
+      "answered": "已回答",
+      "unanswered": "未回答"
+    },
+    "statusHints": {
+      "done": "已完成处理",
+      "pending": "仍需跟进"
+    },
+    "kpis": {
+      "currentList": "当前列表：{count}",
+      "unanswered": "未回答：{count}",
+      "answered": "已回答：{count}"
+    },
+    "columns": {
+      "query": "问题",
+      "status": "状态",
+      "spotId": "关联景点ID",
+      "responsePreview": "回复预览",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "process": "处理",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "deleteDialog": {
+      "title": "确认删除",
+      "content": "删除后不可恢复，确定要删除这条游客问题吗？"
+    },
+    "drawerTitle": "处理游客问题",
+    "empty": "暂无游客问题",
+    "form": {
+      "query": "游客问题",
+      "spotId": "关联景点 ID",
+      "response": "处理回复",
+      "status": "处理状态"
+    },
+    "placeholders": {
+      "query": "游客提出的问题",
+      "spotId": "没有关联景点时为 0",
+      "response": "填写给游客或运营复盘使用的处理说明"
+    },
+    "messages": {
+      "loadFailed": "游客问题加载失败",
+      "queryRequired": "游客问题不能为空。",
+      "saveSuccess": "游客问题已保存。",
+      "saveFailed": "游客问题保存失败",
+      "deleteSuccess": "游客问题已删除。",
+      "deleteFailed": "游客问题删除失败"
+    }
   },
   "error": {
     "title": "页面出现了异常",

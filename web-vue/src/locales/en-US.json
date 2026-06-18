@@ -169,11 +169,138 @@
     "digitalCenter": "Digital Guide",
     "avatar": "Avatar Config",
     "reports": "Feedback Reports",
+    "queries": "Visitor Questions",
     "knowledge": "Knowledge Base",
     "systemMgmt": "System",
     "users": "Users",
     "settings": "Settings",
     "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Real-time operations overview",
+    "common": {
+      "none": "None"
+    },
+    "kpis": {
+      "todayVisitors": "Visitors Served Today",
+      "weeklyChats": "Weekly Q&A",
+      "satisfaction": "User Satisfaction",
+      "avgResponseTime": "Average Response Time",
+      "knowledgeItems": "Knowledge Items"
+    },
+    "sections": {
+      "hotSpots": "Top 5 Attractions",
+      "questionCloud": "Question Cloud",
+      "crowdHeat": "Real-time Crowd Heat",
+      "activityStatus": "Show / Activity Status",
+      "terminalStatus": "Digital Guide Terminal Status",
+      "knowledgeOps": "Knowledge Operations",
+      "hourlyTrend": "24-hour Traffic Trend",
+      "categoryDistribution": "Topic Distribution",
+      "satisfactionTrend": "7-day Satisfaction Trend",
+      "topQuestions": "Top 10 Questions",
+      "recentConversations": "Recent Conversations"
+    },
+    "empty": {
+      "hotSpots": "No real hot-attraction data",
+      "questionCloud": "No question-cloud data",
+      "crowdHeat": "No real-time crowd heat data",
+      "activityStatus": "No real show or activity status data",
+      "terminalStatus": "No real terminal status data",
+      "knowledgeGaps": "No real knowledge-gap data",
+      "avatarSummary": "No real configuration summary data",
+      "satisfactionTrend": "No satisfaction trend data",
+      "topQuestions": "No top question data",
+      "recentConversations": "No conversation records"
+    },
+    "labels": {
+      "lastUpdated": "Last Updated",
+      "avatarPreview": "Digital Guide Config Preview"
+    },
+    "columns": {
+      "time": "Time",
+      "visitorQuery": "Visitor Question",
+      "aiResponse": "AI Response",
+      "emotion": "Emotion",
+      "hotQuestion": "Hot Question",
+      "count": "Count"
+    },
+    "emotions": {
+      "joy": "Positive",
+      "surprise": "Surprised",
+      "neutral": "Neutral",
+      "sadness": "Negative",
+      "fear": "Concerned"
+    },
+    "units": {
+      "times": "{count} times"
+    },
+    "tooltips": {
+      "satisfaction": "Satisfaction",
+      "conversations": "Conversations"
+    }
+  },
+  "adminQueries": {
+    "title": "Visitor Questions",
+    "subtitle": "Handle visitor questions that need manual follow-up from digital guide chats and feedback.",
+    "filters": {
+      "unanswered": "Unanswered",
+      "all": "All"
+    },
+    "status": {
+      "answered": "Answered",
+      "unanswered": "Unanswered"
+    },
+    "statusHints": {
+      "done": "Completed",
+      "pending": "Needs follow-up"
+    },
+    "kpis": {
+      "currentList": "Current list: {count}",
+      "unanswered": "Unanswered: {count}",
+      "answered": "Answered: {count}"
+    },
+    "columns": {
+      "query": "Question",
+      "status": "Status",
+      "spotId": "Spot ID",
+      "responsePreview": "Response Preview",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "process": "Process",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "deleteDialog": {
+      "title": "Confirm Delete",
+      "content": "This cannot be undone. Delete this visitor question?"
+    },
+    "drawerTitle": "Process Visitor Question",
+    "empty": "No visitor questions",
+    "form": {
+      "query": "Visitor Question",
+      "spotId": "Spot ID",
+      "response": "Response",
+      "status": "Status"
+    },
+    "placeholders": {
+      "query": "Question raised by the visitor",
+      "spotId": "Use 0 when no spot is linked",
+      "response": "Write a reply or operations follow-up note"
+    },
+    "messages": {
+      "loadFailed": "Failed to load visitor questions",
+      "queryRequired": "Visitor question is required.",
+      "saveSuccess": "Visitor question saved.",
+      "saveFailed": "Failed to save visitor question",
+      "deleteSuccess": "Visitor question deleted.",
+      "deleteFailed": "Failed to delete visitor question"
+    }
   },
   "error": {
     "title": "Something went wrong",

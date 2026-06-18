@@ -2,7 +2,7 @@
 import { h, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { NLayoutSider, NMenu, NIcon, NScrollbar } from 'naive-ui'
+import { NLayoutSider, NMenu, NScrollbar } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { useAppStore } from '../stores/app'
 import { useAuthStore } from '../stores/auth'
@@ -38,6 +38,7 @@ const menuOptions = computed<MenuOption[]>(() => {
       children: [
         { label: t('nav.avatar'), key: 'admin-avatar', icon: renderIcon('👤') },
         { label: t('nav.reports'), key: 'admin-reports', icon: renderIcon('📈') },
+        { label: t('nav.queries'), key: 'admin-queries', icon: renderIcon('❓') },
       ],
     },
     { label: t('nav.knowledge'), key: 'admin-knowledge', icon: renderIcon('📚') },

@@ -62,6 +62,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/AdminReports.vue'),
         meta: { title: 'nav.reports', parentTitle: 'nav.digitalCenter', requiresAdmin: true },
       },
+      {
+        path: 'admin/queries',
+        name: 'admin-queries',
+        component: () => import('../views/AdminQueries.vue'),
+        meta: { title: 'nav.queries', parentTitle: 'nav.digitalCenter', requiresAdmin: true },
+      },
       // 知识库
       {
         path: 'admin/knowledge',
