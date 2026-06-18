@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 19:37 - 补齐知识库管理页 i18n 源码
+
+### 变更内容
+- web-vue/src/views/AdminKnowledge.vue — 将知识库管理页的分类、筛选、表单、上传、列表、AI 分析记录和知识候选等用户可见文案接入 `adminKnowledge.*` locale key。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增知识库管理页中英文文案。
+- scripts/check-admin-knowledge-i18n.mjs、scripts/check-admin-knowledge-insights.mjs、web-vue/package.json、Makefile — 新增并接入知识库管理页 i18n 与 AI 分析区检查命令。
+
+### 原因
+- 多语言路线图要求继续补齐新增管理页和错误文案；知识库管理页仍有硬编码中文和 AI 分析区域检查未覆盖 locale key。
+
+### 影响范围
+- 影响 Vue 管理端知识库管理页、前端 i18n 检查脚本和 `make frontend-contracts` 检查链路；不改变后端接口和运行时数据结构。
+
 ## 2026-06-18 17:26 - 新增账号切换交接记录
 
 ### 变更内容

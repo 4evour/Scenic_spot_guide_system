@@ -582,6 +582,139 @@
       "saveFailed": "保存失败"
     }
   },
+  "adminKnowledge": {
+    "categories": {
+      "all": "全部分类",
+      "guide": "讲解词",
+      "history": "文史资料",
+      "faq": "游客 FAQ",
+      "route": "路线推荐",
+      "service": "服务设施",
+      "ticket": "票务交通",
+      "official": "官方资料",
+      "government": "政府资料",
+      "overview": "景区概况",
+      "spot": "景点介绍",
+      "boundary": "实时边界",
+      "uncategorized": "未分类"
+    },
+    "spotCategories": {
+      "all": "全部景点分类",
+      "core": "核心景点",
+      "performance": "演艺体验",
+      "culture": "文化建筑",
+      "service": "服务设施"
+    },
+    "spots": {
+      "all": "全部景点",
+      "fallback": "景点{id}"
+    },
+    "validation": {
+      "contentRequired": "请输入知识内容"
+    },
+    "kpis": {
+      "items": {
+        "label": "知识条目",
+        "note": "来自 RAG 知识库"
+      },
+      "current": {
+        "label": "当前页显示",
+        "note": "服务端筛选结果"
+      },
+      "formats": {
+        "label": "支持格式",
+        "note": "另支持 JSON、TXT"
+      },
+      "cache": {
+        "label": "缓存状态",
+        "value": "自动刷新",
+        "note": "增删改后立即生效"
+      }
+    },
+    "editor": {
+      "createTitle": "新增知识条目",
+      "editTitle": "编辑知识条目"
+    },
+    "form": {
+      "title": "标题",
+      "category": "分类",
+      "source": "来源",
+      "content": "知识内容"
+    },
+    "placeholders": {
+      "title": "例如：九龙灌浴讲解词",
+      "source": "admin / 文件名 / 景点名称",
+      "content": "填写讲解词、历史背景、FAQ 问答或运营说明"
+    },
+    "actions": {
+      "save": "保存更新",
+      "add": "加入知识库",
+      "clear": "清空",
+      "search": "查询",
+      "refresh": "刷新",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "approve": "入库",
+      "reject": "拒绝"
+    },
+    "upload": {
+      "title": "上传知识文档",
+      "submit": "上传并导入",
+      "hint": "JSONL/JSON 需包含 title、content、source、metadata 字段；Markdown/TXT 会按段落自动切片。"
+    },
+    "filters": {
+      "searchPlaceholder": "搜索景点、讲解词、FAQ、来源..."
+    },
+    "empty": {
+      "knowledge": "暂无知识条目",
+      "analyses": "暂无 AI 分析记录",
+      "candidates": "暂无待审核知识候选"
+    },
+    "labels": {
+      "source": "来源：{source} / {updated}",
+      "session": "会话：{session}"
+    },
+    "analysis": {
+      "title": "AI 分析记录",
+      "sessionPlaceholder": "输入会话 ID 生成候选",
+      "analyze": "AI 分析会话",
+      "refresh": "刷新记录",
+      "satisfaction": "满意度 {score}",
+      "emptySummary": "暂无分析摘要",
+      "attentionPoint": "关注点：{item}",
+      "negativeReason": "负面原因：{item}"
+    },
+    "candidates": {
+      "title": "AI 知识候选",
+      "latestAnalysis": "最近分析：{session}",
+      "refresh": "刷新候选"
+    },
+    "dialog": {
+      "deleteTitle": "确认删除",
+      "deleteContent": "确认删除「{title}」吗？"
+    },
+    "messages": {
+      "loadFailed": "知识库加载失败",
+      "updateSuccess": "知识条目已更新，数字人检索缓存已刷新。",
+      "createSuccess": "知识条目已加入数字人知识库。",
+      "saveFailed": "保存失败",
+      "deleteSuccess": "知识条目已删除。",
+      "deleteFailed": "删除失败",
+      "chooseFile": "请先选择知识文档。",
+      "uploadSuccess": "上传完成，已导入 {count} 条知识片段。",
+      "uploadFailed": "上传失败",
+      "sessionRequired": "请输入需要分析的会话 ID。",
+      "analyzeSuccess": "AI 分析完成，已生成知识候选。",
+      "analyzeFailed": "AI 分析失败",
+      "analysesLoadFailed": "AI 分析记录加载失败",
+      "candidatesLoadFailed": "知识候选加载失败",
+      "approveSuccess": "候选知识已入库。",
+      "approveFailed": "入库失败",
+      "rejectSuccess": "候选知识已拒绝。",
+      "rejectFailed": "拒绝失败"
+    }
+  },
   "adminSpots": {
     "title": "景点管理",
     "subtitle": "管理景区内的所有景点信息、分类与位置",

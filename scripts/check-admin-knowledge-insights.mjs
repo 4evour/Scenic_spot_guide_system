@@ -19,10 +19,10 @@ const requiredViewSnippets = [
   '/admin/insights/analyses?page=1&page_size=5',
   'insightAnalyses',
   'loadInsightAnalyses',
-  'AI 分析记录',
-  '满意度',
-  '关注点',
-  '负面原因',
+  'adminKnowledge.analysis.title',
+  'adminKnowledge.analysis.satisfaction',
+  'adminKnowledge.analysis.attentionPoint',
+  'adminKnowledge.analysis.negativeReason',
 ];
 
 for (const snippet of requiredViewSnippets) {

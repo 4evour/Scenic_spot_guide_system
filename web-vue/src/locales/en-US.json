@@ -582,6 +582,139 @@
       "saveFailed": "Save failed"
     }
   },
+  "adminKnowledge": {
+    "categories": {
+      "all": "All Categories",
+      "guide": "Guide Script",
+      "history": "Historical Material",
+      "faq": "Visitor FAQ",
+      "route": "Route Recommendation",
+      "service": "Service Facility",
+      "ticket": "Ticketing & Transport",
+      "official": "Official Material",
+      "government": "Government Material",
+      "overview": "Scenic Overview",
+      "spot": "Spot Introduction",
+      "boundary": "Realtime Boundary",
+      "uncategorized": "Uncategorized"
+    },
+    "spotCategories": {
+      "all": "All Spot Categories",
+      "core": "Core Attraction",
+      "performance": "Performance",
+      "culture": "Cultural Site",
+      "service": "Service Facility"
+    },
+    "spots": {
+      "all": "All Spots",
+      "fallback": "Spot {id}"
+    },
+    "validation": {
+      "contentRequired": "Enter knowledge content"
+    },
+    "kpis": {
+      "items": {
+        "label": "Knowledge Items",
+        "note": "From the RAG knowledge base"
+      },
+      "current": {
+        "label": "Current Page",
+        "note": "Server-side filtered results"
+      },
+      "formats": {
+        "label": "Supported Formats",
+        "note": "Also supports JSON and TXT"
+      },
+      "cache": {
+        "label": "Cache Status",
+        "value": "Auto refresh",
+        "note": "Changes take effect immediately"
+      }
+    },
+    "editor": {
+      "createTitle": "Create Knowledge Item",
+      "editTitle": "Edit Knowledge Item"
+    },
+    "form": {
+      "title": "Title",
+      "category": "Category",
+      "source": "Source",
+      "content": "Knowledge Content"
+    },
+    "placeholders": {
+      "title": "Example: Nine Dragons Bathing guide script",
+      "source": "admin / file name / scenic spot name",
+      "content": "Enter guide scripts, historical context, FAQ answers, or operations notes"
+    },
+    "actions": {
+      "save": "Save Changes",
+      "add": "Add to Knowledge Base",
+      "clear": "Clear",
+      "search": "Search",
+      "refresh": "Refresh",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "upload": {
+      "title": "Upload Knowledge Document",
+      "submit": "Upload and Import",
+      "hint": "JSONL/JSON must include title, content, source, and metadata fields. Markdown/TXT is chunked by paragraph."
+    },
+    "filters": {
+      "searchPlaceholder": "Search spots, scripts, FAQ, or source..."
+    },
+    "empty": {
+      "knowledge": "No knowledge items",
+      "analyses": "No AI analysis records",
+      "candidates": "No pending knowledge candidates"
+    },
+    "labels": {
+      "source": "Source: {source} / {updated}",
+      "session": "Session: {session}"
+    },
+    "analysis": {
+      "title": "AI Analysis Records",
+      "sessionPlaceholder": "Enter a session ID to generate candidates",
+      "analyze": "Analyze Session",
+      "refresh": "Refresh Records",
+      "satisfaction": "Satisfaction {score}",
+      "emptySummary": "No analysis summary",
+      "attentionPoint": "Attention: {item}",
+      "negativeReason": "Negative reason: {item}"
+    },
+    "candidates": {
+      "title": "AI Knowledge Candidates",
+      "latestAnalysis": "Latest analysis: {session}",
+      "refresh": "Refresh Candidates"
+    },
+    "dialog": {
+      "deleteTitle": "Confirm Delete",
+      "deleteContent": "Delete \"{title}\"?"
+    },
+    "messages": {
+      "loadFailed": "Failed to load knowledge base",
+      "updateSuccess": "Knowledge item updated and the digital guide retrieval cache refreshed.",
+      "createSuccess": "Knowledge item added to the digital guide knowledge base.",
+      "saveFailed": "Save failed",
+      "deleteSuccess": "Knowledge item deleted.",
+      "deleteFailed": "Delete failed",
+      "chooseFile": "Select a knowledge document first.",
+      "uploadSuccess": "Upload complete. Imported {count} knowledge chunks.",
+      "uploadFailed": "Upload failed",
+      "sessionRequired": "Enter a session ID to analyze.",
+      "analyzeSuccess": "AI analysis complete and knowledge candidates generated.",
+      "analyzeFailed": "AI analysis failed",
+      "analysesLoadFailed": "Failed to load AI analysis records",
+      "candidatesLoadFailed": "Failed to load knowledge candidates",
+      "approveSuccess": "Candidate knowledge approved.",
+      "approveFailed": "Approval failed",
+      "rejectSuccess": "Candidate knowledge rejected.",
+      "rejectFailed": "Reject failed"
+    }
+  },
   "adminSpots": {
     "title": "Scenic Spot Management",
     "subtitle": "Manage scenic spot details, categories, and locations",
