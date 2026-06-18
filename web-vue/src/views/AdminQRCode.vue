@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, h, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   NButton,
   NCard,
@@ -29,6 +30,7 @@ type QRSpot = {
 }
 
 const message = useMessage()
+const { t } = useI18n()
 const drawerVisible = ref(false)
 const state = reactive({
   loading: false,
@@ -62,7 +64,7 @@ async function loadData() {
     state.spots = spots
     state.stats = stats
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '二维码数据加载失败')
+    message.error(error instanceof Error ? error.message : t('adminQRCode.messages.loadFailed'))
   } finally {
     state.loading = false
   }
@@ -72,10 +74,10 @@ async function generateAll() {
   state.generating = true
   try {
     const data = await apiFetch<{ generated: number }>('/admin/qr/batch-generate', { method: 'POST', body: '{}' })
-    message.success(`已生成 ${data.generated || 0} 个二维码 ID。`)
+    message.success(t('adminQRCode.messages.generateSuccess', { count: data.generated || 0 }))
     await loadData()
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '批量生成失败')
+    message.error(error instanceof Error ? error.message : t('adminQRCode.messages.generateFailed'))
   } finally {
     state.generating = false
   }
@@ -84,9 +86,9 @@ async function generateAll() {
 async function copyLink(row: QRSpot) {
   try {
     await navigator.clipboard.writeText(scanURL(row))
-    message.success('扫码链接已复制。')
+    message.success(t('adminQRCode.messages.copySuccess'))
   } catch {
-    message.error('复制失败，请手动复制链接。')
+    message.error(t('adminQRCode.messages.copyFailed'))
   }
 }
 
@@ -107,7 +109,7 @@ function openEdit(row: QRSpot) {
 
 async function saveQRCode() {
   if (state.editor.qr_code.length > 100) {
-    message.error('二维码 ID 最多 100 个字符。')
+    message.error(t('adminQRCode.messages.qrCodeTooLong'))
     return
   }
   state.saving = true
@@ -120,39 +122,39 @@ async function saveQRCode() {
         qr_enabled: state.editor.qr_enabled,
       }),
     })
-    message.success('二维码配置已保存。')
+    message.success(t('adminQRCode.messages.saveSuccess'))
     drawerVisible.value = false
     await loadData()
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '二维码配置保存失败')
+    message.error(error instanceof Error ? error.message : t('adminQRCode.messages.saveFailed'))
   } finally {
     state.saving = false
   }
 }
 
 const columns: DataTableColumns<QRSpot> = [
-  { title: '景点', key: 'name', width: 180, ellipsis: { tooltip: true } },
-  { title: '分类', key: 'category', width: 120 },
+  { title: t('adminQRCode.columns.spot'), key: 'name', width: 180, ellipsis: { tooltip: true } },
+  { title: t('adminQRCode.columns.category'), key: 'category', width: 120 },
   {
-    title: '状态',
+    title: t('adminQRCode.columns.status'),
     key: 'qr_enabled',
     width: 100,
     render(row) {
       return row.qr_enabled
-        ? h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => '已启用' })
-        : h(NTag, { size: 'small', bordered: false }, { default: () => '未启用' })
+        ? h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => t('adminQRCode.status.enabled') })
+        : h(NTag, { size: 'small', bordered: false }, { default: () => t('adminQRCode.status.disabled') })
     },
   },
   { title: '二维码 ID', key: 'qr_code', width: 140 },
   {
-    title: '操作',
+    title: t('adminQRCode.columns.actions'),
     key: 'actions',
     width: 320,
     render(row) {
       return h(NSpace, { size: 6 }, {
         default: () => [
-          h(NButton, { size: 'small', tertiary: true, type: 'primary', onClick: () => openEdit(row) }, { default: () => '编辑' }),
-          h(NButton, { size: 'small', tertiary: true, onClick: () => copyLink(row) }, { default: () => '复制链接' }),
+          h(NButton, { size: 'small', tertiary: true, type: 'primary', onClick: () => openEdit(row) }, { default: () => t('adminQRCode.actions.edit') }),
+          h(NButton, { size: 'small', tertiary: true, onClick: () => copyLink(row) }, { default: () => t('adminQRCode.actions.copyLink') }),
           h(NButton, { size: 'small', tertiary: true, type: 'primary', onClick: () => downloadQR(row, 'png') }, { default: () => 'PNG' }),
           h(NButton, { size: 'small', tertiary: true, type: 'primary', onClick: () => downloadQR(row, 'svg') }, { default: () => 'SVG' }),
         ],
@@ -168,19 +170,19 @@ onMounted(loadData)
   <section class="qr-admin">
     <div class="qr-header">
       <div>
-        <h2>二维码管理</h2>
-        <p>生成、复制和下载景点扫码导览二维码。</p>
+        <h2>{{ t('adminQRCode.title') }}</h2>
+        <p>{{ t('adminQRCode.subtitle') }}</p>
       </div>
       <NSpace>
-        <NButton :loading="state.loading" @click="loadData">刷新</NButton>
-        <NButton type="primary" :loading="state.generating" @click="generateAll">批量生成</NButton>
+        <NButton :loading="state.loading" @click="loadData">{{ t('adminQRCode.actions.refresh') }}</NButton>
+        <NButton type="primary" :loading="state.generating" @click="generateAll">{{ t('adminQRCode.actions.generate') }}</NButton>
       </NSpace>
     </div>
 
     <div class="qr-kpis">
-      <NCard :bordered="false">已启用：{{ enabledCount }}</NCard>
-      <NCard :bordered="false">有二维码：{{ state.stats.spots_with_qr }}</NCard>
-      <NCard :bordered="false">缓存：{{ state.stats.cache_entries }}</NCard>
+      <NCard :bordered="false">{{ t('adminQRCode.kpis.enabled', { count: enabledCount }) }}</NCard>
+      <NCard :bordered="false">{{ t('adminQRCode.kpis.withQr', { count: state.stats.spots_with_qr }) }}</NCard>
+      <NCard :bordered="false">{{ t('adminQRCode.kpis.cache', { count: state.stats.cache_entries }) }}</NCard>
     </div>
 
     <NCard :bordered="false" class="qr-card">
@@ -193,33 +195,33 @@ onMounted(loadData)
           :bordered="false"
           :scroll-x="900"
         />
-        <NEmpty v-else description="暂无景点二维码配置" />
+        <NEmpty v-else :description="t('adminQRCode.empty')" />
       </NSpin>
     </NCard>
 
     <NDrawer v-model:show="drawerVisible" :width="520" placement="right">
-      <NDrawerContent :title="`编辑二维码：${state.editor.name}`" closable>
+      <NDrawerContent :title="t('adminQRCode.drawerTitle', { name: state.editor.name })" closable>
         <NForm label-placement="left" label-width="90">
-          <NFormItem label="二维码 ID">
-            <NInput v-model:value="state.editor.qr_code" maxlength="100" show-count placeholder="例如 SPOT-0001" />
+          <NFormItem :label="t('adminQRCode.form.qrCode')">
+            <NInput v-model:value="state.editor.qr_code" maxlength="100" show-count :placeholder="t('adminQRCode.placeholders.qrCode')" />
           </NFormItem>
-          <NFormItem label="启用扫码">
+          <NFormItem :label="t('adminQRCode.form.enabled')">
             <NSwitch v-model:value="state.editor.qr_enabled" />
-            <span class="switch-hint">{{ state.editor.qr_enabled ? '游客可扫码进入讲解' : '扫码入口停用' }}</span>
+            <span class="switch-hint">{{ state.editor.qr_enabled ? t('adminQRCode.statusHints.enabled') : t('adminQRCode.statusHints.disabled') }}</span>
           </NFormItem>
-          <NFormItem label="讲解词">
+          <NFormItem :label="t('adminQRCode.form.intro')">
             <NInput
               v-model:value="state.editor.qr_intro_text"
               type="textarea"
               :rows="6"
-              placeholder="留空时由后端根据景点信息生成讲解"
+              :placeholder="t('adminQRCode.placeholders.intro')"
             />
           </NFormItem>
         </NForm>
         <template #footer>
           <NSpace justify="end">
-            <NButton @click="drawerVisible = false">取消</NButton>
-            <NButton type="primary" :loading="state.saving" @click="saveQRCode">保存</NButton>
+            <NButton @click="drawerVisible = false">{{ t('adminQRCode.actions.cancel') }}</NButton>
+            <NButton type="primary" :loading="state.saving" @click="saveQRCode">{{ t('adminQRCode.actions.save') }}</NButton>
           </NSpace>
         </template>
       </NDrawerContent>

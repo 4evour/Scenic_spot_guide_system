@@ -302,6 +302,58 @@
       "deleteFailed": "Failed to delete visitor question"
     }
   },
+  "adminQRCode": {
+    "title": "QR Code Management",
+    "subtitle": "Generate, copy, and download QR codes for attraction audio guides.",
+    "columns": {
+      "spot": "Attraction",
+      "category": "Category",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "statusHints": {
+      "enabled": "Visitors can scan to enter the guide",
+      "disabled": "Scan entry disabled"
+    },
+    "kpis": {
+      "enabled": "Enabled: {count}",
+      "withQr": "With QR: {count}",
+      "cache": "Cache: {count}"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "generate": "Batch Generate",
+      "edit": "Edit",
+      "copyLink": "Copy Link",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "drawerTitle": "Edit QR Code: {name}",
+    "empty": "No attraction QR code settings",
+    "form": {
+      "qrCode": "QR Code ID",
+      "enabled": "Enable Scan",
+      "intro": "Guide Script"
+    },
+    "placeholders": {
+      "qrCode": "Example: SPOT-0001",
+      "intro": "Leave empty to let the backend generate a guide from attraction data"
+    },
+    "messages": {
+      "loadFailed": "Failed to load QR code data",
+      "generateSuccess": "Generated {count} QR code IDs.",
+      "generateFailed": "Batch generation failed",
+      "copySuccess": "Scan link copied.",
+      "copyFailed": "Copy failed. Please copy the link manually.",
+      "qrCodeTooLong": "QR Code ID can be at most 100 characters.",
+      "saveSuccess": "QR code settings saved.",
+      "saveFailed": "Failed to save QR code settings"
+    }
+  },
   "error": {
     "title": "Something went wrong",
     "subtitle": "Try refreshing the page or contact the system administrator",

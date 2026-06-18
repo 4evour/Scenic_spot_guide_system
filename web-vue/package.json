@@ -10,6 +10,7 @@
     "check": "vue-tsc -b --pretty false",
     "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
     "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",
+    "check:admin-qrcode-i18n": "node ../scripts/check-admin-qrcode-i18n.mjs",
     "check:dashboard-i18n": "node ../scripts/check-dashboard-i18n.mjs",
     "check:data-boundaries": "node ../scripts/check-dashboard-data-boundaries.mjs",
     "check:digital-human-docs": "node ../scripts/check-digital-human-docs.mjs",

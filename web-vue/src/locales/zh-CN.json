@@ -302,6 +302,58 @@
       "deleteFailed": "游客问题删除失败"
     }
   },
+  "adminQRCode": {
+    "title": "二维码管理",
+    "subtitle": "生成、复制和下载景点扫码导览二维码。",
+    "columns": {
+      "spot": "景点",
+      "category": "分类",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "status": {
+      "enabled": "已启用",
+      "disabled": "未启用"
+    },
+    "statusHints": {
+      "enabled": "游客可扫码进入讲解",
+      "disabled": "扫码入口停用"
+    },
+    "kpis": {
+      "enabled": "已启用：{count}",
+      "withQr": "有二维码：{count}",
+      "cache": "缓存：{count}"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "generate": "批量生成",
+      "edit": "编辑",
+      "copyLink": "复制链接",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "drawerTitle": "编辑二维码：{name}",
+    "empty": "暂无景点二维码配置",
+    "form": {
+      "qrCode": "二维码 ID",
+      "enabled": "启用扫码",
+      "intro": "讲解词"
+    },
+    "placeholders": {
+      "qrCode": "例如 SPOT-0001",
+      "intro": "留空时由后端根据景点信息生成讲解"
+    },
+    "messages": {
+      "loadFailed": "二维码数据加载失败",
+      "generateSuccess": "已生成 {count} 个二维码 ID。",
+      "generateFailed": "批量生成失败",
+      "copySuccess": "扫码链接已复制。",
+      "copyFailed": "复制失败，请手动复制链接。",
+      "qrCodeTooLong": "二维码 ID 最多 100 个字符。",
+      "saveSuccess": "二维码配置已保存。",
+      "saveFailed": "二维码配置保存失败"
+    }
+  },
   "error": {
     "title": "页面出现了异常",
     "subtitle": "可尝试刷新页面，或联系系统管理员",

@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 15:35 - 补齐二维码管理国际化
+
+### 变更内容
+- scripts/check-admin-qrcode-i18n.mjs、web-vue/package.json、Makefile — 新增二维码管理页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminQRCode.vue — 将二维码管理页标题、KPI、表格列、状态标签、操作按钮、抽屉表单、空状态和消息提示接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminQRCode` 中英文文案。
+
+### 原因
+- 路线图要求多语言 i18n 持续补齐新增页面和错误文案；审查发现新补齐的二维码管理页仍存在大量硬编码中文。
+
+### 影响范围
+- 影响二维码管理页中英文切换展示、前端静态检查和统一验证入口；不改变二维码后端接口和缓存逻辑。
+
 ## 2026-06-18 15:25 - 校准数字人联调文档
 
 ### 变更内容
