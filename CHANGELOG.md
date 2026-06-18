@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 20:23 - 增加定位错误 i18n 检查
+
+### 变更内容
+- scripts/check-geolocation-i18n.mjs — 新增地理定位错误文案 i18n 静态检查，覆盖 `useGeolocation` 和地图/数字人调用点。
+- web-vue/package.json、Makefile — 接入 `check:geolocation-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/composables/useGeolocation.ts、web-vue/src/views/MapView.vue、web-vue/src/views/DigitalHumanView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将定位权限、GPS 异常、超时和未知失败提示接入 `map.gps*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端错误文案；定位权限、GPS 异常和定位失败提示仍由 composable 写死中文。
+
+### 影响范围
+- 影响地图页和数字人页自动导览定位错误提示，以及前端静态检查链路；不改变定位监听参数、自动导览逻辑和后端接口。
+
 ## 2026-06-18 20:16 - 刷新 Live2D 舞台构建产物
 
 ### 变更内容

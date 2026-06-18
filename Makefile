@@ -22,6 +22,7 @@ frontend-contracts:
 	cd web-vue && npm run check:login-i18n
 	cd web-vue && npm run check:qr-scan-i18n
 	cd web-vue && npm run check:live2d-stage-i18n
+	cd web-vue && npm run check:geolocation-i18n
 	cd web-vue && npm run check:data-boundaries
 	cd web-vue && npm run check:admin-queries
 	cd web-vue && npm run check:admin-knowledge-insights

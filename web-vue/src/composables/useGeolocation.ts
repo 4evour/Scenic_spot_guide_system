@@ -11,6 +11,15 @@ export interface UseGeolocationOptions {
   enableHighAccuracy?: boolean; // 默认 true
   maximumAge?: number; // 默认 5000（5秒缓存）
   timeout?: number; // 默认 10000（10秒超时）
+  messages?: Partial<GeolocationMessages>;
+}
+
+export interface GeolocationMessages {
+  notSupported: () => string;
+  denied: () => string;
+  unavailable: () => string;
+  timeout: () => string;
+  failed: (message: string) => string;
 }
 
 export interface UseGeolocationReturn {
@@ -29,7 +38,17 @@ export function useGeolocation(
     enableHighAccuracy = true,
     maximumAge = 5000,
     timeout = 10000,
+    messages = {},
   } = options;
+
+  const defaultMessages: GeolocationMessages = {
+    notSupported: () => 'Geolocation is not supported in this browser',
+    denied: () => 'Location permission denied',
+    unavailable: () => 'Location is unavailable',
+    timeout: () => 'Location request timed out',
+    failed: (message) => `Location failed: ${message}`,
+  };
+  const geolocationMessages = { ...defaultMessages, ...messages };
 
   const currentPosition = ref<GeolocationPosition | null>(null);
   const error = ref<string | null>(null);
@@ -40,7 +59,7 @@ export function useGeolocation(
 
   function startWatch() {
     if (!navigator.geolocation) {
-      error.value = '浏览器不支持地理位置';
+      error.value = geolocationMessages.notSupported();
       return;
     }
 
@@ -64,13 +83,13 @@ export function useGeolocation(
         isWatching.value = false;
         if (err.code === err.PERMISSION_DENIED) {
           permissionGranted.value = false;
-          error.value = '位置权限被拒绝，请在浏览器设置中允许定位';
+          error.value = geolocationMessages.denied();
         } else if (err.code === err.POSITION_UNAVAILABLE) {
-          error.value = '无法获取位置信息，请检查GPS信号';
+          error.value = geolocationMessages.unavailable();
         } else if (err.code === err.TIMEOUT) {
-          error.value = '定位超时';
+          error.value = geolocationMessages.timeout();
         } else {
-          error.value = `定位失败: ${err.message}`;
+          error.value = geolocationMessages.failed(err.message);
         }
       },
       { enableHighAccuracy, maximumAge, timeout },

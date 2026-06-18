@@ -18,6 +18,13 @@ import { getCSRFToken } from '../utils/csrf';
 import { buildGuideInsight, type GuideInsight } from '../constants/scenicVisualization';
 
 const { t } = useI18n();
+const geolocationMessages = {
+  notSupported: () => t('map.gpsNotSupported'),
+  denied: () => t('map.gpsDenied'),
+  unavailable: () => t('map.gpsUnavailable'),
+  timeout: () => t('map.gpsTimeout'),
+  failed: (message: string) => t('map.gpsFailed', { message }),
+};
 const route = useRoute();
 const authStore = useAuthStore();
 const DEFAULT_AVATAR_ID = 'mao_pro';
@@ -34,6 +41,7 @@ const {
   enableHighAccuracy: true,
   maximumAge: 5000,
   timeout: 10000,
+  messages: geolocationMessages,
 });
 const { nearbySpot, resetTriggered, setSpots } = useProximityGuide(currentPosition, {
   triggerRadiusM: 100,

@@ -99,6 +99,7 @@
     "gpsUnavailable": "Unable to get location. Check GPS signal.",
     "gpsTimeout": "Location timeout. Retrying...",
     "gpsNotSupported": "Geolocation not supported in this browser",
+    "gpsFailed": "Location failed: {message}",
     "gpsLabel": "GPS {accuracy}m"
   },
   "dh": {

@@ -99,6 +99,7 @@
     "gpsUnavailable": "无法获取位置信息，请检查GPS信号",
     "gpsTimeout": "定位超时，正在重试",
     "gpsNotSupported": "浏览器不支持地理位置",
+    "gpsFailed": "定位失败：{message}",
     "gpsLabel": "GPS {accuracy}m"
   },
   "dh": {

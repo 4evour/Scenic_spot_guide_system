@@ -18,6 +18,13 @@ import {
 } from '../constants/scenicVisualization';
 
 const { t } = useI18n();
+const geolocationMessages = {
+  notSupported: () => t('map.gpsNotSupported'),
+  denied: () => t('map.gpsDenied'),
+  unavailable: () => t('map.gpsUnavailable'),
+  timeout: () => t('map.gpsTimeout'),
+  failed: (message: string) => t('map.gpsFailed', { message }),
+};
 
 declare const AMap: Record<string, unknown>;
 
@@ -162,6 +169,7 @@ const {
   enableHighAccuracy: true,
   maximumAge: 5000,
   timeout: 10000,
+  messages: geolocationMessages,
 });
 
 const {
