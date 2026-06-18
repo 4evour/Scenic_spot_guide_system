@@ -582,6 +582,58 @@
       "saveFailed": "Save failed"
     }
   },
+  "adminContent": {
+    "title": "Guide Content Management",
+    "actions": {
+      "create": "Create Content",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "submitCreate": "Create"
+    },
+    "drawer": {
+      "createTitle": "Create Content",
+      "editTitle": "Edit Content"
+    },
+    "columns": {
+      "title": "Title",
+      "type": "Type",
+      "preview": "Content Preview",
+      "spotID": "Spot ID",
+      "audio": "Audio",
+      "actions": "Actions"
+    },
+    "contentTypes": {
+      "guide": "Guide Script",
+      "faq": "FAQ",
+      "history": "Historical Material",
+      "service": "Service Info"
+    },
+    "audio": {
+      "available": "Yes",
+      "missing": "No"
+    },
+    "form": {
+      "title": "Title",
+      "type": "Type",
+      "spotID": "Spot ID",
+      "content": "Content",
+      "audioURL": "Audio URL"
+    },
+    "placeholders": {
+      "title": "Enter a title",
+      "type": "Select a type",
+      "spotID": "Enter a spot ID",
+      "content": "Enter guide content",
+      "audioURL": "Optional audio file URL"
+    },
+    "validation": {
+      "titleRequired": "Enter a title",
+      "typeRequired": "Select a type",
+      "contentRequired": "Enter content"
+    }
+  },
   "adminRoutes": {
     "title": "Route Management",
     "actions": {

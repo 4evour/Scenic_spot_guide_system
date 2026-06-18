@@ -582,6 +582,58 @@
       "saveFailed": "保存失败"
     }
   },
+  "adminContent": {
+    "title": "讲解内容管理",
+    "actions": {
+      "create": "新增内容",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存",
+      "submitCreate": "创建"
+    },
+    "drawer": {
+      "createTitle": "新增内容",
+      "editTitle": "编辑内容"
+    },
+    "columns": {
+      "title": "标题",
+      "type": "类型",
+      "preview": "内容预览",
+      "spotID": "关联景点ID",
+      "audio": "音频",
+      "actions": "操作"
+    },
+    "contentTypes": {
+      "guide": "讲解词",
+      "faq": "FAQ",
+      "history": "文史资料",
+      "service": "服务信息"
+    },
+    "audio": {
+      "available": "有",
+      "missing": "无"
+    },
+    "form": {
+      "title": "标题",
+      "type": "类型",
+      "spotID": "关联景点ID",
+      "content": "内容",
+      "audioURL": "音频URL"
+    },
+    "placeholders": {
+      "title": "请输入标题",
+      "type": "请选择类型",
+      "spotID": "请输入景点ID",
+      "content": "请输入讲解内容",
+      "audioURL": "可选，音频文件链接"
+    },
+    "validation": {
+      "titleRequired": "请输入标题",
+      "typeRequired": "请选择类型",
+      "contentRequired": "请输入内容"
+    }
+  },
   "adminRoutes": {
     "title": "路线管理",
     "actions": {

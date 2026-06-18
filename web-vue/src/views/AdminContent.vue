@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { h, ref, onMounted } from 'vue'
+import { computed, h, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   NButton,
   NDataTable,
@@ -27,6 +28,8 @@ interface GuideContent {
   audio_url: string
   duration: number
 }
+
+const { t } = useI18n()
 
 const {
   loading,
@@ -60,12 +63,12 @@ const {
   deleteApi: (id) => ({ path: `/contents/${id}` }),
 })
 
-const contentTypeOptions = [
-  { label: '讲解词', value: '讲解词' },
-  { label: 'FAQ', value: 'FAQ' },
-  { label: '文史资料', value: '文史资料' },
-  { label: '服务信息', value: '服务信息' },
-]
+const contentTypeOptions = computed(() => [
+  { label: t('adminContent.contentTypes.guide'), value: '讲解词' },
+  { label: t('adminContent.contentTypes.faq'), value: 'FAQ' },
+  { label: t('adminContent.contentTypes.history'), value: '文史资料' },
+  { label: t('adminContent.contentTypes.service'), value: '服务信息' },
+])
 
 const contentTypeColorMap: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
   '讲解词': 'success',
@@ -76,46 +79,54 @@ const contentTypeColorMap: Record<string, 'success' | 'info' | 'warning' | 'erro
 
 const formRef = ref<FormInst | null>(null)
 
-const formRules: FormRules = {
-  title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
-  content_type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-  content: [{ required: true, message: '请输入内容', trigger: 'blur' }],
+const formRules = computed<FormRules>(() => ({
+  title: [{ required: true, message: t('adminContent.validation.titleRequired'), trigger: 'blur' }],
+  content_type: [{ required: true, message: t('adminContent.validation.typeRequired'), trigger: 'change' }],
+  content: [{ required: true, message: t('adminContent.validation.contentRequired'), trigger: 'blur' }],
+}))
+
+function contentTypeLabel(value: string) {
+  if (value === '讲解词') return t('adminContent.contentTypes.guide')
+  if (value === 'FAQ') return t('adminContent.contentTypes.faq')
+  if (value === '文史资料') return t('adminContent.contentTypes.history')
+  if (value === '服务信息') return t('adminContent.contentTypes.service')
+  return value
 }
 
-const columns: DataTableColumns<GuideContent> = [
-  { title: '标题', key: 'title', ellipsis: { tooltip: true }, width: 180 },
+const columns = computed<DataTableColumns<GuideContent>>(() => [
+  { title: t('adminContent.columns.title'), key: 'title', ellipsis: { tooltip: true }, width: 180 },
   {
-    title: '类型',
+    title: t('adminContent.columns.type'),
     key: 'content_type',
     width: 110,
     render: (row) =>
       h(
         NTag,
         { type: contentTypeColorMap[row.content_type] ?? 'default', size: 'small', bordered: false },
-        { default: () => row.content_type },
+        { default: () => contentTypeLabel(row.content_type) },
       ),
   },
   {
-    title: '内容预览',
+    title: t('adminContent.columns.preview'),
     key: 'content',
     ellipsis: { tooltip: true },
     width: 240,
     render: (row) => (row.content?.length > 50 ? row.content.slice(0, 50) + '...' : row.content || '-'),
   },
-  { title: '关联景点ID', key: 'spot_id', width: 110, render: (row) => row.spot_id || '-' },
+  { title: t('adminContent.columns.spotID'), key: 'spot_id', width: 110, render: (row) => row.spot_id || '-' },
   {
-    title: '音频',
+    title: t('adminContent.columns.audio'),
     key: 'audio_url',
     width: 80,
     render: (row) =>
       h(
         NTag,
         { type: row.audio_url ? 'success' : 'default', size: 'small', bordered: false },
-        { default: () => (row.audio_url ? '有' : '无') },
+        { default: () => (row.audio_url ? t('adminContent.audio.available') : t('adminContent.audio.missing')) },
       ),
   },
   {
-    title: '操作',
+    title: t('adminContent.columns.actions'),
     key: 'actions',
     width: 150,
     fixed: 'right',
@@ -124,16 +135,16 @@ const columns: DataTableColumns<GuideContent> = [
         h(
           NButton,
           { size: 'small', type: 'primary', quaternary: true, onClick: () => openEdit(row) },
-          { default: () => '编辑' },
+          { default: () => t('adminContent.actions.edit') },
         ),
         h(
           NButton,
           { size: 'small', type: 'error', quaternary: true, onClick: () => handleDelete(row) },
-          { default: () => '删除' },
+          { default: () => t('adminContent.actions.delete') },
         ),
       ]),
   },
-]
+])
 
 function onSave() {
   formRef.value?.validate((errors) => {
@@ -149,8 +160,8 @@ onMounted(fetchData)
 <template>
   <div class="admin-content">
     <div class="page-header">
-      <h2>讲解内容管理</h2>
-      <NButton type="primary" @click="openCreate">+ 新增内容</NButton>
+      <h2>{{ t('adminContent.title') }}</h2>
+      <NButton type="primary" @click="openCreate">{{ t('adminContent.actions.create') }}</NButton>
     </div>
 
     <NDataTable
@@ -165,7 +176,7 @@ onMounted(fetchData)
     />
 
     <NDrawer v-model:show="drawerVisible" :width="700" placement="right">
-      <NDrawerContent :title="isEditing ? '编辑内容' : '新增内容'" closable>
+      <NDrawerContent :title="isEditing ? t('adminContent.drawer.editTitle') : t('adminContent.drawer.createTitle')" closable>
         <NForm
           ref="formRef"
           :model="formData"
@@ -174,46 +185,46 @@ onMounted(fetchData)
           label-width="90"
           require-mark-placement="right-hanging"
         >
-          <NFormItem label="标题" path="title">
-            <NInput v-model:value="formData.title" placeholder="请输入标题" />
+          <NFormItem :label="t('adminContent.form.title')" path="title">
+            <NInput v-model:value="formData.title" :placeholder="t('adminContent.placeholders.title')" />
           </NFormItem>
 
-          <NFormItem label="类型" path="content_type">
+          <NFormItem :label="t('adminContent.form.type')" path="content_type">
             <NSelect
               v-model:value="formData.content_type"
               :options="contentTypeOptions"
-              placeholder="请选择类型"
+              :placeholder="t('adminContent.placeholders.type')"
             />
           </NFormItem>
 
-          <NFormItem label="关联景点ID" path="spot_id">
+          <NFormItem :label="t('adminContent.form.spotID')" path="spot_id">
             <NInputNumber
               v-model:value="formData.spot_id"
               :min="0"
-              placeholder="请输入景点ID"
+              :placeholder="t('adminContent.placeholders.spotID')"
               style="width: 100%"
             />
           </NFormItem>
 
-          <NFormItem label="内容" path="content">
+          <NFormItem :label="t('adminContent.form.content')" path="content">
             <NInput
               v-model:value="formData.content"
               type="textarea"
               :rows="10"
-              placeholder="请输入讲解内容"
+              :placeholder="t('adminContent.placeholders.content')"
             />
           </NFormItem>
 
-          <NFormItem label="音频URL" path="audio_url">
-            <NInput v-model:value="formData.audio_url" placeholder="可选，音频文件链接" />
+          <NFormItem :label="t('adminContent.form.audioURL')" path="audio_url">
+            <NInput v-model:value="formData.audio_url" :placeholder="t('adminContent.placeholders.audioURL')" />
           </NFormItem>
         </NForm>
 
         <template #footer>
           <div style="display: flex; justify-content: flex-end; gap: 12px">
-            <NButton @click="closeDrawer">取消</NButton>
+            <NButton @click="closeDrawer">{{ t('adminContent.actions.cancel') }}</NButton>
             <NButton type="primary" :loading="saving" @click="onSave">
-              {{ isEditing ? '保存' : '创建' }}
+              {{ isEditing ? t('adminContent.actions.save') : t('adminContent.actions.submitCreate') }}
             </NButton>
           </div>
         </template>

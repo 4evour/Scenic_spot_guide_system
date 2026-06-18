@@ -10,6 +10,7 @@
     "check": "vue-tsc -b --pretty false",
     "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
     "check:admin-knowledge-insights": "node ../scripts/check-admin-knowledge-insights.mjs",
+    "check:admin-content-i18n": "node ../scripts/check-admin-content-i18n.mjs",
     "check:admin-settings-i18n": "node ../scripts/check-admin-settings-i18n.mjs",
     "check:admin-avatar-i18n": "node ../scripts/check-admin-avatar-i18n.mjs",
     "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",

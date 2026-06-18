@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 17:20 - 补齐讲解内容国际化
+
+### 变更内容
+- scripts/check-admin-content-i18n.mjs、web-vue/package.json、Makefile — 新增讲解内容管理页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminContent.vue — 将页面标题、按钮、表格列、内容类型标签、音频状态、抽屉表单、占位符和校验文案接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminContent` 中英文文案。
+
+### 原因
+- 讲解内容管理页接口和页面已存在，但主体文案仍硬编码中文，未落实路线图中新增管理页和错误文案持续补齐 i18n 的要求。
+
+### 影响范围
+- 影响讲解内容管理页中英文切换展示、表单校验提示和统一验证入口；不改变讲解内容 CRUD 接口和保存到后端的内容类型值。
+
 ## 2026-06-18 17:19 - 刷新路线管理构建产物
 
 ### 变更内容
