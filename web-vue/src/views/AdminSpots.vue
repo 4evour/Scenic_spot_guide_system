@@ -13,7 +13,6 @@ import {
   NSelect,
   NTag,
   NSpace,
-  NPopconfirm,
   NSwitch,
 } from 'naive-ui'
 import { useCrudTable } from '../composables/useCrudTable'
@@ -203,17 +202,12 @@ const columns: DataTableColumns<Record<string, unknown>> = [
             type: 'primary',
             onClick: () => openEdit(row),
           }, { default: () => '编辑' }),
-          h(NPopconfirm, {
-            onPositiveClick: () => handleDelete(row),
-          }, {
-            trigger: () =>
-              h(NButton, {
-                size: 'small',
-                tertiary: true,
-                type: 'error',
-              }, { default: () => '删除' }),
-            default: () => '确认删除该景点？',
-          }),
+          h(NButton, {
+            size: 'small',
+            tertiary: true,
+            type: 'error',
+            onClick: () => handleDelete(row),
+          }, { default: () => '删除' }),
         ],
       })
     },
