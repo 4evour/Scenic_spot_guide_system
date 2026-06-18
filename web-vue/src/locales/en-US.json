@@ -159,6 +159,20 @@
     "scanIntroDefault": "Welcome to {name}! Let me introduce this special place to you.",
     "scanFollowUp": "You can also ask:"
   },
+  "live2dStage": {
+    "status": {
+      "speaking": "Speaking",
+      "thinking": "Thinking",
+      "listening": "Listening",
+      "interrupted": "Interrupted",
+      "connecting": "Connecting",
+      "error": "Error",
+      "idle": "Idle"
+    },
+    "sdkFallback": "Live2D SDK is not ready. Fallback animation preview is enabled.",
+    "readyNote": "Live2D model connected. Expressions and lip sync follow frontend state.",
+    "loadingNote": "Loading Live2D model..."
+  },
   "qr": {
     "scanning": "Identifying attraction...",
     "spotLocated": "Attraction located",

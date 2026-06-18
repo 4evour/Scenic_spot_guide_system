@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 20:12 - 增加 Live2D 舞台 i18n 检查
+
+### 变更内容
+- scripts/check-live2d-stage-i18n.mjs — 新增 Live2D 舞台状态、加载和 fallback 文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:live2d-stage-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/components/Live2DStage.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将 Live2D 舞台状态、加载和 fallback 提示接入 `live2dStage.*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端数字人链路；Live2D 舞台组件仍有状态和加载提示硬编码中文。
+
+### 影响范围
+- 影响游客端数字人舞台状态和加载提示文案，以及前端静态检查链路；不改变模型加载逻辑、交互事件和数字人接口。
+
 ## 2026-06-18 20:06 - 刷新 QR 扫码页构建产物
 
 ### 变更内容

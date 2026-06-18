@@ -159,6 +159,20 @@
     "scanIntroDefault": "欢迎来到{name}！让我为您详细介绍这里的特色。",
     "scanFollowUp": "您还可以继续提问："
   },
+  "live2dStage": {
+    "status": {
+      "speaking": "讲解中",
+      "thinking": "思考中",
+      "listening": "聆听中",
+      "interrupted": "已打断",
+      "connecting": "连接中",
+      "error": "异常",
+      "idle": "待命"
+    },
+    "sdkFallback": "Live2D SDK 未就绪，已启用备用动效预览",
+    "readyNote": "Live2D 模型已接入，表情与口型由前端状态驱动。",
+    "loadingNote": "正在加载 Live2D 模型..."
+  },
   "qr": {
     "scanning": "正在识别景点...",
     "spotLocated": "景点已定位",

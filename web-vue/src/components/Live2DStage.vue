@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ThinkingIndicator from './ThinkingIndicator.vue';
 import type { ConversationState, Live2DExpression, PixiAppLike, Live2DModelLike, MotionGroup } from '../types/digitalHuman';
 
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   (e: 'head-click'): void;
   (e: 'body-click'): void;
 }>();
+
+const { t } = useI18n();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const live2dHost = ref<HTMLDivElement | null>(null);
@@ -42,13 +45,18 @@ let modelLipSyncIds: string[] = ['ParamA'];
 const expressionClass = computed(() => `expr-${props.expression}`);
 
 const statusText = computed(() => {
-  if (props.state === 'speaking') return '讲解中';
-  if (props.state === 'thinking') return '思考中';
-  if (props.state === 'listening') return '聆听中';
-  if (props.state === 'interrupted') return '已打断';
-  if (props.state === 'connecting') return '连接中';
-  if (props.state === 'error') return '异常';
-  return '待命';
+  if (props.state === 'speaking') return t('live2dStage.status.speaking');
+  if (props.state === 'thinking') return t('live2dStage.status.thinking');
+  if (props.state === 'listening') return t('live2dStage.status.listening');
+  if (props.state === 'interrupted') return t('live2dStage.status.interrupted');
+  if (props.state === 'connecting') return t('live2dStage.status.connecting');
+  if (props.state === 'error') return t('live2dStage.status.error');
+  return t('live2dStage.status.idle');
+});
+
+const live2dNote = computed(() => {
+  if (live2dLoaded.value) return t('live2dStage.readyNote');
+  return live2dError.value || t('live2dStage.loadingNote');
 });
 
 // --- fallback drawing helpers ---
@@ -240,7 +248,7 @@ async function loadLive2DModel() {
     applyLive2DState();
   } catch (error) {
     live2dLoaded.value = false;
-    live2dError.value = 'Live2D SDK 未就绪，已启用备用动效预览';
+    live2dError.value = t('live2dStage.sdkFallback');
     console.warn('Live2D SDK unavailable, fallback avatar is active.', error);
   }
 }
@@ -657,7 +665,7 @@ watch(() => props.modelUrl, () => {
     </div>
 
     <div class="live2d-note">
-      {{ live2dLoaded ? 'Live2D 模型已接入，表情与口型由前端状态驱动。' : live2dError || '正在加载 Live2D 模型...' }}
+      {{ live2dNote }}
     </div>
   </section>
 </template>
