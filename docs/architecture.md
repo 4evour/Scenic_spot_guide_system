@@ -6,9 +6,9 @@
 ┌─────────────────────────────────┐
 │         景区系统 (Go)            │
 │  scenic-guide                   │
-│  ├── configs/scenic/*.yaml      │  ← 景区配置（换景区改这里）
+│  ├── configs/scenic_profiles/*.yaml │ ← 景区配置（换景区改这里）
 │  ├── knowledge/*.jsonl          │  ← 知识库
-│  ├── API: /api/v1/scenic/*      │  ← 景区信息接口
+│  ├── API: /api/v1/scenic/profile │  ← 景区 Profile 接口
 │  └── API: /api/v1/ai/chat       │  ← RAG 问答接口
 └──────────┬──────────────────────┘
            │ HTTP API（OpenAI 兼容格式）
@@ -52,9 +52,11 @@
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/api/v1/scenic/profile` | GET | 景区完整信息（数字人可获取景区名称、路线等） |
+| `/api/v1/scenic/profile` | GET | 景区完整信息，包含景区名称、数字人配置、快捷问题、路线和主题实体 |
 | `/api/v1/scenic/persona` | GET | 数字人角色提示词（从景区配置动态生成） |
 | `/api/v1/scenic/quick-asks` | GET | 快捷提问列表 |
+| `/api/v1/spots` | GET | 公开景点列表 |
+| `/api/v1/routes` | GET | 公开游览路线列表 |
 | `/api/v1/ai/chat` | POST | RAG 问答（数字人发送问题，景区系统回答） |
 | `/v1/chat/completions` | POST | OpenAI 兼容接口（数字人直接调用） |
 

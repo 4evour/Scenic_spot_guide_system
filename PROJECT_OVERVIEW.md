@@ -44,7 +44,7 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - 前端构建：在 `web-vue` 目录运行 `npm install` 和 `npm run build`。
 - 容器启动：仓库根目录运行 `docker compose up --build`，默认启动 PostgreSQL 16 和 Go 服务。
 - 启动服务：仓库根目录运行 `go run .`，本地直启需准备 PostgreSQL 或显式改为 SQLite 本地配置。
-- 验证命令：`go test ./...`、`go vet ./...`、`npm run check`、`npm run check:encoding`、`npm run build`。
+- 验证命令：`go test ./...`、`go vet ./...`、`npm run check`、`npm run lint`、`npm run check:data-boundaries`、`npm run check:encoding`、`npm run build`。
 - RAG smoke 评估：`go run ./cmd/rag-eval -k 8 -fail-on-miss`。
 - RAG 合成规模实验：`go run ./cmd/rag-eval -knowledge knowledge/lingshan_scale_3000.jsonl -eval knowledge/lingshan_eval_300.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -fail-on-miss`。
 - RAG 真实资料多模式本地对比：`go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval knowledge/real/lingshan_real_eval_open.json -k 8 -bench -concurrency 16 -repeat 1 -retrieval-only -compare-modes bm25-local,light-rerank`。
@@ -65,11 +65,11 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - 旧静态 `/static/admin.html` 与 `/static/dashboard.html` 不再承载 mock 管理/大屏页面，仅跳转到 Vue 正式入口；对应旧 mock 脚本已从 `static/js` 移除，避免演示时误用模拟数据。
 - 前端生产构建关闭 sourcemap，避免提交大体积调试映射文件。
 - `static/digital-human/libs/live2dcubismcore.min.js` 被 Vue 入口引用，不能随意删除。
-- 当前 Live2D 主模型使用 `static/live2d-models/mao_pro`。
-- 未被业务入口引用的旧 `static/live2d-models/shizuku` 模型已清理。
-- scripts/check-secrets.mjs 新增高德地图 API Key 检测规则（map_webapi_key、map_config_key）。
+- 当前 Live2D 可选模型为 `static/live2d-models/mao_pro` 和 `static/live2d-models/shizuku`；管理员可配置默认数字人和是否允许游客切换。
+- 数字人会话消息采用 localStorage 兜底、Pinia 实时状态和后端 `/api/v1/sessions/:session_id/messages` 持久化三路同步。
+- scripts/check-secrets.mjs 新增高德地图 API Key 检测规则（amap_webapi_key、amap_config_key）。
 - internal/handler/errors.go 提供 isRecordNotFound 统一封装 gorm.ErrRecordNotFound，handler 层统一使用。
-- user_handler.go 提取 alidateUsername、alidateEmail、alidateRole、userPayload 共享函数；创建/编辑用户统一走密码策略校验。
+- user_handler.go 提取 validateUsername、validateEmail、validateRole、userPayload 共享函数；创建/编辑用户统一走密码策略校验。
 - docs/architecture.md 记录景区系统与数字人系统的解耦架构、独立迁移清单和 API 连接点。
 - web-vue 新增 .eslintrc.cjs、.prettierrc.json、.prettierignore，前端代码风格统一由 ESLint + Prettier 管理。
 - 源码和文档统一使用 UTF-8；提交前应运行编码检查，防止中文内容 mojibake。
@@ -101,14 +101,14 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 - `static/digital-human` 保留了旧数字人静态前端及运行库，删除前需确认没有外部入口依赖。
 - 服务启动日志在部分 Windows 终端可能出现编码显示问题，但 Go 编译和测试不受影响。
 
-## 当前开发进展 (2026-06-10)
+## 当前实现快照 (2026-06-18)
 
 ### 已完成
 
-- **Phase 0 (全部10步)**: Emotion 测试、路线配置化、DI 依赖注入、AdminView 拆分、Design Tokens、测试补充、Redis 限流、数字人配置、WS 代理、集成测试
-- **前端架构迁移 Phase A**: vue-router + Pinia 替代自制 hash 路由
-- **前端生产级迭代 M1**: 布局重构完成，M2 CRUD 页面创建中
-- **代码审查修复**: 38/63 项已完成
+- **数字人主链路**: Vue 数字人页、Live2D 双模型、SSE/RAG 问答、流式 TTS、`/vtuber-ws/*` 代理、打断和口型驱动已接入。
+- **游客账号与会话**: 游客登录、正式账号升级、会话列表、消息保存和会话搜索接口已接入；游客升级为同一账号原地转正，升级前会话保留。
+- **景区管理闭环**: 景点、路线、导览内容、知识库、数字人配置、二维码、游客问题处理、AI 知识候选和游客感受度报告已有管理端页面。
+- **产品边界**: 当前交付端为 Web/Vue，不做微信小程序端；小程序环境无法完整承载当前 Live2D、麦克风、WebSocket、流式 TTS、口型驱动和打断链路。
 
 ### 竞争调研 (2026-06-10)
 
@@ -117,9 +117,9 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 | 参考项目 | 亮点 | 借鉴方向 |
 |---------|------|---------|
 | [TripStar](https://github.com/1sdv/TripStar) (⭐1,800+) | 多Agent旅行规划、i18n、双地图 | 多语言、异步轮询 |
-| [WeTravel](https://github.com/nanbouking/WeTravel) (⭐265) | 微信小程序、预约管理 | 小程序架构、预约系统 |
+| [WeTravel](https://github.com/nanbouking/WeTravel) (⭐265) | 微信小程序、预约管理 | 仅参考预约/运营形态，不采用小程序端 |
 | [TravelGuide3D](https://github.com/kiranbaby14/Travel-Guide-3D) | 3D路线飞越 | 地图视觉 |
-| [CyberVerse](https://github.com/Lynpoint/CyberVerse) | WebRTC实时语音、会话持久化 | 语音交互 |
+| [CyberVerse](https://github.com/Lynpoint/CyberVerse) | 实时语音、会话持久化 | 数字人交互体验参考 |
 | [Open-LLM-VTuber+RAG](https://github.com/HappynessI/Open-LLM-VTuber-with-rag) | Live2D+RAG、视觉感知 | 同赛道参考 |
 
 **核心差异化优势**: Live2D 数字人 + RAG 知识引擎组合在开源社区无直接竞品。
@@ -129,17 +129,17 @@ Scenic Spot Guide System 是一个景区智能导览系统，提供游客问答�
 详见 [docs/ROADMAP.md](docs/ROADMAP.md)
 
 **短期优先 (6项)**:
-1. WebRTC 实时语音升级 — 替换"转写→文本→TTS"为流式方案
-2. 微信小程序跨平台 — uni-app/Taro 多端覆盖
-3. 地图体验优化 — 景点配图、标注美化
-4. 多语言 i18n — 中/英双语
-5. 游客账号 + 会话持久化 — 注册/登录 + 跨访问记忆
-6. GPS 定位主动导览 — 到达景点自动触发讲解
+1. 实时数字人链路完善 — 稳定现有 SSE、`/vtuber-ws/*`、流式 TTS、打断和口型驱动
+2. 游客账号 + 会话持久化 — 游客登录、正式账号、跨访问历史和会话搜索
+3. 地图体验优化 — 景点配图、标注美化、真实数据优先和兜底一致
+4. 多语言 i18n — 持续补齐新增页面和错误文案
+5. GPS 定位主动导览 — 到达景点自动触发讲解
+6. 运营闭环完善 — 游客反馈、AI 分析、知识候选、游客问题处理和二维码管理
 
 **长期计划 (2项)**:
 - 预约订阅板块（独立票务系统）
-- Docker 一键部署
+- 部署验证与运维补强（Docker Compose 已存在，继续补健康检查、日志、监控和发布说明）
 
-**明确不采用**: 多 Agent 架构（单 Agent 已够）、知识图谱可视化、离线模式
+**明确不采用**: 微信小程序端（无法完整承载当前数字人链路）、多 Agent 架构（单 Agent 已够）、知识图谱可视化、离线模式
 
 > 每次改动需同步更新 `docs/ROADMAP.md` 的变更日志。

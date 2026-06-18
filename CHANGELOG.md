@@ -1,5 +1,199 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 14:43 - 补齐游客问题页面国际化
+
+### 变更内容
+- scripts/check-admin-query-i18n.mjs、web-vue/package.json — 新增游客问题页面 i18n 静态检查脚本和 npm 脚本入口，用于防止新增管理页只接入导航翻译而页面文案仍硬编码中文。
+- web-vue/src/views/AdminQueries.vue — 将游客问题管理页标题、筛选、表格列、操作按钮、表单、空状态、删除确认和消息提示接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminQueries` 中英文文案。
+- static/vue-app — 重新构建 Vue 静态产物，包含游客问题页面国际化。
+
+### 原因
+- 路线图要求多语言 i18n 持续补齐新增页面和错误文案；审查发现新补的游客问题管理页主体文案、表格列、操作按钮和消息提示仍为硬编码中文。
+
+### 影响范围
+- 影响游客问题管理页、中英文 locale、前端 i18n 校验脚本和 Vue 构建产物。
+
+## 2026-06-18 14:47 - 补齐应用容器健康检查
+
+### 变更内容
+- scripts/check-compose-healthcheck.mjs、Makefile — 新增 Docker Compose 应用健康检查静态校验，并接入 `make check`。
+- Dockerfile、docker-compose.yml — 在运行镜像中加入 `wget`，为 `scenic-guide` 服务增加探测 `/health` 的应用容器 healthcheck。
+
+### 原因
+- 路线图将“部署验证与运维补强”列为长期计划，并明确 Docker Compose 后续要补健康检查；审查发现 Compose 只有 PostgreSQL healthcheck，应用容器没有探测 `/health`。
+
+### 影响范围
+- 影响 Docker 运行镜像、Compose 应用服务健康状态和 `make check`；不改变服务端 `/health` 响应路径。
+
+## 2026-06-18 14:22 - 补齐游客问题管理闭环
+
+### 变更内容
+- scripts/check-admin-query-management.mjs、web-vue/package.json — 新增游客问题管理闭环静态检查脚本和 npm 脚本入口。
+- internal/handler/visitor_query_handler_test.go — 新增游客问题路由注册和命中回归测试，覆盖 `/queries/unanswered` 与通配查询路由可同时注册且命中未回答列表处理器。
+- web-vue/src/types/admin.ts、web-vue/src/views/AdminQueries.vue — 新增游客问题类型和管理端页面，支持全部/未回答切换、刷新、回复编辑、处理状态更新和删除。
+- web-vue/src/router/index.ts、web-vue/src/layout/GlobalSider.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 接入游客问题路由、数字人中心侧边栏入口和中英文导航文案。
+- README.md、PROJECT_OVERVIEW.md、PROJECT_DOCUMENTATION.md、docs/api.md、docs/ROADMAP.md、docs/architecture.md、CODE_WIKI.md — 同步游客问题管理闭环、当前技术栈、景区 Profile API、Go/PostgreSQL 运行口径、实际路由清单和路线图记录。
+- PROJECT_DOCUMENTATION.md、docs/LIVE2D_FIX_PLAN.md、docs/ROADMAP.md — 清理本次触达文档中的尾随空格，保证 `git diff --check` 不再报错。
+- static/vue-app — 重新构建 Vue 静态产物，包含游客问题管理页和导航入口。
+
+### 原因
+- 审查发现游客问题后端接口和 API 文档已存在，但 Vue 管理端没有页面、路由和侧边栏入口；需要补齐运营人员处理游客问题的前端闭环，并用静态检查固定该类缺口。
+
+### 影响范围
+- 影响数字人中心管理端导航、游客问题管理页、前端校验脚本、游客问题路由测试、项目说明文档和 Vue 构建产物；不改变游客问题后端接口路径和数据表结构。
+
+## 2026-06-18 14:11 - 修正到点导览冷却重置
+
+### 变更内容
+- web-vue/src/composables/useProximityGuide.ts — `resetTriggered` 在清理当前页面已触发景点集合时，同步删除本地冷却记录。
+- static/vue-app — 重新构建 Vue 静态产物，包含到点导览冷却重置修正。
+
+### 原因
+- GPS 主动导览打开时会调用 `resetTriggered`，但原实现只清理内存集合，不清理 localStorage 中的冷却时间；游客重新开启到点导览后仍可能被旧冷却记录阻止触发。
+
+### 影响范围
+- 影响游客地图页和数字人页的到点讲解重新开启体验；不改变距离计算、景点半径和单个景点冷却字段定义。
+
+## 2026-06-18 14:08 - 接通数字人历史会话搜索
+
+### 变更内容
+- internal/repository/chat_session_repo.go — 增加按会话主键批量查询接口，用于搜索结果补充会话上下文。
+- internal/service/chat_session_service.go — 将跨会话消息搜索结果扩展为包含 `session_id` 和 `session_title` 的响应结构。
+- internal/handler/session_handler_test.go — 新增回归测试，确保 `/api/v1/sessions/search` 返回可跳转会话所需的上下文字段。
+- web-vue/src/stores/session.ts — 为历史搜索结果补充 `session_id`、`session_title` 类型。
+- web-vue/src/views/DigitalHumanView.vue — 搜索栏接入后端历史消息搜索，并合并当前会话本地结果；点击搜索结果可切换到对应历史会话。
+- static/vue-app — 重新构建 Vue 静态产物，包含历史会话搜索 UI 修正。
+
+### 原因
+- 路线图要求完善跨访问历史和会话搜索体验；审查发现后端已有搜索接口和前端 store 方法，但数字人页面只搜索当前内存消息，历史会话搜索没有真正接入 UI。
+
+### 影响范围
+- 影响数字人页历史消息搜索、会话切换体验和会话搜索 API 响应字段；不改变消息保存格式和会话列表接口。
+
+## 2026-06-18 14:00 - 补齐前端校验工具链
+
+### 变更内容
+- web-vue/package.json、web-vue/package-lock.json — 补齐 ESLint、Vue ESLint、TypeScript ESLint、Prettier 相关开发依赖，增加 `esbuild` override 并通过 `npm audit fix` 清理前端依赖审计问题。
+- web-vue/.eslintrc.cjs — 拆分 lint 与 Prettier 格式职责，保留 `eslint-config-prettier`，关闭与 Vue 宏、TypeScript 全局和流式循环不匹配的误报规则。
+- web-vue/src/components/KpiCard.vue、web-vue/src/components/Live2DStage.vue、web-vue/src/components/MarkdownRenderer.vue、web-vue/src/layout/GlobalSider.vue、web-vue/src/views/AdminKnowledge.vue、web-vue/src/views/AdminView.vue、web-vue/src/views/DigitalHumanView.vue、web-vue/src/views/MapView.vue — 清理 lint 暴露的未使用导入、未使用变量和无处理函数的事件绑定。
+- scripts/check-encoding.mjs — 增加非法 ASCII 控制字符检测，避免文档中再次出现吞掉函数名首字母的隐藏控制字符。
+- README.md、PROJECT_OVERVIEW.md — 补充可运行的 `npm run lint`、`npm run check:data-boundaries` 验证命令，并修正控制字符导致的函数名/路径乱码。
+- static/vue-app — 重新构建 Vue 静态产物，包含 lint 清理后的前端源码输出。
+
+### 原因
+- 审查发现项目已有 `.eslintrc.cjs`、Prettier 配置和 `lint` 脚本，但缺少对应依赖，导致 `npm run lint` 无法执行；文档中还残留不可见控制字符，造成函数名和路径显示错误。
+
+### 影响范围
+- 影响前端开发校验、依赖锁文件、编码检查脚本和项目验证文档；不改变运行时业务接口。
+
+## 2026-06-18 13:42 - 收敛大屏演示数据边界
+
+### 变更内容
+- web-vue/src/views/DashboardView.vue — 移除运营大屏对硬编码热门景点、问答准确率、人流热力、活动状态、终端状态和知识缺口的演示兜底；无真实接口来源时显示空状态，知识库条目为 0 时显示真实 0。
+- web-vue/src/constants/scenicVisualization.ts — 删除已无引用的 `DASHBOARD_FALLBACK` 和 `REPORT_FALLBACK` 演示数据常量。
+- scripts/check-dashboard-data-boundaries.mjs — 新增大屏数据边界检查，防止后续重新把演示兜底作为真实运营数据展示。
+- web-vue/package.json — 增加 `check:data-boundaries` 脚本入口，便于复跑大屏数据边界检查。
+- README.md — 修正数据大屏功能描述，移除未实装的 RAG 评估指标可视化和 30 秒自动刷新表述。
+- static/vue-app — 重新构建 Vue 静态产物，包含数据大屏空状态和演示数据边界修正。
+
+### 原因
+- 审查发现运营大屏仍把前端演示数据展示成真实运营态势，且 README 描述与当前代码不一致，容易误导为已接入实时人流、终端状态和自动刷新能力。
+
+### 影响范围
+- 影响管理端数据大屏、前端演示数据常量、项目功能概览和新增边界检查脚本；不改变已有后端统计接口。
+
+## 2026-06-18 13:29 - 修正感受度报告周期与数据边界
+
+### 变更内容
+- internal/handler/admin_handler.go、internal/handler/admin_handler_test.go — `/admin/reports/visitor` 读取 `period=7d|30d`，新增回归测试覆盖 30 天报告必须纳入 20 天前交互，以及无数据时不得伪造图表数据。
+- internal/service/stats_service.go — 感受度报告按 7/30 天窗口统计总量、关注点、情绪、热门时段和趋势；无真实交互时返回空图表数据与无数据建议，不再返回固定演示指标。
+- web-vue/src/views/AdminReports.vue — 报告页 KPI 文案随 7/30 天周期变化，并移除负面原因、人群画像、路线满意度和词云的前端演示兜底。
+- static/vue-app — 重新构建 Vue 静态产物，包含感受度报告页周期和无数据展示修正。
+- docs/api.md、PROJECT_DOCUMENTATION.md — 补充报告周期参数、无数据边界和管理端 QR/洞察接口清单。
+
+### 原因
+- 审查发现报告页已有 7/30 天切换，但后端固定按近 7 天统计；同时无真实交互时会展示固定演示数据，容易把演示指标误认为真实运营报告。
+
+### 影响范围
+- 影响管理端游客感受度报告、统计服务、报告接口文档和项目接口总览；不改变交互日志写入链路。
+
+## 2026-06-18 13:16 - 补齐二维码管理闭环
+
+### 变更内容
+- internal/handler/qr_handler.go、internal/handler/qr_handler_test.go — 修复二维码配置改码后旧二维码讲解缓存仍可命中的问题，并新增回归测试覆盖旧码应返回 404。
+- web-vue/src/views/AdminQRCode.vue — 增加二维码配置编辑抽屉，支持后台直接修改二维码 ID、启用状态和扫码讲解词，调用已有 `/admin/qr/spots/:id` 接口保存。
+- static/vue-app — 重新构建 Vue 静态产物，包含二维码管理页编辑入口。
+- internal/handler/digital_human_avatar_test.go — 增加游客升级后仍可读取升级前会话消息的回归测试，锁定同账号升级保留会话的当前设计。
+- docs/api.md、docs/ROADMAP.md、PROJECT_OVERVIEW.md — 补充二维码公开和管理接口文档，校准游客升级会话口径，并替换过期的 2026-06-10 开发进展快照。
+
+### 原因
+- 审查发现二维码后端已有更新接口，但管理页缺少编辑入口；同时改码后只清理新二维码缓存，旧码仍可能返回旧讲解内容。路线图中的“会话迁移”表述也与当前原地升级实现不一致。
+
+### 影响范围
+- 影响管理端二维码配置、游客扫码讲解缓存一致性、游客升级后的会话保留回归保障，以及 API/路线图/项目总览文档口径。
+
+## 2026-06-18 12:51 - 补齐会话消息保存与 Live2D 遗留项
+
+### 变更内容
+- internal/service/chat_session_service.go、internal/service/chat_session_service_test.go — 增加单条会话消息保存逻辑与回归测试，支持前端按会话补写用户/助手消息。
+- internal/handler/session_handler.go、internal/handler/session_handler_test.go — 增加 `POST /api/v1/sessions/:session_id/messages` 接口与鉴权、归属、参数校验测试。
+- web-vue/src/components/Live2DStage.vue — 使用统一 resize 监听路径同步 Live2D 布局，并删除残留的随机 motion 索引函数。
+- web-vue/src/components/ThinkingIndicator.vue — 改为纯展示组件，由父组件负责是否渲染。
+
+### 原因
+- 前端已调用会话消息保存接口但后端缺少对应路由，导致聊天历史无法稳定落库；Live2D 遗留计划中仍有 resize 监听和展示组件职责不一致的半实装项。
+
+### 影响范围
+- 影响游客端数字人会话历史保存、后端会话消息接口、Live2D 舞台窗口尺寸同步和思考状态展示。
+
+## 2026-06-18 13:18 - 校准产品计划与文档实现状态
+
+### 变更内容
+- web-vue/src/views/DigitalHumanView.vue — `persistMessage` 在写入 localStorage 和 Pinia 后调用 `sessionStore.saveMessage`，让数字人会话消息真正写入后端会话接口。
+- docs/ROADMAP.md — 移除微信小程序跨平台计划；将 WebRTC 升级改为现有 SSE、`/vtuber-ws/*`、流式 TTS、打断和会话链路完善；将 Docker 一键部署改为已有编排后的部署验证与运维补强。
+- PROJECT_OVERVIEW.md — 同步路线图和当前数字人模型状态，修正 shizuku 已清理、微信小程序、WebRTC 替换、Docker 待实现等过时表述。
+- docs/api.md — 补充游客登录升级、头像偏好、会话消息保存、TTS stream、数字人形象列表和游客洞察/知识候选管理接口。
+- docs/LIVE2D_FIX_PLAN.md — 将旧待修指南改为 Live2D 遗留项完成记录，说明 manifest 路径在当前 Vite base 下保持 `/static/vue-app/manifest.json`。
+- PROJECT_DOCUMENTATION.md — 重写为当前实现说明，校准 PostgreSQL/SQLite 边界、Cookie 鉴权、Vue 前端、数字人链路、会话持久化、TTS 和不做微信小程序的产品边界。
+- docs/interview-qa.md — 修正鉴权问答，明确浏览器主路径使用 `auth_token` HttpOnly Cookie，Bearer token 仅作为非浏览器兼容路径。
+
+### 原因
+- 用户要求补齐计划中未彻底实装的功能、明确不做微信小程序，并修正文档与代码不一致；审查发现前端会话持久化只更新本地状态未调用后端保存接口，且多份文档仍描述旧架构和旧产品计划。
+
+### 影响范围
+- 影响数字人游客端会话历史落库、路线图和项目文档口径、API 文档、Live2D 遗留计划说明；不改变小程序相关代码，因为项目不交付微信小程序端。
+
+## 2026-06-17 18:27 - 修复地图导览与数字人切换问题
+
+### 变更内容
+- internal/handler/user_handler.go、web-vue/src/stores/auth.ts、web-vue/src/views/DigitalHumanView.vue — `/user/me` 成功时刷新 CSRF cookie，前端播放语音前强制恢复 CSRF，避免 TTS 403 后退回浏览器朗读。
+- web-vue/src/views/MapView.vue — 增加离线景区路线图、稳定点位覆盖层、自动导览/定位/老年模式反馈，并修正后端数字景点 ID 与结构化路线 ID 不匹配导致的路线缺失。
+- web-vue/src/components/Live2DStage.vue — 为 Live2D 模型加载增加 generation 校验，丢弃过期异步加载结果，避免切换时两个模型同时出现。
+- internal/model/models.go、internal/service/stats_service.go、internal/handler/digital_human_handler.go、web-vue/src/views/AdminAvatar.vue — 增加 `allow_avatar_switch` 配置；管理员可限制游客只能使用景区默认数字人。
+- web-vue/src/views/DigitalHumanView.vue — 桌面端不再在左侧显示长字幕，语音合成使用去除表情标签后的文本。
+
+### 原因
+- 地图页依赖外部高德脚本时，在本地环境可能只显示空容器；数字人切换存在异步竞态；语音链路缺 CSRF 时会错误回退到浏览器朗读；管理端需要控制游客切换权限。
+
+### 影响范围
+- 影响游客端地图导览、数字人展示与语音播放、管理员端数字人配置、后端数字人配置和公开数字人列表接口。
+
+## 2026-06-17 16:50 - 增加两个真实数字人切换
+
+### 变更内容
+- internal/model/models.go — 为 `DigitalHumanConfig` 增加 `default_avatar_id`，为 `User` 增加 `preferred_avatar_id`。
+- internal/service、internal/handler、internal/repository — 增加两个真实数字人列表、默认形象读写、用户偏好读写和非法 `avatar_id` 校验。
+- web-vue/src/components/Live2DStage.vue、web-vue/src/views/DigitalHumanView.vue、web-vue/src/views/AdminAvatar.vue — 移除游客端模型硬编码，按当前选择加载模型；游客端可切换 `mao_pro`/`shizuku` 并保存偏好，管理端可保存默认数字人。
+- static/live2d-models/shizuku、static/vue-app — 同步 shizuku Live2D 资产并重新构建前端静态产物。
+
+### 原因
+- 当前游客端只接入魔女形象，景区端和游客端都无法在真实数字人之间切换；需要提供两个真实模型并按账号保存游客偏好。
+
+### 影响范围
+- 影响数字人游客页、管理端数字人配置、用户资料、系统配置、Open-LLM-VTuber WebSocket `switch-config` 同步和相关测试。
+- 仅暴露 `mao_pro` 与 `shizuku` 两个真实模型，不增加第三方未知授权模型。
+
 ## 2026-06-16 19:02 - 解耦数字人文字输出和语音播放
 
 ### 变更内容
@@ -259,3 +453,66 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 - 影响景点管理、知识库管理、二维码管理、游客地图页、数字人页和扫码页。
 - 影响聊天反馈、会话满意度分析、知识候选审核入库和数据大屏可用的后续分析数据来源。
 - 新增数据库字段和表，启动时由现有 AutoMigrate 自动迁移。
+
+## 2026-06-17 00:28 - 增强游客导览与后台可视化
+
+### 变更内容
+- web-vue/src/constants/scenicVisualization.ts — 新增灵山胜境、拈花湾结构化演示点位、三类游览路线、服务提醒、后台大屏和感受度报告兜底数据。
+- web-vue/src/views/MapView.vue — 景点地图接入点位类型配色、结构化信息卡、路线切换、路线高亮、服务提醒和轻量 AR/离线导览提示。
+- web-vue/src/views/DigitalHumanView.vue — 数字人回答时根据回答内容同步展示景点要点卡片。
+- web-vue/src/views/DashboardView.vue — 管理端数据大屏补充热门景点、热门问答准确率、人流热力、演出状态、终端状态、知识库缺口和数字人配置预览。
+- web-vue/src/views/AdminReports.vue、web-vue/src/types/admin.ts — 游客感受度报告补充 7/30 天切换、负面原因下钻、关注词云、人群画像、路线满意度和自动化建议展示字段。
+- static/vue-app/ — 重新构建 Vue 静态产物，包含本次游客端和管理端可视化更新。
+
+### 原因
+需要按赛题计划补齐 C 端游客导览可视化和管理端运营/感受度报告可视化，并在后端接口暂未完整提供新字段时保证前端可展示完整演示效果。
+
+### 影响范围
+- 影响游客地图页、数字人交互页、管理端数据大屏和游客感受度报告页。
+- 不改变现有后端问答、定位、TTS 和管理端已有接口；新增数据均为前端兼容字段与接口失败兜底展示。
+
+## 2026-06-18 14:55 - 新增数据大屏国际化检查
+
+### 变更内容
+- scripts/check-dashboard-i18n.mjs、web-vue/package.json — 新增数据大屏页面 i18n 静态检查脚本和 npm 脚本入口，用于定位大屏页面中仍未接入 locale 的用户可见中文文案。
+
+### 原因
+- 路线图要求多语言 i18n 持续补齐新增页面和错误文案；审查发现数据大屏页面仍存在大量硬编码中文。
+
+### 影响范围
+- 影响前端静态检查流程；暂不改变页面运行时行为。
+
+## 2026-06-18 15:02 - 补齐数据大屏国际化
+
+### 变更内容
+- web-vue/src/views/DashboardView.vue — 数据大屏页头、KPI、运营卡片、图表标题、空状态、表格列、情绪标签和满意度 tooltip 接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `dashboard` 中英文文案，覆盖数据大屏当前用户可见文本。
+
+### 原因
+- 新增数据大屏 i18n 检查后确认页面仍有大量硬编码中文；需要落实路线图中“多语言 i18n 持续补齐新增页面和错误文案”的承诺。
+
+### 影响范围
+- 影响数据大屏的中英文切换展示；不改变大屏接口、统计逻辑和演示数据边界。
+
+## 2026-06-18 15:05 - 接入前端契约检查
+
+### 变更内容
+- Makefile — 新增 `frontend-contracts` 目标，并将数据边界、游客问题闭环、游客问题国际化和数据大屏国际化检查接入 `make check`。
+
+### 原因
+- 数据大屏 i18n 检查和既有前端契约检查如果只保留在 `package.json` 中，统一验证入口不会覆盖这些计划闭环约束。
+
+### 影响范围
+- 影响本地/CI 使用 `make check` 时的验证范围；不改变应用运行时行为。
+
+## 2026-06-18 15:18 - 接通 RAG Prometheus 指标
+
+### 变更内容
+- internal/service/generation_service.go、internal/service/rag_service.go — 在普通 RAG 查询和流式 RAG 查询链路中记录 `rag_query_duration_seconds`，并在查询缓存命中时递增 `rag_cache_hits_total`。
+- internal/service/generation_service_test.go — 新增 RAG 指标回归测试，覆盖首次查询增加耗时观测、二次查询命中缓存并递增缓存命中计数。
+
+### 原因
+- README 已说明 `/metrics` 暴露 RAG 查询耗时和缓存命中率，但审查发现指标只定义在 `internal/pkg/metrics.go`，业务 RAG 链路没有实际记录。
+
+### 影响范围
+- 影响 Prometheus `/metrics` 中 RAG 查询耗时和缓存命中指标；不改变 RAG 回答内容、缓存策略和公开 API。

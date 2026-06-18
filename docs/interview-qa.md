@@ -145,13 +145,13 @@ Go 服务把 `/vtuber-ws/*path` 反向代理到本地 Open-LLM-VTuber 默认端�
 
 ### 17. 项目怎么做登录鉴权？
 
-项目使用 JWT。用户登录成功后，后端生成包含 `user_id`、`username`、`role` 的 token。请求需要登录的接口时，客户端通过 `Authorization: Bearer <token>` 传递。中间件解析 token 后把用户信息写入 Gin Context。
+项目使用 JWT，但浏览器主路径不是把 token 暴露给前端。用户登录成功后，后端生成包含 `user_id`、`username`、`role` 的 token，并写入 `auth_token` HttpOnly Cookie；前端通过 Cookie 会话访问需要登录的接口，并通过 `/api/v1/user/me` 恢复用户状态。`Authorization: Bearer <token>` 仍保留给非浏览器客户端或接口调试使用。
 
 管理员接口会额外经过 AdminMiddleware，检查 role 是否为 `admin`。普通用户只能访问自己的基础接口，景点、路线、导览内容、知识库管理、系统设置、数据大屏等写操作或后台接口需要管理员权限。
 
 ### 18. 哪些接口是公开的，哪些需要权限？
 
-公开接口主要包括景点、路线、导览内容的 GET 查询、AI 聊天、TTS、数字人聊天和健康检查。
+公开接口主要包括景点、路线、导览内容的 GET 查询、AI 聊天、TTS、数字人健康检查、数字人形象列表和健康检查。数字人文本聊天、语音转写聊天、反馈和会话管理需要用户或游客会话。
 
 需要登录的接口包括游客查询创建、查询详情、用户信息等。
 
@@ -159,7 +159,7 @@ Go 服务把 `/vtuber-ws/*path` 反向代理到本地 Open-LLM-VTuber 默认端�
 
 ### 19. JWT 安全上做了哪些处理？
 
-JWT 初始化时会拒绝空密钥、常见默认密钥和小于 32 字符的短密钥。Token 有过期时间，过期时间来自配置。接口层通过 AuthMiddleware 校验 Bearer token，通过 AdminMiddleware 控制管理员权限。测试里覆盖了过期 token、伪造签名、异常签名算法、普通用户访问管理员接口、知识库高风险删除接口鉴权，以及限流窗口和并发行为。
+JWT 初始化时会拒绝空密钥、常见默认密钥和小于 32 字符的短密钥。Token 有过期时间，过期时间来自配置。接口层通过 AuthMiddleware 校验 HttpOnly Cookie，并兼容 Bearer token；通过 AdminMiddleware 控制管理员权限。测试里覆盖了过期 token、伪造签名、异常签名算法、普通用户访问管理员接口、知识库高风险删除接口鉴权，以及限流窗口和并发行为。
 
 如果继续强化，可以加刷新 token、退出登录黑名单、密码复杂度策略，以及生产环境强制 HTTPS。
 

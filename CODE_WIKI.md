@@ -1,5 +1,7 @@
 # 景区导览服务 Code Wiki
 
+> 历史结构参考文档。当前准确实现口径以 `PROJECT_DOCUMENTATION.md`、`PROJECT_OVERVIEW.md` 和 `docs/api.md` 为准；本文件保留模块索引用途，部分早期静态页面和数据库描述已经不再代表主路径。
+
 ## 目录
 
 1. [项目概述](#项目概述)
@@ -36,13 +38,14 @@
 
 | 技术 | 用途 |
 |------|------|
-| Go 1.22 | 主要开发语言 |
+| Go 1.25.0 | 主要开发语言 |
 | Gin | Web框架 |
 | GORM | ORM框架 |
-| SQLite | 数据库 |
+| PostgreSQL / SQLite | PostgreSQL 为主数据库配置，SQLite 仅用于本地开发和轻量测试配置 |
 | Viper | 配置管理 |
 | JWT | 身份认证 |
 | bcrypt | 密码加密 |
+| Vue 3 / Vite | 当前数据大屏、管理后台、游客地图和数字人前端主路径 |
 
 ---
 
@@ -716,8 +719,8 @@ Handler → Service → Repository → Model
 
 ### 环境要求
 
-- Go 1.22+
-- SQLite3
+- Go 1.25.0 或与 `go.mod` 匹配的版本
+- PostgreSQL 16+；SQLite 仅用于本地开发和轻量测试配置
 
 ### 配置文件
 
@@ -729,8 +732,12 @@ server:
   host: "0.0.0.0"
 
 database:
-  driver: "sqlite"
-  path: "./data/scenic.db"
+  driver: "postgres"
+  host: "localhost"
+  port: 5432
+  name: "scenic_guide"
+  user: "scenic"
+  password: "scenic_password"
 
 logging:
   level: "info"
