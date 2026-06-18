@@ -166,7 +166,10 @@
     "chatNow": "直接提问",
     "backToDH": "返回对话",
     "invalidCode": "二维码无效",
-    "spotNotFound": "未找到对应景点，请检查二维码"
+    "spotNotFound": "未找到对应景点，请检查二维码",
+    "autoAsk": "请详细介绍{name}这个景点",
+    "seniorMode": "老年模式",
+    "exitSeniorMode": "退出老年模式"
   },
   "nav": {
     "brand": "景区智能导览",

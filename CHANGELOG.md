@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 20:01 - 增加 QR 扫码页 i18n 检查
+
+### 变更内容
+- scripts/check-qr-scan-i18n.mjs — 新增 QR 扫码页自动提问和老年模式按钮文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:qr-scan-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/QRScanView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将 QR 扫码页自动提问模板和老年模式按钮文案接入 `qr.*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端页面；QR 扫码页仍有自动提问模板和老年模式按钮硬编码中文。
+
+### 影响范围
+- 影响 QR 扫码页自动提问和老年模式按钮文案，以及前端静态检查链路；不改变后端接口和扫码数据结构。
+
 ## 2026-06-18 19:52 - 刷新游客端壳层构建产物
 
 ### 变更内容

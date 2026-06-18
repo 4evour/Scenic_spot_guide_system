@@ -166,7 +166,10 @@
     "chatNow": "Ask a Question",
     "backToDH": "Back to Chat",
     "invalidCode": "Invalid QR code",
-    "spotNotFound": "Attraction not found. Please check the QR code."
+    "spotNotFound": "Attraction not found. Please check the QR code.",
+    "autoAsk": "Please introduce {name} in detail",
+    "seniorMode": "Senior Mode",
+    "exitSeniorMode": "Exit Senior Mode"
   },
   "nav": {
     "brand": "Scenic Guide",

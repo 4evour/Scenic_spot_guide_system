@@ -66,7 +66,7 @@ onMounted(async () => {
 function startTour() {
   if (!spot.value) return;
   // 跳转到数字人页面，带上景点名作为自动提问
-  const query = `请详细介绍${spot.value.name}这个景点`;
+  const query = t('qr.autoAsk', { name: spot.value.name });
   router.push({ name: 'digital-human', query: { qr: spot.value.qr_intro_text || spot.value.name, auto_ask: query } });
 }
 
@@ -78,7 +78,7 @@ function chatNow() {
 <template>
   <main class="qr-scan-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
     <button class="senior-toggle" @click="toggleSeniorMode">
-      {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+      {{ seniorModeEnabled ? $t('qr.exitSeniorMode') : $t('qr.seniorMode') }}
     </button>
     <!-- Loading -->
     <div v-if="loading" class="scan-loading">
