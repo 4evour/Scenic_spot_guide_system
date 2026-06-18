@@ -538,6 +538,50 @@
       "roleRequired": "Select a role"
     }
   },
+  "adminSettings": {
+    "title": "System Settings",
+    "sections": {
+      "basic": "Basic Information",
+      "features": "System Features",
+      "data": "Data Management"
+    },
+    "form": {
+      "scenicName": "Scenic Area Name",
+      "scenicDesc": "Scenic Area Description",
+      "serviceHotline": "Service Hotline",
+      "enableLogin": "Enable User Login",
+      "enableVoice": "Enable Voice Service",
+      "enableFilter": "Enable Visitor Feedback Analysis",
+      "dataRetention": "Data Retention Days",
+      "backupFrequency": "Backup Frequency"
+    },
+    "placeholders": {
+      "scenicName": "Enter scenic area name",
+      "scenicDesc": "Enter scenic area description",
+      "serviceHotline": "Enter service hotline",
+      "backupFrequency": "Select backup frequency"
+    },
+    "backupFrequency": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "manual": "Manual"
+    },
+    "actions": {
+      "save": "Save Settings",
+      "reset": "Reset"
+    },
+    "validation": {
+      "scenicNameRequired": "Scenic area name is required",
+      "dataRetentionRequired": "Data retention days are required",
+      "dataRetentionRange": "Enter 1-365 days"
+    },
+    "messages": {
+      "loadFailed": "Failed to load system settings",
+      "saveSuccess": "System settings saved",
+      "saveFailed": "Save failed"
+    }
+  },
   "error": {
     "title": "Something went wrong",
     "subtitle": "Try refreshing the page or contact the system administrator",

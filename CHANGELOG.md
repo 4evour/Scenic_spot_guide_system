@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 16:42 - 补齐系统设置国际化
+
+### 变更内容
+- scripts/check-admin-settings-i18n.mjs、web-vue/package.json、Makefile — 新增系统设置页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminSettings.vue — 将系统设置页标题、分区、表单标签、占位符、备份频率选项、按钮、校验和消息提示接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminSettings` 中英文文案。
+
+### 原因
+- 系统设置接口和文档已存在，但页面仍有大量硬编码中文和未接入 locale 的错误文案，不符合路线图中持续补齐新增页面 i18n 的要求。
+
+### 影响范围
+- 影响系统设置页中英文切换展示、前端表单提示和统一验证入口；不改变 `/admin/settings` 接口、存储键和值格式。
+
 ## 2026-06-18 16:32 - 刷新用户管理构建产物
 
 ### 变更内容

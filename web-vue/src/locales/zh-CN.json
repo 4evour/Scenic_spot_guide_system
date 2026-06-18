@@ -538,6 +538,50 @@
       "roleRequired": "请选择角色"
     }
   },
+  "adminSettings": {
+    "title": "系统设置",
+    "sections": {
+      "basic": "基本信息",
+      "features": "系统功能",
+      "data": "数据管理"
+    },
+    "form": {
+      "scenicName": "景区名称",
+      "scenicDesc": "景区简介",
+      "serviceHotline": "服务热线",
+      "enableLogin": "启用用户登录",
+      "enableVoice": "启用语音服务",
+      "enableFilter": "启用游客感受度分析",
+      "dataRetention": "数据保留天数",
+      "backupFrequency": "备份频率"
+    },
+    "placeholders": {
+      "scenicName": "请输入景区名称",
+      "scenicDesc": "请输入景区简介",
+      "serviceHotline": "请输入服务热线",
+      "backupFrequency": "请选择备份频率"
+    },
+    "backupFrequency": {
+      "daily": "每日",
+      "weekly": "每周",
+      "monthly": "每月",
+      "manual": "手动"
+    },
+    "actions": {
+      "save": "保存设置",
+      "reset": "重置"
+    },
+    "validation": {
+      "scenicNameRequired": "请输入景区名称",
+      "dataRetentionRequired": "请输入数据保留天数",
+      "dataRetentionRange": "请输入 1-365 天"
+    },
+    "messages": {
+      "loadFailed": "系统设置加载失败",
+      "saveSuccess": "系统设置已保存",
+      "saveFailed": "保存失败"
+    }
+  },
   "error": {
     "title": "页面出现了异常",
     "subtitle": "可尝试刷新页面，或联系系统管理员",

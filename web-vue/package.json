@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "check": "vue-tsc -b --pretty false",
     "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
+    "check:admin-settings-i18n": "node ../scripts/check-admin-settings-i18n.mjs",
     "check:admin-avatar-i18n": "node ../scripts/check-admin-avatar-i18n.mjs",
     "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",
     "check:admin-qrcode-i18n": "node ../scripts/check-admin-qrcode-i18n.mjs",
