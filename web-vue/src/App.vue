@@ -2,12 +2,14 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from './stores/auth'
 import { adminThemeOverrides } from './theme'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const isDarkTheme = computed(() => route.name !== 'login')
 const isFullscreen = computed(() => !!route.meta?.fullscreen)
@@ -36,13 +38,13 @@ async function handleLogout() {
                   <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#63e2b7" opacity="0.9"/>
                   <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#63e2b7" stroke-width="1.5" fill="none" opacity="0.5"/>
                 </svg>
-                <span>景区智能导览</span>
+                <span>{{ t('appShell.brand') }}</span>
               </div>
               <div class="fullscreen-nav">
-                <button :class="{ active: route.name === 'map' }" @click="router.push('/map')">🗺️ 地图</button>
-                <button :class="{ active: route.name === 'digital-human' }" @click="router.push('/digital-human')">💬 数字人</button>
-                <button v-if="authStore.isAdmin" @click="router.push('/dashboard')">⚙️ 管理</button>
-                <button @click="handleLogout">退出</button>
+                <button :class="{ active: route.name === 'map' }" @click="router.push('/map')">{{ t('appShell.map') }}</button>
+                <button :class="{ active: route.name === 'digital-human' }" @click="router.push('/digital-human')">{{ t('appShell.digitalHuman') }}</button>
+                <button v-if="authStore.isAdmin" @click="router.push('/dashboard')">{{ t('appShell.admin') }}</button>
+                <button @click="handleLogout">{{ t('appShell.logout') }}</button>
               </div>
             </header>
             <main class="fullscreen-main">

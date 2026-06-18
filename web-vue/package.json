@@ -8,6 +8,7 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "check": "vue-tsc -b --pretty false",
+    "check:app-shell-i18n": "node ../scripts/check-app-shell-i18n.mjs",
     "check:login-i18n": "node ../scripts/check-login-i18n.mjs",
     "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
     "check:admin-knowledge-insights": "node ../scripts/check-admin-knowledge-insights.mjs",

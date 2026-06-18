@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 19:49 - 增加游客端壳层 i18n 检查
+
+### 变更内容
+- scripts/check-app-shell-i18n.mjs — 新增游客端全屏顶部栏文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:app-shell-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/App.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将游客端全屏顶部栏品牌、地图、数字人、管理和退出文案接入 `appShell.*` 中英文文案。
+
+### 原因
+- 多语言计划要求持续补齐新增页面和错误文案；游客端全屏壳层仍有硬编码中文且缺少专项检查。
+
+### 影响范围
+- 影响游客端地图/数字人全屏壳层文案和前端静态检查链路；不改变路由、鉴权和页面布局。
+
 ## 2026-06-18 19:46 - 刷新登录页构建产物
 
 ### 变更内容

@@ -48,6 +48,13 @@
     "zh-CN": "中文",
     "en-US": "English"
   },
+  "appShell": {
+    "brand": "景区智能导览",
+    "map": "🗺️ 地图",
+    "digitalHuman": "💬 数字人",
+    "admin": "⚙️ 管理",
+    "logout": "退出"
+  },
   "login": {
     "title": "景区智能导览系统",
     "subtitle": "Scenic Spot Guide System",

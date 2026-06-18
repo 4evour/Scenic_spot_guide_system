@@ -48,6 +48,13 @@
     "zh-CN": "中文",
     "en-US": "English"
   },
+  "appShell": {
+    "brand": "Scenic Guide",
+    "map": "🗺️ Map",
+    "digitalHuman": "💬 Guide",
+    "admin": "⚙️ Admin",
+    "logout": "Logout"
+  },
   "login": {
     "title": "Scenic Spot Guide System",
     "subtitle": "Scenic Spot Guide System",
