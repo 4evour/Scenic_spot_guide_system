@@ -107,8 +107,8 @@ const activeRouteSpots = computed(() => activeRoute.value.spotIds
   .filter((spot): spot is ScenicSpot => Boolean(spot)));
 const activeReminders = computed(() => SERVICE_REMINDERS.filter(item => activeRouteSpotIds.value.has(item.spotId)));
 const mapStatusLabel = computed(() => {
-  if (state.mapReady) return '地图就绪';
-  if (state.mapFallback) return '离线示意图';
+  if (state.mapReady) return t('map.ready');
+  if (state.mapFallback) return t('map.offlineMap');
   return t('map.loading');
 });
 const mapStatusClass = computed(() => {
@@ -118,10 +118,10 @@ const mapStatusClass = computed(() => {
 });
 const arStatusText = computed(() => {
   if (autoGuideEnabled.value && geoError.value) return geoError.value;
-  if (autoGuideEnabled.value && !currentPosition.value) return '自动导览已开启，等待浏览器定位授权；未授权时仍可点击景点查看离线路线。';
-  if (geoError.value) return 'GPS 信号弱，已切换离线景点列表；后台可标注梵宫等弱信号区域用于现场疏导。';
-  if (currentPosition.value) return `AR 指引已就绪，当前位置精度约 ${Math.round(currentPosition.value.accuracy)}m。`;
-  return '开启到点讲解后，可基于定位显示方向提示；未授权时保留离线景点选择。';
+  if (autoGuideEnabled.value && !currentPosition.value) return t('map.ar.autoGuideWaiting');
+  if (geoError.value) return t('map.ar.gpsWeakFallback');
+  if (currentPosition.value) return t('map.ar.ready', { accuracy: Math.round(currentPosition.value.accuracy) });
+  return t('map.ar.idle');
 });
 const offlineMapPoints = computed(() => {
   if (state.spots.length === 0) return [];
@@ -423,7 +423,7 @@ function switchRoute(routeId: ScenicRoutePlan['id']) {
 function locateMe() {
   if (!map || typeof AMap === 'undefined') {
     startWatch();
-    message.info('已请求定位权限，离线示意图会保留景点和路线。', { duration: 3000 });
+    message.info(t('map.messages.locateFallback'), { duration: 3000 });
     return;
   }
   const Geo = AMap.Geolocation as new (opts: Record<string, unknown>) => unknown;
@@ -456,17 +456,17 @@ function toggleAutoGuide() {
       })),
     );
     startWatch();
-    message.success('自动导览已开启，靠近景点后会自动讲解。', { duration: 3000 });
+    message.success(t('map.messages.autoGuideStarted'), { duration: 3000 });
   } else {
     stopWatch();
     audioPlayer.interrupt();
-    message.info('自动导览已关闭。', { duration: 2500 });
+    message.info(t('map.messages.autoGuideStopped'), { duration: 2500 });
   }
 }
 
 function toggleSeniorGuideMode() {
   toggleSeniorMode();
-  message.info(seniorModeEnabled.value ? '老年模式已开启，文字和按钮会放大。' : '老年模式已关闭。', { duration: 2500 });
+  message.info(seniorModeEnabled.value ? t('map.messages.seniorModeEnabled') : t('map.messages.seniorModeDisabled'), { duration: 2500 });
 }
 
 // 监听近场检测结果，自动触发讲解
@@ -616,7 +616,7 @@ onUnmounted(() => {
             :type="seniorModeEnabled ? 'primary' : 'default'"
             @click="toggleSeniorGuideMode"
           >
-            {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+            {{ seniorModeEnabled ? $t('map.exitSeniorMode') : $t('map.seniorMode') }}
           </NButton>
           <span
             v-if="autoGuideEnabled && currentPosition"
@@ -631,7 +631,7 @@ onUnmounted(() => {
           <span v-if="state.loading" class="loading-text">{{ $t('map.loadingSpots') }}</span>
         </div>
         <div class="ar-guide-panel" :class="{ offline: Boolean(geoError) }">
-          <strong>{{ geoError ? '离线导览模式' : 'AR 导航提示' }}</strong>
+          <strong>{{ geoError ? $t('map.ar.offlineMode') : $t('map.ar.navigationHint') }}</strong>
           <span>{{ arStatusText }}</span>
         </div>
       </article>

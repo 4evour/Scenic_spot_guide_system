@@ -83,6 +83,7 @@
     "demoDataNoCoord": "演示数据（景点未配置经纬度）",
     "loadFailed": "加载景点失败",
     "ready": "地图就绪",
+    "offlineMap": "离线示意图",
     "loading": "加载中",
     "myLocation": "📍 我的位置",
     "loadingSpots": "加载景点数据…",
@@ -95,12 +96,29 @@
     "autoGuideOn": "自动导览",
     "autoGuideOff": "停止导览",
     "autoGuideArrived": "您已到达 {name}，正在为您播放讲解",
+    "seniorMode": "老年模式",
+    "exitSeniorMode": "退出老年模式",
     "gpsDenied": "位置权限被拒绝，请在浏览器设置中允许定位",
     "gpsUnavailable": "无法获取位置信息，请检查GPS信号",
     "gpsTimeout": "定位超时，正在重试",
     "gpsNotSupported": "浏览器不支持地理位置",
     "gpsFailed": "定位失败：{message}",
-    "gpsLabel": "GPS {accuracy}m"
+    "gpsLabel": "GPS {accuracy}m",
+    "ar": {
+      "autoGuideWaiting": "自动导览已开启，等待浏览器定位授权；未授权时仍可点击景点查看离线路线。",
+      "gpsWeakFallback": "GPS 信号弱，已切换离线景点列表；后台可标注梵宫等弱信号区域用于现场疏导。",
+      "ready": "AR 指引已就绪，当前位置精度约 {accuracy}m。",
+      "idle": "开启到点讲解后，可基于定位显示方向提示；未授权时保留离线景点选择。",
+      "offlineMode": "离线导览模式",
+      "navigationHint": "AR 导航提示"
+    },
+    "messages": {
+      "locateFallback": "已请求定位权限，离线示意图会保留景点和路线。",
+      "autoGuideStarted": "自动导览已开启，靠近景点后会自动讲解。",
+      "autoGuideStopped": "自动导览已关闭。",
+      "seniorModeEnabled": "老年模式已开启，文字和按钮会放大。",
+      "seniorModeDisabled": "老年模式已关闭。"
+    }
   },
   "dh": {
     "title": "与小灵对话",

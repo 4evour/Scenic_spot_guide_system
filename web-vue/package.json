@@ -13,6 +13,7 @@
     "check:qr-scan-i18n": "node ../scripts/check-qr-scan-i18n.mjs",
     "check:live2d-stage-i18n": "node ../scripts/check-live2d-stage-i18n.mjs",
     "check:geolocation-i18n": "node ../scripts/check-geolocation-i18n.mjs",
+    "check:map-guide-i18n": "node ../scripts/check-map-guide-i18n.mjs",
     "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
     "check:admin-knowledge-insights": "node ../scripts/check-admin-knowledge-insights.mjs",
     "check:admin-knowledge-i18n": "node ../scripts/check-admin-knowledge-i18n.mjs",

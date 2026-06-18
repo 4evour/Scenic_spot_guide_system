@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 20:29 - 增加地图导览控制 i18n 检查
+
+### 变更内容
+- scripts/check-map-guide-i18n.mjs — 新增地图页导览状态、AR 提示、自动导览 toast 和老年模式按钮文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:map-guide-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/MapView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将地图状态、AR 提示、自动导览提示和老年模式按钮接入 `map.*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端地图链路；地图导览控制区仍有用户可见硬编码中文。
+
+### 影响范围
+- 影响地图页导览控制区用户可见文案和前端静态检查链路；不改变地图渲染、定位参数、自动导览触发和后端接口。
+
 ## 2026-06-18 20:28 - 刷新定位错误文案构建产物
 
 ### 变更内容
