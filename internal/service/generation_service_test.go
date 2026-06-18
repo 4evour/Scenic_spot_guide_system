@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/scenic-guide/internal/model"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestBuildRAGPromptWithContext(t *testing.T) {
@@ -72,6 +73,67 @@ func TestQueryWithRAGReturnsErrorWhenConfiguredLLMFails(t *testing.T) {
 	if strings.Contains(answer, "游客常问") {
 		t.Fatalf("failed LLM should not return knowledge meta as answer: %s", answer)
 	}
+}
+
+func TestQueryWithRAGRecordsPrometheusMetrics(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"test","content":"灵山大佛通高88米，主体高79米，莲花瓣高9米。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	durationBefore, cacheBefore := ragMetricSnapshot(t)
+	if _, _, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN"); err != nil {
+		t.Fatalf("first QueryWithRAGTrace returned error: %v", err)
+	}
+	durationAfterFirst, cacheAfterFirst := ragMetricSnapshot(t)
+	if durationAfterFirst <= durationBefore {
+		t.Fatalf("RAG duration observations did not increase: before=%d after=%d", durationBefore, durationAfterFirst)
+	}
+	if cacheAfterFirst != cacheBefore {
+		t.Fatalf("first query should not count as cache hit: before=%.0f after=%.0f", cacheBefore, cacheAfterFirst)
+	}
+
+	if _, trace, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN"); err != nil {
+		t.Fatalf("second QueryWithRAGTrace returned error: %v", err)
+	} else if !trace.CacheHit {
+		t.Fatalf("second query should hit cache")
+	}
+	durationAfterSecond, cacheAfterSecond := ragMetricSnapshot(t)
+	if durationAfterSecond <= durationAfterFirst {
+		t.Fatalf("cached RAG duration observation did not increase: before=%d after=%d", durationAfterFirst, durationAfterSecond)
+	}
+	if cacheAfterSecond <= cacheAfterFirst {
+		t.Fatalf("RAG cache hit counter did not increase: before=%.0f after=%.0f", cacheAfterFirst, cacheAfterSecond)
+	}
+}
+
+func ragMetricSnapshot(t *testing.T) (uint64, float64) {
+	t.Helper()
+	families, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		t.Fatalf("gather metrics: %v", err)
+	}
+	var durationCount uint64
+	var cacheHits float64
+	for _, family := range families {
+		switch family.GetName() {
+		case "rag_query_duration_seconds":
+			for _, metric := range family.GetMetric() {
+				if metric.GetHistogram() != nil {
+					durationCount += metric.GetHistogram().GetSampleCount()
+				}
+			}
+		case "rag_cache_hits_total":
+			for _, metric := range family.GetMetric() {
+				if metric.GetCounter() != nil {
+					cacheHits += metric.GetCounter().GetValue()
+				}
+			}
+		}
+	}
+	return durationCount, cacheHits
 }
 
 func TestBuildRAGPromptWithContextAndSession(t *testing.T) {

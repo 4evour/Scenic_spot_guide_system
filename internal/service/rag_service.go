@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/scenic-guide/internal/model"
+	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/repository"
 
 	iconfig "github.com/scenic-guide/internal/config"
@@ -593,6 +594,10 @@ func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query, lang s
 // Returns the full answer, tour route, trace, and error.
 func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToken func(string)) (string, *TourRoute, RAGTrace, error) {
 	sessionID = normalizeSessionID(sessionID)
+	totalStart := time.Now()
+	defer func() {
+		pkg.RecordRAGQueryDuration(time.Since(totalStart).Seconds())
+	}()
 
 	// 1. 追问改写
 	retrievalQuery := query
@@ -611,8 +616,6 @@ func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToke
 		Provider:      map[bool]string{true: "bm25-local", false: "embedding"}[s.useBM25],
 		RetrievalMode: string(normalizeRetrievalMode(RetrievalModeDefault, s.embedding != nil && s.embedding.IsAvailable(), s.useBM25)),
 	}
-	totalStart := time.Now()
-
 	retrievalStart := time.Now()
 	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()

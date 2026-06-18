@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/scenic-guide/internal/model"
+	"github.com/scenic-guide/internal/pkg"
 )
 
 // OpenAI 兼容 API 类型定义（供多处复用）
@@ -134,6 +135,10 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	defer func() {
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
 		trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
+		pkg.RecordRAGQueryDuration(time.Since(totalStart).Seconds())
+		if trace.CacheHit {
+			pkg.RecordRAGCacheHit()
+		}
 		logAttrs := []any{
 			"trace_id", trace.TraceID,
 			"provider", trace.Provider,
