@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 17:02 - 补齐知识库 AI 分析记录
+
+### 变更内容
+- scripts/check-admin-knowledge-insights.mjs、web-vue/package.json、Makefile — 新增知识库 AI 分析记录静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/types/admin.ts — 新增 `VisitorInsightAnalysis` 前端类型，对齐后端 `/admin/insights/analyses` 响应。
+- web-vue/src/views/AdminKnowledge.vue — 接入 `/admin/insights/analyses?page=1&page_size=5`，在知识库页展示最近 AI 分析记录、满意度、关注点和负面原因，并在新分析完成后同步刷新分析记录和知识候选。
+
+### 原因
+- 路线图要求完善运营闭环；后端和 API 文档已有 AI 分析记录接口，但管理端只生成候选、审核候选，没有展示已生成的分析记录，闭环不完整。
+
+### 影响范围
+- 影响知识库管理页的 AI 分析记录可见性和前端契约检查；不改变 AI 分析、候选入库、拒绝接口和数据库结构。
+
 ## 2026-06-18 16:48 - 刷新系统设置构建产物
 
 ### 变更内容

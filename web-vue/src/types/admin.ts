@@ -26,6 +26,20 @@ export type KnowledgeCandidate = {
   created_at: string
 }
 
+export type VisitorInsightAnalysis = {
+  id: number
+  user_id: number
+  session_id: string
+  summary: string
+  satisfaction_score: number
+  negative_reasons: string
+  attention_points: string
+  raw_result: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
 export type AvatarConfig = {
   default_avatar_id: string
   allow_avatar_switch: boolean

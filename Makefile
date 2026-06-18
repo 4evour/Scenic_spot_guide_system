@@ -20,6 +20,7 @@ frontend-check:
 frontend-contracts:
 	cd web-vue && npm run check:data-boundaries
 	cd web-vue && npm run check:admin-queries
+	cd web-vue && npm run check:admin-knowledge-insights
 	cd web-vue && npm run check:admin-settings-i18n
 	cd web-vue && npm run check:admin-avatar-i18n
 	cd web-vue && npm run check:admin-query-i18n

@@ -20,7 +20,7 @@ import {
 } from 'naive-ui'
 import KpiCard from '../components/KpiCard.vue'
 import { apiFetch } from '../services/api'
-import type { KnowledgeCandidate, KnowledgeItem } from '../types/admin'
+import type { KnowledgeCandidate, KnowledgeItem, VisitorInsightAnalysis } from '../types/admin'
 
 const categoryOptions = [
   { label: '全部分类', value: '' },
@@ -74,11 +74,14 @@ const state = reactive({
   selectedFile: null as File | null,
   analysisSessionId: '',
   analyzing: false,
+  analysesLoading: false,
+  insightAnalyses: [] as VisitorInsightAnalysis[],
   candidatesLoading: false,
   candidates: [] as KnowledgeCandidate[],
 })
 
 const displayedCount = computed(() => state.knowledge.length)
+const latestAnalysis = computed(() => state.insightAnalyses[0])
 const spotOptions = computed(() => [
   { label: '全部景点', value: 0 },
   ...state.spots
@@ -116,6 +119,26 @@ function normalizeKnowledge(raw: Record<string, unknown>): KnowledgeItem {
     metadata,
     updated: updatedAt ? new Date(updatedAt).toLocaleDateString('zh-CN') : '-',
   }
+}
+
+function parseJSONList(value: string) {
+  if (!value) return [] as string[]
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.map(item => String(item)).filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
+function formatAnalysisTime(value: string) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 async function loadSpots() {
@@ -239,11 +262,23 @@ async function analyzeSession() {
   try {
     await apiFetch(`/admin/insights/sessions/${encodeURIComponent(state.analysisSessionId.trim())}/analyze`, { method: 'POST', body: '{}' })
     message.success('AI 分析完成，已生成知识候选。')
-    await loadCandidates()
+    await Promise.all([loadInsightAnalyses(), loadCandidates()])
   } catch (error) {
     message.error(error instanceof Error ? error.message : 'AI 分析失败')
   } finally {
     state.analyzing = false
+  }
+}
+
+async function loadInsightAnalyses() {
+  state.analysesLoading = true
+  try {
+    const data = await apiFetch<{ list?: VisitorInsightAnalysis[] }>('/admin/insights/analyses?page=1&page_size=5')
+    state.insightAnalyses = data.list || []
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : 'AI 分析记录加载失败')
+  } finally {
+    state.analysesLoading = false
   }
 }
 
@@ -289,7 +324,7 @@ async function rejectCandidate(candidate: KnowledgeCandidate) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadSpots(), loadKnowledge(), loadCandidates()])
+  await Promise.all([loadSpots(), loadKnowledge(), loadInsightAnalyses(), loadCandidates()])
 })
 </script>
 
@@ -402,39 +437,75 @@ onMounted(async () => {
     </template>
   </NCard>
 
-  <NCard title="AI 知识候选" :bordered="false" class="sg-card" style="margin-top: 16px">
-    <template #header-extra>
-      <NSpace align="center">
-        <NInput v-model:value="state.analysisSessionId" placeholder="输入会话 ID 生成候选" style="width: 240px" />
-        <NButton type="primary" :loading="state.analyzing" @click="analyzeSession">AI 分析会话</NButton>
-        <NButton :loading="state.candidatesLoading" @click="loadCandidates">刷新候选</NButton>
-      </NSpace>
-    </template>
-    <NSpin :show="state.candidatesLoading">
-      <div v-if="state.candidates.length === 0">
-        <NEmpty description="暂无待审核知识候选" />
-      </div>
-      <div v-else class="knowledge-grid">
-        <article v-for="candidate in state.candidates" :key="candidate.id" class="knowledge-card">
-          <div class="knowledge-card-header">
-            <h3>{{ candidate.title }}</h3>
-            <NSpace :size="6">
-              <NTag size="small" type="warning" :bordered="false">{{ candidate.knowledge_category || '游客 FAQ' }}</NTag>
-              <NTag v-if="candidate.spot_category" size="small" :bordered="false">{{ candidate.spot_category }}</NTag>
-            </NSpace>
+  <NGrid :cols="2" :x-gap="16" :y-gap="16" responsive="screen" item-responsive style="margin-top: 16px">
+    <NGi span="2 m:1">
+      <NCard title="AI 分析记录" :bordered="false" class="sg-card">
+        <template #header-extra>
+          <NSpace align="center">
+            <NInput v-model:value="state.analysisSessionId" placeholder="输入会话 ID 生成候选" style="width: 220px" />
+            <NButton type="primary" :loading="state.analyzing" @click="analyzeSession">AI 分析会话</NButton>
+            <NButton :loading="state.analysesLoading" @click="loadInsightAnalyses">刷新记录</NButton>
+          </NSpace>
+        </template>
+        <NSpin :show="state.analysesLoading">
+          <NEmpty v-if="state.insightAnalyses.length === 0" description="暂无 AI 分析记录" />
+          <div v-else class="analysis-list">
+            <article v-for="analysis in state.insightAnalyses" :key="analysis.id" class="analysis-card">
+              <header>
+                <strong>{{ analysis.session_id }}</strong>
+                <NTag size="small" type="success" :bordered="false">满意度 {{ analysis.satisfaction_score }}</NTag>
+              </header>
+              <p>{{ analysis.summary || '暂无分析摘要' }}</p>
+              <div class="analysis-tags">
+                <NTag v-for="item in parseJSONList(analysis.attention_points)" :key="`a-${analysis.id}-${item}`" size="small" :bordered="false">
+                  关注点：{{ item }}
+                </NTag>
+                <NTag v-for="item in parseJSONList(analysis.negative_reasons)" :key="`n-${analysis.id}-${item}`" size="small" type="error" :bordered="false">
+                  负面原因：{{ item }}
+                </NTag>
+              </div>
+              <small>{{ formatAnalysisTime(analysis.created_at) }}</small>
+            </article>
           </div>
-          <p class="knowledge-preview">{{ candidate.content }}</p>
-          <div class="knowledge-card-footer">
-            <small>会话：{{ candidate.session_id || '-' }}</small>
-            <NSpace :size="6">
-              <NButton size="small" quaternary type="primary" @click="approveCandidate(candidate)">入库</NButton>
-              <NButton size="small" quaternary type="error" @click="rejectCandidate(candidate)">拒绝</NButton>
-            </NSpace>
+        </NSpin>
+      </NCard>
+    </NGi>
+
+    <NGi span="2 m:1">
+      <NCard title="AI 知识候选" :bordered="false" class="sg-card">
+        <template #header-extra>
+          <NSpace align="center">
+            <NTag v-if="latestAnalysis" size="small" :bordered="false">最近分析：{{ latestAnalysis.session_id }}</NTag>
+            <NButton :loading="state.candidatesLoading" @click="loadCandidates">刷新候选</NButton>
+          </NSpace>
+        </template>
+        <NSpin :show="state.candidatesLoading">
+          <div v-if="state.candidates.length === 0">
+            <NEmpty description="暂无待审核知识候选" />
           </div>
-        </article>
-      </div>
-    </NSpin>
-  </NCard>
+          <div v-else class="knowledge-grid compact">
+            <article v-for="candidate in state.candidates" :key="candidate.id" class="knowledge-card">
+              <div class="knowledge-card-header">
+                <h3>{{ candidate.title }}</h3>
+                <NSpace :size="6">
+                  <NTag size="small" type="warning" :bordered="false">{{ candidate.knowledge_category || '游客 FAQ' }}</NTag>
+                  <NTag v-if="candidate.spot_category" size="small" :bordered="false">{{ candidate.spot_category }}</NTag>
+                </NSpace>
+              </div>
+              <p class="knowledge-preview">{{ candidate.content }}</p>
+              <div class="knowledge-card-footer">
+                <small>会话：{{ candidate.session_id || '-' }}</small>
+                <NSpace :size="6">
+                  <NButton size="small" quaternary type="primary" @click="approveCandidate(candidate)">入库</NButton>
+                  <NButton size="small" quaternary type="error" @click="rejectCandidate(candidate)">拒绝</NButton>
+                </NSpace>
+              </div>
+            </article>
+          </div>
+        </NSpin>
+      </NCard>
+    </NGi>
+  </NGrid>
 </template>
 
 <style scoped>
@@ -465,6 +536,54 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
+}
+
+.knowledge-grid.compact {
+  grid-template-columns: 1fr;
+}
+
+.analysis-list {
+  display: grid;
+  gap: 12px;
+}
+
+.analysis-card {
+  background: var(--sg-surface-soft);
+  border: 1px solid var(--sg-border-soft);
+  border-radius: var(--sg-radius-lg);
+  padding: 16px;
+}
+
+.analysis-card header,
+.analysis-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.analysis-card header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.analysis-card strong {
+  color: var(--sg-text-heading);
+  font-size: 13px;
+}
+
+.analysis-card p {
+  color: var(--sg-text-placeholder);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+
+.analysis-card small {
+  display: block;
+  color: var(--sg-text-faint);
+  font-size: 11px;
+  margin-top: 10px;
 }
 
 .knowledge-card {
