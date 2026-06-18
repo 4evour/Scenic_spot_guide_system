@@ -3,11 +3,19 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NInput, NButton, NTag, NEmpty, NSpin, NAlert, useMessage } from 'naive-ui';
 import { useGeolocation } from '../composables/useGeolocation';
-import { useProximityGuide, type SpotWithCoords } from '../composables/useProximityGuide';
+import { useProximityGuide } from '../composables/useProximityGuide';
 import { useSeniorMode } from '../composables/useSeniorMode';
 import { AudioPlaybackController } from '../services/audioPlayback';
 import { streamTTS } from '../services/ttsApi';
 import { apiFetch } from '../services/api';
+import {
+  SCENIC_ROUTES,
+  SCENIC_SPOTS,
+  SERVICE_REMINDERS,
+  findStructuredSpot,
+  type ScenicRoutePlan,
+  type ScenicVisualType,
+} from '../constants/scenicVisualization';
 
 const { t } = useI18n();
 
@@ -16,29 +24,33 @@ declare const AMap: Record<string, unknown>;
 type ScenicSpot = {
   id: string;
   name: string;
+  area: string;
   category: string;
+  visualType: ScenicVisualType;
   description: string;
   lng: number;
   lat: number;
   rating: number;
   price: number;
   imageUrl: string;
+  thumbnail: string;
+  parameters: string[];
+  culture: string;
+  highlights: string[];
+  openInfo: string;
+  showTimes: string[];
+  routeTags: string[];
   geofenceEnabled: boolean;
   geofenceRadiusM: number;
   geofenceIntroText: string;
   geofenceCooldownMinutes: number;
+  signalBlindSpot?: boolean;
 };
 
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '';
 const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY || '';
 
-const fallbackSpots: ScenicSpot[] = [
-  { id: 'gate', name: '景区入口', category: '服务设施', description: '游客服务中心，购票和咨询', lng: 0, lat: 0, rating: 4.5, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
-  { id: 'spot-1', name: '主景点', category: '核心景点', description: '景区标志性景观', lng: 0, lat: 0, rating: 4.8, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
-  { id: 'spot-2', name: '文化展馆', category: '文化建筑', description: '展示景区历史与文化底蕴', lng: 0, lat: 0, rating: 4.7, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
-  { id: 'spot-3', name: '观景台', category: '核心景点', description: '俯瞰景区全貌的最佳位置', lng: 0, lat: 0, rating: 4.6, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
-  { id: 'rest', name: '服务区', category: '服务设施', description: '文创商品、饮品和休憩服务', lng: 0, lat: 0, rating: 4.5, price: 0, imageUrl: '', geofenceEnabled: false, geofenceRadiusM: 100, geofenceIntroText: '', geofenceCooldownMinutes: 1440 },
-];
+const fallbackSpots: ScenicSpot[] = SCENIC_SPOTS.map(spot => ({ ...spot }));
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -49,6 +61,14 @@ const categoryTagType: Record<string, 'success' | 'info' | 'warning' | 'error' |
   '文化建筑': 'warning',
   '演艺体验': 'info',
   '服务设施': 'default',
+  '地标建筑': 'warning',
+  '文化休憩': 'success',
+};
+
+const visualTypeMeta: Record<ScenicVisualType, { label: string; color: string; dimColor: string }> = {
+  landmark: { label: '地标建筑', color: '#f4c765', dimColor: 'rgba(244,199,101,0.45)' },
+  experience: { label: '体验景点', color: '#52f0ee', dimColor: 'rgba(82,240,238,0.42)' },
+  culture: { label: '休憩文化', color: '#63e2b7', dimColor: 'rgba(99,226,183,0.42)' },
 };
 
 const state = reactive({
@@ -58,21 +78,74 @@ const state = reactive({
   source: '',
   selectedSpot: null as ScenicSpot | null,
   mapReady: false,
+  mapFallback: false,
   search: '',
+  activeRouteId: 'family' as ScenicRoutePlan['id'],
 });
 
 const filteredSpots = computed(() => {
   const term = state.search.trim().toLowerCase();
-  if (!term) return state.spots;
-  return state.spots.filter(s =>
+  const activeIds = new Set(activeRoute.value.spotIds);
+  const base = state.spots.slice().sort((a, b) => Number(!activeIds.has(a.id)) - Number(!activeIds.has(b.id)));
+  if (!term) return base;
+  return base.filter(s =>
     `${s.name}${s.category}${s.description}`.toLowerCase().includes(term),
   );
 });
+
+const activeRoute = computed(() => SCENIC_ROUTES.find(route => route.id === state.activeRouteId) || SCENIC_ROUTES[0]);
+const activeRouteSpotIds = computed(() => new Set(activeRoute.value.spotIds));
+const activeRouteSpots = computed(() => activeRoute.value.spotIds
+  .map(id => state.spots.find(spot => spot.id === id))
+  .filter((spot): spot is ScenicSpot => Boolean(spot)));
+const activeReminders = computed(() => SERVICE_REMINDERS.filter(item => activeRouteSpotIds.value.has(item.spotId)));
+const mapStatusLabel = computed(() => {
+  if (state.mapReady) return '地图就绪';
+  if (state.mapFallback) return '离线示意图';
+  return t('map.loading');
+});
+const mapStatusClass = computed(() => {
+  if (state.mapReady) return 'ready';
+  if (state.mapFallback) return 'fallback';
+  return 'loading';
+});
+const arStatusText = computed(() => {
+  if (autoGuideEnabled.value && geoError.value) return geoError.value;
+  if (autoGuideEnabled.value && !currentPosition.value) return '自动导览已开启，等待浏览器定位授权；未授权时仍可点击景点查看离线路线。';
+  if (geoError.value) return 'GPS 信号弱，已切换离线景点列表；后台可标注梵宫等弱信号区域用于现场疏导。';
+  if (currentPosition.value) return `AR 指引已就绪，当前位置精度约 ${Math.round(currentPosition.value.accuracy)}m。`;
+  return '开启到点讲解后，可基于定位显示方向提示；未授权时保留离线景点选择。';
+});
+const offlineMapPoints = computed(() => {
+  if (state.spots.length === 0) return [];
+  const lngs = state.spots.map(spot => spot.lng);
+  const lats = state.spots.map(spot => spot.lat);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const lngRange = Math.max(maxLng - minLng, 0.0001);
+  const latRange = Math.max(maxLat - minLat, 0.0001);
+  const routeIds = activeRouteSpotIds.value;
+  return state.spots.map(spot => ({
+    spot,
+    x: 8 + ((spot.lng - minLng) / lngRange) * 84,
+    y: 8 + ((maxLat - spot.lat) / latRange) * 84,
+    inRoute: routeIds.has(spot.id),
+  }));
+});
+const offlineRoutePoints = computed(() => activeRoute.value.spotIds
+  .map(id => offlineMapPoints.value.find(point => point.spot.id === id))
+  .filter((point): point is NonNullable<typeof point> => Boolean(point)));
+const offlineRoutePolyline = computed(() => offlineRoutePoints.value
+  .map(point => `${point.x},${point.y}`)
+  .join(' '));
 
 const mapContainer = ref<HTMLDivElement>();
 let map: unknown = null;
 let markers: unknown[] = [];
 let infoWindow: unknown = null;
+let routePolyline: unknown = null;
 
 // === GPS 主动导览 ===
 const message = useMessage();
@@ -85,7 +158,6 @@ const {
   error: geoError,
   startWatch,
   stopWatch,
-  permissionGranted,
 } = useGeolocation({
   enableHighAccuracy: true,
   maximumAge: 5000,
@@ -117,24 +189,10 @@ async function loadSpots() {
     const response = await fetch('/api/v1/spots', { signal: AbortSignal.timeout(15000) });
     const payload = await response.json() as { code?: number; message?: string; data?: Array<Record<string, unknown>> };
     if (!response.ok || payload.code !== 0) throw new Error(payload.message || '加载失败');
-    const spots = (payload.data || []).map((raw, i) => ({
-      id: String(raw.id || raw.ID || `spot-${i}`),
-      name: String(raw.name || raw.Name || `景点${i + 1}`),
-      category: String(raw.category || raw.Category || ''),
-      description: String(raw.description || raw.Description || ''),
-      lng: Number(raw.longitude || raw.Longitude || 120.42 + (i * 0.002)),
-      lat: Number(raw.latitude || raw.Latitude || 31.57 - (i * 0.002)),
-      rating: Number(raw.rating || raw.Rating || 4.5),
-      price: Number(raw.price || raw.Price || 0),
-      imageUrl: String(raw.image_url || raw.ImageURL || ''),
-      geofenceEnabled: Boolean(raw.geofence_enabled || raw.GeofenceEnabled),
-      geofenceRadiusM: Number(raw.geofence_radius_m || raw.GeofenceRadiusM || 100),
-      geofenceIntroText: String(raw.geofence_intro_text || raw.GeofenceIntroText || ''),
-      geofenceCooldownMinutes: Number(raw.geofence_cooldown_minutes || raw.GeofenceCooldownMinutes || 1440),
-    }));
+    const spots = (payload.data || []).map((raw, i) => enrichSpot(raw, i));
     if (spots.length > 0 && spots.some(s => s.lng > 100)) {
-      state.spots = spots;
-      state.source = t('map.liveData');
+      state.spots = mergeCoreSpots(spots);
+      state.source = `${t('map.liveData')} + 结构化导览`;
     } else {
       state.spots = [...fallbackSpots];
       state.source = t('map.demoDataNoCoord');
@@ -152,12 +210,68 @@ async function loadSpots() {
         cooldownMinutes: s.geofenceCooldownMinutes,
       })),
     );
+    state.selectedSpot = activeRouteSpots.value[0] || state.spots[0] || null;
+    if (!state.mapReady) state.mapFallback = true;
   } catch {
     state.spots = [...fallbackSpots];
     state.source = t('map.demoData');
+    state.selectedSpot = activeRouteSpots.value[0] || state.spots[0] || null;
+    if (!state.mapReady) state.mapFallback = true;
   } finally {
     state.loading = false;
   }
+}
+
+function enrichSpot(raw: Record<string, unknown>, i: number): ScenicSpot {
+  const rawID = String(raw.id || raw.ID || `spot-${i}`);
+  const name = String(raw.name || raw.Name || `景点${i + 1}`);
+  const structured = findStructuredSpot(rawID) || findStructuredSpot(name);
+  const id = structured?.id || rawID;
+  return {
+    id,
+    name,
+    area: String(raw.area || structured?.area || '灵山胜境'),
+    category: String(raw.category || raw.Category || structured?.category || '文化休憩'),
+    visualType: normalizeVisualType(raw.type || raw.visualType || structured?.visualType),
+    description: String(raw.description || raw.Description || structured?.description || ''),
+    lng: Number(raw.longitude || raw.Longitude || structured?.lng || 120.42 + (i * 0.002)),
+    lat: Number(raw.latitude || raw.Latitude || structured?.lat || 31.57 - (i * 0.002)),
+    rating: Number(raw.rating || raw.Rating || structured?.rating || 4.5),
+    price: Number(raw.price || raw.Price || structured?.price || 0),
+    imageUrl: String(raw.image_url || raw.ImageURL || structured?.imageUrl || ''),
+    thumbnail: String(raw.thumbnail || structured?.thumbnail || name.charAt(0)),
+    parameters: asStringList(raw.parameters || structured?.parameters),
+    culture: String(raw.culture || structured?.culture || ''),
+    highlights: asStringList(raw.highlights || structured?.highlights),
+    openInfo: String(raw.openInfo || raw.open_info || structured?.openInfo || ''),
+    showTimes: asStringList(raw.showTimes || raw.show_times || structured?.showTimes),
+    routeTags: asStringList(raw.routeTags || raw.route_tags || structured?.routeTags),
+    geofenceEnabled: Boolean(raw.geofence_enabled || raw.GeofenceEnabled || structured?.geofenceEnabled),
+    geofenceRadiusM: Number(raw.geofence_radius_m || raw.GeofenceRadiusM || structured?.geofenceRadiusM || 100),
+    geofenceIntroText: String(raw.geofence_intro_text || raw.GeofenceIntroText || structured?.geofenceIntroText || ''),
+    geofenceCooldownMinutes: Number(raw.geofence_cooldown_minutes || raw.GeofenceCooldownMinutes || structured?.geofenceCooldownMinutes || 1440),
+    signalBlindSpot: Boolean(raw.signalBlindSpot || raw.signal_blind_spot || structured?.signalBlindSpot),
+  };
+}
+
+function mergeCoreSpots(spots: ScenicSpot[]): ScenicSpot[] {
+  const exists = new Set(spots.flatMap(spot => [spot.id, spot.name]));
+  const missing = fallbackSpots.filter(spot => !exists.has(spot.id) && !exists.has(spot.name));
+  return [...spots, ...missing];
+}
+
+function normalizeVisualType(value: unknown): ScenicVisualType {
+  if (value === 'landmark' || value === 'experience' || value === 'culture') return value;
+  const text = String(value || '');
+  if (text.includes('地标') || text.includes('大佛') || text.includes('梵宫')) return 'landmark';
+  if (text.includes('体验') || text.includes('演艺') || text.includes('湖')) return 'experience';
+  return 'culture';
+}
+
+function asStringList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(item => String(item)).filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return value.split(/[、,，]/).map(item => item.trim()).filter(Boolean);
+  return [];
 }
 
 function loadAmapScript(): Promise<void> {
@@ -170,9 +284,16 @@ function loadAmapScript(): Promise<void> {
       (window as any)._AMapSecurityConfig = { securityJsCode: AMAP_SECURITY };
     }
     const script = document.createElement('script');
+    const timer = window.setTimeout(() => reject(new Error(t('map.amapLoadFailed'))), 8000);
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.Walking,AMap.Geolocation`;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(t('map.amapLoadFailed')));
+    script.onload = () => {
+      window.clearTimeout(timer);
+      resolve();
+    };
+    script.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error(t('map.amapLoadFailed')));
+    };
     document.head.appendChild(script);
   });
 }
@@ -180,9 +301,7 @@ function loadAmapScript(): Promise<void> {
 function initMap() {
   if (!mapContainer.value || typeof AMap === 'undefined') return;
   const AMapMap = AMap.Map as new (container: HTMLElement, opts: Record<string, unknown>) => unknown;
-  const AMapMarker = AMap.Marker as new (opts: Record<string, unknown>) => unknown;
   const AMapInfoWindow = AMap.InfoWindow as new (opts: Record<string, unknown>) => unknown;
-  const AMapPolyline = AMap.Polyline as new (opts: Record<string, unknown>) => unknown;
 
   map = new AMapMap(mapContainer.value, {
     zoom: 16,
@@ -196,41 +315,55 @@ function initMap() {
     offset: new (AMap.Pixel as new (x: number, y: number) => unknown)(0, -40),
   });
 
+  renderMapOverlays();
+  state.mapReady = true;
+  state.mapFallback = false;
+}
+
+function renderMapOverlays() {
+  if (!map || typeof AMap === 'undefined') return;
+  const AMapMarker = AMap.Marker as new (opts: Record<string, unknown>) => unknown;
+  const AMapPolyline = AMap.Polyline as new (opts: Record<string, unknown>) => unknown;
+  if (markers.length || routePolyline) {
+    (map as { remove?: (overlays: unknown[]) => void }).remove?.([...markers, routePolyline].filter(Boolean));
+  }
   markers = [];
-  const path: number[][] = [];
+  routePolyline = null;
+  const routeIds = activeRouteSpotIds.value;
   for (const spot of state.spots) {
+    const meta = visualTypeMeta[spot.visualType] || visualTypeMeta.culture;
+    const isInRoute = routeIds.has(spot.id);
     const marker = new AMapMarker({
       position: [spot.lng, spot.lat],
       title: spot.name,
       content: `<div style="
         width: 32px; height: 32px; border-radius: 50%;
-        background: ${spot.rating >= 4.8 ? '#f4c765' : '#52f0ee'};
+        background: ${isInRoute ? meta.color : meta.dimColor};
         border: 2px solid rgba(255,255,255,0.9);
         display: flex; align-items: center; justify-content: center;
         font-size: 13px; color: #0a0a0f; font-weight: bold;
         box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-        cursor: pointer; transition: transform 0.2s;
+        cursor: pointer; transition: transform 0.2s; opacity:${isInRoute ? 1 : 0.48};
       ">${escapeHtml(spot.name.charAt(0))}</div>`,
       extData: spot,
     });
     (marker as unknown as { on: (event: string, cb: () => void) => void }).on('click', () => showSpotInfo(spot));
     markers.push(marker);
-    path.push([spot.lng, spot.lat]);
   }
 
-  const polyline = new AMapPolyline({
+  const path = activeRouteSpots.value.map(spot => [spot.lng, spot.lat]);
+  routePolyline = new AMapPolyline({
     path,
     strokeColor: '#52f0ee',
-    strokeWeight: 3,
-    strokeOpacity: 0.6,
+    strokeWeight: 5,
+    strokeOpacity: 0.82,
     lineJoin: 'round',
     lineCap: 'round',
-    strokeStyle: 'dashed',
+    showDir: true,
   });
 
-  (map as { add: (overlays: unknown[]) => void }).add([...markers, polyline]);
+  (map as { add: (overlays: unknown[]) => void }).add([...markers, routePolyline]);
   (map as { setFitView: () => void }).setFitView();
-  state.mapReady = true;
 }
 
 function showSpotInfo(spot: ScenicSpot) {
@@ -250,9 +383,10 @@ function showSpotInfo(spot: ScenicSpot) {
         <span style="padding:2px 8px; border-radius:8px; font-size:10px; background:rgba(99,226,183,0.12); color:#63e2b7; border:1px solid rgba(99,226,183,0.2);">${escapeHtml(spot.category)}</span>
       </div>
       <p style="margin:0 0 10px; font-size:13px; line-height:1.6; color:rgba(255,255,255,0.65);">${escapeHtml(spot.description)}</p>
-      <div style="display:flex; gap:16px; font-size:12px; color:rgba(255,255,255,0.5); padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
-        <span style="color:#f4c765;">⭐ ${spot.rating}</span>
-        <span>${priceText}</span>
+      <div style="display:grid; gap:6px; font-size:12px; color:rgba(255,255,255,0.68); padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+        <span style="color:#f4c765;">${escapeHtml(spot.parameters.join(' / ') || `评分 ${spot.rating}`)}</span>
+        <span>${escapeHtml(spot.openInfo || priceText)}</span>
+        <span>${escapeHtml(spot.highlights.slice(0, 2).join(' · '))}</span>
       </div>
     </div>`;
     (infoWindow as { setContent: (c: string) => void; open: (m: unknown, pos: number[]) => void })
@@ -270,8 +404,20 @@ function flyToSpot(spot: ScenicSpot) {
   }
 }
 
+function switchRoute(routeId: ScenicRoutePlan['id']) {
+  state.activeRouteId = routeId;
+  if (!state.selectedSpot || !activeRouteSpotIds.value.has(state.selectedSpot.id)) {
+    state.selectedSpot = activeRouteSpots.value[0] || state.selectedSpot;
+  }
+  renderMapOverlays();
+}
+
 function locateMe() {
-  if (!map) return;
+  if (!map || typeof AMap === 'undefined') {
+    startWatch();
+    message.info('已请求定位权限，离线示意图会保留景点和路线。', { duration: 3000 });
+    return;
+  }
   const Geo = AMap.Geolocation as new (opts: Record<string, unknown>) => unknown;
   const geolocation = new Geo({ enableHighAccuracy: true, timeout: 10000 });
   (geolocation as { getCurrentPosition: (cb: (status: string, result: Record<string, unknown>) => void) => void })
@@ -302,10 +448,17 @@ function toggleAutoGuide() {
       })),
     );
     startWatch();
+    message.success('自动导览已开启，靠近景点后会自动讲解。', { duration: 3000 });
   } else {
     stopWatch();
     audioPlayer.interrupt();
+    message.info('自动导览已关闭。', { duration: 2500 });
   }
+}
+
+function toggleSeniorGuideMode() {
+  toggleSeniorMode();
+  message.info(seniorModeEnabled.value ? '老年模式已开启，文字和按钮会放大。' : '老年模式已关闭。', { duration: 2500 });
 }
 
 // 监听近场检测结果，自动触发讲解
@@ -368,7 +521,11 @@ onMounted(async () => {
     await loadAmapScript();
     initMap();
   } catch (e) {
-    state.error = e instanceof Error ? e.message : t('map.mapLoadFailed');
+    state.mapFallback = true;
+    state.mapReady = false;
+    state.error = '';
+    state.source = `${state.source || t('map.demoData')} · 离线示意图`;
+    console.warn('[Map] AMap unavailable, using offline scenic map.', e);
   }
 });
 
@@ -389,9 +546,9 @@ onUnmounted(() => {
         <h1>{{ $t('map.title') }}</h1>
         <p>{{ $t('map.subtitle') }}</p>
       </div>
-      <div class="map-status" :class="state.mapReady ? 'ready' : 'loading'">
+      <div class="map-status" :class="mapStatusClass">
         <span class="status-dot"></span>
-        {{ state.mapReady ? $t('map.ready') : $t('map.loading') }}
+        {{ mapStatusLabel }}
         <small>{{ state.source }}</small>
       </div>
     </header>
@@ -401,7 +558,40 @@ onUnmounted(() => {
         <NAlert v-if="state.error" type="error" :show-icon="true" style="margin: 8px 16px;">
           {{ state.error }}
         </NAlert>
-        <div ref="mapContainer" class="amap-container"></div>
+        <div class="map-canvas-shell">
+          <div ref="mapContainer" class="amap-container" :class="{ hidden: state.mapFallback }"></div>
+          <div class="offline-map" :class="{ overlay: state.mapReady && !state.mapFallback }" aria-label="景区路线图">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="offline-map-svg">
+              <defs>
+                <linearGradient id="routeGlow" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#52f0ee" />
+                  <stop offset="100%" stop-color="#63e2b7" />
+                </linearGradient>
+              </defs>
+              <path d="M8 84 C24 64 27 35 48 47 S69 83 92 20" class="offline-river" />
+              <polyline
+                v-if="offlineRoutePolyline"
+                :points="offlineRoutePolyline"
+                class="offline-route-line"
+              />
+            </svg>
+            <button
+              v-for="point in offlineMapPoints"
+              :key="point.spot.id"
+              class="offline-spot-marker"
+              :class="{ route: point.inRoute, active: state.selectedSpot?.id === point.spot.id }"
+              :style="{
+                left: `${point.x}%`,
+                top: `${point.y}%`,
+                '--spot-color': visualTypeMeta[point.spot.visualType].color,
+              }"
+              @click="flyToSpot(point.spot)"
+            >
+              <span>{{ point.spot.thumbnail || point.spot.name.charAt(0) }}</span>
+              <strong>{{ point.spot.name }}</strong>
+            </button>
+          </div>
+        </div>
         <div class="map-toolbar">
           <NButton size="small" quaternary @click="locateMe">
             {{ $t('map.myLocation') }}
@@ -416,7 +606,7 @@ onUnmounted(() => {
           <NButton
             size="small"
             :type="seniorModeEnabled ? 'primary' : 'default'"
-            @click="toggleSeniorMode"
+            @click="toggleSeniorGuideMode"
           >
             {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
           </NButton>
@@ -432,9 +622,47 @@ onUnmounted(() => {
           <NSpin v-if="state.loading" size="small" />
           <span v-if="state.loading" class="loading-text">{{ $t('map.loadingSpots') }}</span>
         </div>
+        <div class="ar-guide-panel" :class="{ offline: Boolean(geoError) }">
+          <strong>{{ geoError ? '离线导览模式' : 'AR 导航提示' }}</strong>
+          <span>{{ arStatusText }}</span>
+        </div>
       </article>
 
       <aside class="map-sidebar">
+        <article class="route-card">
+          <div class="route-card-header">
+            <div>
+              <h2>个性化路线</h2>
+              <p>{{ activeRoute.duration }} · {{ activeRoute.summary }}</p>
+            </div>
+          </div>
+          <div class="route-tabs">
+            <button
+              v-for="route in SCENIC_ROUTES"
+              :key="route.id"
+              :class="{ active: route.id === state.activeRouteId }"
+              @click="switchRoute(route.id)"
+            >
+              {{ route.name }}
+            </button>
+          </div>
+          <ol class="route-nodes">
+            <li v-for="spot in activeRouteSpots" :key="spot.id" @click="flyToSpot(spot)">
+              <span>{{ spot.name }}</span>
+              <small>{{ activeRoute.nodeHighlights[spot.id] }}</small>
+            </li>
+          </ol>
+        </article>
+
+        <article class="reminder-card">
+          <h2>服务提醒</h2>
+          <div v-for="item in activeReminders" :key="item.title" class="reminder-item" :class="item.priority">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.startTime }} · 提前{{ item.advanceMinutes }}分钟</span>
+            <p>{{ item.message }}</p>
+          </div>
+        </article>
+
         <!-- 选中景点详情 -->
         <article v-if="state.selectedSpot" class="spot-card">
           <div class="spot-card-header">
@@ -444,9 +672,26 @@ onUnmounted(() => {
             </NTag>
           </div>
           <p class="spot-desc">{{ state.selectedSpot.description }}</p>
+          <div class="spot-section">
+            <strong>建筑参数</strong>
+            <span>{{ state.selectedSpot.parameters.join(' / ') || '暂无参数' }}</span>
+          </div>
+          <div class="spot-section">
+            <strong>文化内涵</strong>
+            <span>{{ state.selectedSpot.culture || '暂无说明' }}</span>
+          </div>
+          <div class="spot-section">
+            <strong>游玩亮点</strong>
+            <span>{{ state.selectedSpot.highlights.join(' / ') || '暂无亮点' }}</span>
+          </div>
+          <div class="spot-section">
+            <strong>开放/演出</strong>
+            <span>{{ state.selectedSpot.openInfo || state.selectedSpot.showTimes.join(' / ') || '随景区开放' }}</span>
+          </div>
           <div class="spot-meta">
             <span class="spot-rating">⭐ {{ state.selectedSpot.rating }}</span>
             <span class="spot-price">{{ state.selectedSpot.price > 0 ? '¥' + state.selectedSpot.price : $t('map.free') }}</span>
+            <span v-if="state.selectedSpot.signalBlindSpot" class="spot-signal">弱信号</span>
           </div>
         </article>
 
@@ -470,8 +715,11 @@ onUnmounted(() => {
               :class="{ active: state.selectedSpot?.id === spot.id }"
               @click="flyToSpot(spot)"
             >
-              <span class="spot-item-name">{{ spot.name }}</span>
-              <span class="spot-item-meta">{{ spot.category }} · ⭐{{ spot.rating }}</span>
+              <span class="spot-item-main">
+                <span class="spot-type-dot" :style="{ background: visualTypeMeta[spot.visualType].color }"></span>
+                <span class="spot-item-name">{{ spot.name }}</span>
+              </span>
+              <span class="spot-item-meta">{{ spot.area }} · {{ visualTypeMeta[spot.visualType].label }}</span>
             </button>
             <NEmpty v-if="filteredSpots.length === 0" :description="$t('map.noResults')" size="small" />
           </div>
@@ -527,6 +775,7 @@ onUnmounted(() => {
   background: var(--sg-red-bright, #e88080);
 }
 .map-status.ready .status-dot { background: var(--sg-jade-bright, #63e2b7); }
+.map-status.fallback .status-dot { background: var(--sg-gold, #f4c765); }
 
 .map-layout {
   display: grid;
@@ -541,10 +790,130 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-.amap-container {
+.map-canvas-shell {
+  position: relative;
   flex: 1;
   min-height: 300px;
   background: #0a1a1e;
+  overflow: hidden;
+}
+
+.amap-container {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+
+.amap-container.hidden {
+  visibility: hidden;
+}
+
+.offline-map {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(82, 240, 238, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(82, 240, 238, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 45% 55%, rgba(99, 226, 183, 0.1), transparent 44%),
+    #081b1e;
+  background-size: 40px 40px, 40px 40px, auto, auto;
+}
+
+.offline-map.overlay {
+  pointer-events: none;
+  background: transparent;
+}
+
+.offline-map.overlay::before,
+.offline-map.overlay .offline-map-svg {
+  display: none;
+}
+
+.offline-map.overlay .offline-spot-marker {
+  pointer-events: auto;
+}
+
+.offline-map::before {
+  content: "灵山胜境 / 拈花湾离线导览图";
+  position: absolute;
+  left: 18px;
+  top: 16px;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+}
+
+.offline-map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.offline-river {
+  fill: none;
+  stroke: rgba(82, 240, 238, 0.12);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.offline-route-line {
+  fill: none;
+  stroke: url(#routeGlow);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(82, 240, 238, 0.45));
+}
+
+.offline-spot-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 64px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.offline-spot-marker span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--spot-color) 45%, #0a1a1e);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  color: #031012;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+}
+
+.offline-spot-marker strong {
+  max-width: 86px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(3, 16, 18, 0.68);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.offline-spot-marker.route span,
+.offline-spot-marker.active span {
+  background: var(--spot-color);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.offline-spot-marker.active strong {
+  color: #031012;
+  background: var(--sg-jade-bright, #63e2b7);
 }
 
 .map-toolbar {
@@ -553,6 +922,7 @@ onUnmounted(() => {
   gap: 12px;
   padding: 10px 16px;
   border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
+  flex-wrap: wrap;
 }
 .loading-text { color: var(--sg-text-faint, rgba(255,255,255,0.3)); font-size: 12px; }
 
@@ -573,6 +943,27 @@ onUnmounted(() => {
   border: 1px solid rgba(232,128,128,0.15);
 }
 
+.ar-guide-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
+  background: rgba(82, 240, 238, 0.035);
+  color: var(--sg-text-secondary, rgba(255,255,255,0.6));
+  font-size: 12px;
+}
+.ar-guide-panel strong {
+  color: var(--sg-cyan, #52f0ee);
+  white-space: nowrap;
+}
+.ar-guide-panel.offline {
+  background: rgba(244, 199, 101, 0.055);
+}
+.ar-guide-panel.offline strong {
+  color: var(--sg-gold, #f4c765);
+}
+
 .map-sidebar {
   display: flex;
   flex-direction: column;
@@ -581,6 +972,97 @@ onUnmounted(() => {
   overflow-y: auto;
   border-left: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
   background: rgba(255,255,255,0.01);
+}
+
+.route-card,
+.reminder-card {
+  background: var(--sg-surface-card, rgba(255,255,255,0.03));
+  border: 1px solid var(--sg-border-soft, rgba(255,255,255,0.06));
+  border-radius: 14px;
+  padding: 16px;
+}
+.route-card-header h2,
+.reminder-card h2 {
+  font-size: 15px;
+  color: var(--sg-text-heading, rgba(255,255,255,0.92));
+  margin: 0 0 6px;
+}
+.route-card-header p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sg-text-hint, rgba(255,255,255,0.35));
+  margin: 0 0 12px;
+}
+.route-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.route-tabs button {
+  min-height: 34px;
+  border: 1px solid var(--sg-border-soft, rgba(255,255,255,0.06));
+  border-radius: 8px;
+  background: rgba(255,255,255,0.025);
+  color: var(--sg-text-secondary, rgba(255,255,255,0.6));
+  font-size: 12px;
+  cursor: pointer;
+}
+.route-tabs button.active {
+  color: #041213;
+  background: var(--sg-jade-bright, #63e2b7);
+  border-color: var(--sg-jade-bright, #63e2b7);
+  font-weight: 700;
+}
+.route-nodes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.route-nodes li {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.025);
+  cursor: pointer;
+}
+.route-nodes span {
+  font-size: 13px;
+  color: var(--sg-text-body, rgba(255,255,255,0.88));
+  font-weight: 600;
+}
+.route-nodes small {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--sg-text-hint, rgba(255,255,255,0.35));
+}
+.reminder-card {
+  display: grid;
+  gap: 8px;
+}
+.reminder-item {
+  border-left: 3px solid var(--sg-cyan, #52f0ee);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.025);
+}
+.reminder-item.high { border-left-color: var(--sg-gold, #f4c765); }
+.reminder-item.medium { border-left-color: var(--sg-jade-bright, #63e2b7); }
+.reminder-item strong {
+  display: block;
+  font-size: 12px;
+  color: var(--sg-text-body, rgba(255,255,255,0.88));
+}
+.reminder-item span,
+.reminder-item p {
+  display: block;
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--sg-text-hint, rgba(255,255,255,0.35));
 }
 
 .spot-card {
@@ -607,13 +1089,35 @@ onUnmounted(() => {
   color: var(--sg-text-secondary, rgba(255,255,255,0.6));
   margin: 0 0 12px;
 }
+.spot-section {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04));
+}
+.spot-section strong {
+  font-size: 11px;
+  color: var(--sg-jade-bright, #63e2b7);
+}
+.spot-section span {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--sg-text-secondary, rgba(255,255,255,0.6));
+}
 .spot-meta {
   display: flex;
   gap: 16px;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 .spot-rating { color: var(--sg-gold, #f4c765); }
 .spot-price { color: var(--sg-text-secondary, rgba(255,255,255,0.5)); }
+.spot-signal {
+  color: var(--sg-gold, #f4c765);
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(244,199,101,0.09);
+}
 
 .spot-list-card {
   background: var(--sg-surface-card, rgba(255,255,255,0.03));
@@ -657,6 +1161,18 @@ onUnmounted(() => {
   transition: all 0.15s;
   text-align: left;
 }
+.spot-item-main {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+.spot-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
 .spot-item:hover {
   background: var(--sg-surface-hover, rgba(255,255,255,0.03));
   border-color: var(--sg-border-soft, rgba(255,255,255,0.06));
@@ -669,6 +1185,9 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 500;
   color: var(--sg-text-body, rgba(255,255,255,0.8));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .spot-item.active .spot-item-name { color: var(--sg-jade-bright, #63e2b7); }
 .spot-item-meta {
@@ -682,5 +1201,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .map-layout { grid-template-columns: 1fr; }
   .map-sidebar { border-left: none; border-top: 1px solid var(--sg-border-subtle, rgba(255,255,255,0.04)); max-height: 40vh; }
+  .map-header { align-items: flex-start; gap: 10px; flex-direction: column; }
+  .ar-guide-panel { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
 </style>

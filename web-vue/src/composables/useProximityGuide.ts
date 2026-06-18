@@ -70,6 +70,11 @@ export function useProximityGuide(
   function resetTriggered() {
     triggeredSpots.value = new Set();
     nearbySpot.value = null;
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore storage failures; in-memory reset still keeps the current page usable.
+    }
   }
 
   watch(currentPosition, (pos) => {
