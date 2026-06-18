@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NCard, NStatistic, NSkeleton } from 'naive-ui'
+import { NCard, NSkeleton } from 'naive-ui'
 
 const props = defineProps<{
   label: string
@@ -23,10 +23,6 @@ const trendIcon = computed(() => {
   return '→'
 })
 
-const isNumeric = computed(() => {
-  const v = String(props.value)
-  return !isNaN(Number(v.replace(/[,%]/g, '')))
-})
 </script>
 
 <template>

@@ -11,6 +11,7 @@ interface CachedAuth {
   userId: string
   username: string
   displayName: string
+  preferredAvatarId: string
   checkedAt: number
 }
 
@@ -28,17 +29,18 @@ export const useAuthStore = defineStore('auth', () => {
     userId: cache.value.userId,
     username: cache.value.username,
     displayName: cache.value.displayName,
+    preferredAvatarId: cache.value.preferredAvatarId,
     role: cache.value.role,
   } : null)
 
-  async function fetchUser(): Promise<boolean> {
-    if (cache.value && Date.now() - cache.value.checkedAt < AUTH_CACHE_TTL) {
+  async function fetchUser(force = false): Promise<boolean> {
+    if (!force && cache.value && Date.now() - cache.value.checkedAt < AUTH_CACHE_TTL) {
       return cache.value.valid
     }
     try {
       const res = await fetch('/api/v1/user/me', { credentials: 'include', signal: AbortSignal.timeout(API_TIMEOUT_MS) })
       if (!res.ok) {
-        cache.value = { valid: false, role: '', userId: '', username: '', displayName: '', checkedAt: Date.now() }
+        cache.value = { valid: false, role: '', userId: '', username: '', displayName: '', preferredAvatarId: 'mao_pro', checkedAt: Date.now() }
         return false
       }
       const data = await res.json()
@@ -49,11 +51,12 @@ export const useAuthStore = defineStore('auth', () => {
         userId: userData.id || userData.ID || '',
         username: userData.username || '',
         displayName: userData.display_name || userData.displayName || userData.username || '',
+        preferredAvatarId: userData.preferred_avatar_id || userData.preferredAvatarId || 'mao_pro',
         checkedAt: Date.now(),
       }
       return true
     } catch {
-      cache.value = { valid: false, role: '', userId: '', username: '', displayName: '', checkedAt: Date.now() }
+      cache.value = { valid: false, role: '', userId: '', username: '', displayName: '', preferredAvatarId: 'mao_pro', checkedAt: Date.now() }
       return false
     }
   }
@@ -85,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
         userId: userData.id || '',
         username: userData.username || '',
         displayName: userData.display_name || userData.username || '',
+        preferredAvatarId: userData.preferred_avatar_id || userData.preferredAvatarId || 'mao_pro',
         checkedAt: Date.now(),
       }
       return true
@@ -119,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
         userId: userData.id || '',
         username: userData.username || '',
         displayName: userData.username || '',
+        preferredAvatarId: userData.preferred_avatar_id || userData.preferredAvatarId || 'mao_pro',
         checkedAt: Date.now(),
       }
       return true

@@ -9,16 +9,18 @@ import { AudioPlaybackController, type PlaybackCue } from '../services/audioPlay
 import { VtuberSocketClient } from '../services/vtuberSocket';
 import { streamTTS } from '../services/ttsApi';
 import { apiFetch } from '../services/api';
-import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression } from '../types/digitalHuman';
+import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression, DigitalHumanAvatarOption } from '../types/digitalHuman';
 import Live2DStage from '../components/Live2DStage.vue';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import { useSessionStore } from '../stores/session';
 import { useAuthStore } from '../stores/auth';
 import { getCSRFToken } from '../utils/csrf';
+import { buildGuideInsight, type GuideInsight } from '../constants/scenicVisualization';
 
 const { t } = useI18n();
 const route = useRoute();
 const authStore = useAuthStore();
+const DEFAULT_AVATAR_ID = 'mao_pro';
 const AUTO_GUIDE_KEY = 'sg_auto_geofence_enabled';
 const autoGuideEnabled = ref(localStorage.getItem(AUTO_GUIDE_KEY) === 'true');
 const geofenceSpots = ref<SpotWithCoords[]>([]);
@@ -104,10 +106,21 @@ const searchQuery = ref('');
 const showSearch = ref(false);
 const showSessionDrawer = ref(false);
 const isSearching = ref(false);
-const searchResults = ref<{ text: string; time: string }[]>([]);
+const searchResults = ref<Array<{
+  id: string;
+  text: string;
+  time: string;
+  role?: ChatMessage['role'];
+  sessionId?: string;
+  sessionTitle?: string;
+}>>([]);
+const currentInsight = ref<GuideInsight | null>(null);
 const typewriterStreaming = ref(false);
 const mobileTab = ref<'avatar' | 'chat'>('avatar');
 const isMobileView = ref(window.innerWidth < 768);
+const avatarOptions = ref<DigitalHumanAvatarOption[]>([]);
+const selectedAvatarId = ref(DEFAULT_AVATAR_ID);
+const avatarSaving = ref(false);
 const audioStatus = ref<'locked' | 'ready' | 'playing' | 'error'>('locked');
 const audioNotice = ref('点击“启用声音”后，我会朗读回答并驱动口型。');
 const storedChatWidth = Number(localStorage.getItem('sg_dh_chat_width') || 420);
@@ -186,6 +199,12 @@ const statusLabel = computed(() => {
   return state.connected ? t('dh.online') : t('dh.offline');
 });
 
+const selectedAvatar = computed(() => {
+  return avatarOptions.value.find(item => item.id === selectedAvatarId.value)
+    || avatarOptions.value.find(item => item.id === DEFAULT_AVATAR_ID)
+    || null;
+});
+
 const canInterrupt = computed(
   () =>
     hasActiveTurn.value ||
@@ -220,6 +239,78 @@ type BackendChatResponse = {
   response?: string;
   trace_id?: string;
 };
+
+type AvatarPreferenceResponse = {
+  avatar_id?: string;
+};
+
+function isKnownAvatar(id: string) {
+  return avatarOptions.value.some(item => item.id === id);
+}
+
+async function loadAvatarOptionsAndPreference() {
+  try {
+    const options = await apiFetch<DigitalHumanAvatarOption[]>('/digital-human/avatar-options');
+    avatarOptions.value = options;
+  } catch {
+    avatarOptions.value = [];
+  }
+
+  let nextAvatarId = authStore.user?.preferredAvatarId || DEFAULT_AVATAR_ID;
+  let savedAvatarId = nextAvatarId;
+  try {
+    const preference = await apiFetch<AvatarPreferenceResponse>('/user/avatar-preference');
+    nextAvatarId = preference.avatar_id || nextAvatarId;
+    savedAvatarId = nextAvatarId;
+  } catch {
+    // 用户偏好读取失败时继续使用默认形象，文字问答不受影响。
+  }
+
+  if (!isKnownAvatar(nextAvatarId)) {
+    nextAvatarId = avatarOptions.value[0]?.id || DEFAULT_AVATAR_ID;
+  }
+  selectedAvatarId.value = nextAvatarId;
+  if (avatarOptions.value.length === 1 && nextAvatarId !== savedAvatarId) {
+    void ensureCSRFToken().then((ok) => {
+      if (!ok) return;
+      return apiFetch('/user/avatar-preference', {
+        method: 'PUT',
+        body: JSON.stringify({ avatar_id: nextAvatarId }),
+      });
+    }).catch(() => {});
+  }
+}
+
+function syncSocketAvatar() {
+  const avatar = selectedAvatar.value;
+  if (!avatar?.config_file) return;
+  socket?.switchConfig(avatar.config_file);
+}
+
+async function selectAvatar(id: string) {
+  if (id === selectedAvatarId.value || !isKnownAvatar(id)) return;
+  const previousAvatarId = selectedAvatarId.value;
+  selectedAvatarId.value = id;
+  syncSocketAvatar();
+  avatarSaving.value = true;
+  try {
+    if (!(await ensureCSRFToken())) {
+      throw new Error('missing csrf token');
+    }
+    await apiFetch('/user/avatar-preference', {
+      method: 'PUT',
+      body: JSON.stringify({ avatar_id: id }),
+    });
+    authStore.invalidateAuth();
+    void authStore.fetchUser();
+  } catch (error) {
+    selectedAvatarId.value = previousAvatarId;
+    syncSocketAvatar();
+    addMessage('system', error instanceof Error ? error.message : '数字人偏好保存失败');
+  } finally {
+    avatarSaving.value = false;
+  }
+}
 
 function stripEmotionTags(text: string) {
   const pattern = new RegExp(`\\[(${ALL_EMOTION_TOKENS.join('|')})\\]\\s*`, 'gi');
@@ -342,6 +433,7 @@ async function persistMessage(role: ChatMessage['role'], content: string) {
   } catch { /* ignore */ }
 
   sessionStore.appendMessage(role, content);
+  await sessionStore.saveMessage(getOrCreateSessionId(), role, content);
 }
 
 function addMessage(role: ChatMessage['role'], text: string) {
@@ -362,6 +454,7 @@ function showAssistantSpeech(text: string) {
   const displayText = stripEmotionTags(text);
   state.subtitle = displayText;
   if (displayText === lastAssistantSpeechText) return;
+  currentInsight.value = buildGuideInsight(displayText);
   resetAssistantTurn();
   lastAssistantSpeechText = displayText;
   typewriterStreaming.value = true;
@@ -379,6 +472,7 @@ function appendAssistantSpeechChunk(text: string) {
   if (!displayText || displayText === 'Thinking...') return;
 
   activeAssistantText = mergeAssistantText(activeAssistantText, displayText);
+  currentInsight.value = buildGuideInsight(activeAssistantText);
   lastAssistantSpeechText = activeAssistantText;
   state.subtitle = displayText;
   typewriterStreaming.value = true;
@@ -415,6 +509,7 @@ function connectSocket() {
     onOpen: () => {
       state.connected = true;
       state.conversation = 'idle';
+      syncSocketAvatar();
       addMessage('system', t('dh.connected'));
     },
     onClose: () => {
@@ -432,6 +527,10 @@ function connectSocket() {
 }
 
 function handleSocketMessage(message: VtuberMessage) {
+  if (message.type === 'config-switched' || message.type === 'set-model-and-conf') {
+    return;
+  }
+
   if (blockIncomingPlayback && ['audio', 'full-text', 'backend-synth-complete'].includes(message.type)) {
     return;
   }
@@ -539,6 +638,7 @@ function sendText() {
   state.expression = 'thinking';
   state.subtitle = t('dh.thinking');
   transcriptBuffer.value = '';
+  currentInsight.value = null;
 
   blockIncomingPlayback = true;
   waitingForFreshServerTurn = false;
@@ -576,27 +676,40 @@ async function answerWithBackendText(text: string, turn: number) {
   }
 }
 
+async function ensureCSRFToken() {
+  if (getCSRFToken()) return true;
+  if (await authStore.fetchUser(true)) {
+    return Boolean(getCSRFToken());
+  }
+  authStore.invalidateAuth();
+  if (await authStore.ensureGuestSession()) {
+    return Boolean(getCSRFToken());
+  }
+  return false;
+}
+
 async function playAnswerAudio(answer: string) {
+  const speechText = stripEmotionTags(answer);
   const cue = { expression: expressionFromText(answer) || 'happy' as const };
   if (audioStatus.value === 'locked') {
     showAudioNotice('locked', '请先点击“启用声音”，之后我会朗读回答并驱动口型。');
     return;
   }
   try {
-    if (!getCSRFToken()) {
-      await authStore.ensureGuestSession();
+    if (!(await ensureCSRFToken())) {
+      throw new Error('missing csrf token');
     }
-    const response = await streamTTS({ text: answer, voice: 'female_xiaoxiao', rate: ttsRate.value });
-    const streamed = await audio.enqueueStream(response, answer, cue);
+    const response = await streamTTS({ text: speechText, voice: 'female_xiaoxiao', rate: ttsRate.value });
+    const streamed = await audio.enqueueStream(response, speechText, cue);
     if (!streamed) {
-      await audio.playTextFallback(answer, cue);
+      await audio.playTextFallback(speechText, cue);
     }
   } catch (err) {
     const message = err instanceof Error && err.message
       ? `语音合成暂时不可用，已切换为浏览器朗读：${err.message}`
       : '语音合成暂时不可用，已切换为浏览器朗读。';
     showAudioNotice('error', message);
-    await audio.playTextFallback(answer, cue);
+    await audio.playTextFallback(speechText, cue);
   }
 }
 
@@ -834,22 +947,75 @@ function toggleSearch() {
   }
 }
 
+function clearSearch() {
+  searchQuery.value = '';
+  searchResults.value = [];
+}
+
 function onSearchInput() {
   window.clearTimeout(searchDebounceTimer);
   const q = searchQuery.value.trim();
   if (!q) {
     searchResults.value = [];
+    isSearching.value = false;
     return;
   }
   searchDebounceTimer = window.setTimeout(() => {
-    isSearching.value = true;
-    // Search in local messages
-    const results = state.messages
-      .filter(m => m.text.toLowerCase().includes(q.toLowerCase()))
-      .map(m => ({ text: m.text, time: m.time }));
-    searchResults.value = results.slice(0, 20);
-    isSearching.value = false;
+    void performSearch(q);
   }, 300);
+}
+
+async function performSearch(keyword: string) {
+  const q = keyword.trim();
+  if (!q) return;
+  try {
+    isSearching.value = true;
+    const [historyResults, localResults] = await Promise.all([
+      sessionStore.searchMessages(q, 1, 20),
+      Promise.resolve(state.messages
+      .filter(m => m.text.toLowerCase().includes(q.toLowerCase()))
+      .map(m => ({
+        id: `local-${m.id}`,
+        text: m.text,
+        time: m.time,
+        role: m.role,
+        sessionId: sessionStore.currentSessionId || getOrCreateSessionId(),
+        sessionTitle: '当前会话',
+      }))),
+    ]);
+
+    const results = historyResults.list.map(item => ({
+      id: `history-${item.id}`,
+      text: item.content,
+      time: new Date(item.created_at).toLocaleString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      role: item.role as ChatMessage['role'],
+      sessionId: item.session_id,
+      sessionTitle: item.session_title || t('dh.sessionDefaultTitle'),
+    }));
+    const seen = new Set(results.map(item => `${item.sessionId}:${item.text}`));
+    for (const item of localResults) {
+      const key = `${item.sessionId}:${item.text}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        results.push(item);
+      }
+    }
+    searchResults.value = results.slice(0, 20);
+  } finally {
+    isSearching.value = false;
+  }
+}
+
+async function openSearchResult(result: { sessionId?: string }) {
+  if (!result.sessionId) return;
+  await switchSession(result.sessionId);
+  showSearch.value = false;
+  clearSearch();
 }
 
 // --- Session drawer ---
@@ -906,7 +1072,7 @@ function onHeadClick() {
 
 function onBodyClick() {
   // Playful feedback on body click
-  addMessage('system', '👋 你戳了戳小灵');
+  addMessage('system', `👋 你戳了戳${selectedAvatar.value?.name || '数字人'}`);
 }
 
 // --- LocalStorage recovery ---
@@ -964,6 +1130,7 @@ onMounted(async () => {
       state.messages = localMsgs;
     }
   }
+  await loadAvatarOptionsAndPreference();
   // 加载景区配置（topic_entities 用于动态关键词匹配）
   try {
     const profile = await apiFetch<{ topic_entities?: string[] }>('/scenic/profile');
@@ -1027,10 +1194,26 @@ onUnmounted(() => {
         <span class="status-text">{{ statusLabel }}</span>
       </div>
 
+      <div v-if="avatarOptions.length > 0" class="avatar-switcher" :class="{ locked: avatarOptions.length === 1 }" aria-label="数字人形象选择">
+        <span v-if="avatarOptions.length === 1" class="avatar-lock-label">景区指定</span>
+        <button
+          v-for="avatar in avatarOptions"
+          :key="avatar.id"
+          class="avatar-choice"
+          :class="{ active: selectedAvatarId === avatar.id }"
+          :disabled="avatarSaving"
+          @click="selectAvatar(avatar.id)"
+        >
+          <span class="avatar-dot" :style="{ background: avatar.preview_color }">{{ avatar.fallback_label }}</span>
+          <span>{{ avatar.name }}</span>
+        </button>
+      </div>
+
       <Live2DStage
         :state="state.conversation"
         :mouth-open="mouthOpen"
         :expression="state.expression"
+        :model-url="selectedAvatar?.model_url"
         @head-click="onHeadClick"
         @body-click="onBodyClick"
       />
@@ -1049,7 +1232,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 字幕气泡 -->
-      <div class="subtitle-bubble">
+      <div v-if="isMobileView" class="subtitle-bubble">
         {{ state.subtitle }}
       </div>
 
@@ -1120,7 +1303,7 @@ onUnmounted(() => {
             @input="onSearchInput"
             autofocus
           />
-          <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''; searchResults = []">✕</button>
+          <button v-if="searchQuery" class="search-clear" @click="clearSearch">✕</button>
         </div>
       </div>
 
@@ -1143,21 +1326,42 @@ onUnmounted(() => {
         </button>
       </div>
 
+      <section v-if="currentInsight" class="answer-visual-card">
+        <div class="answer-visual-thumb">{{ currentInsight.image }}</div>
+        <div class="answer-visual-body">
+          <div class="answer-visual-header">
+            <strong>{{ currentInsight.title }}</strong>
+            <span v-for="tag in currentInsight.tags" :key="tag">{{ tag }}</span>
+          </div>
+          <div class="answer-visual-points">
+            <i v-for="point in currentInsight.points" :key="point">{{ point }}</i>
+          </div>
+        </div>
+      </section>
+
       <!-- 搜索结果 -->
       <div v-if="showSearch && searchResults.length > 0" class="search-results">
-        <div
+        <button
           v-for="(result, i) in searchResults"
           :key="i"
           class="search-result-item"
-          v-html="highlightMatch(result.text, searchQuery)"
-        />
+          @click="openSearchResult(result)"
+        >
+          <span class="search-result-meta">
+            {{ result.sessionTitle || $t('dh.sessionDefaultTitle') }} · {{ result.time }}
+          </span>
+          <span
+            class="search-result-text"
+            v-html="highlightMatch(result.text, searchQuery)"
+          />
+        </button>
       </div>
       <div v-else-if="showSearch && searchQuery && !isSearching" class="search-empty">
         {{ $t('dh.searchNoResults') }}
       </div>
 
       <!-- 消息列表 -->
-      <div v-if="!showSearch || !searchQuery" class="message-list" @scroll.passive>
+      <div v-if="!showSearch || !searchQuery" class="message-list">
         <article v-for="msg in state.messages" :key="msg.id" :class="['msg', msg.role]">
           <div class="msg-label">
             {{ msg.role === 'user' ? $t('dh.user') : msg.role === 'assistant' ? $t('dh.assistant') : $t('dh.system') }}
@@ -1319,6 +1523,69 @@ function highlightMatch(text: string, query: string): string {
 .status-text {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.avatar-switcher {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(10, 10, 15, 0.52);
+  backdrop-filter: blur(12px);
+  z-index: 2;
+}
+
+.avatar-lock-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.avatar-choice {
+  min-width: 78px;
+  height: 34px;
+  padding: 0 10px 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatar-choice:hover,
+.avatar-choice.active {
+  border-color: rgba(99, 226, 183, 0.4);
+  background: rgba(99, 226, 183, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.avatar-choice:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.avatar-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  color: #081014;
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
 }
 
 .emotion-bar {
@@ -1493,11 +1760,28 @@ function highlightMatch(text: string, query: string): string {
   padding: 8px 16px;
 }
 .search-result-item {
-  padding: 6px 0;
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 8px 0;
   font-size: 12px;
   color: rgba(255,255,255,.6);
+  text-align: left;
+  background: transparent;
+  border: none;
   border-bottom: 1px solid rgba(255,255,255,.04);
   line-height: 1.5;
+  cursor: pointer;
+}
+.search-result-item:hover {
+  color: rgba(255,255,255,.86);
+}
+.search-result-meta {
+  color: var(--sg-text-hint, rgba(255,255,255,.35));
+  font-size: 10px;
+}
+.search-result-text {
+  color: inherit;
 }
 .search-empty {
   padding: 20px;
@@ -1530,6 +1814,65 @@ function highlightMatch(text: string, query: string): string {
   margin-left: auto;
   padding: 5px 8px;
   font-size: 14px;
+}
+
+.answer-visual-card {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  margin: 10px 16px 0;
+  padding: 12px;
+  border: 1px solid rgba(82, 240, 238, 0.14);
+  border-radius: 10px;
+  background: rgba(82, 240, 238, 0.045);
+}
+.answer-visual-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #051214;
+  background: var(--sg-gold, #f4c765);
+  font-size: 20px;
+  font-weight: 800;
+}
+.answer-visual-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.answer-visual-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.answer-visual-header strong {
+  color: var(--sg-text-heading, rgba(255,255,255,.92));
+  font-size: 13px;
+}
+.answer-visual-header span {
+  color: var(--sg-jade-bright, #63e2b7);
+  background: rgba(99,226,183,.08);
+  border: 1px solid rgba(99,226,183,.14);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+.answer-visual-points {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.answer-visual-points i {
+  font-style: normal;
+  color: rgba(255,255,255,.68);
+  background: rgba(255,255,255,.045);
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .message-list {
@@ -1705,6 +2048,17 @@ function highlightMatch(text: string, query: string): string {
   .dh-stage {
     flex: none;
     height: 45vh;
+  }
+  .avatar-switcher {
+    top: 48px;
+    right: 12px;
+    max-width: calc(100% - 24px);
+    overflow-x: auto;
+  }
+  .avatar-choice {
+    min-width: 68px;
+    height: 32px;
+    padding-right: 8px;
   }
   .dh-chat {
     width: 100%;
