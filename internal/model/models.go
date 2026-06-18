@@ -63,15 +63,16 @@ type VisitorQuery struct {
 }
 
 type User struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	Username    string    `gorm:"size:100;uniqueIndex;not null" json:"username"`
-	Password    string    `gorm:"size:255;not null" json:"password,omitempty"`
-	Email       string    `gorm:"size:255" json:"email"`
-	Role        string    `gorm:"size:50;default:'visitor'" json:"role"`                                 // admin | visitor | guest
-	GuestToken  string    `gorm:"size:100;uniqueIndex:idx_guest_token,where:guest_token != ''" json:"-"` // 游客设备绑定标识
-	DisplayName string    `gorm:"size:100" json:"display_name"`                                          // 游客显示名
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID                uint      `gorm:"primaryKey" json:"id"`
+	Username          string    `gorm:"size:100;uniqueIndex;not null" json:"username"`
+	Password          string    `gorm:"size:255;not null" json:"password,omitempty"`
+	Email             string    `gorm:"size:255" json:"email"`
+	Role              string    `gorm:"size:50;default:'visitor'" json:"role"`                                 // admin | visitor | guest
+	GuestToken        string    `gorm:"size:100;uniqueIndex:idx_guest_token,where:guest_token != ''" json:"-"` // 游客设备绑定标识
+	DisplayName       string    `gorm:"size:100" json:"display_name"`                                          // 游客显示名
+	PreferredAvatarID string    `gorm:"size:50;default:'mao_pro'" json:"preferred_avatar_id"`                  // 数字人偏好
+	CreatedAt         time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt         time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 type VisitRecord struct {
@@ -189,21 +190,23 @@ type SystemSetting struct {
 
 // DigitalHumanConfig 数字人配置
 type DigitalHumanConfig struct {
-	ID             uint      `gorm:"primaryKey"`
-	Name           string    `gorm:"size:100;default:'小灵'"`
-	Appearance     string    `gorm:"size:255;default:'亲和型国风讲解员'"`
-	Costume        string    `gorm:"size:255;default:'古典汉服'"`
-	Style          string    `gorm:"size:100;default:'古典汉服'"`
-	Color          string    `gorm:"size:20;default:'#D4AF37'"`
-	CultureTheme   string    `gorm:"size:255;default:'灵山佛教文化与江南山水意境'"`
-	VoiceType      string    `gorm:"size:100;default:'温柔女声'"`
-	VoiceTone      string    `gorm:"size:100;default:'温暖、端庄、亲切'"`
-	Speed          float64   `gorm:"default:0.8"`
-	Volume         int       `gorm:"default:80"`
-	Greeting       string    `gorm:"size:500;default:'欢迎来到灵山胜境，我是您的数字导览员小灵。'"`
-	DefaultEmotion string    `gorm:"size:50;default:'joy'"`
-	EmotionLevel   int       `gorm:"default:3"`
-	UpdatedAt      time.Time `gorm:"autoUpdateTime"`
+	ID                uint      `gorm:"primaryKey"`
+	Name              string    `gorm:"size:100;default:'小灵'"`
+	Appearance        string    `gorm:"size:255;default:'亲和型国风讲解员'"`
+	Costume           string    `gorm:"size:255;default:'古典汉服'"`
+	Style             string    `gorm:"size:100;default:'古典汉服'"`
+	Color             string    `gorm:"size:20;default:'#D4AF37'"`
+	CultureTheme      string    `gorm:"size:255;default:'灵山佛教文化与江南山水意境'"`
+	VoiceType         string    `gorm:"size:100;default:'温柔女声'"`
+	VoiceTone         string    `gorm:"size:100;default:'温暖、端庄、亲切'"`
+	Speed             float64   `gorm:"default:0.8"`
+	Volume            int       `gorm:"default:80"`
+	Greeting          string    `gorm:"size:500;default:'欢迎来到灵山胜境，我是您的数字导览员小灵。'"`
+	DefaultEmotion    string    `gorm:"size:50;default:'joy'"`
+	EmotionLevel      int       `gorm:"default:3"`
+	DefaultAvatarID   string    `gorm:"size:50;default:'mao_pro'"`
+	AllowAvatarSwitch bool      `gorm:"default:true"`
+	UpdatedAt         time.Time `gorm:"autoUpdateTime"`
 }
 
 func AutoMigrate(db *gorm.DB) error {

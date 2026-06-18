@@ -188,6 +188,35 @@ func authHeaderFor(t *testing.T, id uint, username, role string) string {
 	return "Bearer " + token
 }
 
+func TestGetCurrentUserRefreshesCSRFCookie(t *testing.T) {
+	router, _, userService := newUserHandlerTestStack(t)
+
+	user := &model.User{Username: "csrf_user", Password: "UserPass123", Role: "visitor"}
+	if err := userService.CreateUser(user); err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/user/me", nil)
+	req.RemoteAddr = "192.0.2.61:1234"
+	req.Header.Set("Authorization", authHeaderFor(t, user.ID, user.Username, user.Role))
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+	found := false
+	for _, cookie := range resp.Result().Cookies() {
+		if cookie.Name == "csrf_token" && cookie.Value != "" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("GET /user/me did not refresh csrf_token cookie")
+	}
+}
+
 func TestAdminUserCRUD(t *testing.T) {
 	router, userRepo, userService := newUserHandlerTestStack(t)
 

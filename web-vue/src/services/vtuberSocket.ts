@@ -92,6 +92,10 @@ export class VtuberSocketClient {
     return this.send({ type: 'interrupt-signal', text: heardResponse });
   }
 
+  switchConfig(file: string) {
+    return this.send({ type: 'switch-config', file });
+  }
+
   send(payload: Record<string, unknown>) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
     this.ws.send(JSON.stringify(payload));

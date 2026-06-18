@@ -72,6 +72,16 @@ export interface ChatMessage {
   time: string;
 }
 
+export interface DigitalHumanAvatarOption {
+  id: string;
+  name: string;
+  description: string;
+  model_url: string;
+  config_file: string;
+  preview_color: string;
+  fallback_label: string;
+}
+
 /** Backend-supported emotion tokens (stripped from display text) */
 export type EmotionToken = 'neutral' | 'joy' | 'sadness' | 'surprise' | 'anger' | 'fear' | 'disgust';
 

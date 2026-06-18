@@ -20,6 +20,8 @@ type UserService interface {
 	UpdateUser(user *model.User) error
 	UpdateAdminUser(id uint, username, email, role, password *string) (*model.User, error)
 	UpdateProfile(id uint, username, email string) error
+	GetAvatarPreference(id uint) (string, error)
+	UpdateAvatarPreference(id uint, avatarID string) error
 	DeleteUser(id uint) error
 	GetAllUsers() ([]model.User, error)
 	GetAllUsersPaginated(page, pageSize int) ([]model.User, int64, error)
@@ -155,6 +157,23 @@ func (s *userService) UpdateProfile(id uint, username, email string) error {
 	return s.repo.UpdateFields(id, map[string]interface{}{
 		"username": username,
 		"email":    email,
+	})
+}
+
+func (s *userService) GetAvatarPreference(id uint) (string, error) {
+	user, err := s.repo.FindByID(id)
+	if err != nil {
+		return "", err
+	}
+	return NormalizeDigitalHumanAvatarID(user.PreferredAvatarID), nil
+}
+
+func (s *userService) UpdateAvatarPreference(id uint, avatarID string) error {
+	if err := ValidateDigitalHumanAvatarID(avatarID); err != nil {
+		return err
+	}
+	return s.repo.UpdateFields(id, map[string]interface{}{
+		"preferred_avatar_id": NormalizeDigitalHumanAvatarID(avatarID),
 	})
 }
 

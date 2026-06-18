@@ -340,6 +340,15 @@ func (h *DigitalHumanHandler) Health(c *gin.Context) {
 	})
 }
 
+func (h *DigitalHumanHandler) AvatarOptions(c *gin.Context) {
+	if h.statsService == nil {
+		pkg.Success(c, service.DigitalHumanAvatarOptions())
+		return
+	}
+	settings := h.statsService.GetDigitalHumanConfig()
+	pkg.Success(c, service.DigitalHumanAvatarOptionsForConfig(settings.DefaultAvatarID, settings.AllowAvatarSwitch))
+}
+
 func (h *DigitalHumanHandler) matchRoute(text string) *model.TourRoute {
 	if h.routeService == nil {
 		return nil
@@ -382,6 +391,8 @@ func (h *DigitalHumanHandler) extractStops(route *model.TourRoute) []string {
 }
 
 func (h *DigitalHumanHandler) Routes(r *gin.RouterGroup) {
+	r.GET("/digital-human/avatar-options", h.AvatarOptions)
+
 	dh := r.Group("/dh")
 	dh.Use(pkg.RateLimitMiddleware(60, time.Minute))
 	{

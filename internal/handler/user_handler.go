@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"log/slog"
@@ -42,12 +42,13 @@ func validateRole(role string) bool {
 
 func userPayload(user *model.User) gin.H {
 	return gin.H{
-		"id":         user.ID,
-		"username":   user.Username,
-		"email":      user.Email,
-		"role":       user.Role,
-		"created_at": user.CreatedAt,
-		"updated_at": user.UpdatedAt,
+		"id":                  user.ID,
+		"username":            user.Username,
+		"email":               user.Email,
+		"role":                user.Role,
+		"preferred_avatar_id": service.NormalizeDigitalHumanAvatarID(user.PreferredAvatarID),
+		"created_at":          user.CreatedAt,
+		"updated_at":          user.UpdatedAt,
 	}
 }
 
@@ -124,15 +125,61 @@ func (h *UserHandler) Logout(c *gin.Context) {
 }
 
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
+	pkg.SetCSRFCookie(c)
+
 	userID, _ := c.Get("user_id")
 	username, _ := c.Get("username")
 	role, _ := c.Get("role")
+	id, _ := userID.(uint)
+	preferredAvatarID := service.DefaultDigitalHumanAvatarID
+	if id != 0 {
+		if avatarID, err := h.service.GetAvatarPreference(id); err == nil {
+			preferredAvatarID = avatarID
+		}
+	}
 
 	pkg.Success(c, gin.H{
-		"id":       userID,
-		"username": username,
-		"role":     role,
+		"id":                  userID,
+		"username":            username,
+		"role":                role,
+		"preferred_avatar_id": preferredAvatarID,
 	})
+}
+
+func (h *UserHandler) GetAvatarPreference(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		pkg.Unauthorized(c, pkg.T(c, "err_unauthorized"))
+		return
+	}
+	userID, _ := userIDVal.(uint)
+	avatarID, err := h.service.GetAvatarPreference(userID)
+	if err != nil {
+		pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
+		return
+	}
+	pkg.Success(c, gin.H{"avatar_id": avatarID})
+}
+
+func (h *UserHandler) UpdateAvatarPreference(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		pkg.Unauthorized(c, pkg.T(c, "err_unauthorized"))
+		return
+	}
+	userID, _ := userIDVal.(uint)
+	var req struct {
+		AvatarID string `json:"avatar_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
+		return
+	}
+	if err := h.service.UpdateAvatarPreference(userID, req.AvatarID); err != nil {
+		pkg.BadRequest(c, err.Error())
+		return
+	}
+	pkg.Success(c, gin.H{"avatar_id": service.NormalizeDigitalHumanAvatarID(req.AvatarID)})
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
@@ -192,8 +239,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	var updateData struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
+		Username        string `json:"username"`
+		Email           string `json:"email"`
 		CurrentPassword string `json:"current_password"`
 	}
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -431,6 +478,8 @@ func (h *UserHandler) Routes(r *gin.RouterGroup) {
 	auth.Use(pkg.AuthMiddleware())
 	{
 		auth.GET("/user/me", h.GetCurrentUser)
+		auth.GET("/user/avatar-preference", h.GetAvatarPreference)
+		auth.PUT("/user/avatar-preference", h.UpdateAvatarPreference)
 		auth.GET("/users/:id", h.GetUser)
 		auth.PUT("/users/:id", h.UpdateUser)
 		auth.DELETE("/users/:id", h.DeleteUser)

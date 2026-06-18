@@ -11,6 +11,7 @@ import {
   NSelect,
   NSlider,
   NStatistic,
+  NSwitch,
   useMessage,
   type FormInst,
   type FormRules,
@@ -18,6 +19,7 @@ import {
 import { apiFetch } from '../services/api'
 import type { AvatarConfig } from '../types/admin'
 import { defaultAvatarConfig } from '../types/admin'
+import type { DigitalHumanAvatarOption } from '../types/digitalHuman'
 
 const message = useMessage()
 
@@ -57,15 +59,27 @@ const state = reactive({
   loading: false,
   saving: false,
   avatar: { ...defaultAvatarConfig } as AvatarConfig,
+  avatarOptions: [] as DigitalHumanAvatarOption[],
 })
 
 const formRef = ref<FormInst | null>(null)
 
 const avatarUpdatedNote = computed(() => `${state.avatar.costume} / ${state.avatar.voice_type}`)
+const digitalHumanOptions = computed(() =>
+  state.avatarOptions.map(item => ({
+    label: `${item.name}（${item.id}）`,
+    value: item.id,
+  })),
+)
+const selectedDigitalHuman = computed(() =>
+  state.avatarOptions.find(item => item.id === state.avatar.default_avatar_id),
+)
 
 function normalizeAvatarConfig(raw: Partial<AvatarConfig>): AvatarConfig {
   return {
     ...defaultAvatarConfig, ...raw,
+    default_avatar_id: raw.default_avatar_id || defaultAvatarConfig.default_avatar_id,
+    allow_avatar_switch: raw.allow_avatar_switch ?? defaultAvatarConfig.allow_avatar_switch,
     speed: Number(raw.speed ?? defaultAvatarConfig.speed),
     volume: Number(raw.volume ?? defaultAvatarConfig.volume),
     emotion_level: Number(raw.emotion_level ?? defaultAvatarConfig.emotion_level),
@@ -75,8 +89,12 @@ function normalizeAvatarConfig(raw: Partial<AvatarConfig>): AvatarConfig {
 async function loadAvatarConfig() {
   state.loading = true
   try {
-    const data = await apiFetch<Partial<AvatarConfig>>('/admin/digital-human/config')
+    const [data, options] = await Promise.all([
+      apiFetch<Partial<AvatarConfig>>('/admin/digital-human/config'),
+      apiFetch<DigitalHumanAvatarOption[]>('/digital-human/avatar-options'),
+    ])
     state.avatar = normalizeAvatarConfig(data)
+    state.avatarOptions = options
   } catch (error) {
     message.error(error instanceof Error ? error.message : '数字人配置加载失败')
   } finally {
@@ -122,6 +140,7 @@ onMounted(loadAvatarConfig)
       <h3>{{ state.avatar.appearance }}</h3>
       <p class="avatar-theme">{{ state.avatar.culture_theme }}</p>
       <ul class="avatar-summary">
+        <li><span>默认形象</span><strong>{{ selectedDigitalHuman?.name || state.avatar.default_avatar_id }}</strong></li>
         <li><span>服装</span><strong>{{ state.avatar.costume }}</strong></li>
         <li><span>声音</span><strong>{{ state.avatar.voice_type }}</strong></li>
         <li><span>语气</span><strong>{{ state.avatar.voice_tone }}</strong></li>
@@ -148,6 +167,21 @@ onMounted(loadAvatarConfig)
         require-mark-placement="right-hanging"
       >
         <NDivider title-placement="left">形象设定</NDivider>
+
+        <NFormItem label="默认数字人" path="default_avatar_id">
+          <NSelect
+            v-model:value="state.avatar.default_avatar_id"
+            :options="digitalHumanOptions"
+            :loading="state.loading && state.avatarOptions.length === 0"
+          />
+        </NFormItem>
+
+        <NFormItem label="游客切换" path="allow_avatar_switch">
+          <NSwitch v-model:value="state.avatar.allow_avatar_switch">
+            <template #checked>允许</template>
+            <template #unchecked>限制为默认</template>
+          </NSwitch>
+        </NFormItem>
 
         <NFormItem label="数字人名称" path="name">
           <NInput v-model:value="state.avatar.name" placeholder="请输入数字人名称" />
