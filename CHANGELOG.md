@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 16:24 - 校准用户管理页实现状态
+
+### 变更内容
+- scripts/check-admin-users-i18n.mjs、web-vue/package.json、Makefile — 新增用户管理页 i18n 和旧 API 文案静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminUsers.vue — 移除“用户管理 API 尚未就绪”的旧分支，按已实装的 `/admin/users` CRUD 接口直接加载用户列表，并将页面标题、表格列、角色、表单、按钮和校验文案接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminUsers` 中英文文案，并将用户名校验提示校准为后端实际的 3-32 位字母、数字或下划线规则。
+
+### 原因
+- 后端和 API 文档已经提供管理端用户 CRUD，但前端仍提示 API 未就绪，属于产品功能状态与代码实现不一致；路线图也要求继续补齐新增管理页和错误文案的 i18n。
+
+### 影响范围
+- 影响用户管理页的加载路径、中英文切换展示、表单前端校验和统一验证入口；不改变用户管理后端接口和权限模型。
+
 ## 2026-06-18 16:12 - 刷新感受度报告构建产物
 
 ### 变更内容

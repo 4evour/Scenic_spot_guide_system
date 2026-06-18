@@ -491,6 +491,53 @@
       "negative": "Negative"
     }
   },
+  "adminUsers": {
+    "title": "User Management",
+    "subtitle": "Manage system user accounts and permissions.",
+    "actions": {
+      "create": "Create User",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "columns": {
+      "username": "Username",
+      "email": "Email",
+      "role": "Role",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "roles": {
+      "admin": "Admin",
+      "visitor": "Visitor"
+    },
+    "drawer": {
+      "createTitle": "Create User",
+      "editTitle": "Edit User"
+    },
+    "form": {
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "role": "Role"
+    },
+    "placeholders": {
+      "username": "Enter username",
+      "email": "Enter email address",
+      "password": "Enter password",
+      "passwordEdit": "Leave blank to keep current password",
+      "role": "Select role"
+    },
+    "validation": {
+      "usernameRequired": "Username is required",
+      "usernameLength": "Username must be 3-32 letters, numbers, or underscores",
+      "emailInvalid": "Enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordPolicy": "Password must be 8-128 characters and include uppercase, lowercase, and a number",
+      "roleRequired": "Select a role"
+    }
+  },
   "error": {
     "title": "Something went wrong",
     "subtitle": "Try refreshing the page or contact the system administrator",

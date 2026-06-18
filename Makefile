@@ -24,6 +24,7 @@ frontend-contracts:
 	cd web-vue && npm run check:admin-query-i18n
 	cd web-vue && npm run check:admin-qrcode-i18n
 	cd web-vue && npm run check:admin-reports-i18n
+	cd web-vue && npm run check:admin-users-i18n
 	cd web-vue && npm run check:dashboard-i18n
 	cd web-vue && npm run check:digital-human-docs
 

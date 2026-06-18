@@ -491,6 +491,53 @@
       "negative": "负面"
     }
   },
+  "adminUsers": {
+    "title": "用户管理",
+    "subtitle": "管理系统的用户账号和权限。",
+    "actions": {
+      "create": "新增用户",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "columns": {
+      "username": "用户名",
+      "email": "邮箱",
+      "role": "角色",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "roles": {
+      "admin": "管理员",
+      "visitor": "游客"
+    },
+    "drawer": {
+      "createTitle": "新增用户",
+      "editTitle": "编辑用户"
+    },
+    "form": {
+      "username": "用户名",
+      "email": "邮箱",
+      "password": "密码",
+      "role": "角色"
+    },
+    "placeholders": {
+      "username": "请输入用户名",
+      "email": "请输入邮箱地址",
+      "password": "请输入密码",
+      "passwordEdit": "留空则不修改密码",
+      "role": "请选择角色"
+    },
+    "validation": {
+      "usernameRequired": "请输入用户名",
+      "usernameLength": "用户名需为 3-32 位字母、数字或下划线",
+      "emailInvalid": "请输入有效的邮箱地址",
+      "passwordRequired": "请输入密码",
+      "passwordPolicy": "密码需 8-128 位且包含大小写字母和数字",
+      "roleRequired": "请选择角色"
+    }
+  },
   "error": {
     "title": "页面出现了异常",
     "subtitle": "可尝试刷新页面，或联系系统管理员",
