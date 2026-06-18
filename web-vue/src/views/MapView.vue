@@ -640,7 +640,7 @@ onUnmounted(() => {
         <article class="route-card">
           <div class="route-card-header">
             <div>
-              <h2>个性化路线</h2>
+              <h2>{{ $t('map.routes.title') }}</h2>
               <p>{{ activeRoute.duration }} · {{ activeRoute.summary }}</p>
             </div>
           </div>
@@ -663,10 +663,10 @@ onUnmounted(() => {
         </article>
 
         <article class="reminder-card">
-          <h2>服务提醒</h2>
+          <h2>{{ $t('map.reminders.title') }}</h2>
           <div v-for="item in activeReminders" :key="item.title" class="reminder-item" :class="item.priority">
             <strong>{{ item.title }}</strong>
-            <span>{{ item.startTime }} · 提前{{ item.advanceMinutes }}分钟</span>
+            <span>{{ item.startTime }} · {{ $t('map.reminders.advanceMinutes', { minutes: item.advanceMinutes }) }}</span>
             <p>{{ item.message }}</p>
           </div>
         </article>

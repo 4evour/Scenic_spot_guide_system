@@ -118,6 +118,13 @@
       "autoGuideStopped": "Auto guide is off.",
       "seniorModeEnabled": "Senior mode is on. Text and buttons are enlarged.",
       "seniorModeDisabled": "Senior mode is off."
+    },
+    "routes": {
+      "title": "Personalized Route"
+    },
+    "reminders": {
+      "title": "Service Reminders",
+      "advanceMinutes": "{minutes} min early"
     }
   },
   "dh": {

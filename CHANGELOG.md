@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 20:21 - 增加地图路线区域 i18n 检查
+
+### 变更内容
+- scripts/check-map-routes-i18n.mjs — 新增地图页路线卡片标题、服务提醒标题和提前分钟文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:map-routes-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/MapView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将地图页路线卡片标题、服务提醒标题和提前分钟文案接入 `map.*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端地图链路；地图路线和服务提醒区域仍有用户可见硬编码中文。
+
+### 影响范围
+- 影响地图页路线/服务提醒区域用户可见 UI 文案和前端静态检查链路；不改变路线数据、提醒数据、地图渲染和后端接口。
+
 ## 2026-06-18 20:30 - 刷新地图导览控制构建产物
 
 ### 变更内容
