@@ -69,6 +69,7 @@ for (const target of extraRoots) {
 }
 
 const failures = [];
+const controlCharacterFailures = [];
 for (const file of files) {
   const text = fs.readFileSync(file, 'utf8');
   const lines = text.split(/\r?\n/);
@@ -81,16 +82,34 @@ for (const file of files) {
         preview: line.trim().slice(0, 140),
       });
     }
+    for (const char of line) {
+      const code = char.charCodeAt(0);
+      if ((code >= 0x00 && code <= 0x08) || code === 0x0b || code === 0x0c || (code >= 0x0e && code <= 0x1f)) {
+        controlCharacterFailures.push({
+          file: path.relative(root, file).replaceAll(path.sep, '/'),
+          line: index + 1,
+          code: `U+${code.toString(16).toUpperCase().padStart(4, '0')}`,
+          preview: line.trim().slice(0, 140),
+        });
+        break;
+      }
+    }
   }
 }
 
-if (failures.length > 0) {
+if (failures.length > 0 || controlCharacterFailures.length > 0) {
   console.error('Encoding check failed. Suspected replacement characters or mojibake were found:');
   for (const failure of failures.slice(0, 50)) {
     console.error(`- ${failure.file}:${failure.line} ${failure.preview}`);
   }
+  for (const failure of controlCharacterFailures.slice(0, 50)) {
+    console.error(`- ${failure.file}:${failure.line} ${failure.code} ${failure.preview}`);
+  }
   if (failures.length > 50) {
     console.error(`...and ${failures.length - 50} more`);
+  }
+  if (controlCharacterFailures.length > 50) {
+    console.error(`...and ${controlCharacterFailures.length - 50} more control character failures`);
   }
   process.exit(1);
 }
