@@ -49,13 +49,13 @@ async function handleGuestLogin() {
   try {
     const ok = await authStore.ensureGuestSession();
     if (ok) {
-      message.success('已以游客身份登录');
+      message.success(t('login.guestSuccess'));
       router.push({ name: 'map' });
     } else {
-      message.error('游客登录失败，请稍后重试');
+      message.error(t('login.guestFailed'));
     }
   } catch {
-    message.error('网络错误');
+    message.error(t('login.networkError'));
   } finally {
     guestLoading.value = false;
   }
@@ -96,7 +96,7 @@ async function handleGuestLogin() {
             {{ $t('login.submit') }}
           </NButton>
           <NButton block size="large" quaternary :loading="guestLoading" @click="handleGuestLogin">
-            🏖️ 以游客身份继续
+            {{ $t('login.guestContinue') }}
           </NButton>
         </NSpace>
       </NForm>

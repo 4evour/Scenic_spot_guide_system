@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 19:43 - 增加登录页 i18n 检查
+
+### 变更内容
+- scripts/check-login-i18n.mjs — 新增登录页游客登录文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:login-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/LoginView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将游客登录按钮和成功/失败提示接入 `login.*` 中英文文案。
+
+### 原因
+- 多语言计划要求持续补齐新增页面和错误文案；登录页游客登录入口仍缺少专项检查。
+
+### 影响范围
+- 影响登录页游客登录入口文案和前端静态检查链路；不改变登录流程、鉴权接口和路由跳转。
+
 ## 2026-06-18 19:39 - 刷新知识库管理构建产物
 
 ### 变更内容

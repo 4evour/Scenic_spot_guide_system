@@ -18,6 +18,7 @@ frontend-check:
 	cd web-vue && npm run check
 
 frontend-contracts:
+	cd web-vue && npm run check:login-i18n
 	cd web-vue && npm run check:data-boundaries
 	cd web-vue && npm run check:admin-queries
 	cd web-vue && npm run check:admin-knowledge-insights

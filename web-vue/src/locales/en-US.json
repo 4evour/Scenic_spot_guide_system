@@ -61,7 +61,10 @@
     "success": "Login successful",
     "failed": "Login failed",
     "networkError": "Network error, please retry",
-    "emptyFields": "Please enter username and password"
+    "emptyFields": "Please enter username and password",
+    "guestContinue": "🏖️ Continue as visitor",
+    "guestSuccess": "Signed in as visitor",
+    "guestFailed": "Visitor sign-in failed. Please retry later."
   },
   "map": {
     "title": "Real-time Tourist Map",

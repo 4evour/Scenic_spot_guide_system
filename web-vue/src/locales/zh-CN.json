@@ -61,7 +61,10 @@
     "success": "登录成功",
     "failed": "登录失败",
     "networkError": "网络错误，请重试",
-    "emptyFields": "请输入用户名和密码"
+    "emptyFields": "请输入用户名和密码",
+    "guestContinue": "🏖️ 以游客身份继续",
+    "guestSuccess": "已以游客身份登录",
+    "guestFailed": "游客登录失败，请稍后重试"
   },
   "map": {
     "title": "游客实时导览地图",
