@@ -11,6 +11,7 @@ import {
   NStatistic,
   type DataTableColumns,
 } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import * as echarts from 'echarts/core';
 import { LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent, GraphicComponent } from 'echarts/components';
@@ -18,6 +19,8 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { apiFetch } from '../services/api';
 
 echarts.use([LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, GraphicComponent, CanvasRenderer]);
+
+const { t } = useI18n();
 
 /* ---- Types ---- */
 
@@ -85,37 +88,41 @@ const trendChart = shallowRef<echarts.ECharts | null>(null);
 const pieChart = shallowRef<echarts.ECharts | null>(null);
 const satisfactionChart = shallowRef<echarts.ECharts | null>(null);
 
-const emotionLabel: Record<string, string> = {
-  joy: '正面', surprise: '惊喜', neutral: '中性', sadness: '负面', fear: '恐惧',
-};
+const emotionLabels = computed<Record<string, string>>(() => ({
+  joy: t('dashboard.emotions.joy'),
+  surprise: t('dashboard.emotions.surprise'),
+  neutral: t('dashboard.emotions.neutral'),
+  sadness: t('dashboard.emotions.sadness'),
+  fear: t('dashboard.emotions.fear'),
+}));
 const emotionTagType: Record<string, 'success' | 'warning' | 'info' | 'error' | 'default'> = {
   joy: 'success', surprise: 'warning', neutral: 'info', sadness: 'error', fear: 'default',
 };
 
 /* ---- Recent conversations table columns ---- */
 
-const conversationColumns: DataTableColumns<Conversation> = [
-  { title: '时间', key: 'time', width: 110, render: (row) => h('span', { style: 'color:var(--sg-text-hint);font-size:12px;white-space:nowrap' }, row.time) },
-  { title: '游客问题', key: 'user_query', ellipsis: { tooltip: true }, width: 220 },
-  { title: 'AI 回答', key: 'ai_response', ellipsis: { tooltip: true }, width: 280 },
+const conversationColumns = computed<DataTableColumns<Conversation>>(() => [
+  { title: t('dashboard.columns.time'), key: 'time', width: 110, render: (row) => h('span', { style: 'color:var(--sg-text-hint);font-size:12px;white-space:nowrap' }, row.time) },
+  { title: t('dashboard.columns.visitorQuery'), key: 'user_query', ellipsis: { tooltip: true }, width: 220 },
+  { title: t('dashboard.columns.aiResponse'), key: 'ai_response', ellipsis: { tooltip: true }, width: 280 },
   {
-    title: '情绪', key: 'emotion', width: 100,
+    title: t('dashboard.columns.emotion'), key: 'emotion', width: 100,
     render: (row) => h(NTag, {
       type: emotionTagType[row.emotion] ?? 'default',
       size: 'small',
       bordered: false,
-    }, { default: () => emotionLabel[row.emotion] ?? row.emotion }),
+    }, { default: () => emotionLabels.value[row.emotion] ?? row.emotion }),
   },
-];
+]);
 
 const conversationPagination = { pageSize: 6 };
 
 /* ---- Top questions table columns ---- */
 
-const topQuestionColumns: DataTableColumns<TopQuestion> = [
-  { title: '热门问题', key: 'question', ellipsis: { tooltip: true } },
-  { title: '次数', key: 'count', width: 80, sorter: (a, b) => a.count - b.count },
-];
+const topQuestionColumns = computed<DataTableColumns<TopQuestion>>(() => [
+  { title: t('dashboard.columns.hotQuestion'), key: 'question', ellipsis: { tooltip: true } },
+  { title: t('dashboard.columns.count'), key: 'count', width: 80, sorter: (a, b) => a.count - b.count },
+]);
 
 const topQuestionPagination = { pageSize: 10 };
 
@@ -148,7 +155,7 @@ async function loadData() {
       renderSatisfactionChart(satisfactionTrend.value);
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '加载失败';
+    const msg = e instanceof Error ? e.message : t('common.loadFailed');
     error.value = msg;
   } finally {
     loading.value = false;
@@ -251,7 +258,7 @@ function renderSatisfactionChart(data: SatisfactionTrendItem[]) {
         if (!p || typeof p !== 'object' || !('value' in p)) return '';
         const item = data[(p as { dataIndex: number }).dataIndex];
         return item
-          ? `${item.date}<br/>满意度: ${item.rate}%<br/>对话数: ${item.total}`
+          ? `${item.date}<br/>${t('dashboard.tooltips.satisfaction')}: ${item.rate}%<br/>${t('dashboard.tooltips.conversations')}: ${item.total}`
           : '';
       },
     },
@@ -265,6 +272,7 @@ function handleResize() {
 }
 
 const loadingSkeletonCount = computed(() => [1, 2, 3, 4]);
+const displayTopQuestions = computed(() => topQuestions.value.slice(0, 5));
 
 onMounted(() => { loadData(); window.addEventListener('resize', handleResize); });
 onUnmounted(() => {
@@ -279,12 +287,12 @@ onUnmounted(() => {
   <div class="dashboard">
     <header class="page-header">
       <div>
-        <h1>数据大屏</h1>
-        <p>实时运营数据概览</p>
+        <h1>{{ t('dashboard.title') }}</h1>
+        <p>{{ t('dashboard.subtitle') }}</p>
       </div>
     </header>
 
-    <!-- 错误提示 -->
+    <!-- Error alert -->
     <NAlert
       v-if="error"
       type="error"
@@ -296,7 +304,7 @@ onUnmounted(() => {
     </NAlert>
 
     <NSpin :show="loading">
-      <!-- KPI 卡片骨架屏 -->
+      <!-- KPI skeleton -->
       <div v-if="loading && recentConversations.length === 0" class="kpi-grid">
         <NCard
           v-for="n in loadingSkeletonCount"
@@ -310,12 +318,12 @@ onUnmounted(() => {
         </NCard>
       </div>
 
-      <!-- KPI 卡片 -->
+      <!-- KPI cards -->
       <div v-else class="kpi-grid">
         <NCard :bordered="false" size="small" class="kpi-card">
           <div class="kpi-icon" style="color: var(--sg-jade-bright);">👥</div>
           <div class="kpi-body">
-            <NStatistic label="今日服务人次" :value="overview.total_visitors" />
+            <NStatistic :label="t('dashboard.kpis.todayVisitors')" :value="overview.total_visitors" />
             <span class="kpi-trend" :class="overview.visitors_trend >= 0 ? 'up' : 'down'">
               {{ overview.visitors_trend >= 0 ? '↑' : '↓' }} {{ Math.abs(overview.visitors_trend) }}%
             </span>
@@ -324,7 +332,7 @@ onUnmounted(() => {
         <NCard :bordered="false" size="small" class="kpi-card">
           <div class="kpi-icon" style="color: var(--sg-cyan);">💬</div>
           <div class="kpi-body">
-            <NStatistic label="本周问答次数" :value="overview.weekly_chats" />
+            <NStatistic :label="t('dashboard.kpis.weeklyChats')" :value="overview.weekly_chats" />
             <span class="kpi-trend" :class="overview.chats_trend >= 0 ? 'up' : 'down'">
               {{ overview.chats_trend >= 0 ? '↑' : '↓' }} {{ Math.abs(overview.chats_trend) }}%
             </span>
@@ -333,7 +341,7 @@ onUnmounted(() => {
         <NCard :bordered="false" size="small" class="kpi-card">
           <div class="kpi-icon" style="color: var(--sg-jade);">⭐</div>
           <div class="kpi-body">
-            <NStatistic label="用户满意度">
+            <NStatistic :label="t('dashboard.kpis.satisfaction')">
               <template #default>
                 <span style="color: var(--sg-jade-bright);">{{ overview.satisfaction_rate }}</span>
               </template>
@@ -346,7 +354,7 @@ onUnmounted(() => {
         <NCard :bordered="false" size="small" class="kpi-card">
           <div class="kpi-icon" style="color: var(--sg-gold);">⚡</div>
           <div class="kpi-body">
-            <NStatistic label="平均响应延迟">
+            <NStatistic :label="t('dashboard.kpis.avgResponseTime')">
               <template #default>
                 <span style="color: var(--sg-gold);">{{ overview.avg_response_time }}</span>
               </template>
@@ -356,36 +364,106 @@ onUnmounted(() => {
             </span>
           </div>
         </NCard>
-        <!-- 知识库统计 KPI -->
+        <!-- Knowledge KPI -->
         <NCard :bordered="false" size="small" class="kpi-card">
           <div class="kpi-icon" style="color: var(--sg-blue);">📚</div>
           <div class="kpi-body">
-            <NStatistic label="知识库条目" :value="knowledgeStats.total_count" />
+            <NStatistic :label="t('dashboard.kpis.knowledgeItems')" :value="knowledgeStats.total_count" />
           </div>
         </NCard>
       </div>
 
-      <!-- 图表区域 -->
+      <section class="ops-grid">
+        <NCard :bordered="false" class="chart-card ops-card">
+          <template #header>{{ t('dashboard.sections.hotSpots') }}</template>
+          <div class="ops-empty">
+            <NEmpty :description="t('dashboard.empty.hotSpots')" />
+          </div>
+        </NCard>
+
+        <NCard :bordered="false" class="chart-card ops-card">
+          <template #header>{{ t('dashboard.sections.questionCloud') }}</template>
+          <div v-if="displayTopQuestions.length > 0" class="question-cloud">
+            <button
+              v-for="item in displayTopQuestions"
+              :key="item.question"
+              :style="{ fontSize: `${Math.min(20, 11 + item.count / 24)}px` }"
+            >
+              {{ item.question }}
+              <span>{{ t('dashboard.units.times', { count: item.count }) }}</span>
+            </button>
+          </div>
+          <div v-else class="ops-empty">
+            <NEmpty :description="t('dashboard.empty.questionCloud')" />
+          </div>
+        </NCard>
+
+        <NCard :bordered="false" class="chart-card ops-card">
+          <template #header>{{ t('dashboard.sections.crowdHeat') }}</template>
+          <div class="ops-empty">
+            <NEmpty :description="t('dashboard.empty.crowdHeat')" />
+          </div>
+        </NCard>
+      </section>
+
+      <section class="ops-grid ops-grid-middle">
+        <NCard :bordered="false" class="chart-card ops-card">
+          <template #header>{{ t('dashboard.sections.activityStatus') }}</template>
+          <div class="ops-empty">
+            <NEmpty :description="t('dashboard.empty.activityStatus')" />
+          </div>
+        </NCard>
+
+        <NCard :bordered="false" class="chart-card ops-card">
+          <template #header>{{ t('dashboard.sections.terminalStatus') }}</template>
+          <div class="ops-empty">
+            <NEmpty :description="t('dashboard.empty.terminalStatus')" />
+          </div>
+        </NCard>
+
+        <NCard :bordered="false" class="chart-card ops-card">
+          <template #header>{{ t('dashboard.sections.knowledgeOps') }}</template>
+          <div class="knowledge-preview">
+            <div>
+              <strong>{{ knowledgeStats.total_count }}</strong>
+              <span>{{ t('dashboard.kpis.knowledgeItems') }}</span>
+            </div>
+            <div>
+              <strong>{{ t('dashboard.common.none') }}</strong>
+              <span>{{ t('dashboard.labels.lastUpdated') }}</span>
+            </div>
+          </div>
+          <div class="ops-empty ops-empty-compact">
+            <NEmpty :description="t('dashboard.empty.knowledgeGaps')" />
+          </div>
+          <div class="avatar-preview">
+            <strong>{{ t('dashboard.labels.avatarPreview') }}</strong>
+            <span>{{ t('dashboard.empty.avatarSummary') }}</span>
+          </div>
+        </NCard>
+      </section>
+
+      <!-- Charts -->
       <div class="chart-grid">
         <NCard :bordered="false" class="chart-card chart-wide">
-          <template #header>24 小时流量趋势</template>
+          <template #header>{{ t('dashboard.sections.hourlyTrend') }}</template>
           <div ref="trendChartRef" class="chart-container"></div>
         </NCard>
         <NCard :bordered="false" class="chart-card">
-          <template #header>关注点分布</template>
+          <template #header>{{ t('dashboard.sections.categoryDistribution') }}</template>
           <div ref="pieChartRef" class="chart-container"></div>
         </NCard>
       </div>
 
-      <!-- 满意度趋势 + 热门问题 -->
+      <!-- Satisfaction trend + top questions -->
       <div class="chart-grid">
         <NCard :bordered="false" class="chart-card chart-wide">
-          <template #header>7 日满意度趋势</template>
+          <template #header>{{ t('dashboard.sections.satisfactionTrend') }}</template>
           <div v-if="satisfactionTrend.length > 0" ref="satisfactionChartRef" class="chart-container"></div>
-          <NEmpty v-else description="暂无满意度趋势数据" />
+          <NEmpty v-else :description="t('dashboard.empty.satisfactionTrend')" />
         </NCard>
         <NCard :bordered="false" class="chart-card">
-          <template #header>热门问题 Top 10</template>
+          <template #header>{{ t('dashboard.sections.topQuestions') }}</template>
           <NDataTable
             v-if="topQuestions.length > 0"
             :columns="topQuestionColumns"
@@ -394,13 +472,13 @@ onUnmounted(() => {
             :bordered="false"
             size="small"
           />
-          <NEmpty v-else description="暂无热门问题数据" />
+          <NEmpty v-else :description="t('dashboard.empty.topQuestions')" />
         </NCard>
       </div>
 
-      <!-- 最近对话 -->
+      <!-- Recent conversations -->
       <NCard :bordered="false" class="chart-card" style="margin-top: 16px">
-        <template #header>最近对话</template>
+        <template #header>{{ t('dashboard.sections.recentConversations') }}</template>
         <NDataTable
           v-if="recentConversations.length > 0"
           :columns="conversationColumns"
@@ -409,7 +487,7 @@ onUnmounted(() => {
           :bordered="false"
           size="small"
         />
-        <NEmpty v-else description="暂无对话记录" />
+        <NEmpty v-else :description="t('dashboard.empty.recentConversations')" />
       </NCard>
     </NSpin>
   </div>
@@ -494,6 +572,85 @@ onUnmounted(() => {
 .kpi-trend.up { color: var(--sg-jade-bright); }
 .kpi-trend.down { color: var(--sg-red-bright); }
 
+.ops-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ops-grid-middle {
+  grid-template-columns: 1.2fr .9fr 1.2fr;
+  margin-bottom: 24px;
+}
+.ops-card :deep(.n-card-header) {
+  font-size: 14px;
+}
+.question-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  min-height: 168px;
+}
+.question-cloud button {
+  border: 1px solid rgba(82,240,238,.12);
+  border-radius: 8px;
+  background: rgba(82,240,238,.055);
+  color: var(--sg-cyan);
+  padding: 8px 10px;
+  cursor: default;
+}
+.question-cloud span {
+  display: block;
+  color: var(--sg-text-hint);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.knowledge-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(99,226,183,.06);
+}
+.knowledge-preview strong {
+  color: var(--sg-jade-bright);
+  font-size: 24px;
+}
+.knowledge-preview span {
+  color: var(--sg-text-hint);
+  font-size: 11px;
+}
+.knowledge-preview div {
+  display: grid;
+  gap: 2px;
+}
+.ops-empty {
+  display: grid;
+  min-height: 168px;
+  place-items: center;
+}
+.ops-empty-compact {
+  min-height: 88px;
+}
+.avatar-preview {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.05);
+}
+.avatar-preview strong {
+  color: var(--sg-text-body);
+  font-size: 12px;
+}
+.avatar-preview span {
+  color: var(--sg-text-hint);
+  font-size: 11px;
+}
+
 /* 图表网格 */
 .chart-grid {
   display: grid;
@@ -512,6 +669,8 @@ onUnmounted(() => {
 
 @media (max-width: 1200px) {
   .chart-grid { grid-template-columns: 1fr; }
+  .ops-grid,
+  .ops-grid-middle { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
   .dashboard { padding: 16px; }

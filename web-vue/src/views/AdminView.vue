@@ -20,8 +20,6 @@ const tabComponents: Record<string, unknown> = {
   reports: AdminReports,
   settings: AdminSettings,
 }
-
-const currentTitle = tabs.find(([key]) => key === state.tab)?.[1] ?? '管理后台'
 </script>
 
 <template>

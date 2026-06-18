@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted, h } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import type { FormInst, FormRules } from 'naive-ui'
 import {
   NButton,

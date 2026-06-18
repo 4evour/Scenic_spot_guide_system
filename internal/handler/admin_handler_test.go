@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/model"
@@ -120,9 +121,9 @@ func TestGetTopQuestionsWithLimit(t *testing.T) {
 	router.GET("/admin/dashboard/top-questions", handler.GetTopQuestions)
 
 	tests := []struct {
-		name      string
-		query     string
-		wantOK    bool
+		name   string
+		query  string
+		wantOK bool
 	}{
 		{name: "valid limit", query: "?limit=5", wantOK: true},
 		{name: "zero limit falls back to 10", query: "?limit=0", wantOK: true},
@@ -153,6 +154,114 @@ func TestGetTopQuestionsWithLimit(t *testing.T) {
 	}
 }
 
+func TestGetVisitorReportRespectsPeriodQuery(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, db := newAdminHandler(t, "")
+	router := gin.New()
+	router.GET("/admin/reports/visitor", handler.GetVisitorReport)
+
+	now := time.Now()
+	logs := []model.InteractionLog{
+		{
+			SessionID:      "recent-session",
+			Query:          "最近路线怎么走",
+			Response:       "路线回答",
+			Emotion:        "joy",
+			Category:       "路线规划",
+			Source:         "digital_human",
+			ResponseTimeMs: 800,
+			CreatedAt:      now.AddDate(0, 0, -2),
+		},
+		{
+			SessionID:      "older-session",
+			Query:          "二十天前的票务问题",
+			Response:       "票务回答",
+			Emotion:        "sadness",
+			Category:       "票务咨询",
+			Source:         "digital_human",
+			ResponseTimeMs: 900,
+			CreatedAt:      now.AddDate(0, 0, -20),
+		},
+	}
+	for i := range logs {
+		if err := db.Create(&logs[i]).Error; err != nil {
+			t.Fatalf("seed log %d: %v", i, err)
+		}
+	}
+
+	parseTotal := func(path string) int64 {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want %d, body=%s", path, resp.Code, http.StatusOK, resp.Body.String())
+		}
+		var body struct {
+			Code int `json:"code"`
+			Data struct {
+				Period  string `json:"period"`
+				Summary struct {
+					TotalInteractions int64 `json:"total_interactions"`
+				} `json:"summary"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+			t.Fatalf("unmarshal %s: %v", path, err)
+		}
+		if body.Code != 0 {
+			t.Fatalf("%s code = %d, want 0", path, body.Code)
+		}
+		return body.Data.Summary.TotalInteractions
+	}
+
+	if got := parseTotal("/admin/reports/visitor?period=7d"); got != 1 {
+		t.Fatalf("7d total_interactions = %d, want 1", got)
+	}
+	if got := parseTotal("/admin/reports/visitor?period=30d"); got != 2 {
+		t.Fatalf("30d total_interactions = %d, want 2", got)
+	}
+}
+
+func TestGetVisitorReportDoesNotFabricateDataWhenEmpty(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, _ := newAdminHandler(t, "")
+	router := gin.New()
+	router.GET("/admin/reports/visitor", handler.GetVisitorReport)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/reports/visitor?period=7d", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			AttentionAnalysis   []service.AttentionItem  `json:"attention_analysis"`
+			EmotionDistribution []service.EmotionItem    `json:"emotion_distribution"`
+			PeakHours           []service.PeakHourItem   `json:"peak_hours"`
+			Suggestions         []service.SuggestionItem `json:"suggestions"`
+			Summary             service.ReportSummary    `json:"summary"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body.Data.Summary.TotalInteractions != 0 {
+		t.Fatalf("total_interactions = %d, want 0", body.Data.Summary.TotalInteractions)
+	}
+	if body.Data.Summary.TopConcern != "暂无数据" || body.Data.Summary.PeakHour != "暂无数据" {
+		t.Fatalf("summary should stay empty-data honest: %+v", body.Data.Summary)
+	}
+	if len(body.Data.AttentionAnalysis) != 0 || len(body.Data.EmotionDistribution) != 0 || len(body.Data.PeakHours) != 0 {
+		t.Fatalf("empty report fabricated chart data: attention=%+v emotions=%+v peak=%+v", body.Data.AttentionAnalysis, body.Data.EmotionDistribution, body.Data.PeakHours)
+	}
+	if len(body.Data.Suggestions) == 0 || !strings.Contains(body.Data.Suggestions[0].Content, "暂无有效交互记录") {
+		t.Fatalf("empty report should include no-data suggestion, got %+v", body.Data.Suggestions)
+	}
+}
+
 func TestGetDigitalHumanConfig(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler, _ := newAdminHandler(t, "")
@@ -168,7 +277,7 @@ func TestGetDigitalHumanConfig(t *testing.T) {
 	}
 
 	var body struct {
-		Code int                        `json:"code"`
+		Code int                          `json:"code"`
 		Data service.DigitalHumanSettings `json:"data"`
 	}
 	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
@@ -179,6 +288,12 @@ func TestGetDigitalHumanConfig(t *testing.T) {
 	}
 	if body.Data.Name == "" {
 		t.Fatal("digital human name should not be empty")
+	}
+	if body.Data.DefaultAvatarID != "mao_pro" {
+		t.Fatalf("default_avatar_id = %q, want %q", body.Data.DefaultAvatarID, "mao_pro")
+	}
+	if !body.Data.AllowAvatarSwitch {
+		t.Fatal("allow_avatar_switch should default to true")
 	}
 }
 
@@ -191,11 +306,13 @@ func TestUpdateDigitalHumanConfig(t *testing.T) {
 
 	// Update config
 	payload := service.DigitalHumanSettings{
-		Name:       "测试数字人",
-		Appearance: "科技型",
-		Costume:    "现代装",
-		Speed:      1.0,
-		Volume:     90,
+		Name:              "测试数字人",
+		Appearance:        "科技型",
+		Costume:           "现代装",
+		Speed:             1.0,
+		Volume:            90,
+		DefaultAvatarID:   "shizuku",
+		AllowAvatarSwitch: false,
 	}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPut, "/admin/digital-human/config", bytes.NewReader(body))
@@ -224,7 +341,7 @@ func TestUpdateDigitalHumanConfig(t *testing.T) {
 	router.ServeHTTP(getResp, getReq)
 
 	var getBody struct {
-		Code int                        `json:"code"`
+		Code int                          `json:"code"`
 		Data service.DigitalHumanSettings `json:"data"`
 	}
 	if err := json.Unmarshal(getResp.Body.Bytes(), &getBody); err != nil {
@@ -235,6 +352,33 @@ func TestUpdateDigitalHumanConfig(t *testing.T) {
 	}
 	if getBody.Data.Appearance != "科技型" {
 		t.Fatalf("appearance = %q, want %q", getBody.Data.Appearance, "科技型")
+	}
+	if getBody.Data.DefaultAvatarID != "shizuku" {
+		t.Fatalf("default_avatar_id = %q, want %q", getBody.Data.DefaultAvatarID, "shizuku")
+	}
+	if getBody.Data.AllowAvatarSwitch {
+		t.Fatal("allow_avatar_switch = true, want false")
+	}
+}
+
+func TestUpdateDigitalHumanConfigRejectsUnknownDefaultAvatar(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, _ := newAdminHandler(t, "")
+	router := gin.New()
+	router.PUT("/admin/digital-human/config", handler.UpdateDigitalHumanConfig)
+
+	payload := service.DigitalHumanSettings{
+		Name:            "测试数字人",
+		DefaultAvatarID: "unknown-avatar",
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPut, "/admin/digital-human/config", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusBadRequest, resp.Body.String())
 	}
 }
 
@@ -270,8 +414,8 @@ func TestGetSystemSettings(t *testing.T) {
 	}
 
 	var body struct {
-		Code int                      `json:"code"`
-		Data service.SystemSettings   `json:"data"`
+		Code int                    `json:"code"`
+		Data service.SystemSettings `json:"data"`
 	}
 	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
