@@ -354,6 +354,87 @@
       "saveFailed": "二维码配置保存失败"
     }
   },
+  "adminAvatar": {
+    "previewTitle": "数字人预览",
+    "formTitle": "形象与声音设定",
+    "currentPlan": "当前方案：{plan}",
+    "summary": {
+      "defaultAvatar": "默认形象",
+      "costume": "服装",
+      "voice": "声音",
+      "tone": "语气"
+    },
+    "sections": {
+      "appearance": "形象设定",
+      "voice": "声音与表达"
+    },
+    "form": {
+      "defaultAvatar": "默认数字人",
+      "allowSwitch": "游客切换",
+      "name": "数字人名称",
+      "appearance": "外观定位",
+      "costume": "服装风格",
+      "color": "主视觉颜色",
+      "cultureTheme": "景区文化主题",
+      "greeting": "欢迎语",
+      "voice": "讲解声音",
+      "tone": "讲解语气",
+      "speed": "语速",
+      "volume": "音量",
+      "defaultEmotion": "默认表情",
+      "emotionLevel": "表情强度"
+    },
+    "switch": {
+      "allow": "允许",
+      "locked": "限制为默认"
+    },
+    "actions": {
+      "save": "保存配置",
+      "reload": "重新加载"
+    },
+    "placeholders": {
+      "name": "请输入数字人名称"
+    },
+    "options": {
+      "appearance": {
+        "friendly": "亲和型国风讲解员",
+        "formal": "端庄礼仪讲解员",
+        "youthful": "青春活力文旅推荐官",
+        "zen": "禅意文化讲述者"
+      },
+      "costume": {
+        "hanfu": "古典汉服",
+        "uniform": "景区文旅制服",
+        "landscape": "山水讲解员制服",
+        "zenRobe": "禅意素雅长衫",
+        "festival": "节庆主题服饰"
+      },
+      "voice": {
+        "gentle": "温柔自然女声",
+        "professional": "沉稳专业女声",
+        "energetic": "活力亲切女声",
+        "ceremonial": "端庄礼仪女声"
+      },
+      "tone": {
+        "warm": "温暖、端庄、亲切",
+        "clear": "专业、清晰、克制",
+        "lively": "活泼、轻快、有陪伴感",
+        "zen": "舒缓、禅意、适合文化讲解"
+      },
+      "emotion": {
+        "joy": "亲切微笑",
+        "neutral": "自然平和",
+        "surprise": "热情提示",
+        "sadness": "温和致歉"
+      }
+    },
+    "messages": {
+      "loadFailed": "数字人配置加载失败",
+      "saveSuccess": "数字人形象配置已保存。",
+      "saveFailed": "保存失败",
+      "nameRequired": "请输入数字人名称"
+    }
+  },
   "error": {
     "title": "页面出现了异常",
     "subtitle": "可尝试刷新页面，或联系系统管理员",

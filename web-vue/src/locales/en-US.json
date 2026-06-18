@@ -354,6 +354,87 @@
       "saveFailed": "Failed to save QR code settings"
     }
   },
+  "adminAvatar": {
+    "previewTitle": "Digital Guide Preview",
+    "formTitle": "Avatar and Voice Settings",
+    "currentPlan": "Current plan: {plan}",
+    "summary": {
+      "defaultAvatar": "Default Avatar",
+      "costume": "Costume",
+      "voice": "Voice",
+      "tone": "Tone"
+    },
+    "sections": {
+      "appearance": "Appearance",
+      "voice": "Voice and Expression"
+    },
+    "form": {
+      "defaultAvatar": "Default Digital Guide",
+      "allowSwitch": "Visitor Switching",
+      "name": "Guide Name",
+      "appearance": "Persona",
+      "costume": "Costume Style",
+      "color": "Primary Color",
+      "cultureTheme": "Scenic Culture Theme",
+      "greeting": "Greeting",
+      "voice": "Narration Voice",
+      "tone": "Narration Tone",
+      "speed": "Speed",
+      "volume": "Volume",
+      "defaultEmotion": "Default Emotion",
+      "emotionLevel": "Emotion Level"
+    },
+    "switch": {
+      "allow": "Allow",
+      "locked": "Default Only"
+    },
+    "actions": {
+      "save": "Save Settings",
+      "reload": "Reload"
+    },
+    "placeholders": {
+      "name": "Enter digital guide name"
+    },
+    "options": {
+      "appearance": {
+        "friendly": "Friendly cultural guide",
+        "formal": "Formal etiquette guide",
+        "youthful": "Energetic travel recommender",
+        "zen": "Zen culture storyteller"
+      },
+      "costume": {
+        "hanfu": "Classical Hanfu",
+        "uniform": "Scenic area uniform",
+        "landscape": "Landscape guide uniform",
+        "zenRobe": "Minimal Zen robe",
+        "festival": "Festival themed outfit"
+      },
+      "voice": {
+        "gentle": "Gentle natural female voice",
+        "professional": "Calm professional female voice",
+        "energetic": "Energetic friendly female voice",
+        "ceremonial": "Formal etiquette female voice"
+      },
+      "tone": {
+        "warm": "Warm, formal, friendly",
+        "clear": "Professional, clear, restrained",
+        "lively": "Lively, light, companionable",
+        "zen": "Calm, Zen-inspired, suited for culture"
+      },
+      "emotion": {
+        "joy": "Friendly Smile",
+        "neutral": "Calm Neutral",
+        "surprise": "Warm Reminder",
+        "sadness": "Gentle Apology"
+      }
+    },
+    "messages": {
+      "loadFailed": "Failed to load digital guide settings",
+      "saveSuccess": "Digital guide avatar settings saved.",
+      "saveFailed": "Save failed",
+      "nameRequired": "Please enter a digital guide name"
+    }
+  },
   "error": {
     "title": "Something went wrong",
     "subtitle": "Try refreshing the page or contact the system administrator",

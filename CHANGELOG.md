@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 15:50 - 补齐数字人形象配置国际化
+
+### 变更内容
+- scripts/check-admin-avatar-i18n.mjs、web-vue/package.json、Makefile — 新增数字人形象配置页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminAvatar.vue — 将数字人预览、形象与声音设定、表单标签、选项、按钮、校验和消息提示接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminAvatar` 中英文文案。
+
+### 原因
+- 路线图要求多语言 i18n 持续补齐新增页面和错误文案；审查发现数字人形象配置页仍存在大量硬编码中文。
+
+### 影响范围
+- 影响数字人形象配置页中英文切换展示、前端静态检查和统一验证入口；不改变数字人配置接口和保存到后端的配置值。
+
 ## 2026-06-18 15:40 - 刷新二维码管理构建产物
 
 ### 变更内容
