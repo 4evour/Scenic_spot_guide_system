@@ -12,6 +12,7 @@
     "check:admin-avatar-i18n": "node ../scripts/check-admin-avatar-i18n.mjs",
     "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",
     "check:admin-qrcode-i18n": "node ../scripts/check-admin-qrcode-i18n.mjs",
+    "check:admin-reports-i18n": "node ../scripts/check-admin-reports-i18n.mjs",
     "check:dashboard-i18n": "node ../scripts/check-dashboard-i18n.mjs",
     "check:data-boundaries": "node ../scripts/check-dashboard-data-boundaries.mjs",
     "check:digital-human-docs": "node ../scripts/check-digital-human-docs.mjs",

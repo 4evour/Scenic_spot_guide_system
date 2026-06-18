@@ -1,5 +1,18 @@
 ﻿# CHANGELOG
 
+## 2026-06-18 16:05 - 补齐感受度报告国际化
+
+### 变更内容
+- scripts/check-admin-reports-i18n.mjs、web-vue/package.json、Makefile — 新增感受度报告页 i18n 静态检查，并接入前端契约检查和 `make check`。
+- web-vue/src/views/AdminReports.vue — 将报告页标题、周期、KPI、图表标题、空状态和消息提示接入 `vue-i18n`。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 新增 `adminReports` 中英文文案。
+
+### 原因
+- 路线图要求多语言 i18n 持续补齐新增页面和错误文案；审查发现感受度报告页仍存在大量硬编码中文。
+
+### 影响范围
+- 影响游客感受度报告页中英文切换展示、前端静态检查和统一验证入口；不改变报告接口、统计逻辑和无数据边界。
+
 ## 2026-06-18 15:58 - 刷新数字人形象配置构建产物
 
 ### 变更内容

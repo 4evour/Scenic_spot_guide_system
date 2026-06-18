@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { NButton, NAlert } from 'naive-ui'
 import KpiCard from '../components/KpiCard.vue'
 import BarList from '../components/BarList.vue'
@@ -8,22 +9,30 @@ import { apiFetch } from '../services/api'
 import type { VisitorReport } from '../types/admin'
 import { defaultVisitorReport } from '../types/admin'
 
+const { t } = useI18n()
 const state = reactive({
   loading: false,
   error: '',
   report: { ...defaultVisitorReport } as VisitorReport,
 })
 const period = ref<'7d' | '30d'>('7d')
-const periodLabel = computed(() => period.value === '7d' ? '近 7 天' : '近 30 天')
+const periodLabel = computed(() => period.value === '7d' ? t('adminReports.periods.7d') : t('adminReports.periods.30d'))
 
 const attentionBars = computed(() => state.report.attention_analysis.map(item => ({
   label: item.label, value: Math.round(item.value),
 })))
 
 const emotionDonutItems = computed(() => {
-  const colors: Record<string, string> = { '正面': '#7ef2a0', '中性': '#52f0ee', '负面': '#ff8b8b' }
+  const colors: Record<string, string> = {
+    [t('adminReports.emotions.positive')]: '#7ef2a0',
+    [t('adminReports.emotions.neutral')]: '#52f0ee',
+    [t('adminReports.emotions.negative')]: '#ff8b8b',
+    '正面': '#7ef2a0',
+    '中性': '#52f0ee',
+    '负面': '#ff8b8b',
+  }
   return state.report.emotion_distribution.map(item => ({
-    label: item.label, value: Math.round(item.percent), color: colors[item.label] || '#f4c765',
+    label: translateEmotionLabel(item.label), value: Math.round(item.percent), color: colors[item.label] || '#f4c765',
   }))
 })
 
@@ -49,8 +58,15 @@ async function loadVisitorReport() {
   try {
     const data = await apiFetch<Partial<VisitorReport> & { summary?: Partial<VisitorReport['summary']> }>(`/admin/reports/visitor?period=${period.value}`)
     state.report = { ...defaultVisitorReport, ...data, summary: { ...defaultVisitorReport.summary, ...(data.summary || {}) } }
-  } catch (error) { state.error = error instanceof Error ? error.message : '感受度报告加载失败' }
+  } catch (error) { state.error = error instanceof Error ? error.message : t('adminReports.messages.loadFailed') }
   finally { state.loading = false }
+}
+
+function translateEmotionLabel(label: string) {
+  if (label === '正面') return t('adminReports.emotions.positive')
+  if (label === '中性') return t('adminReports.emotions.neutral')
+  if (label === '负面') return t('adminReports.emotions.negative')
+  return label
 }
 
 onMounted(loadVisitorReport)
@@ -59,33 +75,33 @@ onMounted(loadVisitorReport)
 <template>
   <article class="panel report-header">
     <div>
-      <h2>游客感受度报告</h2>
-      <p class="hint-line">基于{{ periodLabel }}数字人、语音和网页问答交互记录自动生成。</p>
+      <h2>{{ t('adminReports.title') }}</h2>
+      <p class="hint-line">{{ t('adminReports.subtitle', { period: periodLabel }) }}</p>
     </div>
     <div class="report-actions">
       <div class="period-switch">
-        <button :class="{ active: period === '7d' }" @click="period = '7d'; loadVisitorReport()">7天</button>
-        <button :class="{ active: period === '30d' }" @click="period = '30d'; loadVisitorReport()">30天</button>
+        <button :class="{ active: period === '7d' }" @click="period = '7d'; loadVisitorReport()">{{ t('adminReports.periodButtons.7d') }}</button>
+        <button :class="{ active: period === '30d' }" @click="period = '30d'; loadVisitorReport()">{{ t('adminReports.periodButtons.30d') }}</button>
       </div>
-      <NButton :loading="state.loading" @click="loadVisitorReport">刷新报告</NButton>
+      <NButton :loading="state.loading" @click="loadVisitorReport">{{ t('adminReports.actions.refresh') }}</NButton>
     </div>
     <NAlert v-if="state.error" type="error" closable style="margin-top: 8px;">{{ state.error }}</NAlert>
   </article>
 
   <section class="kpi-row">
-    <KpiCard label="交互记录" :value="String(state.report.summary.total_interactions)" :note="`${periodLabel}累计`" />
-    <KpiCard label="满意倾向" :value="`${Math.round(state.report.summary.satisfaction_rate)}%`" note="正向情绪占比" tone="green" />
-    <KpiCard label="负面占比" :value="`${Math.round(state.report.summary.negative_rate)}%`" note="需重点复盘" tone="red" />
-    <KpiCard label="高峰时段" :value="state.report.summary.peak_hour" :note="`关注点：${state.report.summary.top_concern}`" tone="gold" />
+    <KpiCard :label="t('adminReports.kpis.interactions')" :value="String(state.report.summary.total_interactions)" :note="t('adminReports.kpiNotes.periodTotal', { period: periodLabel })" />
+    <KpiCard :label="t('adminReports.kpis.satisfaction')" :value="`${Math.round(state.report.summary.satisfaction_rate)}%`" :note="t('adminReports.kpiNotes.positiveEmotion')" tone="green" />
+    <KpiCard :label="t('adminReports.kpis.negative')" :value="`${Math.round(state.report.summary.negative_rate)}%`" :note="t('adminReports.kpiNotes.needsReview')" tone="red" />
+    <KpiCard :label="t('adminReports.kpis.peakHour')" :value="state.report.summary.peak_hour" :note="t('adminReports.kpiNotes.topConcern', { concern: state.report.summary.top_concern })" tone="gold" />
   </section>
 
   <article class="panel">
-    <h2>游客关注点分析</h2>
-    <div v-if="state.loading" class="muted-center">正在生成报告...</div>
+    <h2>{{ t('adminReports.sections.attention') }}</h2>
+    <div v-if="state.loading" class="muted-center">{{ t('adminReports.messages.generating') }}</div>
     <div v-else class="attention-layout">
       <BarList :items="attentionBars" />
       <div class="word-cloud">
-        <span v-if="wordCloudItems.length === 0" class="empty-inline">暂无真实词云数据</span>
+        <span v-if="wordCloudItems.length === 0" class="empty-inline">{{ t('adminReports.empty.wordCloud') }}</span>
         <span
           v-for="item in wordCloudItems"
           :key="item.label"
@@ -99,11 +115,11 @@ onMounted(loadVisitorReport)
 
   <div class="two-col">
     <article class="panel">
-      <h2>情绪分布</h2>
+      <h2>{{ t('adminReports.sections.emotionDistribution') }}</h2>
       <DonutChart :items="emotionDonutItems" :center="`${Math.round(state.report.summary.satisfaction_rate)}%`" />
     </article>
     <article class="panel">
-      <h2>情感趋势</h2>
+      <h2>{{ t('adminReports.sections.emotionTrend') }}</h2>
       <div class="emotion-trend">
         <div v-for="item in state.report.emotion_trend" :key="item.date" class="trend-day">
           <span>{{ item.date.slice(5) }}</span>
@@ -119,17 +135,17 @@ onMounted(loadVisitorReport)
 
   <div class="two-col">
     <article class="panel">
-      <h2>负面反馈原因下钻</h2>
+      <h2>{{ t('adminReports.sections.negativeReasons') }}</h2>
       <BarList :items="negativeReasonBars" />
     </article>
     <article class="panel">
-      <h2>人群画像与路线匹配</h2>
+      <h2>{{ t('adminReports.sections.audienceProfiles') }}</h2>
       <div class="profile-list">
-        <div v-if="audienceProfiles.length === 0" class="empty-block">暂无真实人群画像数据</div>
+        <div v-if="audienceProfiles.length === 0" class="empty-block">{{ t('adminReports.empty.audienceProfiles') }}</div>
         <div v-for="item in audienceProfiles" :key="item.label" class="profile-row">
           <strong>{{ item.label }}</strong>
           <span>{{ item.percent }}% · {{ item.route }}</span>
-          <small>满意度 {{ item.satisfaction }}%</small>
+          <small>{{ t('adminReports.labels.satisfactionPercent', { value: item.satisfaction }) }}</small>
         </div>
       </div>
     </article>
@@ -137,30 +153,30 @@ onMounted(loadVisitorReport)
 
   <div class="two-col">
     <article class="panel">
-      <h2>路线点击率/满意度</h2>
+      <h2>{{ t('adminReports.sections.routeSatisfaction') }}</h2>
       <div class="route-report-list">
-        <div v-if="routeSatisfaction.length === 0" class="empty-block">暂无真实路线满意度数据</div>
+        <div v-if="routeSatisfaction.length === 0" class="empty-block">{{ t('adminReports.empty.routeSatisfaction') }}</div>
         <div v-for="item in routeSatisfaction" :key="item.label" class="route-report-row">
           <div>
             <strong>{{ item.label }}</strong>
-            <span>点击率 {{ item.clickRate }}%</span>
+            <span>{{ t('adminReports.labels.clickRatePercent', { value: item.clickRate }) }}</span>
           </div>
           <i :style="{ width: `${item.satisfaction}%` }"></i>
-          <small>满意度 {{ item.satisfaction }}%</small>
+          <small>{{ t('adminReports.labels.satisfactionPercent', { value: item.satisfaction }) }}</small>
         </div>
       </div>
     </article>
     <article class="panel">
-      <h2>热门时段</h2>
+      <h2>{{ t('adminReports.sections.peakHours') }}</h2>
       <BarList :items="peakHourBars" />
     </article>
   </div>
 
   <article class="panel">
-    <h2>自动化改进建议</h2>
+    <h2>{{ t('adminReports.sections.suggestions') }}</h2>
     <ul class="clean-list suggestion-grid">
       <li v-for="item in state.report.suggestions" :key="item.content">{{ item.content }}</li>
-      <li v-if="state.report.suggestions.length === 0">暂无真实交互数据，暂不能生成改进建议。</li>
+      <li v-if="state.report.suggestions.length === 0">{{ t('adminReports.empty.suggestions') }}</li>
     </ul>
   </article>
 </template>

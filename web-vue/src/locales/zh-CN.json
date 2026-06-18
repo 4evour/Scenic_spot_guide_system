@@ -435,6 +435,62 @@
       "nameRequired": "请输入数字人名称"
     }
   },
+  "adminReports": {
+    "title": "游客感受度报告",
+    "subtitle": "基于{period}数字人、语音和网页问答交互记录自动生成。",
+    "periods": {
+      "7d": "近 7 天",
+      "30d": "近 30 天"
+    },
+    "periodButtons": {
+      "7d": "7天",
+      "30d": "30天"
+    },
+    "actions": {
+      "refresh": "刷新报告"
+    },
+    "kpis": {
+      "interactions": "交互记录",
+      "satisfaction": "满意倾向",
+      "negative": "负面占比",
+      "peakHour": "高峰时段"
+    },
+    "kpiNotes": {
+      "periodTotal": "{period}累计",
+      "positiveEmotion": "正向情绪占比",
+      "needsReview": "需重点复盘",
+      "topConcern": "关注点：{concern}"
+    },
+    "sections": {
+      "attention": "游客关注点分析",
+      "emotionDistribution": "情绪分布",
+      "emotionTrend": "情感趋势",
+      "negativeReasons": "负面反馈原因下钻",
+      "audienceProfiles": "人群画像与路线匹配",
+      "routeSatisfaction": "路线点击率/满意度",
+      "peakHours": "热门时段",
+      "suggestions": "自动化改进建议"
+    },
+    "messages": {
+      "loadFailed": "感受度报告加载失败",
+      "generating": "正在生成报告..."
+    },
+    "empty": {
+      "wordCloud": "暂无真实词云数据",
+      "audienceProfiles": "暂无真实人群画像数据",
+      "routeSatisfaction": "暂无真实路线满意度数据",
+      "suggestions": "暂无真实交互数据，暂不能生成改进建议。"
+    },
+    "labels": {
+      "satisfactionPercent": "满意度 {value}%",
+      "clickRatePercent": "点击率 {value}%"
+    },
+    "emotions": {
+      "positive": "正面",
+      "neutral": "中性",
+      "negative": "负面"
+    }
+  },
   "error": {
     "title": "页面出现了异常",
     "subtitle": "可尝试刷新页面，或联系系统管理员",

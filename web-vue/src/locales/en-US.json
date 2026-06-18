@@ -435,6 +435,62 @@
       "nameRequired": "Please enter a digital guide name"
     }
   },
+  "adminReports": {
+    "title": "Visitor Feedback Report",
+    "subtitle": "Automatically generated from {period} digital guide, voice, and web Q&A interactions.",
+    "periods": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days"
+    },
+    "periodButtons": {
+      "7d": "7 days",
+      "30d": "30 days"
+    },
+    "actions": {
+      "refresh": "Refresh Report"
+    },
+    "kpis": {
+      "interactions": "Interactions",
+      "satisfaction": "Satisfaction",
+      "negative": "Negative Share",
+      "peakHour": "Peak Hour"
+    },
+    "kpiNotes": {
+      "periodTotal": "{period} total",
+      "positiveEmotion": "Positive emotion share",
+      "needsReview": "Needs review",
+      "topConcern": "Top concern: {concern}"
+    },
+    "sections": {
+      "attention": "Visitor Attention Analysis",
+      "emotionDistribution": "Emotion Distribution",
+      "emotionTrend": "Emotion Trend",
+      "negativeReasons": "Negative Feedback Reasons",
+      "audienceProfiles": "Audience Profiles and Route Fit",
+      "routeSatisfaction": "Route Click Rate / Satisfaction",
+      "peakHours": "Peak Hours",
+      "suggestions": "Automated Improvement Suggestions"
+    },
+    "messages": {
+      "loadFailed": "Failed to load visitor feedback report",
+      "generating": "Generating report..."
+    },
+    "empty": {
+      "wordCloud": "No real word-cloud data",
+      "audienceProfiles": "No real audience profile data",
+      "routeSatisfaction": "No real route satisfaction data",
+      "suggestions": "No real interaction data, so suggestions cannot be generated yet."
+    },
+    "labels": {
+      "satisfactionPercent": "Satisfaction {value}%",
+      "clickRatePercent": "Click rate {value}%"
+    },
+    "emotions": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative"
+    }
+  },
   "error": {
     "title": "Something went wrong",
     "subtitle": "Try refreshing the page or contact the system administrator",
