@@ -24,6 +24,11 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface ChatMessageSearchResult extends ChatMessage {
+  session_id: string
+  session_title: string
+}
+
 export const useSessionStore = defineStore('session', () => {
   const sessions = ref<ChatSession[]>([])
   const currentSessionId = ref<string | null>(null)
@@ -114,7 +119,7 @@ export const useSessionStore = defineStore('session', () => {
   /** 搜索历史消息 */
   async function searchMessages(keyword: string, page = 1, pageSize = 20) {
     try {
-      return await apiFetch<{ list: ChatMessage[]; total: number }>(
+      return await apiFetch<{ list: ChatMessageSearchResult[]; total: number }>(
         `/sessions/search?keyword=${encodeURIComponent(keyword)}&page=${page}&page_size=${pageSize}`,
       );
     } catch {
