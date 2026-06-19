@@ -48,7 +48,7 @@ async function handleLogout() {
 
     <div class="header-actions">
       <button class="lang-switch" @click="toggleLang">{{ $t('lang.switch') }}</button>
-      <span class="header-user" v-if="authStore.user">{{ authStore.user.username }}</span>
+      <span v-if="authStore.user" class="header-user">{{ authStore.user.username }}</span>
       <button class="header-logout" @click="handleLogout">{{ $t('nav.logout') }}</button>
     </div>
   </header>

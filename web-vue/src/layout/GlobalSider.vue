@@ -82,9 +82,9 @@ function handleMenuUpdate(key: string) {
     :width="220"
     :collapsed="appStore.siderCollapsed"
     show-trigger
+    :style="{ background: 'var(--sg-surface-strong, rgba(5, 17, 20, 0.94))' }"
     @collapse="appStore.siderCollapsed = true"
     @expand="appStore.siderCollapsed = false"
-    :style="{ background: 'var(--sg-surface-strong, rgba(5, 17, 20, 0.94))' }"
   >
     <div class="sider-logo">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none">

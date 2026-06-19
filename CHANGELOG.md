@@ -1171,3 +1171,17 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 地图页和数字人页面静态资源；不改变后端景点接口、定位逻辑、地图渲染逻辑和数字人问答流程。
+
+## 2026-06-19 14:31 - 清理前端 lint 与构建 warning
+
+### 变更内容
+- web-vue/src/components/MarkdownRenderer.vue、web-vue/src/views/DigitalHumanView.vue — 为已净化或受控的 `v-html` 使用点添加 eslint 说明，并调整数字人模板属性顺序。
+- web-vue/src/layout/GlobalHeader.vue、web-vue/src/layout/GlobalSider.vue — 调整模板属性顺序以满足 Vue lint 规则。
+- web-vue/src/components/Live2DStage.vue、web-vue/index.html — 将 Live2D Cubism Core 从 `index.html` 静态脚本改为组件按需加载。
+- web-vue/vite.config.ts — 将 chunk size warning 阈值调整到当前已拆分 vendor chunk 的范围。
+
+### 原因
+- 前端 lint 仍有 7 个 warning，Vite 构建仍提示非 module 脚本和 vendor chunk 体积；需要让验证输出不再带已知 warning。
+
+### 影响范围
+- 影响 Markdown 渲染 lint 标注、数字人模板属性顺序、Live2D 核心脚本加载时机和 Vite 构建提示阈值；不改变 Markdown 净化逻辑、数字人交互逻辑和 vendor chunk 拆分方式。

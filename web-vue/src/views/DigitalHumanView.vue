@@ -1207,7 +1207,7 @@ onUnmounted(() => {
 <template>
   <main class="dh-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
     <!-- 左侧：数字人展示区 -->
-    <section class="dh-stage" v-show="mobileTab === 'avatar' || !isMobileView">
+    <section v-show="mobileTab === 'avatar' || !isMobileView" class="dh-stage">
       <div class="dh-status">
         <span class="status-dot" :class="{ online: state.connected }"></span>
         <span class="status-text">{{ statusLabel }}</span>
@@ -1291,7 +1291,7 @@ onUnmounted(() => {
     ></div>
 
     <!-- 右侧：聊天面板 -->
-    <aside class="dh-chat" :style="chatPanelStyle" v-show="mobileTab === 'chat' || !isMobileView">
+    <aside v-show="mobileTab === 'chat' || !isMobileView" class="dh-chat" :style="chatPanelStyle">
       <div class="chat-header">
         <div class="chat-header-top">
           <h2>{{ $t('dh.title') }}</h2>
@@ -1318,9 +1318,9 @@ onUnmounted(() => {
         <div v-if="showSearch" class="search-bar">
           <input
             v-model="searchQuery"
+            autofocus
             :placeholder="$t('dh.searchPlaceholder')"
             @input="onSearchInput"
-            autofocus
           />
           <button v-if="searchQuery" class="search-clear" @click="clearSearch">✕</button>
         </div>
@@ -1369,10 +1369,12 @@ onUnmounted(() => {
           <span class="search-result-meta">
             {{ result.sessionTitle || $t('dh.sessionDefaultTitle') }} · {{ result.time }}
           </span>
+          <!-- eslint-disable vue/no-v-html -- highlightMatch escapes the search query before injecting mark tags -->
           <span
             class="search-result-text"
             v-html="highlightMatch(result.text, searchQuery)"
           />
+          <!-- eslint-enable vue/no-v-html -->
         </button>
       </div>
       <div v-else-if="showSearch && searchQuery && !isSearching" class="search-empty">

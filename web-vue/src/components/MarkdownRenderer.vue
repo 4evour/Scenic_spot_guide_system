@@ -102,6 +102,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- eslint-disable-next-line vue/no-v-html -- sanitized by DOMPurify in renderMarkdown -->
   <div class="markdown-renderer" v-html="rendered" />
 </template>
 

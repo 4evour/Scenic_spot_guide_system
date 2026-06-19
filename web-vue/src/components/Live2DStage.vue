@@ -13,6 +13,9 @@ const props = withDefaults(defineProps<{
   modelUrl: '/static/live2d-models/mao_pro/runtime/mao_pro.model3.json',
 });
 
+const CUBISM_CORE_SCRIPT_ID = 'live2d-cubism-core';
+const CUBISM_CORE_SCRIPT_SRC = '/static/digital-human/libs/live2dcubismcore.min.js';
+
 const emit = defineEmits<{
   (e: 'head-click'): void;
   (e: 'body-click'): void;
@@ -189,6 +192,7 @@ async function loadLive2DModel() {
   const host = live2dHost.value;
   try {
     destroyLive2DModel(false);
+    await loadCubismCore();
     const PIXI = await import('pixi.js');
     const { Live2DModel } = await import('pixi-live2d-display/cubism4');
     window.PIXI = PIXI;
@@ -251,6 +255,30 @@ async function loadLive2DModel() {
     live2dError.value = t('live2dStage.sdkFallback');
     console.warn('Live2D SDK unavailable, fallback avatar is active.', error);
   }
+}
+
+function loadCubismCore(): Promise<void> {
+  const existing = document.getElementById(CUBISM_CORE_SCRIPT_ID) as HTMLScriptElement | null;
+  if (existing?.dataset.loaded === 'true') return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = existing || document.createElement('script');
+    const onLoad = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    const onError = () => reject(new Error('Live2D Cubism Core failed to load'));
+
+    script.addEventListener('load', onLoad, { once: true });
+    script.addEventListener('error', onError, { once: true });
+
+    if (!existing) {
+      script.id = CUBISM_CORE_SCRIPT_ID;
+      script.src = CUBISM_CORE_SCRIPT_SRC;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  });
 }
 
 // --- Lip-Sync parameter detection ---
