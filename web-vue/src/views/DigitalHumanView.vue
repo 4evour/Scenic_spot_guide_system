@@ -475,7 +475,7 @@ function showAssistantSpeech(text: string) {
   const displayText = stripEmotionTags(text);
   state.subtitle = displayText;
   if (displayText === lastAssistantSpeechText) return;
-  currentInsight.value = buildGuideInsight(displayText);
+  currentInsight.value = buildGuideInsight(displayText, locale.value);
   resetAssistantTurn();
   lastAssistantSpeechText = displayText;
   typewriterStreaming.value = true;
@@ -493,7 +493,7 @@ function appendAssistantSpeechChunk(text: string) {
   if (!displayText || displayText === 'Thinking...') return;
 
   activeAssistantText = mergeAssistantText(activeAssistantText, displayText);
-  currentInsight.value = buildGuideInsight(activeAssistantText);
+  currentInsight.value = buildGuideInsight(activeAssistantText, locale.value);
   lastAssistantSpeechText = activeAssistantText;
   state.subtitle = displayText;
   typewriterStreaming.value = true;

@@ -37,6 +37,7 @@
     "check:digital-human-runtime-i18n": "node ../scripts/check-digital-human-runtime-i18n.mjs",
     "check:digital-human-docs": "node ../scripts/check-digital-human-docs.mjs",
     "check:service-i18n": "node ../scripts/check-service-i18n.mjs",
+    "check:scenic-visualization-i18n": "node ../scripts/check-scenic-visualization-i18n.mjs",
     "check:encoding": "node ../scripts/check-encoding.mjs",
     "lint": "eslint . --ext .vue,.ts,.tsx",
     "format": "prettier --write ."

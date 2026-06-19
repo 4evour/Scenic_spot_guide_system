@@ -9,15 +9,15 @@ import { AudioPlaybackController } from '../services/audioPlayback';
 import { streamTTS } from '../services/ttsApi';
 import { apiFetch } from '../services/api';
 import {
-  SCENIC_ROUTES,
-  SCENIC_SPOTS,
-  SERVICE_REMINDERS,
   findStructuredSpot,
+  localizeScenicRoutes,
+  localizeScenicSpots,
+  localizeServiceReminders,
   type ScenicRoutePlan,
   type ScenicVisualType,
 } from '../constants/scenicVisualization';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const geolocationMessages = {
   notSupported: () => t('map.gpsNotSupported'),
   denied: () => t('map.gpsDenied'),
@@ -57,7 +57,9 @@ type ScenicSpot = {
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '';
 const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY || '';
 
-const fallbackSpots: ScenicSpot[] = SCENIC_SPOTS.map(spot => ({ ...spot }));
+const fallbackSpots = computed<ScenicSpot[]>(() => localizeScenicSpots(locale.value).map(spot => ({ ...spot })));
+const localizedRoutes = computed(() => localizeScenicRoutes(locale.value));
+const localizedReminders = computed(() => localizeServiceReminders(locale.value));
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -70,6 +72,12 @@ const categoryTagType: Record<string, 'success' | 'info' | 'warning' | 'error' |
   '服务设施': 'default',
   '地标建筑': 'warning',
   '文化休憩': 'success',
+  'Landmark': 'warning',
+  'Performance': 'info',
+  'Culture & Rest': 'success',
+  'Core Attraction': 'success',
+  'Cultural Site': 'warning',
+  'Service Facility': 'default',
 };
 
 const visualTypeMeta: Record<ScenicVisualType, { color: string; dimColor: string }> = {
@@ -100,12 +108,12 @@ const filteredSpots = computed(() => {
   );
 });
 
-const activeRoute = computed(() => SCENIC_ROUTES.find(route => route.id === state.activeRouteId) || SCENIC_ROUTES[0]);
+const activeRoute = computed(() => localizedRoutes.value.find(route => route.id === state.activeRouteId) || localizedRoutes.value[0]);
 const activeRouteSpotIds = computed(() => new Set(activeRoute.value.spotIds));
 const activeRouteSpots = computed(() => activeRoute.value.spotIds
   .map(id => state.spots.find(spot => spot.id === id))
   .filter((spot): spot is ScenicSpot => Boolean(spot)));
-const activeReminders = computed(() => SERVICE_REMINDERS.filter(item => activeRouteSpotIds.value.has(item.spotId)));
+const activeReminders = computed(() => localizedReminders.value.filter(item => activeRouteSpotIds.value.has(item.spotId)));
 const mapStatusLabel = computed(() => {
   if (state.mapReady) return t('map.ready');
   if (state.mapFallback) return t('map.offlineMap');
@@ -200,13 +208,13 @@ async function loadSpots() {
   try {
     const response = await fetch('/api/v1/spots', { signal: AbortSignal.timeout(15000) });
     const payload = await response.json() as { code?: number; message?: string; data?: Array<Record<string, unknown>> };
-    if (!response.ok || payload.code !== 0) throw new Error(payload.message || '加载失败');
+    if (!response.ok || payload.code !== 0) throw new Error(payload.message || t('map.loadFailed'));
     const spots = (payload.data || []).map((raw, i) => enrichSpot(raw, i));
     if (spots.length > 0 && spots.some(s => s.lng > 100)) {
       state.spots = mergeCoreSpots(spots);
       state.source = `${t('map.liveData')} + ${t('map.structuredGuide')}`;
     } else {
-      state.spots = [...fallbackSpots];
+      state.spots = [...fallbackSpots.value];
       state.source = t('map.demoDataNoCoord');
     }
     // 注入景点坐标到近场检测
@@ -225,7 +233,7 @@ async function loadSpots() {
     state.selectedSpot = activeRouteSpots.value[0] || state.spots[0] || null;
     if (!state.mapReady) state.mapFallback = true;
   } catch {
-    state.spots = [...fallbackSpots];
+    state.spots = [...fallbackSpots.value];
     state.source = t('map.demoData');
     state.selectedSpot = activeRouteSpots.value[0] || state.spots[0] || null;
     if (!state.mapReady) state.mapFallback = true;
@@ -236,14 +244,14 @@ async function loadSpots() {
 
 function enrichSpot(raw: Record<string, unknown>, i: number): ScenicSpot {
   const rawID = String(raw.id || raw.ID || `spot-${i}`);
-  const name = String(raw.name || raw.Name || `景点${i + 1}`);
-  const structured = findStructuredSpot(rawID) || findStructuredSpot(name);
+  const name = String(raw.name || raw.Name || t('map.spotFallbackName', { id: i + 1 }));
+  const structured = findStructuredSpot(rawID, locale.value) || findStructuredSpot(name, locale.value);
   const id = structured?.id || rawID;
   return {
     id,
     name,
-    area: String(raw.area || structured?.area || '灵山胜境'),
-    category: String(raw.category || raw.Category || structured?.category || '文化休憩'),
+    area: String(raw.area || structured?.area || t('map.defaultArea')),
+    category: String(raw.category || raw.Category || structured?.category || t('map.defaultCategory')),
     visualType: normalizeVisualType(raw.type || raw.visualType || structured?.visualType),
     description: String(raw.description || raw.Description || structured?.description || ''),
     lng: Number(raw.longitude || raw.Longitude || structured?.lng || 120.42 + (i * 0.002)),
@@ -268,7 +276,7 @@ function enrichSpot(raw: Record<string, unknown>, i: number): ScenicSpot {
 
 function mergeCoreSpots(spots: ScenicSpot[]): ScenicSpot[] {
   const exists = new Set(spots.flatMap(spot => [spot.id, spot.name]));
-  const missing = fallbackSpots.filter(spot => !exists.has(spot.id) && !exists.has(spot.name));
+  const missing = fallbackSpots.value.filter(spot => !exists.has(spot.id) && !exists.has(spot.name));
   return [...spots, ...missing];
 }
 
@@ -651,7 +659,7 @@ onUnmounted(() => {
           </div>
           <div class="route-tabs">
             <button
-              v-for="route in SCENIC_ROUTES"
+              v-for="route in localizedRoutes"
               :key="route.id"
               :class="{ active: route.id === state.activeRouteId }"
               @click="switchRoute(route.id)"

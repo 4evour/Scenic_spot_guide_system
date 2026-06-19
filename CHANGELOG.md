@@ -1146,3 +1146,17 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响未路由的旧源码文件；不改变当前 `/admin/*` 管理页面、导航、路由配置和构建产物。
+
+## 2026-06-19 14:24 - 增加结构化景区数据多语言层
+
+### 变更内容
+- web-vue/src/constants/scenicVisualization.ts — 为结构化景点、路线和服务提醒补充英文翻译，并新增本地化读取函数。
+- web-vue/src/views/MapView.vue、web-vue/src/views/DigitalHumanView.vue — 地图页和数字人答案卡片按当前 locale 读取结构化景区数据。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 补充地图后端数据缺字段时的 fallback 文案。
+- scripts/check-scenic-visualization-i18n.mjs、web-vue/package.json、Makefile — 新增并接入结构化景区数据多语言静态检查。
+
+### 原因
+- 结构化景区数据会展示在游客地图和数字人答案卡片中，不能只作为内部中文数据保留；英文界面需要对应的路线、提醒和景点说明。
+
+### 影响范围
+- 影响游客地图结构化导览数据、服务提醒和数字人答案卡片展示；不改变后端景点接口、定位逻辑、地图渲染逻辑和数字人问答流程。
