@@ -72,10 +72,10 @@ const categoryTagType: Record<string, 'success' | 'info' | 'warning' | 'error' |
   '文化休憩': 'success',
 };
 
-const visualTypeMeta: Record<ScenicVisualType, { label: string; color: string; dimColor: string }> = {
-  landmark: { label: '地标建筑', color: '#f4c765', dimColor: 'rgba(244,199,101,0.45)' },
-  experience: { label: '体验景点', color: '#52f0ee', dimColor: 'rgba(82,240,238,0.42)' },
-  culture: { label: '休憩文化', color: '#63e2b7', dimColor: 'rgba(99,226,183,0.42)' },
+const visualTypeMeta: Record<ScenicVisualType, { color: string; dimColor: string }> = {
+  landmark: { color: '#f4c765', dimColor: 'rgba(244,199,101,0.45)' },
+  experience: { color: '#52f0ee', dimColor: 'rgba(82,240,238,0.42)' },
+  culture: { color: '#63e2b7', dimColor: 'rgba(99,226,183,0.42)' },
 };
 
 const state = reactive({
@@ -148,6 +148,10 @@ const offlineRoutePolyline = computed(() => offlineRoutePoints.value
   .map(point => `${point.x},${point.y}`)
   .join(' '));
 
+function visualTypeLabel(type: ScenicVisualType): string {
+  return t(`map.visualTypes.${type}`);
+}
+
 const mapContainer = ref<HTMLDivElement>();
 let map: unknown = null;
 let markers: unknown[] = [];
@@ -200,7 +204,7 @@ async function loadSpots() {
     const spots = (payload.data || []).map((raw, i) => enrichSpot(raw, i));
     if (spots.length > 0 && spots.some(s => s.lng > 100)) {
       state.spots = mergeCoreSpots(spots);
-      state.source = `${t('map.liveData')} + 结构化导览`;
+      state.source = `${t('map.liveData')} + ${t('map.structuredGuide')}`;
     } else {
       state.spots = [...fallbackSpots];
       state.source = t('map.demoDataNoCoord');
@@ -392,7 +396,7 @@ function showSpotInfo(spot: ScenicSpot) {
       </div>
       <p style="margin:0 0 10px; font-size:13px; line-height:1.6; color:rgba(255,255,255,0.65);">${escapeHtml(spot.description)}</p>
       <div style="display:grid; gap:6px; font-size:12px; color:rgba(255,255,255,0.68); padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
-        <span style="color:#f4c765;">${escapeHtml(spot.parameters.join(' / ') || `评分 ${spot.rating}`)}</span>
+        <span style="color:#f4c765;">${escapeHtml(spot.parameters.join(' / ') || t('map.rating', { rating: spot.rating }))}</span>
         <span>${escapeHtml(spot.openInfo || priceText)}</span>
         <span>${escapeHtml(spot.highlights.slice(0, 2).join(' · '))}</span>
       </div>
@@ -532,7 +536,7 @@ onMounted(async () => {
     state.mapFallback = true;
     state.mapReady = false;
     state.error = '';
-    state.source = `${state.source || t('map.demoData')} · 离线示意图`;
+    state.source = `${state.source || t('map.demoData')} · ${t('map.offlineDiagram')}`;
     console.warn('[Map] AMap unavailable, using offline scenic map.', e);
   }
 });
@@ -568,7 +572,7 @@ onUnmounted(() => {
         </NAlert>
         <div class="map-canvas-shell">
           <div ref="mapContainer" class="amap-container" :class="{ hidden: state.mapFallback }"></div>
-          <div class="offline-map" :class="{ overlay: state.mapReady && !state.mapFallback }" aria-label="景区路线图">
+          <div class="offline-map" :class="{ overlay: state.mapReady && !state.mapFallback }" :aria-label="$t('map.offlineMapLabel')">
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="offline-map-svg">
               <defs>
                 <linearGradient id="routeGlow" x1="0" x2="1" y1="0" y2="1">
@@ -583,6 +587,7 @@ onUnmounted(() => {
                 class="offline-route-line"
               />
             </svg>
+            <span class="offline-map-watermark">{{ $t('map.offlineMapWatermark') }}</span>
             <button
               v-for="point in offlineMapPoints"
               :key="point.spot.id"
@@ -727,7 +732,7 @@ onUnmounted(() => {
                 <span class="spot-type-dot" :style="{ background: visualTypeMeta[spot.visualType].color }"></span>
                 <span class="spot-item-name">{{ spot.name }}</span>
               </span>
-              <span class="spot-item-meta">{{ spot.area }} · {{ visualTypeMeta[spot.visualType].label }}</span>
+              <span class="spot-item-meta">{{ spot.area }} · {{ visualTypeLabel(spot.visualType) }}</span>
             </button>
             <NEmpty v-if="filteredSpots.length === 0" :description="$t('map.noResults')" size="small" />
           </div>
@@ -832,7 +837,7 @@ onUnmounted(() => {
   background: transparent;
 }
 
-.offline-map.overlay::before,
+.offline-map.overlay .offline-map-watermark,
 .offline-map.overlay .offline-map-svg {
   display: none;
 }
@@ -841,8 +846,7 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 
-.offline-map::before {
-  content: "灵山胜境 / 拈花湾离线导览图";
+.offline-map-watermark {
   position: absolute;
   left: 18px;
   top: 16px;

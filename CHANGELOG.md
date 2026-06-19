@@ -993,3 +993,16 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 地图页静态资源；不改变后端接口、景点数据、路线推荐和地图渲染逻辑。
+
+## 2026-06-19 13:50 - 增加地图景点列表 i18n 检查
+
+### 变更内容
+- scripts/check-map-spot-list-i18n.mjs — 新增地图页景点列表视觉类型、离线图标签、地图来源和评分文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:map-spot-list-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/MapView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将地图页景点列表视觉类型、离线导览图标题、地图来源后缀和弹窗评分文案接入 `map.*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端地图链路；地图页搜索/景点列表和离线图区域仍有用户可见硬编码中文。
+
+### 影响范围
+- 影响地图页景点列表、离线导览图标题、地图来源说明和地图弹窗评分文案；不改变景点数据、搜索逻辑、地图渲染和后端接口。

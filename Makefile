@@ -26,6 +26,7 @@ frontend-contracts:
 	cd web-vue && npm run check:map-guide-i18n
 	cd web-vue && npm run check:map-routes-i18n
 	cd web-vue && npm run check:map-spot-detail-i18n
+	cd web-vue && npm run check:map-spot-list-i18n
 	cd web-vue && npm run check:data-boundaries
 	cd web-vue && npm run check:admin-queries
 	cd web-vue && npm run check:admin-knowledge-insights

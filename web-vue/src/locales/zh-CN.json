@@ -81,6 +81,11 @@
     "demoData": "演示数据",
     "liveData": "实时数据",
     "demoDataNoCoord": "演示数据（景点未配置经纬度）",
+    "structuredGuide": "结构化导览",
+    "offlineDiagram": "离线示意图",
+    "rating": "评分 {rating}",
+    "offlineMapLabel": "景区路线图",
+    "offlineMapWatermark": "灵山胜境 / 拈花湾离线导览图",
     "loadFailed": "加载景点失败",
     "ready": "地图就绪",
     "offlineMap": "离线示意图",
@@ -125,6 +130,11 @@
     "reminders": {
       "title": "服务提醒",
       "advanceMinutes": "提前{minutes}分钟"
+    },
+    "visualTypes": {
+      "landmark": "地标建筑",
+      "experience": "体验景点",
+      "culture": "休憩文化"
     },
     "spotDetail": {
       "parameters": "建筑参数",

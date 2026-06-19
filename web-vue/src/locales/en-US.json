@@ -81,6 +81,11 @@
     "demoData": "Demo Data",
     "liveData": "Live Data",
     "demoDataNoCoord": "Demo Data (coordinates missing)",
+    "structuredGuide": "Structured Guide",
+    "offlineDiagram": "Offline Diagram",
+    "rating": "Rating {rating}",
+    "offlineMapLabel": "Scenic route map",
+    "offlineMapWatermark": "Lingshan / Nianhua Bay Offline Guide Map",
     "loadFailed": "Failed to load spots",
     "ready": "Map Ready",
     "offlineMap": "Offline Map",
@@ -125,6 +130,11 @@
     "reminders": {
       "title": "Service Reminders",
       "advanceMinutes": "{minutes} min early"
+    },
+    "visualTypes": {
+      "landmark": "Landmark",
+      "experience": "Experience",
+      "culture": "Culture & Rest"
     },
     "spotDetail": {
       "parameters": "Architecture Details",
