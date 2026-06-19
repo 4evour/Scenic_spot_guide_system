@@ -1135,3 +1135,14 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 静态资源；不改变接口协议、后端返回 message、音频队列和 WebSocket 重连策略。
+
+## 2026-06-19 14:20 - 移除未路由的旧管理入口
+
+### 变更内容
+- web-vue/src/views/AdminView.vue — 删除未被当前 Vue Router 引用的旧管理后台聚合入口。
+
+### 原因
+- 当前管理端路由已拆分到 `AdminSpots.vue`、`AdminRoutes.vue`、`AdminKnowledge.vue`、`AdminAvatar.vue` 等具体页面；旧入口仍保留硬编码中文但不在运行路径中，继续补 i18n 会维护死代码。
+
+### 影响范围
+- 影响未路由的旧源码文件；不改变当前 `/admin/*` 管理页面、导航、路由配置和构建产物。
