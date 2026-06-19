@@ -1033,6 +1033,7 @@
     "upgradeTitle": "注册正式账号",
     "upgradeHint": "升级后可保存所有对话记录，跨设备同步。",
     "upgradeButton": "确认注册",
+    "upgradeLoading": "注册中…",
     "usernamePlaceholder": "用户名",
     "passwordPlaceholder": "密码（至少6位）",
     "emailPlaceholder": "邮箱（可选）",

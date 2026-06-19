@@ -1033,6 +1033,7 @@
     "upgradeTitle": "Register Account",
     "upgradeHint": "Save all conversations and sync across devices.",
     "upgradeButton": "Register",
+    "upgradeLoading": "Registering…",
     "usernamePlaceholder": "Username",
     "passwordPlaceholder": "Password (min 6 chars)",
     "emailPlaceholder": "Email (optional)",

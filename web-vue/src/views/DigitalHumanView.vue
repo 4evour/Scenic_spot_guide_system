@@ -55,11 +55,11 @@ const upgradeError = ref('');
 
 async function handleUpgrade() {
   if (!upgradeForm.username || !upgradeForm.password) {
-    upgradeError.value = t('auth.usernamePasswordRequired') || '请填写用户名和密码';
+    upgradeError.value = t('auth.usernamePasswordRequired');
     return;
   }
   if (upgradeForm.password.length < 6) {
-    upgradeError.value = t('auth.passwordTooShort') || '密码至少6位';
+    upgradeError.value = t('auth.passwordTooShort');
     return;
   }
   upgradeLoading.value = true;
@@ -72,10 +72,10 @@ async function handleUpgrade() {
       upgradeForm.password = '';
       upgradeForm.email = '';
     } else {
-      upgradeError.value = t('auth.upgradeFailed') || '升级失败，用户名可能已被占用';
+      upgradeError.value = t('auth.upgradeFailed');
     }
   } catch {
-    upgradeError.value = t('auth.upgradeFailed') || '升级失败';
+    upgradeError.value = t('auth.upgradeFailed');
   } finally {
     upgradeLoading.value = false;
   }
@@ -1446,17 +1446,17 @@ onUnmounted(() => {
       <div v-if="showUpgradeModal" class="drawer-overlay" @click.self="showUpgradeModal = false">
         <div class="upgrade-modal">
           <div class="drawer-header">
-            <h3>📝 {{ $t('auth.upgradeTitle') || '注册正式账号' }}</h3>
+            <h3>📝 {{ $t('auth.upgradeTitle') }}</h3>
             <button class="drawer-close" @click="showUpgradeModal = false">✕</button>
           </div>
           <div class="upgrade-form">
-            <p class="upgrade-hint">{{ $t('auth.upgradeHint') || '升级后可保存所有对话记录，跨设备同步。' }}</p>
-            <input v-model="upgradeForm.username" :placeholder="$t('auth.usernamePlaceholder') || '用户名'" autocomplete="username" />
-            <input v-model="upgradeForm.password" type="password" :placeholder="$t('auth.passwordPlaceholder') || '密码（至少6位）'" autocomplete="new-password" />
-            <input v-model="upgradeForm.email" type="email" :placeholder="$t('auth.emailPlaceholder') || '邮箱（可选）'" autocomplete="email" />
+            <p class="upgrade-hint">{{ $t('auth.upgradeHint') }}</p>
+            <input v-model="upgradeForm.username" :placeholder="$t('auth.usernamePlaceholder')" autocomplete="username" />
+            <input v-model="upgradeForm.password" type="password" :placeholder="$t('auth.passwordPlaceholder')" autocomplete="new-password" />
+            <input v-model="upgradeForm.email" type="email" :placeholder="$t('auth.emailPlaceholder')" autocomplete="email" />
             <p v-if="upgradeError" class="upgrade-error">{{ upgradeError }}</p>
             <button class="upgrade-submit" :disabled="upgradeLoading" @click="handleUpgrade">
-              {{ upgradeLoading ? '...' : ($t('auth.upgradeButton') || '确认注册') }}
+              {{ upgradeLoading ? $t('auth.upgradeLoading') : $t('auth.upgradeButton') }}
             </button>
           </div>
         </div>

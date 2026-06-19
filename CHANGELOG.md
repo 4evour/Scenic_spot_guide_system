@@ -1053,6 +1053,7 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响数字人聊天面板按钮标题、会话条数和会话日期显示；不改变搜索、会话切换、注册入口和消息渲染逻辑。
+
 ## 2026-06-19 14:03 - 刷新数字人聊天面板构建产物
 
 ### 变更内容
@@ -1063,3 +1064,16 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 数字人页面静态资源；不改变搜索、会话切换、注册入口和消息渲染逻辑。
+
+## 2026-06-19 14:05 - 增加数字人注册弹窗 i18n 检查
+
+### 变更内容
+- scripts/check-digital-human-upgrade-i18n.mjs — 新增数字人游客注册弹窗、升级错误和提交中状态的 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:digital-human-upgrade-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/DigitalHumanView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 移除游客注册弹窗和升级错误的中文 fallback，并补充 `auth.upgradeLoading` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端数字人链路；游客注册弹窗仍保留硬编码中文 fallback 和提交中状态。
+
+### 影响范围
+- 影响数字人页面游客注册弹窗、升级错误和提交中按钮文案；不改变注册请求、表单字段和鉴权逻辑。
