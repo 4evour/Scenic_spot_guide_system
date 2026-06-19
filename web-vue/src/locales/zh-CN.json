@@ -179,6 +179,10 @@
     "interruptedServer": "已打断当前讲解，并向数字人服务发送中断信号。",
     "interruptReceived": "已收到数字人服务的中断确认，当前语音已停止。",
     "componentError": "发生了一个错误，请刷新页面重试。",
+    "spotFallbackName": "景点{id}",
+    "autoGuideIntro": "欢迎来到{name}，我来为您介绍这里的看点。",
+    "autoGuideTriggered": "已到达{name}，自动讲解已触发。",
+    "currentSession": "当前会话",
     "user": "游客",
     "assistant": "🤖 小灵",
     "system": "⚙ 系统",
@@ -203,7 +207,12 @@
       "hoursLabel": "开放时间",
       "routeDetail": "这条路线有哪些景点？",
       "routeTime": "需要多长时间？",
+      "routeDetailQuery": "这条路线有哪些主要景点？",
+      "routeTimeQuery": "需要多长时间走完？",
       "historyDetail": "这里有什么历史故事吗？",
+      "historyDetailQuery": "能讲讲这里的历史故事吗？",
+      "entityDetailLabel": "{name}的详细介绍",
+      "entityDetailQuery": "能详细介绍一下{name}吗？",
       "buddhaStory": "灵山大佛有什么特别之处？"
     },
     "tabAvatar": "数字人",
@@ -233,7 +242,10 @@
     },
     "avatar": {
       "ariaLabel": "数字人形象选择",
-      "lockedLabel": "景区指定"
+      "lockedLabel": "景区指定",
+      "fallbackName": "数字人",
+      "saveFailed": "数字人偏好保存失败",
+      "poked": "👋 你戳了戳{name}"
     }
   },
   "live2dStage": {

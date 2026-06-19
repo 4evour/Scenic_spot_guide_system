@@ -34,6 +34,7 @@
     "check:digital-human-chat-panel-i18n": "node ../scripts/check-digital-human-chat-panel-i18n.mjs",
     "check:digital-human-controls-i18n": "node ../scripts/check-digital-human-controls-i18n.mjs",
     "check:digital-human-upgrade-i18n": "node ../scripts/check-digital-human-upgrade-i18n.mjs",
+    "check:digital-human-runtime-i18n": "node ../scripts/check-digital-human-runtime-i18n.mjs",
     "check:digital-human-docs": "node ../scripts/check-digital-human-docs.mjs",
     "check:encoding": "node ../scripts/check-encoding.mjs",
     "lint": "eslint . --ext .vue,.ts,.tsx",

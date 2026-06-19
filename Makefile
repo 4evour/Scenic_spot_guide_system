@@ -44,6 +44,7 @@ frontend-contracts:
 	cd web-vue && npm run check:digital-human-chat-panel-i18n
 	cd web-vue && npm run check:digital-human-controls-i18n
 	cd web-vue && npm run check:digital-human-upgrade-i18n
+	cd web-vue && npm run check:digital-human-runtime-i18n
 	cd web-vue && npm run check:digital-human-docs
 
 frontend-build:

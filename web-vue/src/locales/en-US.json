@@ -179,6 +179,10 @@
     "interruptedServer": "Interrupted current narration and sent interrupt signal to server.",
     "interruptReceived": "Received interrupt confirmation from server. Voice playback stopped.",
     "componentError": "An error occurred. Please refresh the page.",
+    "spotFallbackName": "Spot {id}",
+    "autoGuideIntro": "Welcome to {name}. Let me introduce the highlights here.",
+    "autoGuideTriggered": "Arrived at {name}. Auto guide triggered.",
+    "currentSession": "Current Session",
     "searchPlaceholder": "Search messages…",
     "searchNoResults": "No matching messages",
     "historySessions": "History",
@@ -203,7 +207,12 @@
       "hoursLabel": "Hours",
       "routeDetail": "What spots are on this route?",
       "routeTime": "How long does it take?",
+      "routeDetailQuery": "What are the main attractions on this route?",
+      "routeTimeQuery": "How long does the route take?",
       "historyDetail": "Any historical stories?",
+      "historyDetailQuery": "Can you tell me the history here?",
+      "entityDetailLabel": "{name} details",
+      "entityDetailQuery": "Can you introduce {name} in detail?",
       "buddhaStory": "What's special about the Buddha?"
     },
     "tabAvatar": "Avatar",
@@ -233,7 +242,10 @@
     },
     "avatar": {
       "ariaLabel": "Digital guide avatar selection",
-      "lockedLabel": "Scenic area assigned"
+      "lockedLabel": "Scenic area assigned",
+      "fallbackName": "digital guide",
+      "saveFailed": "Failed to save digital guide preference",
+      "poked": "👋 You tapped {name}"
     }
   },
   "live2dStage": {

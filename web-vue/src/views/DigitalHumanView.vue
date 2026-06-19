@@ -147,7 +147,7 @@ const state = reactive({
       id: uid(),
       role: 'assistant',
       text: t('dh.greeting'),
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(),
     },
   ] as ChatMessage[],
 });
@@ -229,7 +229,20 @@ const chatPanelStyle = computed(() => {
 });
 
 function nowTime() {
-  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return formatTime();
+}
+
+function formatTime(value: Date | number | string = new Date()) {
+  return new Date(value).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatSearchTime(value: Date | number | string) {
+  return new Date(value).toLocaleString(locale.value, {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function showAudioNotice(status: typeof audioStatus.value, message: string) {
@@ -314,7 +327,7 @@ async function selectAvatar(id: string) {
   } catch (error) {
     selectedAvatarId.value = previousAvatarId;
     syncSocketAvatar();
-    addMessage('system', error instanceof Error ? error.message : '数字人偏好保存失败');
+    addMessage('system', error instanceof Error ? error.message : t('dh.avatar.saveFailed'));
   } finally {
     avatarSaving.value = false;
   }
@@ -727,7 +740,7 @@ async function loadGeofenceSpots() {
     geofenceSpots.value = data
       .map((raw, index) => ({
         id: String(raw.id || raw.ID || `spot-${index}`),
-        name: String(raw.name || raw.Name || `景点${index + 1}`),
+        name: String(raw.name || raw.Name || t('dh.spotFallbackName', { id: index + 1 })),
         lat: Number(raw.latitude || raw.Latitude || 0),
         lng: Number(raw.longitude || raw.Longitude || 0),
         triggerEnabled: Boolean(raw.geofence_enabled || raw.GeofenceEnabled),
@@ -756,8 +769,8 @@ function toggleAutoGuide() {
 
 watch(nearbySpot, async (spot) => {
   if (!spot || !autoGuideEnabled.value) return;
-  const text = spot.introText || `欢迎来到${spot.name}，我来为您介绍这里的看点。`;
-  addMessage('system', `已到达${spot.name}，自动讲解已触发。`);
+  const text = spot.introText || t('dh.autoGuideIntro', { name: spot.name });
+  addMessage('system', t('dh.autoGuideTriggered', { name: spot.name }));
   showAssistantSpeech(text);
   await playAnswerAudio(text);
 });
@@ -919,16 +932,19 @@ const followUpQuestions = computed(() => {
   const text = lastMsg.text;
   const questions: { label: string; query: string }[] = [];
   if (text.includes('路线') || text.includes('route')) {
-    questions.push({ label: t('dh.quickAsk.routeDetail'), query: '这条路线有哪些主要景点？' });
-    questions.push({ label: t('dh.quickAsk.routeTime'), query: '需要多长时间走完？' });
+    questions.push({ label: t('dh.quickAsk.routeDetail'), query: t('dh.quickAsk.routeDetailQuery') });
+    questions.push({ label: t('dh.quickAsk.routeTime'), query: t('dh.quickAsk.routeTimeQuery') });
   }
   if (text.includes('历史') || text.includes('history')) {
-    questions.push({ label: t('dh.quickAsk.historyDetail'), query: '能讲讲这里的历史故事吗？' });
+    questions.push({ label: t('dh.quickAsk.historyDetail'), query: t('dh.quickAsk.historyDetailQuery') });
   }
   // 动态匹配景点实体（从 profile API 获取，而非硬编码）
   for (const entity of topicEntities.value) {
     if (text.includes(entity)) {
-      questions.push({ label: `${entity}的详细介绍`, query: `能详细介绍一下${entity}吗？` });
+      questions.push({
+        label: t('dh.quickAsk.entityDetailLabel', { name: entity }),
+        query: t('dh.quickAsk.entityDetailQuery', { name: entity }),
+      });
       break;
     }
   }
@@ -988,19 +1004,14 @@ async function performSearch(keyword: string) {
         time: m.time,
         role: m.role,
         sessionId: sessionStore.currentSessionId || getOrCreateSessionId(),
-        sessionTitle: '当前会话',
+        sessionTitle: t('dh.currentSession'),
       }))),
     ]);
 
     const results = historyResults.list.map(item => ({
       id: `history-${item.id}`,
       text: item.content,
-      time: new Date(item.created_at).toLocaleString('zh-CN', {
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      time: formatSearchTime(item.created_at),
       role: item.role as ChatMessage['role'],
       sessionId: item.session_id,
       sessionTitle: item.session_title || t('dh.sessionDefaultTitle'),
@@ -1043,7 +1054,7 @@ async function switchSession(sessionId: string) {
         id: `hist-${m.id}`,
         role: m.role as ChatMessage['role'],
         text: m.content,
-        time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(m.created_at),
       }));
     } else {
       const localMsgs = loadLocalMessages(sessionId);
@@ -1080,7 +1091,7 @@ function onHeadClick() {
 
 function onBodyClick() {
   // Playful feedback on body click
-  addMessage('system', `👋 你戳了戳${selectedAvatar.value?.name || '数字人'}`);
+  addMessage('system', t('dh.avatar.poked', { name: selectedAvatar.value?.name || t('dh.avatar.fallbackName') }));
 }
 
 // --- LocalStorage recovery ---
@@ -1093,7 +1104,7 @@ function loadLocalMessages(sessionId = getOrCreateSessionId()): ChatMessage[] {
       id: uid(),
       role: item.role as ChatMessage['role'],
       text: item.content,
-      time: new Date(item.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(item.time),
     }));
   } catch {
     return [];
@@ -1103,7 +1114,7 @@ function loadLocalMessages(sessionId = getOrCreateSessionId()): ChatMessage[] {
 function buildFallbackAnswer(_text: string) {
   // 通用兜底：当 WebSocket 不可用时引导用户使用文字聊天
   // 具体景区信息已通过 RAG 知识库 + ScenicProfile 配置化，不再硬编码景区内容
-  return t('dh.fallbackGeneric') || '语音服务暂时不可用，请尝试文字聊天，我会根据知识库为您解答。';
+  return t('dh.fallbackGeneric');
 }
 
 onErrorCaptured((err) => {
@@ -1123,7 +1134,7 @@ onMounted(async () => {
         id: `hist-${m.id}`,
         role: m.role as ChatMessage['role'],
         text: m.content,
-        time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(m.created_at),
       }));
     } else {
       const localMsgs = loadLocalMessages(sessionId);
