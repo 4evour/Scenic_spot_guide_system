@@ -187,6 +187,13 @@
     "historySessions": "历史会话",
     "noSessions": "暂无历史会话",
     "sessionDefaultTitle": "未命名会话",
+    "sessionMessageCount": "{count} 条消息",
+    "actions": {
+      "search": "搜索",
+      "history": "历史会话",
+      "register": "注册账号",
+      "refresh": "刷新"
+    },
     "quickAsk": {
       "buddhaHeight": "灵山大佛有多高？",
       "withKids": "带孩子怎么玩？",

@@ -1029,6 +1029,7 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响数字人页面音频提示、控制按钮、头像选择标签和聊天宽度拖动标题；不改变会话、语音播放、自动导览和后端通信逻辑。
+
 ## 2026-06-19 13:58 - 刷新数字人控制区构建产物
 
 ### 变更内容
@@ -1039,3 +1040,16 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 数字人页面静态资源；不改变会话、语音播放、自动导览和后端通信逻辑。
+
+## 2026-06-19 14:00 - 增加数字人聊天面板 i18n 检查
+
+### 变更内容
+- scripts/check-digital-human-chat-panel-i18n.mjs — 新增数字人聊天面板按钮标题、会话条数和会话日期 locale 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:digital-human-chat-panel-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/DigitalHumanView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将聊天面板搜索、历史会话、注册账号、刷新按钮标题和会话条数接入 `dh.*` 中英文文案，并让会话日期使用当前语言。
+
+### 原因
+- 多语言计划要求继续补齐游客端数字人链路；数字人聊天面板工具栏和会话元信息仍有用户可见硬编码中文。
+
+### 影响范围
+- 影响数字人聊天面板按钮标题、会话条数和会话日期显示；不改变搜索、会话切换、注册入口和消息渲染逻辑。

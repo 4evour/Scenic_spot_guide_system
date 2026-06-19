@@ -17,7 +17,7 @@ import { useAuthStore } from '../stores/auth';
 import { getCSRFToken } from '../utils/csrf';
 import { buildGuideInsight, type GuideInsight } from '../constants/scenicVisualization';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const geolocationMessages = {
   notSupported: () => t('map.gpsNotSupported'),
   denied: () => t('map.gpsDenied'),
@@ -1285,17 +1285,17 @@ onUnmounted(() => {
         <div class="chat-header-top">
           <h2>{{ $t('dh.title') }}</h2>
           <div class="header-actions">
-            <button class="icon-btn" :class="{ active: showSearch }" @click="toggleSearch" title="搜索">
+            <button class="icon-btn" :class="{ active: showSearch }" :title="$t('dh.actions.search')" @click="toggleSearch">
               🔍
             </button>
-            <button class="icon-btn" @click="toggleSessionDrawer" title="历史会话">
+            <button class="icon-btn" :title="$t('dh.actions.history')" @click="toggleSessionDrawer">
               📋
             </button>
             <button
               v-if="authStore.isGuest"
               class="icon-btn upgrade-btn"
+              :title="$t('dh.actions.register')"
               @click="showUpgradeModal = true"
-              title="注册账号"
             >
               👤
             </button>
@@ -1327,8 +1327,8 @@ onUnmounted(() => {
         <button
           v-if="followUpQuestions.length > 0"
           class="refresh-btn"
+          :title="$t('dh.actions.refresh')"
           @click="state.expression = 'neutral'"
-          title="刷新"
         >
           🔄
         </button>
@@ -1427,7 +1427,7 @@ onUnmounted(() => {
             >
               <div class="session-info">
                 <span class="session-title">{{ sess.title || $t('dh.sessionDefaultTitle') }}</span>
-                <span class="session-meta">{{ sess.message_count }} 条消息 · {{ new Date(sess.last_active_at).toLocaleDateString('zh-CN') }}</span>
+                <span class="session-meta">{{ $t('dh.sessionMessageCount', { count: sess.message_count }) }} · {{ new Date(sess.last_active_at).toLocaleDateString(locale) }}</span>
               </div>
               <button
                 class="session-delete"

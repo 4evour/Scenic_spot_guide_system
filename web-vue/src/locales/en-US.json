@@ -184,9 +184,16 @@
     "historySessions": "History",
     "noSessions": "No saved sessions",
     "sessionDefaultTitle": "Untitled Session",
+    "sessionMessageCount": "{count} messages",
     "user": "Visitor",
     "assistant": "🤖 Xiao Ling",
     "system": "⚙ System",
+    "actions": {
+      "search": "Search",
+      "history": "History",
+      "register": "Register account",
+      "refresh": "Refresh"
+    },
     "quickAsk": {
       "buddhaHeight": "How tall is the Buddha?",
       "withKids": "Best route for kids?",
