@@ -1124,3 +1124,14 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 API 前端兜底错误、音频播放错误和数字人语音 WebSocket 错误提示；不改变接口协议、后端返回 message、音频队列和 WebSocket 重连策略。
+
+## 2026-06-19 14:19 - 刷新服务层错误文案构建产物
+
+### 变更内容
+- static/vue-app — 重新构建 Vue 静态产物，包含服务层错误文案 i18n 后的前端输出和新 hash 资源。
+
+### 原因
+- API、音频播放和数字人 WebSocket 服务层错误文案源码已接入全局 i18n，需要同步 Go 服务托管的静态 Vue 构建产物。
+
+### 影响范围
+- 影响 Go 服务直接托管的 Vue 静态资源；不改变接口协议、后端返回 message、音频队列和 WebSocket 重连策略。
