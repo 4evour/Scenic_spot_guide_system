@@ -1,6 +1,7 @@
 ﻿import router from '../router';
 import { useAuthStore } from '../stores/auth';
 import { getCSRFToken } from '../utils/csrf';
+import i18n from '../i18n';
 
 export async function apiFetch<T = unknown>(
   path: string,
@@ -23,7 +24,7 @@ export async function apiFetch<T = unknown>(
   if (response.status === 401) {
     useAuthStore().invalidateAuth();
     router.push('/login');
-    throw new Error('未登录或登录已过期');
+    throw new Error(i18n.global.t('api.unauthorizedExpired'));
   }
 
   const raw = await response.text();
@@ -32,12 +33,12 @@ export async function apiFetch<T = unknown>(
     try {
       payload = JSON.parse(raw);
     } catch {
-      throw new Error(`接口返回非 JSON 响应 (${response.status})`);
+      throw new Error(i18n.global.t('api.nonJsonResponse', { status: response.status }));
     }
   }
   if (!response.ok || payload.code !== 0) {
     throw new Error(
-      payload.message || payload.msg || response.statusText || `请求失败 (${response.status})`,
+      payload.message || payload.msg || response.statusText || i18n.global.t('api.requestFailed', { status: response.status }),
     );
   }
   return payload.data as T;

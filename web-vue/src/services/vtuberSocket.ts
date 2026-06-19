@@ -1,5 +1,7 @@
 ﻿import type { VtuberMessage } from '../types/digitalHuman';
 
+import i18n from '../i18n';
+
 type Handlers = {
   onOpen?: () => void;
   onClose?: () => void;
@@ -42,13 +44,13 @@ export class VtuberSocketClient {
       this.scheduleReconnect();
     };
     this.ws.onerror = () => {
-      this.handlers.onError?.('数字人语音服务未连接。文字聊天仍可正常使用，如需语音功能请启动 Open-LLM-VTuber 服务。');
+      this.handlers.onError?.(i18n.global.t('dh.socket.notConnected'));
     };
     this.ws.onmessage = event => {
       try {
         this.handlers.onMessage?.(JSON.parse(event.data));
       } catch {
-        this.handlers.onError?.('收到无法解析的数字人消息。');
+        this.handlers.onError?.(i18n.global.t('dh.socket.invalidMessage'));
       }
     };
   }
@@ -56,7 +58,7 @@ export class VtuberSocketClient {
   private scheduleReconnect() {
     if (this.intentionalClose) return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.handlers.onError?.('数字人语音服务重连失败，请检查服务是否启动。');
+      this.handlers.onError?.(i18n.global.t('dh.socket.reconnectFailed'));
       return;
     }
     // Exponential backoff with jitter

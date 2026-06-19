@@ -228,7 +228,17 @@
       "lockedNotice": "请先点击“启用声音”，之后我会朗读回答并驱动口型。",
       "ttsFallback": "语音合成暂时不可用，已切换为浏览器朗读。",
       "ttsFallbackWithMessage": "语音合成暂时不可用，已切换为浏览器朗读：{message}",
-      "enabledNotice": "声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。"
+      "enabledNotice": "声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。",
+      "emptyStreamFallback": "语音合成没有返回音频，已切换为浏览器朗读。",
+      "browserSpeechBlocked": "浏览器朗读被阻止，请点击“启用声音”后重试。",
+      "soundPermissionDenied": "浏览器未允许播放声音，请检查站点声音权限。",
+      "autoplayBlocked": "浏览器阻止了自动播放，请点击“启用声音”。",
+      "playbackFailedNext": "音频播放失败，已尝试播放下一段。"
+    },
+    "socket": {
+      "notConnected": "数字人语音服务未连接。文字聊天仍可正常使用，如需语音功能请启动 Open-LLM-VTuber 服务。",
+      "invalidMessage": "收到无法解析的数字人消息。",
+      "reconnectFailed": "数字人语音服务重连失败，请检查服务是否启动。"
     },
     "controls": {
       "soundPlaying": "播放中",
@@ -1036,6 +1046,9 @@
     "err_internal": "服务异常",
     "err_csrf": "CSRF token 校验失败",
     "err_ratelimit": "请求过于频繁，请稍后再试",
+    "unauthorizedExpired": "未登录或登录已过期",
+    "nonJsonResponse": "接口返回非 JSON 响应 ({status})",
+    "requestFailed": "请求失败 ({status})",
     "msg_feedback_thanks": "感谢您的反馈",
     "msg_knowledge_uploaded": "知识上传并加载成功",
     "msg_knowledge_deleted": "知识删除成功",

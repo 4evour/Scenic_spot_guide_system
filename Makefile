@@ -46,6 +46,7 @@ frontend-contracts:
 	cd web-vue && npm run check:digital-human-upgrade-i18n
 	cd web-vue && npm run check:digital-human-runtime-i18n
 	cd web-vue && npm run check:digital-human-docs
+	cd web-vue && npm run check:service-i18n
 
 frontend-build:
 	cd web-vue && npm run build

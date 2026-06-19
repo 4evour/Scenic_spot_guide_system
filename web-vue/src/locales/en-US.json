@@ -228,7 +228,17 @@
       "lockedNotice": "Tap \"Enable sound\" first, then I will read answers aloud with lip sync.",
       "ttsFallback": "Speech synthesis is temporarily unavailable. Switched to browser speech.",
       "ttsFallbackWithMessage": "Speech synthesis is temporarily unavailable. Switched to browser speech: {message}",
-      "enabledNotice": "Sound enabled. Future answers will be read aloud with audio or browser speech lip sync."
+      "enabledNotice": "Sound enabled. Future answers will be read aloud with audio or browser speech lip sync.",
+      "emptyStreamFallback": "Speech synthesis returned no audio. Switched to browser speech.",
+      "browserSpeechBlocked": "Browser speech was blocked. Tap \"Enable sound\" and retry.",
+      "soundPermissionDenied": "The browser did not allow audio playback. Check site sound permissions.",
+      "autoplayBlocked": "The browser blocked autoplay. Tap \"Enable sound\".",
+      "playbackFailedNext": "Audio playback failed. Trying the next segment."
+    },
+    "socket": {
+      "notConnected": "Digital guide voice service is not connected. Text chat still works; start Open-LLM-VTuber to use voice.",
+      "invalidMessage": "Received a digital guide message that could not be parsed.",
+      "reconnectFailed": "Digital guide voice service reconnect failed. Check whether the service is running."
     },
     "controls": {
       "soundPlaying": "Playing",
@@ -1036,6 +1046,9 @@
     "err_internal": "Internal server error",
     "err_csrf": "CSRF token validation failed",
     "err_ratelimit": "Too many requests. Please wait.",
+    "unauthorizedExpired": "Not logged in or session expired",
+    "nonJsonResponse": "API returned a non-JSON response ({status})",
+    "requestFailed": "Request failed ({status})",
     "msg_feedback_thanks": "Thanks for your feedback",
     "msg_knowledge_uploaded": "Knowledge uploaded successfully",
     "msg_knowledge_deleted": "Knowledge deleted",

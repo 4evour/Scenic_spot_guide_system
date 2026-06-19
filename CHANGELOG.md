@@ -1111,3 +1111,16 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 数字人页面静态资源；不改变会话存储、景区数据、语音播放和后端通信逻辑。
+
+## 2026-06-19 14:17 - 增加服务层错误文案 i18n 检查
+
+### 变更内容
+- scripts/check-service-i18n.mjs — 新增 API、音频播放和数字人 WebSocket 服务层用户可见错误文案静态检查。
+- web-vue/package.json、Makefile — 接入 `check:service-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/services/api.ts、web-vue/src/services/audioPlayback.ts、web-vue/src/services/vtuberSocket.ts、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将前端生成的服务层错误提示接入全局 i18n，并让浏览器朗读语言跟随当前 locale。
+
+### 原因
+- 多语言计划要求清理游客端服务链路中仍由前端生成的中文错误提示，避免英文界面下出现固定中文。
+
+### 影响范围
+- 影响 API 前端兜底错误、音频播放错误和数字人语音 WebSocket 错误提示；不改变接口协议、后端返回 message、音频队列和 WebSocket 重连策略。
