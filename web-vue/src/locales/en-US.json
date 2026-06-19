@@ -204,7 +204,30 @@
     "scanSuccess": "📍 Attraction identified: {name}",
     "scanFailed": "QR code not recognized. Please check if this is a valid scenic area QR code.",
     "scanIntroDefault": "Welcome to {name}! Let me introduce this special place to you.",
-    "scanFollowUp": "You can also ask:"
+    "scanFollowUp": "You can also ask:",
+    "audio": {
+      "initialNotice": "Tap \"Enable sound\" and I will read answers aloud with lip sync.",
+      "playingNotice": "Voice is playing. Lip sync follows the audio.",
+      "readyNotice": "Sound enabled.",
+      "lockedNotice": "Tap \"Enable sound\" first, then I will read answers aloud with lip sync.",
+      "ttsFallback": "Speech synthesis is temporarily unavailable. Switched to browser speech.",
+      "ttsFallbackWithMessage": "Speech synthesis is temporarily unavailable. Switched to browser speech: {message}",
+      "enabledNotice": "Sound enabled. Future answers will be read aloud with audio or browser speech lip sync."
+    },
+    "controls": {
+      "soundPlaying": "Playing",
+      "soundReady": "Sound enabled",
+      "soundEnable": "Enable sound",
+      "autoGuideOn": "Proximity guide on",
+      "autoGuideOff": "Proximity guide",
+      "seniorMode": "Senior Mode",
+      "exitSeniorMode": "Exit Senior Mode",
+      "chatResizeTitle": "Drag to adjust chat width"
+    },
+    "avatar": {
+      "ariaLabel": "Digital guide avatar selection",
+      "lockedLabel": "Scenic area assigned"
+    }
   },
   "live2dStage": {
     "status": {

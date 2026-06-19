@@ -204,7 +204,30 @@
     "scanSuccess": "📍 已识别景点：{name}",
     "scanFailed": "二维码无法识别，请确认是否为本景区的景点二维码",
     "scanIntroDefault": "欢迎来到{name}！让我为您详细介绍这里的特色。",
-    "scanFollowUp": "您还可以继续提问："
+    "scanFollowUp": "您还可以继续提问：",
+    "audio": {
+      "initialNotice": "点击“启用声音”后，我会朗读回答并驱动口型。",
+      "playingNotice": "正在播放语音，口型会跟随音频变化。",
+      "readyNotice": "声音已启用。",
+      "lockedNotice": "请先点击“启用声音”，之后我会朗读回答并驱动口型。",
+      "ttsFallback": "语音合成暂时不可用，已切换为浏览器朗读。",
+      "ttsFallbackWithMessage": "语音合成暂时不可用，已切换为浏览器朗读：{message}",
+      "enabledNotice": "声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。"
+    },
+    "controls": {
+      "soundPlaying": "播放中",
+      "soundReady": "声音已启用",
+      "soundEnable": "启用声音",
+      "autoGuideOn": "到点讲解已开",
+      "autoGuideOff": "到点讲解",
+      "seniorMode": "老年模式",
+      "exitSeniorMode": "退出老年模式",
+      "chatResizeTitle": "拖动调整聊天框宽度"
+    },
+    "avatar": {
+      "ariaLabel": "数字人形象选择",
+      "lockedLabel": "景区指定"
+    }
   },
   "live2dStage": {
     "status": {

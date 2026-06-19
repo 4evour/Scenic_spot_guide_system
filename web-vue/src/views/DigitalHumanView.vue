@@ -130,7 +130,7 @@ const avatarOptions = ref<DigitalHumanAvatarOption[]>([]);
 const selectedAvatarId = ref(DEFAULT_AVATAR_ID);
 const avatarSaving = ref(false);
 const audioStatus = ref<'locked' | 'ready' | 'playing' | 'error'>('locked');
-const audioNotice = ref('点击“启用声音”后，我会朗读回答并驱动口型。');
+const audioNotice = ref(t('dh.audio.initialNotice'));
 const storedChatWidth = Number(localStorage.getItem('sg_dh_chat_width') || 420);
 const chatWidth = ref(Number.isFinite(storedChatWidth) ? storedChatWidth : 420);
 const isChatResizing = ref(false);
@@ -168,7 +168,7 @@ let lastAudioNotice = '';
 const audio = new AudioPlaybackController({
   onStart: (text: string | undefined, cue: PlaybackCue | undefined) => {
     audioStatus.value = 'playing';
-    audioNotice.value = '正在播放语音，口型会跟随音频变化。';
+    audioNotice.value = t('dh.audio.playingNotice');
     isPlaybackActive.value = true;
     hasActiveTurn.value = true;
     typewriterStreaming.value = true;
@@ -179,7 +179,7 @@ const audio = new AudioPlaybackController({
   onEnd: () => {
     if (audioStatus.value === 'playing') {
       audioStatus.value = 'ready';
-      audioNotice.value = '声音已启用。';
+      audioNotice.value = t('dh.audio.readyNotice');
     }
     isPlaybackActive.value = false;
     mouthOpen.value = 0;
@@ -700,7 +700,7 @@ async function playAnswerAudio(answer: string) {
   const speechText = stripEmotionTags(answer);
   const cue = { expression: expressionFromText(answer) || 'happy' as const };
   if (audioStatus.value === 'locked') {
-    showAudioNotice('locked', '请先点击“启用声音”，之后我会朗读回答并驱动口型。');
+    showAudioNotice('locked', t('dh.audio.lockedNotice'));
     return;
   }
   try {
@@ -714,8 +714,8 @@ async function playAnswerAudio(answer: string) {
     }
   } catch (err) {
     const message = err instanceof Error && err.message
-      ? `语音合成暂时不可用，已切换为浏览器朗读：${err.message}`
-      : '语音合成暂时不可用，已切换为浏览器朗读。';
+      ? t('dh.audio.ttsFallbackWithMessage', { message: err.message })
+      : t('dh.audio.ttsFallback');
     showAudioNotice('error', message);
     await audio.playTextFallback(speechText, cue);
   }
@@ -766,7 +766,7 @@ async function enableSound() {
   const ok = await audio.unlock();
   if (ok) {
     audioStatus.value = 'ready';
-    audioNotice.value = '声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。';
+    audioNotice.value = t('dh.audio.enabledNotice');
     lastAudioNotice = '';
   }
 }
@@ -1202,8 +1202,8 @@ onUnmounted(() => {
         <span class="status-text">{{ statusLabel }}</span>
       </div>
 
-      <div v-if="avatarOptions.length > 0" class="avatar-switcher" :class="{ locked: avatarOptions.length === 1 }" aria-label="数字人形象选择">
-        <span v-if="avatarOptions.length === 1" class="avatar-lock-label">景区指定</span>
+      <div v-if="avatarOptions.length > 0" class="avatar-switcher" :class="{ locked: avatarOptions.length === 1 }" :aria-label="$t('dh.avatar.ariaLabel')">
+        <span v-if="avatarOptions.length === 1" class="avatar-lock-label">{{ $t('dh.avatar.lockedLabel') }}</span>
         <button
           v-for="avatar in avatarOptions"
           :key="avatar.id"
@@ -1251,17 +1251,17 @@ onUnmounted(() => {
           :class="{ ready: audioStatus === 'ready' || audioStatus === 'playing', error: audioStatus === 'error' }"
           @click="enableSound"
         >
-          {{ audioStatus === 'playing' ? '播放中' : audioStatus === 'ready' ? '声音已启用' : '启用声音' }}
+          {{ audioStatus === 'playing' ? $t('dh.controls.soundPlaying') : audioStatus === 'ready' ? $t('dh.controls.soundReady') : $t('dh.controls.soundEnable') }}
         </button>
         <button class="ctrl-btn danger" :disabled="!canInterrupt" @click="interruptAnswer">
           {{ $t('dh.interrupt') }}
         </button>
         <button class="ctrl-btn" @click="connectSocket">{{ $t('dh.reconnect') }}</button>
         <button class="ctrl-btn" :class="{ ready: autoGuideEnabled }" @click="toggleAutoGuide">
-          {{ autoGuideEnabled ? '到点讲解已开' : '到点讲解' }}
+          {{ autoGuideEnabled ? $t('dh.controls.autoGuideOn') : $t('dh.controls.autoGuideOff') }}
         </button>
         <button class="ctrl-btn" :class="{ ready: seniorModeEnabled }" @click="toggleSeniorMode">
-          {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+          {{ seniorModeEnabled ? $t('dh.controls.exitSeniorMode') : $t('dh.controls.seniorMode') }}
         </button>
         <span v-if="autoGuideEnabled && geoError" class="interrupt-count">{{ geoError }}</span>
         <span class="interrupt-count">{{ $t('dh.interruptCount', { count: state.interruptCount }) }}</span>
@@ -1275,7 +1275,7 @@ onUnmounted(() => {
       v-if="!isMobileView"
       class="chat-resizer"
       :class="{ resizing: isChatResizing }"
-      title="拖动调整聊天框宽度"
+      :title="$t('dh.controls.chatResizeTitle')"
       @pointerdown.prevent="startChatResize"
     ></div>
 
