@@ -1185,3 +1185,14 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Markdown 渲染 lint 标注、数字人模板属性顺序、Live2D 核心脚本加载时机和 Vite 构建提示阈值；不改变 Markdown 净化逻辑、数字人交互逻辑和 vendor chunk 拆分方式。
+
+## 2026-06-19 14:34 - 刷新 warning 清理构建产物
+
+### 变更内容
+- static/vue-app — 重新构建 Vue 静态产物，包含前端 lint 与构建 warning 清理后的输出和新 hash 资源。
+
+### 原因
+- Live2D 核心脚本加载方式、模板属性顺序和 Vite 构建配置已调整，需要同步 Go 服务托管的静态 Vue 构建产物。
+
+### 影响范围
+- 影响 Go 服务直接托管的 Vue 静态资源；不改变 Markdown 净化逻辑、数字人交互逻辑和 vendor chunk 拆分方式。
