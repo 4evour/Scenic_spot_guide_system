@@ -125,6 +125,17 @@
     "reminders": {
       "title": "服务提醒",
       "advanceMinutes": "提前{minutes}分钟"
+    },
+    "spotDetail": {
+      "parameters": "建筑参数",
+      "culture": "文化内涵",
+      "highlights": "游玩亮点",
+      "openInfo": "开放/演出",
+      "noParameters": "暂无参数",
+      "noDescription": "暂无说明",
+      "noHighlights": "暂无亮点",
+      "defaultOpenInfo": "随景区开放",
+      "weakSignal": "弱信号"
     }
   },
   "dh": {

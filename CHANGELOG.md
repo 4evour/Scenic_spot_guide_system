@@ -969,3 +969,16 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Prometheus `/metrics` 中 RAG 查询耗时和缓存命中指标；不改变 RAG 回答内容、缓存策略和公开 API。
+
+## 2026-06-19 13:44 - 增加地图景点详情 i18n 检查
+
+### 变更内容
+- scripts/check-map-spot-detail-i18n.mjs — 新增地图页选中景点详情卡片标签、空态和弱信号文案 i18n 静态检查。
+- web-vue/package.json、Makefile — 接入 `check:map-spot-detail-i18n` 到前端检查命令和 `frontend-contracts`。
+- web-vue/src/views/MapView.vue、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 将地图页景点详情卡片的建筑参数、文化内涵、游玩亮点、开放/演出、空态和弱信号文案接入 `map.spotDetail.*` 中英文文案。
+
+### 原因
+- 多语言计划要求继续补齐游客端地图链路；地图页选中景点详情卡片仍有用户可见硬编码中文。
+
+### 影响范围
+- 影响地图页选中景点详情卡片用户可见 UI 文案和前端静态检查链路；不改变景点数据、地图渲染、路线推荐和后端接口。

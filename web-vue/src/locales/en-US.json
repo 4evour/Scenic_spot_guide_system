@@ -125,6 +125,17 @@
     "reminders": {
       "title": "Service Reminders",
       "advanceMinutes": "{minutes} min early"
+    },
+    "spotDetail": {
+      "parameters": "Architecture Details",
+      "culture": "Cultural Context",
+      "highlights": "Visit Highlights",
+      "openInfo": "Hours / Shows",
+      "noParameters": "No details",
+      "noDescription": "No description",
+      "noHighlights": "No highlights",
+      "defaultOpenInfo": "Open with the scenic area",
+      "weakSignal": "Weak signal"
     }
   },
   "dh": {

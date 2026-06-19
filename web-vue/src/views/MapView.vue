@@ -681,25 +681,25 @@ onUnmounted(() => {
           </div>
           <p class="spot-desc">{{ state.selectedSpot.description }}</p>
           <div class="spot-section">
-            <strong>建筑参数</strong>
-            <span>{{ state.selectedSpot.parameters.join(' / ') || '暂无参数' }}</span>
+            <strong>{{ $t('map.spotDetail.parameters') }}</strong>
+            <span>{{ state.selectedSpot.parameters.join(' / ') || $t('map.spotDetail.noParameters') }}</span>
           </div>
           <div class="spot-section">
-            <strong>文化内涵</strong>
-            <span>{{ state.selectedSpot.culture || '暂无说明' }}</span>
+            <strong>{{ $t('map.spotDetail.culture') }}</strong>
+            <span>{{ state.selectedSpot.culture || $t('map.spotDetail.noDescription') }}</span>
           </div>
           <div class="spot-section">
-            <strong>游玩亮点</strong>
-            <span>{{ state.selectedSpot.highlights.join(' / ') || '暂无亮点' }}</span>
+            <strong>{{ $t('map.spotDetail.highlights') }}</strong>
+            <span>{{ state.selectedSpot.highlights.join(' / ') || $t('map.spotDetail.noHighlights') }}</span>
           </div>
           <div class="spot-section">
-            <strong>开放/演出</strong>
-            <span>{{ state.selectedSpot.openInfo || state.selectedSpot.showTimes.join(' / ') || '随景区开放' }}</span>
+            <strong>{{ $t('map.spotDetail.openInfo') }}</strong>
+            <span>{{ state.selectedSpot.openInfo || state.selectedSpot.showTimes.join(' / ') || $t('map.spotDetail.defaultOpenInfo') }}</span>
           </div>
           <div class="spot-meta">
             <span class="spot-rating">⭐ {{ state.selectedSpot.rating }}</span>
             <span class="spot-price">{{ state.selectedSpot.price > 0 ? '¥' + state.selectedSpot.price : $t('map.free') }}</span>
-            <span v-if="state.selectedSpot.signalBlindSpot" class="spot-signal">弱信号</span>
+            <span v-if="state.selectedSpot.signalBlindSpot" class="spot-signal">{{ $t('map.spotDetail.weakSignal') }}</span>
           </div>
         </article>
 

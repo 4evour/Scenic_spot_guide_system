@@ -15,6 +15,7 @@
     "check:geolocation-i18n": "node ../scripts/check-geolocation-i18n.mjs",
     "check:map-guide-i18n": "node ../scripts/check-map-guide-i18n.mjs",
     "check:map-routes-i18n": "node ../scripts/check-map-routes-i18n.mjs",
+    "check:map-spot-detail-i18n": "node ../scripts/check-map-spot-detail-i18n.mjs",
     "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
     "check:admin-knowledge-insights": "node ../scripts/check-admin-knowledge-insights.mjs",
     "check:admin-knowledge-i18n": "node ../scripts/check-admin-knowledge-i18n.mjs",
