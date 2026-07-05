@@ -165,9 +165,10 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	if sessionContext != "" {
 		cacheKey = "prompt:" + promptQuery + "\nretrieval:" + retrievalQuery + "\nctx:" + sessionContext
 	}
-	if cachedResp, ok := s.getCachedResponse(cacheKey); ok {
+	if cachedResp, cachedSources, ok := s.getCachedResponse(cacheKey); ok {
 		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(promptQuery)))
 		trace.CacheHit = true
+		trace.Sources = cachedSources
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
 		trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
 		return cachedResp, trace, nil
@@ -177,6 +178,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
 	trace.ChunkCount = len(chunks)
+	trace.Sources = buildRAGSources(chunks, 3)
 	if err != nil {
 		return "", trace, fmt.Errorf("检索相关知识失败: %v", err)
 	}
@@ -195,7 +197,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 		generationStart := time.Now()
 		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer)
+		s.setCachedResponse(cacheKey, answer, trace.Sources)
 		return answer, trace, nil
 	}
 
@@ -273,7 +275,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 
 	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
 		answer := openAIResp.Choices[0].Message.Content
-		s.setCachedResponse(cacheKey, answer)
+		s.setCachedResponse(cacheKey, answer, trace.Sources)
 		return answer, trace, nil
 	}
 
@@ -492,14 +494,14 @@ func splitKnowledgeSentences(content string) []string {
 }
 
 func (s *RAGService) QueryGeneralChat(query, lang string) (string, error) {
-	if cachedResp, ok := s.getCachedResponse(query); ok {
+	if cachedResp, _, ok := s.getCachedResponse(query); ok {
 		slog.Debug("通用 Chat 命中查询缓存", "query_len", len([]rune(query)))
 		return cachedResp, nil
 	}
 
 	if strings.TrimSpace(s.chatAPIKey) == "" {
 		answer := "当前知识库没有检索到足够匹配的资料，并且 AI API Key 尚未配置。您可以先在管理后台补充相关知识，或配置 AI API Key 后再启用通用问答。"
-		s.setCachedResponse(query, answer)
+		s.setCachedResponse(query, answer, nil)
 		return answer, nil
 	}
 
@@ -599,7 +601,7 @@ func (s *RAGService) QueryGeneralChat(query, lang string) (string, error) {
 		return "抱歉，我无法生成合适的回答。", fmt.Errorf("API返回空结果")
 	}
 
-	s.setCachedResponse(query, answer)
+	s.setCachedResponse(query, answer, nil)
 	slog.Info("通用 Chat API 返回回答", "answer_len", len([]rune(answer)))
 	return answer, nil
 }

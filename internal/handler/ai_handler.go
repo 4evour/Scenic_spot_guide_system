@@ -229,8 +229,8 @@ func (h *AIHandler) Chat(c *gin.Context) {
 				})
 			}
 
-			// 发送完成标记（含路由和 trace_id）
-			doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": trace.TraceID, "route": route})
+			// 发送完成标记（含路由、trace_id 和来源引用）
+			doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": trace.TraceID, "route": route, "sources": trace.Sources})
 			writeMu.Lock()
 			fmt.Fprintf(writer, "data: %s\n\n", string(doneData))
 			fmt.Fprintf(writer, "data: [DONE]\n\n")
@@ -273,6 +273,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		responseData := gin.H{
 			"response": response,
 			"trace_id": trace.TraceID,
+			"sources":  trace.Sources,
 		}
 		if route != nil {
 			responseData["route"] = route

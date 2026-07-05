@@ -63,6 +63,7 @@ type RAGTrace struct {
 	Provider       string
 	CacheHit       bool
 	ChunkCount     int
+	Sources        []RAGSource
 	RetrievalMs    int64
 	EmbeddingMs    int64
 	GenerationMs   int64
@@ -72,8 +73,19 @@ type RAGTrace struct {
 	SlowRequest    bool
 }
 
+type RAGSource struct {
+	ID                string `json:"id"`
+	Title             string `json:"title"`
+	Source            string `json:"source"`
+	KnowledgeCategory string `json:"knowledge_category,omitempty"`
+	SpotID            uint   `json:"spot_id,omitempty"`
+	SpotCategory      string `json:"spot_category,omitempty"`
+	Preview           string `json:"preview,omitempty"`
+}
+
 type CacheEntry struct {
 	Response   string
+	Sources    []RAGSource
 	ExpireTime time.Time
 }
 
@@ -93,6 +105,43 @@ type TourRoute struct {
 	Description string          `json:"description"`
 	Steps       []TourRouteStep `json:"steps"`
 	Duration    string          `json:"duration"`
+}
+
+func buildRAGSources(chunks []model.KnowledgeChunk, limit int) []RAGSource {
+	if limit <= 0 || len(chunks) == 0 {
+		return nil
+	}
+	if len(chunks) < limit {
+		limit = len(chunks)
+	}
+	sources := make([]RAGSource, 0, limit)
+	for _, chunk := range chunks {
+		if len(sources) >= limit {
+			break
+		}
+		sources = append(sources, RAGSource{
+			ID:                chunk.ID,
+			Title:             strings.TrimSpace(chunk.Title),
+			Source:            strings.TrimSpace(chunk.Source),
+			KnowledgeCategory: strings.TrimSpace(chunk.KnowledgeCategory),
+			SpotID:            chunk.SpotID,
+			SpotCategory:      strings.TrimSpace(chunk.SpotCategory),
+			Preview:           buildRAGSourcePreview(chunk.Content, 96),
+		})
+	}
+	return sources
+}
+
+func buildRAGSourcePreview(content string, limit int) string {
+	preview := strings.Join(strings.Fields(strings.TrimSpace(content)), " ")
+	if preview == "" || limit <= 0 {
+		return preview
+	}
+	runes := []rune(preview)
+	if len(runes) <= limit {
+		return preview
+	}
+	return string(runes[:limit]) + "..."
 }
 
 // isScenicRelatedQuestion 判断问题是否与当前景区相关（配置化，支持任意景区）
@@ -286,26 +335,26 @@ func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 	return vec, nil
 }
 
-func (s *RAGService) getCachedResponse(query string) (string, bool) {
+func (s *RAGService) getCachedResponse(query string) (string, []RAGSource, bool) {
 	s.cacheMutex.RLock()
 	entry, ok := s.queryCache[query]
 	s.cacheMutex.RUnlock()
 
 	if !ok {
-		return "", false
+		return "", nil, false
 	}
 
 	if time.Now().After(entry.ExpireTime) {
 		s.cacheMutex.Lock()
 		delete(s.queryCache, query)
 		s.cacheMutex.Unlock()
-		return "", false
+		return "", nil, false
 	}
 
-	return entry.Response, true
+	return entry.Response, entry.Sources, true
 }
 
-func (s *RAGService) setCachedResponse(query, response string) {
+func (s *RAGService) setCachedResponse(query, response string, sources []RAGSource) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 
@@ -315,6 +364,7 @@ func (s *RAGService) setCachedResponse(query, response string) {
 
 	s.queryCache[query] = CacheEntry{
 		Response:   response,
+		Sources:    sources,
 		ExpireTime: time.Now().Add(CacheTTL),
 	}
 }
@@ -620,6 +670,7 @@ func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToke
 	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
 	trace.ChunkCount = len(chunks)
+	trace.Sources = buildRAGSources(chunks, 3)
 	if err != nil {
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
 		return "", nil, trace, fmt.Errorf("检索相关知识失败: %v", err)
