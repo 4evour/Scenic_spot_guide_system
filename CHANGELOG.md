@@ -1,5 +1,22 @@
 ﻿# CHANGELOG
 
+## 2026-07-05 18:07 - 优化二维码讲解与反馈知识闭环
+
+### 变更内容
+- internal/service/rag_service.go、internal/service/generation_service.go、internal/handler/ai_handler.go — 为 RAG trace 增加最多 3 条来源引用，并在 `/api/v1/ai/chat` 响应中返回 `sources`。
+- internal/service/visitor_insight_service.go — 将明确负面的用户反馈转换为待审核知识候选，候选内容保留游客问题和反馈，不自动编造正式答案。
+- internal/service/generation_service_test.go、internal/service/visitor_insight_service_test.go — 增加 RAG 来源返回和低分反馈生成知识候选的回归测试。
+- web-vue/src/views/QRScanView.vue、web-vue/src/views/DigitalHumanView.vue、web-vue/src/types/digitalHuman.ts、web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 扫码开始讲解时通过 `sessionStorage` 传递接口返回的讲解词，数字人直接展示并播报；普通问答消息下方展示参考来源。
+- static/vue-app — 重新构建 Vue 静态产物，包含二维码直出讲解和回答来源展示的前端输出。
+
+### 原因
+- 二维码扫码讲解不需要再次触发 RAG 推理，直接输出接口返回讲解词可以降低等待时间。
+- 参赛展示需要突出回答可信度和运营闭环，让游客可见回答来源，让管理员能从差评中沉淀待补充知识。
+
+### 影响范围
+- 影响二维码扫码后的数字人讲解入口、数字人普通问答消息展示、RAG chat 响应结构和低分反馈后的后台知识候选列表。
+- 不改变知识候选的审核入库流程；反馈候选仍需管理员确认后才进入正式知识库。
+
 ## 2026-06-18 20:22 - 刷新地图路线区域构建产物
 
 ### 变更内容
@@ -1196,3 +1213,80 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 Go 服务直接托管的 Vue 静态资源；不改变 Markdown 净化逻辑、数字人交互逻辑和 vendor chunk 拆分方式。
+
+## 2026-07-05 18:27 - 取消本地启动外部数字人端口
+
+### 变更内容
+- scripts/start-local.ps1 — 移除 Open-LLM-VTuber 启动逻辑，不再启动或重启 `127.0.0.1:12393`；启动后默认打开 `http://127.0.0.1:8080/digital-human#/login`。
+- docs/digital-human-runbook.md — 更新本地启动说明，明确默认只启动 Go 服务和本地 SQLite 演示数据，不再启动 `12393` 外部服务。
+
+### 原因
+- 本地使用只需要进入 Go 服务托管的登录页，并通过管理员或游客账号登录，不再需要自动启动独立的 Open-LLM-VTuber 端口。
+
+### 影响范围
+- 影响 `start-local.ps1` 本地联调启动行为和运行手册说明；不改变 Go 后端、Vue 路由、登录账号初始化、数字人页面业务逻辑。
+
+## 2026-07-05 18:43 - 补齐数据大屏运营卡片内容
+
+### 变更内容
+- web-vue/src/views/DashboardView.vue — 将热门景点、人流热力、活动状态、终端状态、知识库运营卡片从固定空态改为读取现有景点、路线、交互统计、数字人配置和知识库统计数据。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 增加数据大屏新增字段的中英文文案。
+- static/vue-app — 重新构建 Vue 静态产物，包含数据大屏卡片内容补齐后的输出和新 hash 资源。
+
+### 原因
+- 数据大屏多个运营卡片原先直接渲染空态，导致已有景点、路线、交互日志和数字人配置没有展示出来。
+
+### 影响范围
+- 影响管理端数据大屏展示；不改变后端统计口径、数据库结构、景点管理、路线管理和数字人配置保存逻辑。
+
+## 2026-07-05 18:47 - 补齐演示景点二维码讲解词
+
+### 变更内容
+- cmd/demo-seed/main.go — 为灵山大佛、九龙灌浴、灵山梵宫、五印坛城、文创驿站写入固定二维码 ID、启用扫码入口，并补充扫码后数字人朗读的讲解词。
+
+### 原因
+- 二维码管理页依赖景点表中的 `qr_code`、`qr_enabled` 和 `qr_intro_text` 字段；演示 seed 原先未写这些字段，导致页面显示二维码未配置、扫码入口停用、讲解词为空。
+
+### 影响范围
+- 影响演示数据初始化和重新 seed 后的二维码管理、扫码导览、数字人扫码讲解内容；不改变二维码管理页 UI、扫码接口路由和数据库结构。
+
+## 2026-07-05 19:08 - 重切知识库并对齐后台筛选字段
+
+### 变更内容
+- knowledge/lingshan_chunks.jsonl — 将原固定长度老切片重切为 81 条语义切片，按景点、小节和问法组织，并补强基础位置问法。
+- knowledge/real/lingshan_real_chunks.jsonl — 保持 153 条真实资料切片，回填 `knowledge_category`、`spot_id`、`spot_category` 列级字段，并补充亲子路线、文化建筑、演艺边界、实时信息边界等常见问法。
+- internal/service/knowledge_manager.go — 将文件导入从“已存在 ID 跳过”改为 upsert，确保重新 seed 能覆盖旧切片并回填分类、景点字段和向量。
+- cmd/demo-seed/main_test.go — 增加二次 seed 同 ID 更新内容和分类字段的回归断言。
+- knowledge/DATASET.md — 更新基础知识切片数量和切分说明。
+
+### 原因
+- 原 `lingshan_chunks.jsonl` 存在半句开头、跨景点混杂的问题；旧库中 `knowledge_category` 等列级筛选字段为空，导致后台按分类或景点筛选时看起来像知识库未加载完整。
+
+### 影响范围
+- 影响演示知识库导入、RAG 检索、后台知识库分类/景点筛选和本地 seed 更新行为；不改变前端筛选参数、后端查询接口路径和数据库表结构。
+
+## 2026-07-05 19:14 - 补全地图页灵山梵宫结构化介绍
+
+### 变更内容
+- web-vue/src/constants/scenicVisualization.ts — 为结构化景点增加 `aliases` 匹配，支持后端返回的“灵山梵宫”命中前端“梵宫”资料；按知识库中的灵山梵宫切片补充建筑参数、文化内涵、游玩亮点、开放/演出信息和到点讲解词。
+- static/vue-app — 重新构建 Vue 静态产物，包含地图页景点介绍补全后的输出。
+
+### 原因
+- 地图页从 `/api/v1/spots` 获取景点基础数据后，会用结构化资料补齐参数、文化、亮点和开放信息；“灵山梵宫”与“梵宫”名称未匹配，导致卡片展示“暂无参数/暂无说明/暂无亮点”。
+
+### 影响范围
+- 影响游客地图页、离线导览图、路线提醒和到点讲解中的灵山梵宫展示；不改变后端景点接口、数据库表结构和其它景点数据。
+
+## 2026-07-05 19:23 - 恢复数字人自带语音链路
+
+### 变更内容
+- web-vue/src/views/DigitalHumanView.vue — 文本发送优先通过 Open-LLM-VTuber WebSocket 的 `text-input` 触发数字人自带 LLM/TTS/口型链路；WebSocket 不可用时才回退到现有 Go `/ai/chat` 与流式 TTS。
+- scripts/start-local.ps1 — 本地启动脚本恢复启动 `127.0.0.1:12393` 的 Open-LLM-VTuber，并在 `-Restart` 时同时重启 `8080` 与 `12393`。
+- docs/digital-human-runbook.md、docs/digital-human-integration.md — 同步运行手册和集成架构说明，明确 Open-LLM-VTuber 作为主语音链路，Go TTS/浏览器朗读只作兜底。
+- static/vue-app — 重新构建 Vue 静态产物，包含数字人自带语音链路恢复后的输出。
+
+### 原因
+- 之前虽然页面会连接 `/vtuber-ws/client-ws`，但用户文本发送仍绕过 Open-LLM-VTuber，直接调用 Go 问答和 Go TTS，导致即使 `12393` 启动也没有正确调用数字人自带语音。
+
+### 影响范围
+- 影响数字人页文本问答播报、本地一键启动行为和数字人运行文档；不改变二维码讲解、地理围栏讲解、Go TTS 兜底接口、登录账号和 WebSocket 代理路由。
