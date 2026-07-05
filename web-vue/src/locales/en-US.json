@@ -224,6 +224,7 @@
     "scanFailed": "QR code not recognized. Please check if this is a valid scenic area QR code.",
     "scanIntroDefault": "Welcome to {name}! Let me introduce this special place to you.",
     "scanFollowUp": "You can also ask:",
+    "sourcesLabel": "Sources",
     "audio": {
       "initialNotice": "Tap \"Enable sound\" and I will read answers aloud with lip sync.",
       "playingNotice": "Voice is playing. Lip sync follows the audio.",
@@ -309,7 +310,9 @@
     "title": "Dashboard",
     "subtitle": "Real-time operations overview",
     "common": {
-      "none": "None"
+      "none": "None",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
     },
     "kpis": {
       "todayVisitors": "Visitors Served Today",
@@ -345,7 +348,16 @@
     },
     "labels": {
       "lastUpdated": "Last Updated",
-      "avatarPreview": "Digital Guide Config Preview"
+      "avatarPreview": "Digital Guide Config Preview",
+      "todayInteractions": "Today's Interactions",
+      "peakHour": "Peak Hour",
+      "peakInteractions": "Peak Interactions",
+      "guideName": "Guide Name",
+      "avatarModel": "Avatar Model",
+      "voiceType": "Voice Type",
+      "avatarSwitch": "Visitor Switch",
+      "trackedQuestions": "Tracked Questions",
+      "knowledgeCoverageHint": "Knowledge operations are summarized from today's frequent questions. Add candidate content in Knowledge Base as needed."
     },
     "columns": {
       "time": "Time",
@@ -363,7 +375,8 @@
       "fear": "Concerned"
     },
     "units": {
-      "times": "{count} times"
+      "times": "{count} times",
+      "minutes": "{count} min"
     },
     "tooltips": {
       "satisfaction": "Satisfaction",

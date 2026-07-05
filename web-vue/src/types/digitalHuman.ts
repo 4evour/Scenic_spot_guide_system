@@ -70,6 +70,17 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   text: string;
   time: string;
+  sources?: RAGSource[];
+}
+
+export interface RAGSource {
+  id: string;
+  title: string;
+  source: string;
+  knowledge_category?: string;
+  spot_id?: number;
+  spot_category?: string;
+  preview?: string;
 }
 
 export interface DigitalHumanAvatarOption {

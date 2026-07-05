@@ -224,6 +224,7 @@
     "scanFailed": "二维码无法识别，请确认是否为本景区的景点二维码",
     "scanIntroDefault": "欢迎来到{name}！让我为您详细介绍这里的特色。",
     "scanFollowUp": "您还可以继续提问：",
+    "sourcesLabel": "参考来源",
     "audio": {
       "initialNotice": "点击“启用声音”后，我会朗读回答并驱动口型。",
       "playingNotice": "正在播放语音，口型会跟随音频变化。",
@@ -309,7 +310,9 @@
     "title": "数据大屏",
     "subtitle": "实时运营数据概览",
     "common": {
-      "none": "暂无"
+      "none": "暂无",
+      "enabled": "已启用",
+      "disabled": "已关闭"
     },
     "kpis": {
       "todayVisitors": "今日服务人次",
@@ -345,7 +348,16 @@
     },
     "labels": {
       "lastUpdated": "最近更新",
-      "avatarPreview": "数字人配置预览"
+      "avatarPreview": "数字人配置预览",
+      "todayInteractions": "今日交互",
+      "peakHour": "高峰时段",
+      "peakInteractions": "高峰交互",
+      "guideName": "讲解员",
+      "avatarModel": "形象模型",
+      "voiceType": "语音类型",
+      "avatarSwitch": "游客切换",
+      "trackedQuestions": "追踪问题",
+      "knowledgeCoverageHint": "已基于今日高频问题展示知识运营概览，可在知识库管理中继续补充候选内容。"
     },
     "columns": {
       "time": "时间",
@@ -363,7 +375,8 @@
       "fear": "恐惧"
     },
     "units": {
-      "times": "{count} 次"
+      "times": "{count} 次",
+      "minutes": "{count} 分钟"
     },
     "tooltips": {
       "satisfaction": "满意度",

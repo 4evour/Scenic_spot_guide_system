@@ -9,7 +9,7 @@ import { AudioPlaybackController, type PlaybackCue } from '../services/audioPlay
 import { VtuberSocketClient } from '../services/vtuberSocket';
 import { streamTTS } from '../services/ttsApi';
 import { apiFetch } from '../services/api';
-import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression, DigitalHumanAvatarOption } from '../types/digitalHuman';
+import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression, DigitalHumanAvatarOption, RAGSource } from '../types/digitalHuman';
 import Live2DStage from '../components/Live2DStage.vue';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import { useSessionStore } from '../stores/session';
@@ -29,6 +29,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const DEFAULT_AVATAR_ID = 'mao_pro';
 const AUTO_GUIDE_KEY = 'sg_auto_geofence_enabled';
+const QR_INTRO_STORAGE_KEY = 'sg_qr_intro_payload';
 const autoGuideEnabled = ref(localStorage.getItem(AUTO_GUIDE_KEY) === 'true');
 const geofenceSpots = ref<SpotWithCoords[]>([]);
 const { seniorModeEnabled, ttsRate, toggleSeniorMode } = useSeniorMode();
@@ -259,7 +260,33 @@ const ALL_EMOTION_TOKENS = ['neutral', 'joy', 'sadness', 'surprise', 'anger', 'f
 type BackendChatResponse = {
   response?: string;
   trace_id?: string;
+  sources?: RAGSource[];
 };
+
+type QRIntroPayload = {
+  spot?: string;
+  intro?: string;
+};
+
+function readQRIntroPayload(): QRIntroPayload {
+  try {
+    const raw = sessionStorage.getItem(QR_INTRO_STORAGE_KEY);
+    if (raw) {
+      sessionStorage.removeItem(QR_INTRO_STORAGE_KEY);
+      const parsed = JSON.parse(raw) as QRIntroPayload;
+      return {
+        spot: typeof parsed.spot === 'string' ? parsed.spot.trim() : '',
+        intro: typeof parsed.intro === 'string' ? parsed.intro.trim() : '',
+      };
+    }
+  } catch {
+    sessionStorage.removeItem(QR_INTRO_STORAGE_KEY);
+  }
+  return {
+    spot: typeof route.query.qr_spot === 'string' ? route.query.qr_spot.trim() : '',
+    intro: typeof route.query.qr_intro === 'string' ? route.query.qr_intro.trim() : '',
+  };
+}
 
 type AvatarPreferenceResponse = {
   avatar_id?: string;
@@ -336,6 +363,12 @@ async function selectAvatar(id: string) {
 function stripEmotionTags(text: string) {
   const pattern = new RegExp(`\\[(${ALL_EMOTION_TOKENS.join('|')})\\]\\s*`, 'gi');
   return text.replace(pattern, '').trim() || text;
+}
+
+function formatRAGSource(source: RAGSource) {
+  const title = source.title || source.source || source.id;
+  const origin = source.source && source.source !== title ? ` · ${source.source}` : '';
+  return `${title}${origin}`;
 }
 
 function expressionFromText(text?: string): Live2DExpression | undefined {
@@ -471,7 +504,7 @@ function addMessage(role: ChatMessage['role'], text: string) {
   }
 }
 
-function showAssistantSpeech(text: string) {
+function showAssistantSpeech(text: string, sources: RAGSource[] = []) {
   const displayText = stripEmotionTags(text);
   state.subtitle = displayText;
   if (displayText === lastAssistantSpeechText) return;
@@ -484,6 +517,7 @@ function showAssistantSpeech(text: string) {
     role: 'assistant',
     text: displayText,
     time: nowTime(),
+    sources,
   });
   void persistMessage('assistant', displayText);
 }
@@ -662,8 +696,13 @@ function sendText() {
   currentInsight.value = null;
 
   blockIncomingPlayback = true;
-  waitingForFreshServerTurn = false;
   audio.resume();
+  waitingForFreshServerTurn = true;
+  if (socket?.sendText(text)) {
+    return;
+  }
+
+  waitingForFreshServerTurn = false;
   const turn = conversationTurn;
   void answerWithBackendText(text, turn);
 }
@@ -679,7 +718,7 @@ async function answerWithBackendText(text: string, turn: number) {
     });
     if (interruptedTurn === turn) return;
     const answer = data.response?.trim() || buildFallbackAnswer(text);
-    showAssistantSpeech(answer);
+    showAssistantSpeech(answer, data.sources || []);
     await playAnswerAudio(answer);
   } catch {
     if (interruptedTurn === turn) return;
@@ -1163,7 +1202,18 @@ onMounted(async () => {
   if (autoGuideEnabled.value) startWatch();
   window.addEventListener('resize', onWindowResize);
 
-  // QR 扫码后自动提问
+  // QR 扫码后直接播放接口返回的讲解词，避免再次触发 RAG 推理。
+  const qrPayload = readQRIntroPayload();
+  if (qrPayload.intro) {
+    if (qrPayload.spot) {
+      addMessage('system', t('dh.scanSuccess', { name: qrPayload.spot }));
+    }
+    showAssistantSpeech(qrPayload.intro);
+    await playAnswerAudio(qrPayload.intro);
+    return;
+  }
+
+  // QR 扫码追问仍保留自动提问能力。
   const autoAsk = route.query.auto_ask as string;
   if (autoAsk) {
     let autoAsked = false;
@@ -1394,6 +1444,17 @@ onUnmounted(() => {
               :streaming="typewriterStreaming && msg.id === state.messages[state.messages.length - 1]?.id"
             />
             <span v-else>{{ msg.text }}</span>
+          </div>
+          <div v-if="msg.role === 'assistant' && msg.sources?.length" class="msg-sources">
+            <span class="msg-sources-label">{{ $t('dh.sourcesLabel') }}</span>
+            <span
+              v-for="source in msg.sources"
+              :key="source.id || source.title"
+              class="msg-source"
+              :title="source.preview || formatRAGSource(source)"
+            >
+              {{ formatRAGSource(source) }}
+            </span>
           </div>
           <div class="msg-time">{{ msg.time }}</div>
         </article>
@@ -1934,6 +1995,26 @@ function highlightMatch(text: string, query: string): string {
   font-size: 12px;
   text-align: center;
   border-radius: 8px;
+}
+.msg-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--sg-text-faint, rgba(255, 255, 255, 0.34));
+}
+.msg-source {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border: 1px solid rgba(99, 226, 183, 0.18);
+  border-radius: 8px;
+  color: rgba(99, 226, 183, 0.78);
+  background: rgba(99, 226, 183, 0.06);
 }
 .msg-time { font-size: 10px; color: var(--sg-text-ghost, rgba(255, 255, 255, 0.2)); margin-top: 4px; }
 

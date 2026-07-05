@@ -8,6 +8,7 @@ import { apiFetch } from '../services/api';
 const { t } = useI18n();
 const router = useRouter();
 const { seniorModeEnabled, toggleSeniorMode } = useSeniorMode();
+const QR_INTRO_STORAGE_KEY = 'sg_qr_intro_payload';
 
 interface SpotInfo {
   id: number;
@@ -65,9 +66,12 @@ onMounted(async () => {
 
 function startTour() {
   if (!spot.value) return;
-  // 跳转到数字人页面，带上景点名作为自动提问
-  const query = t('qr.autoAsk', { name: spot.value.name });
-  router.push({ name: 'digital-human', query: { qr: spot.value.qr_intro_text || spot.value.name, auto_ask: query } });
+  const introText = intro.value || spot.value.qr_intro_text || spot.value.description || spot.value.name;
+  sessionStorage.setItem(QR_INTRO_STORAGE_KEY, JSON.stringify({
+    spot: spot.value.name,
+    intro: introText,
+  }));
+  router.push({ name: 'digital-human', query: { qr_spot: spot.value.name, qr_direct: '1' } });
 }
 
 function chatNow() {
