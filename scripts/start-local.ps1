@@ -7,7 +7,6 @@ $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $WorkspaceRoot = Split-Path $ProjectRoot -Parent
-$VtuberRoot = Join-Path $WorkspaceRoot "Open-LLM-VTuber"
 $LogRoot = Join-Path $WorkspaceRoot "tmp\scenic-guide-start"
 $AdminPassword = "ScenicDemo123456"
 
@@ -65,22 +64,6 @@ function Wait-HttpOk {
         } catch {
             Start-Sleep -Milliseconds 800
         }
-    }
-    return $false
-}
-
-function Wait-TcpPort {
-    param(
-        [int]$Port,
-        [int]$TimeoutSeconds = 45
-    )
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    while ((Get-Date) -lt $deadline) {
-        $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($conn) {
-            return $true
-        }
-        Start-Sleep -Milliseconds 800
     }
     return $false
 }
@@ -173,46 +156,6 @@ function Set-ScenicGuideEnv {
     }
 }
 
-function Start-OpenLLMVTuber {
-    if (!(Test-Path $VtuberRoot)) {
-        Write-Warning "Open-LLM-VTuber directory not found: $VtuberRoot"
-        return
-    }
-
-    if (Get-ListenerProcessId -Port 12393) {
-        Write-Host "[OK] Open-LLM-VTuber is already running on port 12393"
-        return
-    }
-
-    $venvPython = Join-Path $VtuberRoot ".venv\Scripts\python.exe"
-    $uv = Get-Command uv -ErrorAction SilentlyContinue
-
-    if (Test-Path $venvPython) {
-        $file = $venvPython
-        $args = @("run_server.py")
-    } elseif ($uv) {
-        $file = $uv.Source
-        $args = @("run", "run_server.py")
-    } else {
-        $file = "python"
-        $args = @("run_server.py")
-    }
-
-    Write-Host "[START] Open-LLM-VTuber: $file $($args -join ' ')"
-    Start-Process -FilePath $file `
-        -ArgumentList $args `
-        -WorkingDirectory $VtuberRoot `
-        -WindowStyle Hidden `
-        -RedirectStandardOutput (Join-Path $LogRoot "open-llm-vtuber.out.log") `
-        -RedirectStandardError (Join-Path $LogRoot "open-llm-vtuber.err.log") | Out-Null
-
-    if (Wait-TcpPort -Port 12393 -TimeoutSeconds 60) {
-        Write-Host "[OK] Open-LLM-VTuber started: http://127.0.0.1:12393/"
-    } else {
-        Write-Warning "Open-LLM-VTuber did not listen on 12393 within 60 seconds. Go service will continue; text chat is not blocked. Logs: $LogRoot"
-    }
-}
-
 function Initialize-ScenicGuide {
     Push-Location $ProjectRoot
     try {
@@ -252,25 +195,56 @@ function Start-ScenicGuide {
     }
 }
 
-if ($Restart) {
-    Write-Host "[RESTART] Stopping existing listeners on ports 8080 and 12393"
-    Stop-PortListener -Port 8080
-    Stop-PortListener -Port 12393
+function Start-OpenLLMVTuber {
+    $vtuberRoot = Join-Path $WorkspaceRoot "Open-LLM-VTuber"
+    if (!(Test-Path $vtuberRoot)) {
+        Write-Warning "Open-LLM-VTuber directory not found: $vtuberRoot"
+        return
+    }
+
+    if (Get-ListenerProcessId -Port 12393) {
+        Write-Host "[OK] Open-LLM-VTuber is already running on port 12393"
+        return
+    }
+
+    $venvPython = Join-Path $vtuberRoot ".venv\Scripts\python.exe"
+    $pythonPath = if (Test-Path $venvPython) { $venvPython } else { "python" }
+
+    Write-Host "[START] Open-LLM-VTuber: python run_server.py"
+    Start-Process -FilePath $pythonPath `
+        -ArgumentList @("run_server.py") `
+        -WorkingDirectory $vtuberRoot `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $LogRoot "open-llm-vtuber.out.log") `
+        -RedirectStandardError (Join-Path $LogRoot "open-llm-vtuber.err.log") | Out-Null
+
+    if (Wait-HttpOk -Url "http://127.0.0.1:12393/" -TimeoutSeconds 90) {
+        Write-Host "[OK] Open-LLM-VTuber started: http://127.0.0.1:12393/"
+    } else {
+        Write-Warning "Open-LLM-VTuber health check did not pass within 90 seconds. Logs: $LogRoot"
+    }
 }
 
-Start-OpenLLMVTuber
+if ($Restart) {
+    Write-Host "[RESTART] Stopping existing listener on port 8080"
+    Stop-PortListener -Port 8080
+    Write-Host "[RESTART] Stopping existing listener on port 12393"
+    Stop-PortListener -Port 12393
+}
 
 if (-not (Get-ListenerProcessId -Port 8080)) {
     Initialize-ScenicGuide
 }
 
 Start-ScenicGuide
+Start-OpenLLMVTuber
 
 Write-Host ""
 Write-Host "URLs:"
+Write-Host "  Login: http://127.0.0.1:8080/digital-human#/login"
 Write-Host "  Digital human: http://127.0.0.1:8080/digital-human#/digital-human"
-Write-Host "  Admin knowledge: http://127.0.0.1:8080/digital-human#/admin/knowledge"
 Write-Host "  Open-LLM-VTuber: http://127.0.0.1:12393/"
+Write-Host "  Admin knowledge: http://127.0.0.1:8080/digital-human#/admin/knowledge"
 Write-Host "  Health: http://127.0.0.1:8080/health"
 Write-Host ""
 Write-Host "Login accounts:"
@@ -280,5 +254,5 @@ Write-Host ""
 Write-Host "Log directory: $LogRoot"
 
 if (-not $NoBrowser) {
-    Start-Process "http://127.0.0.1:8080/digital-human#/digital-human"
+    Start-Process "http://127.0.0.1:8080/digital-human#/login"
 }

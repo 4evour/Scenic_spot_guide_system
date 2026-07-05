@@ -17,17 +17,17 @@ flowchart LR
     G --> R["RAG问答服务"]
     G --> P["路线推荐服务"]
     G --> F["反馈分析服务"]
-    V --> T["Go Edge TTS / 浏览器朗读兜底"]
+    V -. "Open-LLM-VTuber 不可用时" .-> T["Go Edge TTS / 浏览器朗读兜底"]
 ```
 
 ### 2.2 模块职责
 
 | 模块 | 职责 | 技术栈 |
 |------|------|--------|
-| Vue 数字人页 | Live2D 展示、文本问答、语音播放、打断、会话历史和游客形象切换 | Vue 3 / PixiJS / Live2D |
+| Vue 数字人页 | Live2D 展示、文本输入转发、语音播放、打断、会话历史和游客形象切换 | Vue 3 / PixiJS / Live2D |
 | Go 后端 | Cookie 鉴权、业务逻辑、RAG 问答、路线推荐、会话消息保存和 WebSocket 代理 | Go/Gin |
 | Open-LLM-VTuber | 外部数字人语音和 Live2D 协议服务，默认监听 `127.0.0.1:12393` | Python |
-| TTS | Go 后端流式 TTS，失败时前端降级到浏览器朗读 | Edge TTS |
+| TTS | Open-LLM-VTuber 负责主数字人语音；Go 后端流式 TTS 和浏览器朗读仅作兜底 | Open-LLM-VTuber / Edge TTS |
 
 ## 3. API 接口规范
 

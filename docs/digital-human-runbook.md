@@ -9,13 +9,14 @@ cd "D:\go web 01\scenic-guide"
 .\scripts\start-local.ps1 -Restart
 ```
 
-脚本会启动 Open-LLM-VTuber、初始化本地 SQLite 演示数据、启动 Go 服务，并把日志写入 `..\tmp\scenic-guide-start`。
+脚本会初始化本地 SQLite 演示数据，并启动 Go 服务与 `127.0.0.1:12393` 的 Open-LLM-VTuber 服务。日志写入 `..\tmp\scenic-guide-start`。
 
 ### 1.2 验证服务
 
 ```bash
 curl http://localhost:8080/health
 curl http://localhost:8080/api/v1/dh/health
+curl http://localhost:12393/
 ```
 
 **预期响应：**
@@ -31,10 +32,8 @@ curl http://localhost:8080/api/v1/dh/health
 ### 1.3 打开主入口
 
 ```text
-http://127.0.0.1:8080/digital-human#/digital-human
+http://127.0.0.1:8080/digital-human#/login
 ```
-
-Open-LLM-VTuber 自带页面 `http://127.0.0.1:12393/` 只用于确认外部服务是否启动，不是本项目的主交付入口。
 
 ## 2. API 测试
 
@@ -157,7 +156,7 @@ cd Open-LLM-VTuber
 
 ### 3.2 配置环境变量
 
-本项目的 Vue 页面默认连接同源 `/vtuber-ws/client-ws`，Go 后端会代理到本机 `127.0.0.1:12393`。Open-LLM-VTuber 调用 Go 的 OpenAI 兼容接口时，需要指向：
+当前本地启动流程会启动 `127.0.0.1:12393`。Open-LLM-VTuber 的 `conf.yaml` 需要让它调用 Go 的 OpenAI 兼容接口：
 
 ```env
 LLM_API_URL=http://127.0.0.1:8080/v1/chat/completions
@@ -166,7 +165,7 @@ LLM_API_KEY=not-needed
 
 ### 3.3 启动数字人前端
 
-参考 Open-LLM-VTuber 官方文档启动外部服务即可。本项目主交付页面仍使用 Go 托管的 Vue 数字人页。
+本项目主交付页面使用 Go 托管的 Vue 登录页和数字人页。Open-LLM-VTuber 自带页面 `http://127.0.0.1:12393/` 仅用于确认外部数字人服务是否启动。
 
 ## 4. 常见问题
 
