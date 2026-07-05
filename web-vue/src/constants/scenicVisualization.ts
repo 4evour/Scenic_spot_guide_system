@@ -20,6 +20,7 @@ export type StructuredScenicSpot = {
   showTimes: string[]
   routeTags: Array<'history' | 'nature' | 'family'>
   thumbnail: string
+  aliases?: string[]
   geofenceEnabled: boolean
   geofenceRadiusM: number
   geofenceIntroText: string
@@ -134,25 +135,26 @@ export const SCENIC_SPOTS: StructuredScenicSpot[] = [
   {
     id: 'LS-003',
     name: '梵宫',
+    aliases: ['灵山梵宫'],
     area: '灵山胜境',
     category: '地标建筑',
     visualType: 'landmark',
-    description: '集建筑艺术、文化展陈与圣坛演出于一体的室内核心建筑。',
+    description: '灵山胜境内建筑规模最大、艺术价值最高的佛教艺术殿堂，兼具文化展陈、佛事活动和圣坛演艺体验。',
     lng: 120.423,
     lat: 31.5674,
     rating: 4.8,
     price: 0,
     imageUrl: '',
     thumbnail: '宫',
-    parameters: ['大型文化建筑', '圣坛演出空间', '室内参观动线'],
-    culture: '以佛教艺术、雕塑、穹顶与舞台演出呈现东方文化审美。',
-    highlights: ['适合避雨避暑', '亲子互动演出', '历史文化讲解密度高'],
-    openInfo: '《灵山吉祥颂》演出建议提前30分钟排队入场。',
-    showTimes: ['灵山吉祥颂演出前30分钟排队'],
+    parameters: ['建筑面积7.2万㎡', '最高处66.5m', '五座莲花圣塔', '圣坛可容纳2000人'],
+    culture: '以“莲花藏世界”为设计核心，五座莲花圣塔象征五方五佛，曼陀罗形态圣坛寓意宇宙圆满，是佛教文化与传统艺术融合的代表建筑。',
+    highlights: ['星空穹顶与东阳木雕飞天', '琉璃巨制《华藏世界》', '《灵山吉祥颂》沉浸演出', '香水海畔莲花圣塔外观'],
+    openInfo: '9:00-17:00开放，冬季闭馆约16:30；《灵山吉祥颂》常见场次为10:35/11:30/14:00/16:00，节假日以现场公告为准。',
+    showTimes: ['10:35《灵山吉祥颂》', '11:30《灵山吉祥颂》', '14:00《灵山吉祥颂》', '16:00《灵山吉祥颂》'],
     routeTags: ['history', 'family'],
     geofenceEnabled: true,
     geofenceRadiusM: 110,
-    geofenceIntroText: '梵宫融合建筑艺术和圣坛演出，观看《灵山吉祥颂》建议提前排队。',
+    geofenceIntroText: '灵山梵宫建筑面积约7.2万平方米，汇集东阳木雕、琉璃、油画等传统工艺，观看《灵山吉祥颂》建议提前排队。',
     geofenceCooldownMinutes: 180,
     signalBlindSpot: true,
     translations: {
@@ -162,12 +164,12 @@ export const SCENIC_SPOTS: StructuredScenicSpot[] = [
         category: 'Landmark',
         description: 'An indoor landmark combining architecture, cultural exhibitions, and the Sacred Altar performance.',
         thumbnail: 'Pal',
-        parameters: ['Large cultural building', 'Sacred Altar performance space', 'Indoor visit route'],
-        culture: 'Buddhist art, sculpture, domes, and stage performance present an Eastern cultural aesthetic.',
-        highlights: ['Good for rain or heat', 'Family-friendly performance', 'Dense historical and cultural narration'],
-        openInfo: 'Arrive about 30 minutes early for the Auspicious Ode of Lingshan performance.',
-        showTimes: ['Queue 30 minutes before Auspicious Ode of Lingshan'],
-        geofenceIntroText: 'Brahma Palace combines architectural art and Sacred Altar performance. Queue early for Auspicious Ode of Lingshan.',
+        parameters: ['72,000 sqm', '66.5m highest point', 'Five lotus towers', 'Sacred Altar for 2,000 viewers'],
+        culture: 'Designed around the idea of a lotus-wrapped Buddhist world, its five lotus towers echo the Five Direction Buddhas and its mandala-like altar symbolizes completeness.',
+        highlights: ['Starry dome and Dongyang woodcarving apsaras', 'Liuli artwork Huazang World', 'Auspicious Ode of Lingshan performance', 'Lotus towers by Xiangshui Sea'],
+        openInfo: 'Usually open 9:00-17:00, around 16:30 in winter. Auspicious Ode is commonly shown at 10:35, 11:30, 14:00, and 16:00; holidays follow on-site notices.',
+        showTimes: ['10:35 Auspicious Ode', '11:30 Auspicious Ode', '14:00 Auspicious Ode', '16:00 Auspicious Ode'],
+        geofenceIntroText: 'Brahma Palace covers about 72,000 sqm and features Dongyang woodcarving, liuli, paintings, and other traditional crafts. Queue early for Auspicious Ode of Lingshan.',
       },
     },
   },
@@ -514,8 +516,10 @@ export function findStructuredSpot(idOrName: string, locale = 'zh-CN') {
   const normalized = idOrName.toLowerCase()
   const spot = SCENIC_SPOTS.find(item => {
     const translatedName = item.translations?.['en-US']?.name?.toLowerCase()
+    const aliases = item.aliases?.map(alias => alias.toLowerCase()) || []
     return item.id.toLowerCase() === normalized
       || item.name.toLowerCase() === normalized
+      || aliases.includes(normalized)
       || translatedName === normalized
   })
   return spot ? localizeItem(spot, locale) : undefined

@@ -66,6 +66,32 @@ interface KnowledgeStats {
   total_count: number;
 }
 
+interface ScenicSpot {
+  id: number;
+  name: string;
+  category: string;
+  rating: number;
+  sort_order?: number;
+}
+
+interface TourRoute {
+  id: number;
+  name: string;
+  description: string;
+  spots: string;
+  duration: number;
+  difficulty: string;
+  rating: number;
+}
+
+interface DigitalHumanConfig {
+  name: string;
+  default_avatar_id: string;
+  allow_avatar_switch: boolean;
+  voice_type: string;
+  voice_tone: string;
+}
+
 /* ---- State ---- */
 
 const loading = ref(true);
@@ -79,6 +105,10 @@ const recentConversations = ref<Conversation[]>([]);
 const topQuestions = ref<TopQuestion[]>([]);
 const satisfactionTrend = ref<SatisfactionTrendItem[]>([]);
 const knowledgeStats = ref<KnowledgeStats>({ total_count: 0 });
+const hourlyTrend = ref<Array<{ hour: string; count: number }>>([]);
+const scenicSpots = ref<ScenicSpot[]>([]);
+const tourRoutes = ref<TourRoute[]>([]);
+const digitalHumanConfig = ref<DigitalHumanConfig | null>(null);
 
 const trendChartRef = ref<HTMLDivElement>();
 const pieChartRef = ref<HTMLDivElement>();
@@ -132,7 +162,7 @@ async function loadData() {
   loading.value = true;
   error.value = null;
   try {
-    const [ov, trend, cats, recent, tq, st, ks] = await Promise.all([
+    const [ov, trend, cats, recent, tq, st, ks, spots, routes, avatarConfig] = await Promise.all([
       apiFetch<Overview>('/admin/dashboard/overview'),
       apiFetch<Array<{ hour: string; count: number }>>('/admin/dashboard/hourly-trend'),
       apiFetch<CategoryItem[]>('/admin/dashboard/category-distribution'),
@@ -140,16 +170,23 @@ async function loadData() {
       apiFetch<TopQuestion[]>('/admin/dashboard/top-questions?limit=10').catch(() => null as TopQuestion[] | null),
       apiFetch<SatisfactionTrendItem[]>('/admin/dashboard/satisfaction-trend').catch(() => null as SatisfactionTrendItem[] | null),
       apiFetch<KnowledgeStats>('/admin/knowledge/stats').catch(() => null as KnowledgeStats | null),
+      apiFetch<ScenicSpot[]>('/spots').catch(() => null as ScenicSpot[] | null),
+      apiFetch<TourRoute[]>('/routes').catch(() => null as TourRoute[] | null),
+      apiFetch<DigitalHumanConfig>('/admin/digital-human/config').catch(() => null as DigitalHumanConfig | null),
     ]);
 
     if (ov) overview.value = ov;
+    hourlyTrend.value = trend || [];
     recentConversations.value = recent || [];
     if (tq) topQuestions.value = tq;
     if (st) satisfactionTrend.value = st;
     if (ks) knowledgeStats.value = ks;
+    if (spots) scenicSpots.value = spots;
+    if (routes) tourRoutes.value = routes;
+    if (avatarConfig) digitalHumanConfig.value = avatarConfig;
 
     await nextTick();
-    renderTrendChart(trend || []);
+    renderTrendChart(hourlyTrend.value);
     renderPieChart(cats || []);
     if (satisfactionTrend.value.length > 0) {
       renderSatisfactionChart(satisfactionTrend.value);
@@ -273,6 +310,28 @@ function handleResize() {
 
 const loadingSkeletonCount = computed(() => [1, 2, 3, 4]);
 const displayTopQuestions = computed(() => topQuestions.value.slice(0, 5));
+const displayTopSpots = computed(() => (
+  [...scenicSpots.value]
+    .sort((a, b) => (b.rating - a.rating) || ((a.sort_order ?? 0) - (b.sort_order ?? 0)) || a.id - b.id)
+    .slice(0, 5)
+));
+const displayRoutes = computed(() => tourRoutes.value.slice(0, 3));
+const peakHour = computed(() => {
+  const activeHours = hourlyTrend.value.filter(item => item.count > 0);
+  if (activeHours.length === 0) return null;
+  return activeHours.reduce((max, item) => (item.count > max.count ? item : max), activeHours[0]);
+});
+const todayInteractionCount = computed(() => hourlyTrend.value.reduce((sum, item) => sum + item.count, 0));
+const terminalSummary = computed(() => {
+  const config = digitalHumanConfig.value;
+  if (!config) return [];
+  return [
+    { label: t('dashboard.labels.guideName'), value: config.name || '-' },
+    { label: t('dashboard.labels.avatarModel'), value: config.default_avatar_id || '-' },
+    { label: t('dashboard.labels.voiceType'), value: config.voice_type || '-' },
+    { label: t('dashboard.labels.avatarSwitch'), value: config.allow_avatar_switch ? t('dashboard.common.enabled') : t('dashboard.common.disabled') },
+  ];
+});
 
 onMounted(() => { loadData(); window.addEventListener('resize', handleResize); });
 onUnmounted(() => {
@@ -376,7 +435,16 @@ onUnmounted(() => {
       <section class="ops-grid">
         <NCard :bordered="false" class="chart-card ops-card">
           <template #header>{{ t('dashboard.sections.hotSpots') }}</template>
-          <div class="ops-empty">
+          <div v-if="displayTopSpots.length > 0" class="ops-list">
+            <div v-for="spot in displayTopSpots" :key="spot.id" class="ops-list-row">
+              <div>
+                <strong>{{ spot.name }}</strong>
+                <span>{{ spot.category || t('dashboard.common.none') }}</span>
+              </div>
+              <NTag size="small" :bordered="false" type="success">{{ spot.rating.toFixed(1) }}</NTag>
+            </div>
+          </div>
+          <div v-else class="ops-empty">
             <NEmpty :description="t('dashboard.empty.hotSpots')" />
           </div>
         </NCard>
@@ -400,8 +468,19 @@ onUnmounted(() => {
 
         <NCard :bordered="false" class="chart-card ops-card">
           <template #header>{{ t('dashboard.sections.crowdHeat') }}</template>
-          <div class="ops-empty">
-            <NEmpty :description="t('dashboard.empty.crowdHeat')" />
+          <div class="ops-metric-grid">
+            <div>
+              <strong>{{ todayInteractionCount }}</strong>
+              <span>{{ t('dashboard.labels.todayInteractions') }}</span>
+            </div>
+            <div>
+              <strong>{{ peakHour ? peakHour.hour : t('dashboard.common.none') }}</strong>
+              <span>{{ t('dashboard.labels.peakHour') }}</span>
+            </div>
+            <div>
+              <strong>{{ peakHour ? peakHour.count : 0 }}</strong>
+              <span>{{ t('dashboard.labels.peakInteractions') }}</span>
+            </div>
           </div>
         </NCard>
       </section>
@@ -409,14 +488,29 @@ onUnmounted(() => {
       <section class="ops-grid ops-grid-middle">
         <NCard :bordered="false" class="chart-card ops-card">
           <template #header>{{ t('dashboard.sections.activityStatus') }}</template>
-          <div class="ops-empty">
+          <div v-if="displayRoutes.length > 0" class="ops-list">
+            <div v-for="route in displayRoutes" :key="route.id" class="ops-list-row">
+              <div>
+                <strong>{{ route.name }}</strong>
+                <span>{{ route.spots }}</span>
+              </div>
+              <NTag size="small" :bordered="false">{{ t('dashboard.units.minutes', { count: route.duration }) }}</NTag>
+            </div>
+          </div>
+          <div v-else class="ops-empty">
             <NEmpty :description="t('dashboard.empty.activityStatus')" />
           </div>
         </NCard>
 
         <NCard :bordered="false" class="chart-card ops-card">
           <template #header>{{ t('dashboard.sections.terminalStatus') }}</template>
-          <div class="ops-empty">
+          <div v-if="terminalSummary.length > 0" class="ops-list">
+            <div v-for="item in terminalSummary" :key="item.label" class="ops-list-row compact-row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+          <div v-else class="ops-empty">
             <NEmpty :description="t('dashboard.empty.terminalStatus')" />
           </div>
         </NCard>
@@ -429,16 +523,16 @@ onUnmounted(() => {
               <span>{{ t('dashboard.kpis.knowledgeItems') }}</span>
             </div>
             <div>
-              <strong>{{ t('dashboard.common.none') }}</strong>
-              <span>{{ t('dashboard.labels.lastUpdated') }}</span>
+              <strong>{{ topQuestions.length }}</strong>
+              <span>{{ t('dashboard.labels.trackedQuestions') }}</span>
             </div>
           </div>
-          <div class="ops-empty ops-empty-compact">
-            <NEmpty :description="t('dashboard.empty.knowledgeGaps')" />
+          <div class="ops-note">
+            {{ topQuestions.length > 0 ? t('dashboard.labels.knowledgeCoverageHint') : t('dashboard.empty.knowledgeGaps') }}
           </div>
           <div class="avatar-preview">
             <strong>{{ t('dashboard.labels.avatarPreview') }}</strong>
-            <span>{{ t('dashboard.empty.avatarSummary') }}</span>
+            <span>{{ digitalHumanConfig?.name || t('dashboard.common.none') }} / {{ digitalHumanConfig?.voice_type || t('dashboard.common.none') }}</span>
           </div>
         </NCard>
       </section>
@@ -634,6 +728,75 @@ onUnmounted(() => {
 }
 .ops-empty-compact {
   min-height: 88px;
+}
+.ops-list {
+  display: grid;
+  gap: 10px;
+  min-height: 168px;
+  align-content: start;
+}
+.ops-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(99,226,183,.1);
+  border-radius: 8px;
+  background: rgba(99,226,183,.045);
+}
+.ops-list-row div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.ops-list-row strong,
+.compact-row strong {
+  color: var(--sg-text-body);
+  font-size: 13px;
+}
+.ops-list-row span,
+.compact-row span {
+  color: var(--sg-text-hint);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compact-row {
+  min-height: 42px;
+}
+.ops-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 168px;
+  align-content: center;
+}
+.ops-metric-grid div {
+  display: grid;
+  gap: 6px;
+  padding: 16px 12px;
+  border: 1px solid rgba(82,240,238,.1);
+  border-radius: 8px;
+  background: rgba(82,240,238,.045);
+}
+.ops-metric-grid strong {
+  color: var(--sg-cyan);
+  font-size: 22px;
+}
+.ops-metric-grid span {
+  color: var(--sg-text-hint);
+  font-size: 11px;
+}
+.ops-note {
+  padding: 12px;
+  border: 1px solid rgba(244,199,101,.1);
+  border-radius: 8px;
+  background: rgba(244,199,101,.045);
+  color: var(--sg-text-hint);
+  font-size: 12px;
+  line-height: 1.6;
 }
 .avatar-preview {
   display: grid;
