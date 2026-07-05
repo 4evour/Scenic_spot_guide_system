@@ -49,6 +49,9 @@ func TestSeedKnowledgeFilesImportsAllConfiguredFilesIdempotently(t *testing.T) {
 	if err := seedKnowledgeFiles(rag, []string{legacyFile, officialFile}); err != nil {
 		t.Fatalf("seedKnowledgeFiles returned error: %v", err)
 	}
+	if err := os.WriteFile(legacyFile, []byte(`{"id":"legacy-001","title":"旧知识更新","source":"legacy","content":"旧知识内容更新。","knowledge_category":"讲解词","metadata":{"category":"讲解词"}}`+"\n"), 0644); err != nil {
+		t.Fatalf("rewrite legacy file: %v", err)
+	}
 	if err := seedKnowledgeFiles(rag, []string{legacyFile, officialFile}); err != nil {
 		t.Fatalf("second seedKnowledgeFiles returned error: %v", err)
 	}
@@ -60,5 +63,12 @@ func TestSeedKnowledgeFilesImportsAllConfiguredFilesIdempotently(t *testing.T) {
 	}
 	if count != 2 {
 		t.Fatalf("knowledge count = %d, want 2", count)
+	}
+	updated, err := repo.GetByID("legacy-001")
+	if err != nil {
+		t.Fatalf("get updated knowledge: %v", err)
+	}
+	if updated.KnowledgeCategory != "讲解词" || updated.Content != "旧知识内容更新。" {
+		t.Fatalf("knowledge was not upserted: category=%q content=%q", updated.KnowledgeCategory, updated.Content)
 	}
 }
