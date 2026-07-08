@@ -82,7 +82,7 @@ function handleMenuUpdate(key: string) {
     :width="220"
     :collapsed="appStore.siderCollapsed"
     show-trigger
-    :style="{ background: 'var(--sg-surface-strong, rgba(5, 17, 20, 0.94))' }"
+    :style="{ background: 'rgba(5, 17, 20, 0.9)' }"
     @collapse="appStore.siderCollapsed = true"
     @expand="appStore.siderCollapsed = false"
   >
@@ -113,14 +113,38 @@ function handleMenuUpdate(key: string) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
-  height: 52px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 16px 14px;
+  height: 64px;
+  border-bottom: 1px solid rgba(82, 240, 238, 0.1);
+  background:
+    linear-gradient(135deg, rgba(82, 240, 238, 0.08), transparent 42%),
+    rgba(5, 17, 20, 0.92);
 }
 .logo-text {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--sg-text-heading, rgba(255, 255, 255, 0.92));
   white-space: nowrap;
+}
+
+:deep(.n-layout-sider) {
+  border-right: 1px solid rgba(82, 240, 238, 0.13) !important;
+  box-shadow: 14px 0 40px rgba(0, 0, 0, 0.22);
+}
+
+:deep(.n-menu) {
+  padding: 10px;
+}
+
+:deep(.n-menu .n-menu-item-content) {
+  border-radius: 10px;
+}
+
+:deep(.n-menu .n-menu-item-content::before) {
+  border-radius: 10px;
+}
+
+:deep(.n-menu .n-menu-item-content.n-menu-item-content--selected::before) {
+  background: rgba(99, 226, 183, 0.12);
 }
 </style>

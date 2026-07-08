@@ -589,8 +589,8 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard {
-  padding: 28px 32px;
-  background: var(--sg-bg-ink);
+  padding: 10px 14px 28px;
+  background: transparent;
   min-height: 100%;
 }
 
@@ -599,17 +599,25 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
+  padding: 22px 24px;
+  border: 1px solid rgba(82, 240, 238, 0.14);
+  border-radius: 16px;
+  background:
+    linear-gradient(115deg, rgba(82, 240, 238, 0.08), transparent 38%),
+    linear-gradient(300deg, rgba(244, 199, 101, 0.08), transparent 44%),
+    rgba(5, 17, 20, 0.76);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.2);
 }
 .page-header h1 {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--sg-text-heading);
   margin-bottom: 4px;
 }
 .page-header p {
   font-size: 13px;
-  color: var(--sg-text-hint);
+  color: var(--sg-text-muted);
 }
 
 /* KPI 网格 */
@@ -623,10 +631,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: var(--sg-surface-card) !important;
-  border: 1px solid var(--sg-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    rgba(5, 17, 20, 0.72) !important;
+  border: 1px solid rgba(82, 240, 238, 0.13) !important;
   border-radius: var(--sg-radius-xl) !important;
   transition: all 0.2s;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
 }
 .kpi-card:hover {
   background: var(--sg-surface-hover) !important;
@@ -649,8 +660,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--sg-radius-lg);
-  background: var(--sg-surface-card);
+  border: 1px solid rgba(82, 240, 238, 0.12);
+  border-radius: var(--sg-radius-md);
+  background: rgba(82, 240, 238, 0.06);
   flex-shrink: 0;
 }
 .kpi-body {
@@ -824,11 +836,42 @@ onUnmounted(() => {
 .chart-wide { grid-column: 1; }
 
 .chart-card {
-  background: var(--sg-surface-card) !important;
-  border: 1px solid var(--sg-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.014)),
+    rgba(5, 17, 20, 0.72) !important;
+  border: 1px solid rgba(82, 240, 238, 0.13) !important;
   border-radius: var(--sg-radius-xl) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
 }
 .chart-container { height: 300px; }
+
+.ops-list-row,
+.question-cloud button,
+.ops-metric-grid div,
+.knowledge-preview,
+.ops-note,
+.avatar-preview {
+  border-color: rgba(82, 240, 238, 0.12);
+  background: rgba(82, 240, 238, 0.04);
+}
+
+.ops-list-row strong,
+.compact-row strong {
+  color: var(--sg-text-heading);
+}
+
+.question-cloud button {
+  border-radius: 999px;
+}
+
+:deep(.n-card-header) {
+  color: var(--sg-text-heading);
+}
+
+:deep(.n-data-table) {
+  --n-merged-th-color: rgba(82, 240, 238, 0.06);
+  --n-merged-td-color: transparent;
+}
 
 @media (max-width: 1200px) {
   .chart-grid { grid-template-columns: 1fr; }

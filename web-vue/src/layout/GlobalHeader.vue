@@ -59,10 +59,14 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  margin: 14px 18px 0;
+  padding: 0 18px;
+  height: 54px;
+  background: rgba(5, 17, 20, 0.78);
+  border: 1px solid rgba(82, 240, 238, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
   flex-shrink: 0;
 }
 .header-actions {
@@ -71,15 +75,20 @@ async function handleLogout() {
   gap: 12px;
 }
 .header-user {
+  padding: 5px 10px;
+  border: 1px solid rgba(82, 240, 238, 0.12);
+  border-radius: 999px;
   font-size: 12px;
-  color: var(--sg-text-faint, rgba(255, 255, 255, 0.3));
+  color: var(--sg-text-soft, rgba(255, 255, 255, 0.3));
+  background: rgba(82, 240, 238, 0.045);
 }
 .header-logout {
-  padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.5);
+  min-height: 32px;
+  padding: 0 12px;
+  background: rgba(232, 128, 128, 0.08);
+  border: 1px solid rgba(232, 128, 128, 0.18);
+  border-radius: 999px;
+  color: #e88080;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
@@ -90,10 +99,11 @@ async function handleLogout() {
   border-color: rgba(232, 128, 128, 0.2);
 }
 .lang-switch {
-  padding: 4px 12px;
-  background: rgba(99, 226, 183, 0.06);
-  border: 1px solid rgba(99, 226, 183, 0.2);
-  border-radius: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  background: rgba(99, 226, 183, 0.08);
+  border: 1px solid rgba(99, 226, 183, 0.22);
+  border-radius: 999px;
   color: var(--sg-jade-bright, #63e2b7);
   font-size: 12px;
   cursor: pointer;
@@ -101,5 +111,13 @@ async function handleLogout() {
 }
 .lang-switch:hover {
   background: rgba(99, 226, 183, 0.15);
+}
+
+:deep(.n-breadcrumb .n-breadcrumb-item__link) {
+  color: var(--sg-text-muted);
+}
+
+:deep(.n-breadcrumb .n-breadcrumb-item:last-child .n-breadcrumb-item__link) {
+  color: var(--sg-text-heading);
 }
 </style>

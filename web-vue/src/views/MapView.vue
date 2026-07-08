@@ -1224,4 +1224,235 @@ onUnmounted(() => {
   .map-header { align-items: flex-start; gap: 10px; flex-direction: column; }
   .ar-guide-panel { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
+
+/* 游客端自然景区服务风 */
+.map-view {
+  min-height: 100%;
+  color: var(--visitor-ink);
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(232, 220, 199, 0.34), transparent 34%),
+    radial-gradient(ellipse at 78% 12%, rgba(198, 107, 61, 0.18), transparent 30%),
+    linear-gradient(135deg, var(--visitor-sage), var(--visitor-moss));
+}
+
+.map-header {
+  margin: 14px 18px 0;
+  padding: 18px 22px;
+  border: 1px solid rgba(232, 220, 199, 0.26);
+  border-radius: var(--visitor-radius);
+  background: rgba(232, 220, 199, 0.18);
+  box-shadow: none;
+}
+
+.map-header h1 {
+  color: var(--visitor-sand);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+}
+
+.map-header p {
+  color: rgba(232, 220, 199, 0.82);
+}
+
+.map-status {
+  color: var(--visitor-ink);
+  background: var(--visitor-sand);
+  border-color: rgba(232, 220, 199, 0.56);
+}
+
+.map-status small {
+  color: var(--visitor-muted);
+}
+
+.status-dot,
+.map-status.ready .status-dot {
+  background: var(--visitor-moss);
+}
+
+.map-layout {
+  gap: 16px;
+  padding: 16px 18px 18px;
+}
+
+.map-stage,
+.map-sidebar {
+  border: 1px solid var(--visitor-line);
+  border-radius: var(--visitor-radius);
+  background: var(--visitor-card);
+  box-shadow: var(--visitor-shadow);
+  overflow: hidden;
+}
+
+.map-sidebar {
+  padding: 14px;
+  border-left: 1px solid var(--visitor-line);
+  background: rgba(232, 220, 199, 0.74);
+}
+
+.map-canvas-shell {
+  margin: 14px;
+  border: 1px solid var(--visitor-line);
+  border-radius: 24px;
+  background: var(--visitor-sand);
+}
+
+.offline-map {
+  background:
+    linear-gradient(rgba(96, 108, 56, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 108, 56, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 42% 55%, rgba(139, 157, 131, 0.24), transparent 45%),
+    var(--visitor-sand);
+  background-size: 36px 36px, 36px 36px, auto, auto;
+}
+
+.offline-river {
+  stroke: rgba(96, 108, 56, 0.18);
+}
+
+.offline-route-line {
+  stroke: var(--visitor-terracotta);
+  filter: drop-shadow(0 0 4px rgba(198, 107, 61, 0.28));
+}
+
+.offline-map-watermark {
+  color: var(--visitor-muted);
+  font-weight: 700;
+}
+
+.offline-spot-marker strong {
+  color: var(--visitor-ink);
+  background: rgba(232, 220, 199, 0.82);
+}
+
+.offline-spot-marker.active strong {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+}
+
+.map-toolbar,
+.ar-guide-panel {
+  border-top-color: var(--visitor-line);
+  background: rgba(232, 220, 199, 0.54);
+  color: var(--visitor-muted);
+}
+
+.ar-guide-panel strong {
+  color: var(--visitor-moss);
+}
+
+.gps-indicator,
+.gps-error {
+  border-color: var(--visitor-line);
+  color: var(--visitor-ink);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.route-card,
+.reminder-card,
+.spot-card,
+.spot-list-card {
+  border-color: var(--visitor-line);
+  border-radius: var(--visitor-radius-sm);
+  background: rgba(232, 220, 199, 0.68);
+}
+
+.route-card-header h2,
+.reminder-card h2,
+.spot-list-header h3 {
+  color: var(--visitor-ink);
+}
+
+.route-card-header p,
+.reminder-item span,
+.reminder-item p,
+.spot-desc,
+.spot-section span,
+.spot-item-meta {
+  color: var(--visitor-muted);
+}
+
+.route-tabs button {
+  border-color: var(--visitor-line);
+  border-radius: 999px;
+  color: var(--visitor-muted);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.route-tabs button.active {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+  border-color: var(--visitor-moss);
+}
+
+.route-nodes li,
+.reminder-item {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.route-nodes span,
+.spot-section strong,
+.spot-card-header h2,
+.spot-item-name {
+  color: var(--visitor-ink);
+}
+
+.reminder-item {
+  border-left-color: var(--visitor-terracotta);
+}
+
+.reminder-item.high {
+  border-left-color: var(--visitor-ochre);
+}
+
+.reminder-item.medium {
+  border-left-color: var(--visitor-moss);
+}
+
+.spot-card-header :deep(.n-tag) {
+  border-radius: 999px;
+}
+
+.spot-section {
+  border-top-color: var(--visitor-line);
+}
+
+.spot-rating,
+.spot-signal {
+  color: var(--visitor-terracotta);
+}
+
+.spot-item:hover,
+.spot-item.active {
+  background: rgba(96, 108, 56, 0.1);
+  border-color: var(--visitor-line-strong);
+}
+
+.spot-item.active .spot-item-name {
+  color: var(--visitor-moss);
+}
+
+.spot-list-card :deep(.n-input) {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+@media (max-width: 768px) {
+  .map-view {
+    height: calc(100dvh - 58px);
+  }
+
+  .map-header,
+  .map-layout {
+    margin: 10px;
+    padding: 12px;
+  }
+
+  .map-layout {
+    margin-top: 0;
+  }
+
+  .map-sidebar {
+    max-height: 46vh;
+  }
+}
 </style>
