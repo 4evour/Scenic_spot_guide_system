@@ -1,5 +1,19 @@
 ﻿# CHANGELOG
 
+## 2026-07-08 21:28 - 增加普通用户修改密码接口
+
+### 变更内容
+- internal/service/user_service.go — 新增 `ChangePassword` 方法，校验当前密码、复用现有密码强度规则，并用 bcrypt 写入新密码哈希。
+- internal/handler/user_handler.go — 新增 `PUT /api/v1/user/password` 认证接口，拒绝游客账号，区分用户不存在、当前密码错误和新密码不合规。
+- internal/pkg/messages.go — 增加修改密码成功和游客禁止修改密码的中英文消息。
+- internal/handler/user_handler_test.go — 增加游客禁止改密、当前密码错误、改密成功后旧密码失效的回归测试。
+
+### 原因
+- 商用级账号闭环需要普通用户可自助修改密码，同时保持游客账号先升级再改密的边界。
+
+### 影响范围
+- 影响登录用户的账号安全接口；不改变登录、注册、游客登录、管理员用户管理和现有 Cookie 会话策略。
+
 ## 2026-07-08 20:10 - 将账号数据库设计文档改为中文
 
 ### 变更内容

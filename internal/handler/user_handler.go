@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -180,6 +181,43 @@ func (h *UserHandler) UpdateAvatarPreference(c *gin.Context) {
 		return
 	}
 	pkg.Success(c, gin.H{"avatar_id": service.NormalizeDigitalHumanAvatarID(req.AvatarID)})
+}
+
+func (h *UserHandler) ChangePassword(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		pkg.Unauthorized(c, pkg.T(c, "err_unauthorized"))
+		return
+	}
+	roleVal, _ := c.Get("role")
+	role, _ := roleVal.(string)
+	if role == "guest" {
+		pkg.BadRequest(c, pkg.T(c, "msg_guest_password_forbidden"))
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
+		return
+	}
+	userID, _ := userIDVal.(uint)
+	if err := h.service.ChangePassword(userID, req.CurrentPassword, req.NewPassword); err != nil {
+		if isRecordNotFound(err) {
+			pkg.NotFound(c, pkg.T(c, "msg_user_not_found"))
+			return
+		}
+		if errors.Is(err, service.ErrInvalidCurrentPassword) {
+			pkg.Unauthorized(c, pkg.T(c, "msg_wrong_password"))
+			return
+		}
+		pkg.BadRequest(c, err.Error())
+		return
+	}
+	pkg.SuccessWithMessage(c, pkg.T(c, "msg_password_changed"), nil)
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
@@ -480,6 +518,7 @@ func (h *UserHandler) Routes(r *gin.RouterGroup) {
 		auth.GET("/user/me", h.GetCurrentUser)
 		auth.GET("/user/avatar-preference", h.GetAvatarPreference)
 		auth.PUT("/user/avatar-preference", h.UpdateAvatarPreference)
+		auth.PUT("/user/password", h.ChangePassword)
 		auth.GET("/users/:id", h.GetUser)
 		auth.PUT("/users/:id", h.UpdateUser)
 		auth.DELETE("/users/:id", h.DeleteUser)

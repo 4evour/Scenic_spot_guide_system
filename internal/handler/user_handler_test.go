@@ -301,3 +301,69 @@ func TestVisitorCannotUseAdminUsersAPI(t *testing.T) {
 		t.Fatalf("status = %d, want %d", resp.Code, http.StatusForbidden)
 	}
 }
+
+func TestChangePasswordRejectsGuest(t *testing.T) {
+	router, _, userService := newUserHandlerTestStack(t)
+
+	guest := &model.User{Username: "guest_1234", Password: "GuestPass123", Role: "guest"}
+	if err := userService.CreateUser(guest); err != nil {
+		t.Fatalf("create guest: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/user/password", bytes.NewReader([]byte(`{"current_password":"GuestPass123","new_password":"NewPass123"}`)))
+	req.RemoteAddr = "192.0.2.62:1234"
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", authHeaderFor(t, guest.ID, guest.Username, guest.Role))
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusBadRequest, resp.Body.String())
+	}
+}
+
+func TestChangePasswordRejectsWrongCurrentPassword(t *testing.T) {
+	router, _, userService := newUserHandlerTestStack(t)
+
+	visitor := &model.User{Username: "password_user", Password: "OldPass123", Role: "visitor"}
+	if err := userService.CreateUser(visitor); err != nil {
+		t.Fatalf("create visitor: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/user/password", bytes.NewReader([]byte(`{"current_password":"WrongPass123","new_password":"NewPass123"}`)))
+	req.RemoteAddr = "192.0.2.63:1234"
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", authHeaderFor(t, visitor.ID, visitor.Username, visitor.Role))
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusUnauthorized, resp.Body.String())
+	}
+}
+
+func TestChangePasswordAllowsVisitorAndInvalidatesOldPassword(t *testing.T) {
+	router, _, userService := newUserHandlerTestStack(t)
+
+	visitor := &model.User{Username: "change_password_user", Password: "OldPass123", Role: "visitor"}
+	if err := userService.CreateUser(visitor); err != nil {
+		t.Fatalf("create visitor: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/user/password", bytes.NewReader([]byte(`{"current_password":"OldPass123","new_password":"NewPass123"}`)))
+	req.RemoteAddr = "192.0.2.64:1234"
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", authHeaderFor(t, visitor.ID, visitor.Username, visitor.Role))
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+	if _, err := userService.Login(visitor.Username, "OldPass123"); err == nil {
+		t.Fatal("old password should not work after password change")
+	}
+	if _, err := userService.Login(visitor.Username, "NewPass123"); err != nil {
+		t.Fatalf("new password login failed: %v", err)
+	}
+}
