@@ -134,6 +134,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function changePassword(currentPassword: string, newPassword: string): Promise<boolean> {
+    try {
+      const res = await fetch('/api/v1/user/password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken(),
+        },
+        credentials: 'include',
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   function invalidateAuth() {
     cache.value = null
   }
@@ -152,6 +173,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     cache, isAuthenticated, isAdmin, isGuest, displayName, isUpgrading,
-    user, fetchUser, ensureGuestSession, upgradeAccount, invalidateAuth, logout,
+    user, fetchUser, ensureGuestSession, upgradeAccount, changePassword, invalidateAuth, logout,
   }
 })

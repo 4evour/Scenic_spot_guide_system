@@ -1,5 +1,19 @@
 ﻿# CHANGELOG
 
+## 2026-07-08 21:44 - 增加游客端账号弹窗
+
+### 变更内容
+- web-vue/src/components/AccountDialog.vue — 新增游客端账号弹窗，游客可升级为正式账号，正式用户和管理员可修改密码。
+- web-vue/src/stores/auth.ts — 新增 `changePassword` 方法，调用 `PUT /api/v1/user/password` 并携带 CSRF token。
+- web-vue/src/App.vue — 在游客端顶部导航加入账号入口，并挂载账号弹窗。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 增加账号弹窗中英文文案。
+
+### 原因
+- 商用级账号闭环需要游客升级和普通用户修改密码在游客端可见可用，而不是只存在后端接口。
+
+### 影响范围
+- 影响游客端地图、数字人和扫码页顶部导航中的账号入口；不改变后台布局、登录路由守卫或游客自动登录逻辑。
+
 ## 2026-07-08 21:39 - 补齐登录页注册入口
 
 ### 变更内容
