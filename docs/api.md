@@ -32,6 +32,7 @@ Public JSON fields use `snake_case`. For example, guide content exposes
 | POST | `/login` | Public | Login and set the `auth_token` HttpOnly Cookie. The response body returns user profile data, not a token. |
 | POST | `/logout` | User | Clear the `auth_token` Cookie. |
 | GET | `/user/me` | User | Read the current Cookie-backed session. |
+| PUT | `/user/password` | User | Change the current registered user's password. Guests must upgrade before changing password. |
 | GET | `/users/:id` | User | Read an owned user profile; admins can read any profile. |
 | PUT | `/users/:id` | User | Update an owned user profile; admins can update any profile. |
 | DELETE | `/users/:id` | User | Delete an owned user profile; admins can delete any profile. |
