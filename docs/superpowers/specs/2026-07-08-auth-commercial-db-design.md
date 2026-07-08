@@ -1,48 +1,48 @@
-# Auth And Commercial Database Design
+# 账号体系与商用级数据库设计
 
-## Context
+## 背景
 
-The scenic guide project already has partial account infrastructure:
+景区导览项目已经具备一部分账号基础能力：
 
-- Go backend supports user registration, username/password login, logout, current-user lookup, admin user management, guest login, and guest upgrade.
-- Vue auth store supports guest sessions and guest upgrade.
-- The login page only exposes username/password login and guest continuation.
-- Self-service password change is not exposed as a dedicated user endpoint.
-- Local development can use SQLite, while deployment already has PostgreSQL support through configuration and `docker-compose.yml`.
+- Go 后端已支持用户注册、用户名密码登录、登出、当前用户查询、管理员用户管理、游客登录和游客升级。
+- Vue `auth` store 已支持游客会话和游客升级。
+- 登录页目前只暴露用户名密码登录和游客继续体验。
+- 普通用户没有独立的自助修改密码接口。
+- 本地开发可以使用 SQLite，部署配置和 `docker-compose.yml` 已经支持 PostgreSQL。
 
-The target is a real scenic-area commercial deployment, not a demo-only setup.
+目标是面向真实景区商用部署，而不是只满足演示环境。
 
-## Decisions
+## 已确定决策
 
-1. Visitors can enter without creating an account.
-2. Ordinary registration succeeds and returns the user to the login page for manual login.
-3. Guest upgrade stays seamless: a guest becomes a registered visitor without losing the current user ID, session, avatar preference, or chat history.
-4. Registration requires `username` and `password`; `email` remains optional and reserved for later email binding.
-5. Usernames must remain globally unique.
-6. Production deployments must use PostgreSQL, not SQLite.
-7. A self-service password change endpoint must be added.
-8. Production database management must include explicit migrations, backups, retention policy, indexes, and observability.
+1. 游客可以免账号进入项目体验。
+2. 普通注册成功后返回登录页，由用户手动登录。
+3. 游客升级为正式用户时保持无缝体验，不丢失当前 `user_id`、会话、数字人偏好和聊天历史。
+4. 注册第一版只要求 `username` 和 `password`，`email` 保留为可选字段，后续再做邮箱绑定。
+5. 用户名必须全局唯一。
+6. 生产环境必须使用 PostgreSQL，不使用 SQLite。
+7. 需要新增普通用户自助修改密码接口。
+8. 生产数据库方案必须包含显式迁移、备份、保留策略、索引和可观测性。
 
-## User Experience
+## 用户体验
 
-The login screen should support three clear paths:
+登录页需要提供三个清晰入口：
 
-- Continue as guest: starts or restores a guest session and routes to the visitor experience.
-- Login: existing users enter username and password.
-- Register: new users enter username, password, and optional email. On success they return to the login form.
+- 游客免账号体验：创建或恢复游客会话，并进入游客端页面。
+- 账号登录：已有用户输入用户名和密码登录。
+- 注册账号：新用户输入用户名、密码和可选邮箱；注册成功后回到登录表单。
 
-Guest visitors should see a lightweight "register account" entry inside the visitor experience. Upgrading from that entry uses the current guest session and keeps the existing data attached to the same account record.
+游客端需要提供轻量的“注册账号”入口。游客从这个入口升级时，沿用当前游客会话，让原本的聊天记录、偏好和行为数据继续绑定在同一个账号记录上。
 
-The account area should expose:
+账号区域需要提供：
 
-- Current account status: guest, visitor, or admin.
-- Register account action for guests.
-- Change password action for registered visitors and admins.
-- Logout action.
+- 当前账号状态：游客、普通用户或管理员。
+- 游客注册正式账号入口。
+- 普通用户和管理员修改密码入口。
+- 退出登录入口。
 
-## Backend API Design
+## 后端 API 设计
 
-Existing routes remain:
+保留现有接口：
 
 - `POST /api/v1/auth/guest-login`
 - `POST /api/v1/auth/upgrade-guest`
@@ -51,7 +51,7 @@ Existing routes remain:
 - `POST /api/v1/logout`
 - `GET /api/v1/user/me`
 
-Add one self-service password endpoint:
+新增普通用户自助修改密码接口：
 
 ```http
 PUT /api/v1/user/password
@@ -63,64 +63,64 @@ Content-Type: application/json
 }
 ```
 
-Rules:
+接口规则：
 
-- Requires authentication.
-- Rejects guest users.
-- Verifies `current_password` with bcrypt before changing the password.
-- Validates `new_password` with the existing password policy.
-- Stores only the bcrypt hash.
-- Keeps the current session valid after a successful change.
+- 必须登录。
+- 拒绝游客账号调用。
+- 修改前必须用 bcrypt 校验 `current_password`。
+- `new_password` 使用现有密码强度规则校验。
+- 数据库只保存 bcrypt 哈希。
+- 修改成功后保持当前会话有效。
 
-Registration behavior:
+普通注册行为：
 
-- `POST /api/v1/register` creates a `visitor` account.
-- The response does not set an auth cookie.
-- The frontend returns to the login form and asks the user to log in.
+- `POST /api/v1/register` 创建 `visitor` 用户。
+- 响应不设置登录 Cookie。
+- 前端回到登录表单，提示用户登录。
 
-Guest upgrade behavior:
+游客升级行为：
 
-- `POST /api/v1/auth/upgrade-guest` keeps the current user record and changes its role from `guest` to `visitor`.
-- The backend clears the guest token and display name, sets the new username/password/email fields, and refreshes the auth cookie.
-- Existing chat sessions and messages continue to point at the same `user_id`.
+- `POST /api/v1/auth/upgrade-guest` 复用当前用户记录，把角色从 `guest` 改为 `visitor`。
+- 后端清除游客 token 和游客显示名，写入新的用户名、密码和可选邮箱，并刷新登录 Cookie。
+- 既有聊天会话和聊天消息继续指向同一个 `user_id`。
 
-## Data Model
+## 数据模型
 
-The existing `users` table remains the account source of truth:
+现有 `users` 表继续作为账号主表：
 
-- `username`: required, unique.
-- `password`: bcrypt hash.
-- `email`: optional for now.
-- `role`: `admin`, `visitor`, or `guest`.
-- `guest_token`: set only for guest users.
-- `display_name`: used for guest display names.
-- `preferred_avatar_id`: user preference.
+- `username`：必填，唯一。
+- `password`：bcrypt 哈希。
+- `email`：第一版可选。
+- `role`：`admin`、`visitor` 或 `guest`。
+- `guest_token`：只用于游客账号。
+- `display_name`：只用于游客显示名。
+- `preferred_avatar_id`：数字人偏好。
 
-No new account table is required for the first version.
+第一版不新增独立账号表。
 
-## Commercial Database Plan
+## 商用级数据库方案
 
-Development may continue using SQLite. Production must use PostgreSQL.
+开发环境可以继续使用 SQLite。生产环境必须使用 PostgreSQL。
 
-Production requirements:
+生产要求：
 
-- Use PostgreSQL as the only production database driver.
-- Keep database credentials in environment variables or deployment secrets.
-- Use persistent database storage that is independent of application containers.
-- Add explicit migration scripts before production release.
-- Treat GORM `AutoMigrate` as a development convenience, not the only production migration mechanism.
-- Configure database connection pool limits per deployment size.
-- Add regular backups and at least one documented restore drill.
+- PostgreSQL 是唯一生产数据库驱动。
+- 数据库账号、密码和连接信息通过环境变量或部署密钥注入。
+- 数据库持久化存储必须独立于应用容器生命周期。
+- 上线前新增显式迁移脚本。
+- GORM `AutoMigrate` 只能作为开发便利，不作为唯一生产迁移机制。
+- 根据部署规模配置数据库连接池。
+- 配置自动备份，并至少完成一次恢复演练。
 
-Recommended retention:
+建议数据保留策略：
 
-- User accounts: retain until user deletion or legal/commercial policy requires removal.
-- Avatar preferences: retain with the account.
-- Chat sessions and messages: retain 180 or 365 days by configuration.
-- Interaction logs: retain 90 or 180 days by configuration.
-- Aggregated dashboard stats: retain longer than raw logs.
+- 用户账号：保留到用户删除，或按景区/合规政策处理。
+- 数字人偏好：随账号长期保留。
+- 聊天会话和消息：默认保留 180 天或 365 天，后续可配置。
+- 行为日志：默认保留 90 天或 180 天，后续可配置。
+- 管理端聚合统计：保留时间长于原始日志。
 
-Recommended indexes to verify or add:
+建议检查或新增索引：
 
 - `users.username`
 - `users.guest_token`
@@ -129,91 +129,91 @@ Recommended indexes to verify or add:
 - `interaction_logs.user_id, interaction_logs.created_at`
 - `interaction_logs.source, interaction_logs.created_at`
 
-The first commercial version should not introduce sharding, read replicas, or a separate analytics database. PostgreSQL plus indexes, retention, backups, and monitoring is the right first step.
+第一版商用增强不引入分库分表、读写分离或独立分析库。PostgreSQL 加索引、保留策略、备份和监控，是更合适的第一步。
 
-## Error Handling
+## 错误处理
 
-User-facing errors should be specific enough to guide correction without leaking sensitive detail:
+用户可见错误需要能指导修正，同时不泄露敏感信息：
 
-- Login failure: keep the existing generic username/password error.
-- Duplicate username: tell the user the username is already used.
-- Weak password: return the existing password policy message.
-- Wrong current password: return a password verification error.
-- Guest upgrade from non-guest account: return a clear "only guest accounts can upgrade" error.
+- 登录失败：继续使用通用的用户名或密码错误提示。
+- 用户名重复：提示用户名已被占用。
+- 密码强度不足：返回现有密码规则提示。
+- 当前密码错误：提示密码验证失败。
+- 非游客账号调用游客升级：提示只有游客账号可以升级。
 
-API errors must keep the project's existing `code/message/data` response shape.
+API 响应继续遵循项目现有 `code/message/data` 结构。
 
-## Security
+## 安全要求
 
-The implementation must preserve the current security posture:
+实现必须保持当前安全边界：
 
-- Store auth in HttpOnly cookies.
-- Keep CSRF protection for state-changing authenticated endpoints.
-- Keep rate limits on login, registration, and guest login.
-- Hash passwords with bcrypt.
-- Do not log raw passwords.
-- Do not send password hashes to the frontend.
+- 登录态使用 HttpOnly Cookie。
+- 需要认证的写接口继续做 CSRF 校验。
+- 登录、注册和游客登录保留限流。
+- 密码使用 bcrypt 哈希。
+- 不记录明文密码。
+- 不向前端返回密码哈希。
 
-Additional production expectations:
+生产环境额外要求：
 
-- Configure a strong JWT secret.
-- Use secure cookies under HTTPS.
-- Add database backups and restore testing before production handoff.
-- Avoid committing real database credentials.
+- 配置强 JWT secret。
+- HTTPS 下启用 Secure Cookie。
+- 生产交付前完成数据库备份和恢复验证。
+- 不提交真实数据库凭据。
 
-## Testing
+## 测试
 
-Backend tests:
+后端测试：
 
-- Register visitor with valid username/password.
-- Reject duplicate username.
-- Reject weak password.
-- Guest login creates or restores a guest account.
-- Guest upgrade preserves user ID and changes role to visitor.
-- Guest upgrade rejects duplicate username.
-- Password change rejects guests.
-- Password change rejects wrong current password.
-- Password change accepts valid current password and new password.
-- Old password no longer works after password change.
+- 有效用户名和密码可以注册普通用户。
+- 重复用户名被拒绝。
+- 弱密码被拒绝。
+- 游客登录可以创建或恢复游客账号。
+- 游客升级保留同一个用户 ID，并把角色改为 `visitor`。
+- 游客升级时重复用户名被拒绝。
+- 游客账号不能修改密码。
+- 当前密码错误时不能修改密码。
+- 当前密码正确且新密码合法时可以修改密码。
+- 修改密码后旧密码不能再登录。
 
-Frontend checks:
+前端检查：
 
-- Login page shows guest, login, and register paths.
-- Register success returns to login instead of auto-login.
-- Guest route access still works without a prior account.
-- Guest upgrade closes the modal and refreshes current user state.
-- Password change form handles validation and backend errors.
+- 登录页展示游客、登录和注册三个路径。
+- 普通注册成功后返回登录表单，不自动登录。
+- 未登录用户访问游客端页面时仍可自动游客登录。
+- 游客升级成功后关闭弹窗并刷新当前用户状态。
+- 修改密码表单能处理前端校验和后端错误。
 
-Production checks:
+生产检查：
 
-- PostgreSQL configuration starts successfully through Docker Compose.
-- Migrations apply on an empty database.
-- Migrations are idempotent in CI or local verification.
-- Backup and restore instructions are documented.
+- PostgreSQL 配置可以通过 Docker Compose 启动。
+- 空数据库上可以应用迁移。
+- 迁移在 CI 或本地验证中具备可重复执行的安全性。
+- 备份和恢复说明已写入文档。
 
-## Implementation Scope
+## 第一版实现范围
 
-In scope for the first implementation:
+第一版包含：
 
-- Login page registration entry.
-- Guest-first visitor experience.
-- Guest upgrade polish.
-- Self-service password endpoint.
-- Frontend password change UI.
-- API documentation update.
-- Production database guidance documentation.
-- Focused backend and frontend verification.
+- 登录页注册入口。
+- 游客优先体验。
+- 游客升级体验打磨。
+- 自助修改密码后端接口。
+- 前端修改密码 UI。
+- API 文档更新。
+- 生产数据库说明文档。
+- 聚焦的后端和前端验证。
 
-Out of scope for the first implementation:
+第一版不包含：
 
-- Email verification.
-- Forgot password by email.
-- OAuth/social login.
-- Two-factor authentication.
-- Multi-tenant scenic-area account isolation.
-- Separate analytics warehouse.
-- Read replicas or database sharding.
+- 邮箱验证。
+- 邮箱找回密码。
+- OAuth 或社交登录。
+- 双因素认证。
+- 多景区租户隔离。
+- 独立数据仓库。
+- 读写分离或数据库分片。
 
-## Approval Gate
+## 审批门槛
 
-This design should be reviewed before implementation. After approval, the next step is an implementation plan that breaks the work into backend API, frontend auth UI, database documentation, and verification tasks.
+实现前需要先确认这份设计。确认后，下一步再拆成实现计划，分别覆盖后端 API、前端账号 UI、数据库文档和验证任务。
