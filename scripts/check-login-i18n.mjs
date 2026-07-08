@@ -19,6 +19,16 @@ const hardcodedPatterns = [
 ];
 
 const requiredKeys = [
+  'login.modeLogin',
+  'login.modeRegister',
+  'login.email',
+  'login.emailPlaceholder',
+  'login.registerSubmit',
+  'login.registerHint',
+  'login.registerSuccess',
+  'login.registerFailed',
+  'login.passwordPolicy',
+  'login.passwordPolicyInvalid',
   'login.guestContinue',
   'login.guestSuccess',
   'login.guestFailed',
