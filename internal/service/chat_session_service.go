@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/scenic-guide/internal/model"
@@ -16,6 +17,17 @@ type ChatSessionService struct {
 	sessionRepo repository.ChatSessionRepository
 	messageRepo repository.ChatMessageRepository
 }
+
+type ChatMessageSearchResult struct {
+	model.ChatMessage
+	SessionID    string `json:"session_id"`
+	SessionTitle string `json:"session_title"`
+}
+
+var (
+	ErrSessionAccessDenied  = errors.New("无权访问该会话")
+	ErrInvalidSessionMessage = errors.New("会话消息无效")
+)
 
 func NewChatSessionService(sessionRepo repository.ChatSessionRepository, messageRepo repository.ChatMessageRepository) *ChatSessionService {
 	return &ChatSessionService{
@@ -106,6 +118,60 @@ func (s *ChatSessionService) AddMessages(sessionID string, userID uint, userMsg,
 	return nil
 }
 
+// AddMessage 持久化单条会话消息，用于前端历史会话离线补写。
+func (s *ChatSessionService) AddMessage(sessionID string, userID uint, role, content string, emotion string, responseTimeMs int64) error {
+	sessionID = strings.TrimSpace(sessionID)
+	role = strings.TrimSpace(role)
+	content = strings.TrimSpace(content)
+	if sessionID == "" || content == "" {
+		return ErrInvalidSessionMessage
+	}
+	if role != "user" && role != "assistant" && role != "system" {
+		return ErrInvalidSessionMessage
+	}
+
+	session, err := s.sessionRepo.FindBySessionID(sessionID)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("查询会话失败: %w", err)
+		}
+		session, err = s.EnsureSession(sessionID, userID, "web")
+		if err != nil {
+			return err
+		}
+	}
+	if session.UserID != userID {
+		return ErrSessionAccessDenied
+	}
+
+	msg := &model.ChatMessage{
+		ChatSessionID:  session.ID,
+		UserID:         userID,
+		Role:           role,
+		Content:        content,
+		Emotion:        emotion,
+		ResponseTimeMs: responseTimeMs,
+		CreatedAt:      time.Now(),
+	}
+	if err := s.messageRepo.Create(msg); err != nil {
+		return fmt.Errorf("持久化会话消息失败: %w", err)
+	}
+
+	title := ""
+	if session.MessageCount == 0 && role == "user" {
+		runes := []rune(content)
+		if len(runes) > 30 {
+			title = string(runes[:30]) + "..."
+		} else {
+			title = content
+		}
+	}
+	if err := s.sessionRepo.UpdateActivity(sessionID, title); err != nil {
+		slog.Warn("更新会话活跃时间失败", "session_id", sessionID, "error", err)
+	}
+	return nil
+}
+
 // ListSessions 获取用户的会话列表
 func (s *ChatSessionService) ListSessions(userID uint, page, pageSize int) ([]model.ChatSession, int64, error) {
 	if page < 1 {
@@ -161,7 +227,7 @@ func (s *ChatSessionService) DeleteSession(sessionID string, userID uint) error 
 }
 
 // SearchMessages 跨会话搜索用户的历史消息
-func (s *ChatSessionService) SearchMessages(userID uint, keyword string, page, pageSize int) ([]model.ChatMessage, int64, error) {
+func (s *ChatSessionService) SearchMessages(userID uint, keyword string, page, pageSize int) ([]ChatMessageSearchResult, int64, error) {
 	if keyword == "" {
 		return nil, 0, errors.New("搜索关键词不能为空")
 	}
@@ -171,7 +237,40 @@ func (s *ChatSessionService) SearchMessages(userID uint, keyword string, page, p
 	if pageSize < 1 || pageSize > 100 {
 		pageSize = 20
 	}
-	return s.messageRepo.SearchByUser(userID, keyword, page, pageSize)
+	messages, total, err := s.messageRepo.SearchByUser(userID, keyword, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	sessionIDs := make([]uint, 0, len(messages))
+	seen := make(map[uint]bool, len(messages))
+	for _, msg := range messages {
+		if msg.ChatSessionID == 0 || seen[msg.ChatSessionID] {
+			continue
+		}
+		seen[msg.ChatSessionID] = true
+		sessionIDs = append(sessionIDs, msg.ChatSessionID)
+	}
+
+	sessions, err := s.sessionRepo.FindByIDs(sessionIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	sessionByID := make(map[uint]model.ChatSession, len(sessions))
+	for _, session := range sessions {
+		sessionByID[session.ID] = session
+	}
+
+	results := make([]ChatMessageSearchResult, 0, len(messages))
+	for _, msg := range messages {
+		result := ChatMessageSearchResult{ChatMessage: msg}
+		if session, ok := sessionByID[msg.ChatSessionID]; ok {
+			result.SessionID = session.SessionID
+			result.SessionTitle = session.Title
+		}
+		results = append(results, result)
+	}
+	return results, total, nil
 }
 
 // MigrateUserSessions 迁移游客的所有会话到新用户

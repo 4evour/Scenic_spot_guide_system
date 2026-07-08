@@ -8,6 +8,36 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "check": "vue-tsc -b --pretty false",
+    "check:app-shell-i18n": "node ../scripts/check-app-shell-i18n.mjs",
+    "check:login-i18n": "node ../scripts/check-login-i18n.mjs",
+    "check:qr-scan-i18n": "node ../scripts/check-qr-scan-i18n.mjs",
+    "check:live2d-stage-i18n": "node ../scripts/check-live2d-stage-i18n.mjs",
+    "check:geolocation-i18n": "node ../scripts/check-geolocation-i18n.mjs",
+    "check:map-guide-i18n": "node ../scripts/check-map-guide-i18n.mjs",
+    "check:map-routes-i18n": "node ../scripts/check-map-routes-i18n.mjs",
+    "check:map-spot-detail-i18n": "node ../scripts/check-map-spot-detail-i18n.mjs",
+    "check:map-spot-list-i18n": "node ../scripts/check-map-spot-list-i18n.mjs",
+    "check:admin-queries": "node ../scripts/check-admin-query-management.mjs",
+    "check:admin-knowledge-insights": "node ../scripts/check-admin-knowledge-insights.mjs",
+    "check:admin-knowledge-i18n": "node ../scripts/check-admin-knowledge-i18n.mjs",
+    "check:admin-content-i18n": "node ../scripts/check-admin-content-i18n.mjs",
+    "check:admin-settings-i18n": "node ../scripts/check-admin-settings-i18n.mjs",
+    "check:admin-avatar-i18n": "node ../scripts/check-admin-avatar-i18n.mjs",
+    "check:admin-query-i18n": "node ../scripts/check-admin-query-i18n.mjs",
+    "check:admin-qrcode-i18n": "node ../scripts/check-admin-qrcode-i18n.mjs",
+    "check:admin-reports-i18n": "node ../scripts/check-admin-reports-i18n.mjs",
+    "check:admin-routes-i18n": "node ../scripts/check-admin-routes-i18n.mjs",
+    "check:admin-spots-i18n": "node ../scripts/check-admin-spots-i18n.mjs",
+    "check:admin-users-i18n": "node ../scripts/check-admin-users-i18n.mjs",
+    "check:dashboard-i18n": "node ../scripts/check-dashboard-i18n.mjs",
+    "check:data-boundaries": "node ../scripts/check-dashboard-data-boundaries.mjs",
+    "check:digital-human-chat-panel-i18n": "node ../scripts/check-digital-human-chat-panel-i18n.mjs",
+    "check:digital-human-controls-i18n": "node ../scripts/check-digital-human-controls-i18n.mjs",
+    "check:digital-human-upgrade-i18n": "node ../scripts/check-digital-human-upgrade-i18n.mjs",
+    "check:digital-human-runtime-i18n": "node ../scripts/check-digital-human-runtime-i18n.mjs",
+    "check:digital-human-docs": "node ../scripts/check-digital-human-docs.mjs",
+    "check:service-i18n": "node ../scripts/check-service-i18n.mjs",
+    "check:scenic-visualization-i18n": "node ../scripts/check-scenic-visualization-i18n.mjs",
     "check:encoding": "node ../scripts/check-encoding.mjs",
     "lint": "eslint . --ext .vue,.ts,.tsx",
     "format": "prettier --write ."
@@ -27,13 +57,20 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-vue": "^9.0.0",
     "playwright": "^1.60.0",
+    "prettier": "^3.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.2.7",
     "vue-tsc": "^3.1.5"
   },
   "overrides": {
-    "gh-pages": "6.3.0"
+    "gh-pages": "6.3.0",
+    "esbuild": "^0.28.1"
   }
 }

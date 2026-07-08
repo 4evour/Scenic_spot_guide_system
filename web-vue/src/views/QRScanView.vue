@@ -8,6 +8,7 @@ import { apiFetch } from '../services/api';
 const { t } = useI18n();
 const router = useRouter();
 const { seniorModeEnabled, toggleSeniorMode } = useSeniorMode();
+const QR_INTRO_STORAGE_KEY = 'sg_qr_intro_payload';
 
 interface SpotInfo {
   id: number;
@@ -65,9 +66,12 @@ onMounted(async () => {
 
 function startTour() {
   if (!spot.value) return;
-  // 跳转到数字人页面，带上景点名作为自动提问
-  const query = `请详细介绍${spot.value.name}这个景点`;
-  router.push({ name: 'digital-human', query: { qr: spot.value.qr_intro_text || spot.value.name, auto_ask: query } });
+  const introText = intro.value || spot.value.qr_intro_text || spot.value.description || spot.value.name;
+  sessionStorage.setItem(QR_INTRO_STORAGE_KEY, JSON.stringify({
+    spot: spot.value.name,
+    intro: introText,
+  }));
+  router.push({ name: 'digital-human', query: { qr_spot: spot.value.name, qr_direct: '1' } });
 }
 
 function chatNow() {
@@ -78,7 +82,7 @@ function chatNow() {
 <template>
   <main class="qr-scan-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
     <button class="senior-toggle" @click="toggleSeniorMode">
-      {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+      {{ seniorModeEnabled ? $t('qr.exitSeniorMode') : $t('qr.seniorMode') }}
     </button>
     <!-- Loading -->
     <div v-if="loading" class="scan-loading">
@@ -315,5 +319,123 @@ function chatNow() {
   .qr-scan-view { padding: 16px; }
   .spot-name { font-size: 20px; }
   .spot-intro { padding: 12px 16px; font-size: 13px; }
+}
+
+/* 游客端自然景区服务风 */
+.qr-scan-view {
+  color: var(--visitor-ink);
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(232, 220, 199, 0.36), transparent 34%),
+    radial-gradient(ellipse at 86% 88%, rgba(198, 107, 61, 0.2), transparent 34%),
+    linear-gradient(135deg, var(--visitor-sage), var(--visitor-moss));
+}
+
+.qr-scan-view::before {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.12;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(232, 220, 199, 0.8) 0 1px, transparent 1px),
+    radial-gradient(circle at 75% 72%, rgba(38, 51, 31, 0.65) 0 1px, transparent 1px);
+  background-size: 18px 18px, 26px 26px;
+}
+
+.senior-toggle {
+  border-color: rgba(232, 220, 199, 0.34);
+  border-radius: 999px;
+  color: var(--visitor-ink);
+  background: var(--visitor-sand);
+}
+
+.scan-loading,
+.scan-error,
+.scan-result {
+  position: relative;
+  z-index: 1;
+}
+
+.scan-loading,
+.scan-error {
+  width: min(460px, 100%);
+  padding: 28px;
+  border: 1px solid var(--visitor-line);
+  border-radius: var(--visitor-radius);
+  color: var(--visitor-ink);
+  background: var(--visitor-sand);
+  box-shadow: var(--visitor-shadow);
+}
+
+.pulse-ring {
+  border-color: rgba(96, 108, 56, 0.2);
+  border-top-color: var(--visitor-moss);
+}
+
+.scan-result {
+  max-width: 560px;
+  padding: 24px;
+  border: 1px solid var(--visitor-line);
+  border-radius: 30px;
+  background: var(--visitor-sand);
+  box-shadow: var(--visitor-shadow);
+}
+
+.spot-badge {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+  border-color: var(--visitor-moss);
+}
+
+.spot-category {
+  color: var(--visitor-ink);
+  background: rgba(96, 108, 56, 0.12);
+}
+
+.spot-name {
+  color: var(--visitor-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+}
+
+.spot-image {
+  border-color: var(--visitor-line);
+  border-radius: 24px;
+}
+
+.spot-intro {
+  color: var(--visitor-muted);
+  border-color: var(--visitor-line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.follow-up-label {
+  color: var(--visitor-muted);
+}
+
+.follow-up-btn {
+  color: var(--visitor-ink);
+  border-color: var(--visitor-line);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.follow-up-btn:hover {
+  background: rgba(96, 108, 56, 0.12);
+}
+
+.action-btn {
+  border-radius: 999px;
+}
+
+.action-btn.primary {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+}
+
+.action-btn.secondary {
+  color: var(--visitor-ink);
+  border: 1px solid var(--visitor-line);
+  background: rgba(255, 255, 255, 0.28);
 }
 </style>

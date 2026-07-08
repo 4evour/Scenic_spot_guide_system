@@ -9,17 +9,27 @@ import { AudioPlaybackController, type PlaybackCue } from '../services/audioPlay
 import { VtuberSocketClient } from '../services/vtuberSocket';
 import { streamTTS } from '../services/ttsApi';
 import { apiFetch } from '../services/api';
-import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression } from '../types/digitalHuman';
+import type { ChatMessage, ConversationState, EmotionToken, VtuberMessage, Live2DExpression, DigitalHumanAvatarOption, RAGSource } from '../types/digitalHuman';
 import Live2DStage from '../components/Live2DStage.vue';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import { useSessionStore } from '../stores/session';
 import { useAuthStore } from '../stores/auth';
 import { getCSRFToken } from '../utils/csrf';
+import { buildGuideInsight, type GuideInsight } from '../constants/scenicVisualization';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const geolocationMessages = {
+  notSupported: () => t('map.gpsNotSupported'),
+  denied: () => t('map.gpsDenied'),
+  unavailable: () => t('map.gpsUnavailable'),
+  timeout: () => t('map.gpsTimeout'),
+  failed: (message: string) => t('map.gpsFailed', { message }),
+};
 const route = useRoute();
 const authStore = useAuthStore();
+const DEFAULT_AVATAR_ID = 'mao_pro';
 const AUTO_GUIDE_KEY = 'sg_auto_geofence_enabled';
+const QR_INTRO_STORAGE_KEY = 'sg_qr_intro_payload';
 const autoGuideEnabled = ref(localStorage.getItem(AUTO_GUIDE_KEY) === 'true');
 const geofenceSpots = ref<SpotWithCoords[]>([]);
 const { seniorModeEnabled, ttsRate, toggleSeniorMode } = useSeniorMode();
@@ -32,6 +42,7 @@ const {
   enableHighAccuracy: true,
   maximumAge: 5000,
   timeout: 10000,
+  messages: geolocationMessages,
 });
 const { nearbySpot, resetTriggered, setSpots } = useProximityGuide(currentPosition, {
   triggerRadiusM: 100,
@@ -43,13 +54,21 @@ const upgradeForm = reactive({ username: '', password: '', email: '' });
 const upgradeLoading = ref(false);
 const upgradeError = ref('');
 
+function isPasswordPolicyValid(password: string) {
+  return password.length >= 8
+    && password.length <= 128
+    && /[A-Z]/.test(password)
+    && /[a-z]/.test(password)
+    && /\d/.test(password);
+}
+
 async function handleUpgrade() {
   if (!upgradeForm.username || !upgradeForm.password) {
-    upgradeError.value = t('auth.usernamePasswordRequired') || '请填写用户名和密码';
+    upgradeError.value = t('auth.usernamePasswordRequired');
     return;
   }
-  if (upgradeForm.password.length < 6) {
-    upgradeError.value = t('auth.passwordTooShort') || '密码至少6位';
+  if (!isPasswordPolicyValid(upgradeForm.password)) {
+    upgradeError.value = t('auth.passwordPolicy');
     return;
   }
   upgradeLoading.value = true;
@@ -62,10 +81,10 @@ async function handleUpgrade() {
       upgradeForm.password = '';
       upgradeForm.email = '';
     } else {
-      upgradeError.value = t('auth.upgradeFailed') || '升级失败，用户名可能已被占用';
+      upgradeError.value = t('auth.upgradeFailed');
     }
   } catch {
-    upgradeError.value = t('auth.upgradeFailed') || '升级失败';
+    upgradeError.value = t('auth.upgradeFailed');
   } finally {
     upgradeLoading.value = false;
   }
@@ -104,12 +123,23 @@ const searchQuery = ref('');
 const showSearch = ref(false);
 const showSessionDrawer = ref(false);
 const isSearching = ref(false);
-const searchResults = ref<{ text: string; time: string }[]>([]);
+const searchResults = ref<Array<{
+  id: string;
+  text: string;
+  time: string;
+  role?: ChatMessage['role'];
+  sessionId?: string;
+  sessionTitle?: string;
+}>>([]);
+const currentInsight = ref<GuideInsight | null>(null);
 const typewriterStreaming = ref(false);
 const mobileTab = ref<'avatar' | 'chat'>('avatar');
 const isMobileView = ref(window.innerWidth < 768);
+const avatarOptions = ref<DigitalHumanAvatarOption[]>([]);
+const selectedAvatarId = ref(DEFAULT_AVATAR_ID);
+const avatarSaving = ref(false);
 const audioStatus = ref<'locked' | 'ready' | 'playing' | 'error'>('locked');
-const audioNotice = ref('点击“启用声音”后，我会朗读回答并驱动口型。');
+const audioNotice = ref(t('dh.audio.initialNotice'));
 const storedChatWidth = Number(localStorage.getItem('sg_dh_chat_width') || 420);
 const chatWidth = ref(Number.isFinite(storedChatWidth) ? storedChatWidth : 420);
 const isChatResizing = ref(false);
@@ -126,7 +156,7 @@ const state = reactive({
       id: uid(),
       role: 'assistant',
       text: t('dh.greeting'),
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(),
     },
   ] as ChatMessage[],
 });
@@ -147,7 +177,7 @@ let lastAudioNotice = '';
 const audio = new AudioPlaybackController({
   onStart: (text: string | undefined, cue: PlaybackCue | undefined) => {
     audioStatus.value = 'playing';
-    audioNotice.value = '正在播放语音，口型会跟随音频变化。';
+    audioNotice.value = t('dh.audio.playingNotice');
     isPlaybackActive.value = true;
     hasActiveTurn.value = true;
     typewriterStreaming.value = true;
@@ -158,7 +188,7 @@ const audio = new AudioPlaybackController({
   onEnd: () => {
     if (audioStatus.value === 'playing') {
       audioStatus.value = 'ready';
-      audioNotice.value = '声音已启用。';
+      audioNotice.value = t('dh.audio.readyNotice');
     }
     isPlaybackActive.value = false;
     mouthOpen.value = 0;
@@ -186,6 +216,12 @@ const statusLabel = computed(() => {
   return state.connected ? t('dh.online') : t('dh.offline');
 });
 
+const selectedAvatar = computed(() => {
+  return avatarOptions.value.find(item => item.id === selectedAvatarId.value)
+    || avatarOptions.value.find(item => item.id === DEFAULT_AVATAR_ID)
+    || null;
+});
+
 const canInterrupt = computed(
   () =>
     hasActiveTurn.value ||
@@ -202,7 +238,20 @@ const chatPanelStyle = computed(() => {
 });
 
 function nowTime() {
-  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return formatTime();
+}
+
+function formatTime(value: Date | number | string = new Date()) {
+  return new Date(value).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatSearchTime(value: Date | number | string) {
+  return new Date(value).toLocaleString(locale.value, {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function showAudioNotice(status: typeof audioStatus.value, message: string) {
@@ -219,11 +268,115 @@ const ALL_EMOTION_TOKENS = ['neutral', 'joy', 'sadness', 'surprise', 'anger', 'f
 type BackendChatResponse = {
   response?: string;
   trace_id?: string;
+  sources?: RAGSource[];
 };
+
+type QRIntroPayload = {
+  spot?: string;
+  intro?: string;
+};
+
+function readQRIntroPayload(): QRIntroPayload {
+  try {
+    const raw = sessionStorage.getItem(QR_INTRO_STORAGE_KEY);
+    if (raw) {
+      sessionStorage.removeItem(QR_INTRO_STORAGE_KEY);
+      const parsed = JSON.parse(raw) as QRIntroPayload;
+      return {
+        spot: typeof parsed.spot === 'string' ? parsed.spot.trim() : '',
+        intro: typeof parsed.intro === 'string' ? parsed.intro.trim() : '',
+      };
+    }
+  } catch {
+    sessionStorage.removeItem(QR_INTRO_STORAGE_KEY);
+  }
+  return {
+    spot: typeof route.query.qr_spot === 'string' ? route.query.qr_spot.trim() : '',
+    intro: typeof route.query.qr_intro === 'string' ? route.query.qr_intro.trim() : '',
+  };
+}
+
+type AvatarPreferenceResponse = {
+  avatar_id?: string;
+};
+
+function isKnownAvatar(id: string) {
+  return avatarOptions.value.some(item => item.id === id);
+}
+
+async function loadAvatarOptionsAndPreference() {
+  try {
+    const options = await apiFetch<DigitalHumanAvatarOption[]>('/digital-human/avatar-options');
+    avatarOptions.value = options;
+  } catch {
+    avatarOptions.value = [];
+  }
+
+  let nextAvatarId = authStore.user?.preferredAvatarId || DEFAULT_AVATAR_ID;
+  let savedAvatarId = nextAvatarId;
+  try {
+    const preference = await apiFetch<AvatarPreferenceResponse>('/user/avatar-preference');
+    nextAvatarId = preference.avatar_id || nextAvatarId;
+    savedAvatarId = nextAvatarId;
+  } catch {
+    // 用户偏好读取失败时继续使用默认形象，文字问答不受影响。
+  }
+
+  if (!isKnownAvatar(nextAvatarId)) {
+    nextAvatarId = avatarOptions.value[0]?.id || DEFAULT_AVATAR_ID;
+  }
+  selectedAvatarId.value = nextAvatarId;
+  if (avatarOptions.value.length === 1 && nextAvatarId !== savedAvatarId) {
+    void ensureCSRFToken().then((ok) => {
+      if (!ok) return;
+      return apiFetch('/user/avatar-preference', {
+        method: 'PUT',
+        body: JSON.stringify({ avatar_id: nextAvatarId }),
+      });
+    }).catch(() => {});
+  }
+}
+
+function syncSocketAvatar() {
+  const avatar = selectedAvatar.value;
+  if (!avatar?.config_file) return;
+  socket?.switchConfig(avatar.config_file);
+}
+
+async function selectAvatar(id: string) {
+  if (id === selectedAvatarId.value || !isKnownAvatar(id)) return;
+  const previousAvatarId = selectedAvatarId.value;
+  selectedAvatarId.value = id;
+  syncSocketAvatar();
+  avatarSaving.value = true;
+  try {
+    if (!(await ensureCSRFToken())) {
+      throw new Error('missing csrf token');
+    }
+    await apiFetch('/user/avatar-preference', {
+      method: 'PUT',
+      body: JSON.stringify({ avatar_id: id }),
+    });
+    authStore.invalidateAuth();
+    void authStore.fetchUser();
+  } catch (error) {
+    selectedAvatarId.value = previousAvatarId;
+    syncSocketAvatar();
+    addMessage('system', error instanceof Error ? error.message : t('dh.avatar.saveFailed'));
+  } finally {
+    avatarSaving.value = false;
+  }
+}
 
 function stripEmotionTags(text: string) {
   const pattern = new RegExp(`\\[(${ALL_EMOTION_TOKENS.join('|')})\\]\\s*`, 'gi');
   return text.replace(pattern, '').trim() || text;
+}
+
+function formatRAGSource(source: RAGSource) {
+  const title = source.title || source.source || source.id;
+  const origin = source.source && source.source !== title ? ` · ${source.source}` : '';
+  return `${title}${origin}`;
 }
 
 function expressionFromText(text?: string): Live2DExpression | undefined {
@@ -342,6 +495,7 @@ async function persistMessage(role: ChatMessage['role'], content: string) {
   } catch { /* ignore */ }
 
   sessionStore.appendMessage(role, content);
+  await sessionStore.saveMessage(getOrCreateSessionId(), role, content);
 }
 
 function addMessage(role: ChatMessage['role'], text: string) {
@@ -358,10 +512,11 @@ function addMessage(role: ChatMessage['role'], text: string) {
   }
 }
 
-function showAssistantSpeech(text: string) {
+function showAssistantSpeech(text: string, sources: RAGSource[] = []) {
   const displayText = stripEmotionTags(text);
   state.subtitle = displayText;
   if (displayText === lastAssistantSpeechText) return;
+  currentInsight.value = buildGuideInsight(displayText, locale.value);
   resetAssistantTurn();
   lastAssistantSpeechText = displayText;
   typewriterStreaming.value = true;
@@ -370,6 +525,7 @@ function showAssistantSpeech(text: string) {
     role: 'assistant',
     text: displayText,
     time: nowTime(),
+    sources,
   });
   void persistMessage('assistant', displayText);
 }
@@ -379,6 +535,7 @@ function appendAssistantSpeechChunk(text: string) {
   if (!displayText || displayText === 'Thinking...') return;
 
   activeAssistantText = mergeAssistantText(activeAssistantText, displayText);
+  currentInsight.value = buildGuideInsight(activeAssistantText, locale.value);
   lastAssistantSpeechText = activeAssistantText;
   state.subtitle = displayText;
   typewriterStreaming.value = true;
@@ -415,6 +572,7 @@ function connectSocket() {
     onOpen: () => {
       state.connected = true;
       state.conversation = 'idle';
+      syncSocketAvatar();
       addMessage('system', t('dh.connected'));
     },
     onClose: () => {
@@ -432,6 +590,10 @@ function connectSocket() {
 }
 
 function handleSocketMessage(message: VtuberMessage) {
+  if (message.type === 'config-switched' || message.type === 'set-model-and-conf') {
+    return;
+  }
+
   if (blockIncomingPlayback && ['audio', 'full-text', 'backend-synth-complete'].includes(message.type)) {
     return;
   }
@@ -539,10 +701,16 @@ function sendText() {
   state.expression = 'thinking';
   state.subtitle = t('dh.thinking');
   transcriptBuffer.value = '';
+  currentInsight.value = null;
 
   blockIncomingPlayback = true;
-  waitingForFreshServerTurn = false;
   audio.resume();
+  waitingForFreshServerTurn = true;
+  if (socket?.sendText(text)) {
+    return;
+  }
+
+  waitingForFreshServerTurn = false;
   const turn = conversationTurn;
   void answerWithBackendText(text, turn);
 }
@@ -558,7 +726,7 @@ async function answerWithBackendText(text: string, turn: number) {
     });
     if (interruptedTurn === turn) return;
     const answer = data.response?.trim() || buildFallbackAnswer(text);
-    showAssistantSpeech(answer);
+    showAssistantSpeech(answer, data.sources || []);
     await playAnswerAudio(answer);
   } catch {
     if (interruptedTurn === turn) return;
@@ -576,27 +744,40 @@ async function answerWithBackendText(text: string, turn: number) {
   }
 }
 
+async function ensureCSRFToken() {
+  if (getCSRFToken()) return true;
+  if (await authStore.fetchUser(true)) {
+    return Boolean(getCSRFToken());
+  }
+  authStore.invalidateAuth();
+  if (await authStore.ensureGuestSession()) {
+    return Boolean(getCSRFToken());
+  }
+  return false;
+}
+
 async function playAnswerAudio(answer: string) {
+  const speechText = stripEmotionTags(answer);
   const cue = { expression: expressionFromText(answer) || 'happy' as const };
   if (audioStatus.value === 'locked') {
-    showAudioNotice('locked', '请先点击“启用声音”，之后我会朗读回答并驱动口型。');
+    showAudioNotice('locked', t('dh.audio.lockedNotice'));
     return;
   }
   try {
-    if (!getCSRFToken()) {
-      await authStore.ensureGuestSession();
+    if (!(await ensureCSRFToken())) {
+      throw new Error('missing csrf token');
     }
-    const response = await streamTTS({ text: answer, voice: 'female_xiaoxiao', rate: ttsRate.value });
-    const streamed = await audio.enqueueStream(response, answer, cue);
+    const response = await streamTTS({ text: speechText, voice: 'female_xiaoxiao', rate: ttsRate.value });
+    const streamed = await audio.enqueueStream(response, speechText, cue);
     if (!streamed) {
-      await audio.playTextFallback(answer, cue);
+      await audio.playTextFallback(speechText, cue);
     }
   } catch (err) {
     const message = err instanceof Error && err.message
-      ? `语音合成暂时不可用，已切换为浏览器朗读：${err.message}`
-      : '语音合成暂时不可用，已切换为浏览器朗读。';
+      ? t('dh.audio.ttsFallbackWithMessage', { message: err.message })
+      : t('dh.audio.ttsFallback');
     showAudioNotice('error', message);
-    await audio.playTextFallback(answer, cue);
+    await audio.playTextFallback(speechText, cue);
   }
 }
 
@@ -606,7 +787,7 @@ async function loadGeofenceSpots() {
     geofenceSpots.value = data
       .map((raw, index) => ({
         id: String(raw.id || raw.ID || `spot-${index}`),
-        name: String(raw.name || raw.Name || `景点${index + 1}`),
+        name: String(raw.name || raw.Name || t('dh.spotFallbackName', { id: index + 1 })),
         lat: Number(raw.latitude || raw.Latitude || 0),
         lng: Number(raw.longitude || raw.Longitude || 0),
         triggerEnabled: Boolean(raw.geofence_enabled || raw.GeofenceEnabled),
@@ -635,8 +816,8 @@ function toggleAutoGuide() {
 
 watch(nearbySpot, async (spot) => {
   if (!spot || !autoGuideEnabled.value) return;
-  const text = spot.introText || `欢迎来到${spot.name}，我来为您介绍这里的看点。`;
-  addMessage('system', `已到达${spot.name}，自动讲解已触发。`);
+  const text = spot.introText || t('dh.autoGuideIntro', { name: spot.name });
+  addMessage('system', t('dh.autoGuideTriggered', { name: spot.name }));
   showAssistantSpeech(text);
   await playAnswerAudio(text);
 });
@@ -645,7 +826,7 @@ async function enableSound() {
   const ok = await audio.unlock();
   if (ok) {
     audioStatus.value = 'ready';
-    audioNotice.value = '声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。';
+    audioNotice.value = t('dh.audio.enabledNotice');
     lastAudioNotice = '';
   }
 }
@@ -798,16 +979,19 @@ const followUpQuestions = computed(() => {
   const text = lastMsg.text;
   const questions: { label: string; query: string }[] = [];
   if (text.includes('路线') || text.includes('route')) {
-    questions.push({ label: t('dh.quickAsk.routeDetail'), query: '这条路线有哪些主要景点？' });
-    questions.push({ label: t('dh.quickAsk.routeTime'), query: '需要多长时间走完？' });
+    questions.push({ label: t('dh.quickAsk.routeDetail'), query: t('dh.quickAsk.routeDetailQuery') });
+    questions.push({ label: t('dh.quickAsk.routeTime'), query: t('dh.quickAsk.routeTimeQuery') });
   }
   if (text.includes('历史') || text.includes('history')) {
-    questions.push({ label: t('dh.quickAsk.historyDetail'), query: '能讲讲这里的历史故事吗？' });
+    questions.push({ label: t('dh.quickAsk.historyDetail'), query: t('dh.quickAsk.historyDetailQuery') });
   }
   // 动态匹配景点实体（从 profile API 获取，而非硬编码）
   for (const entity of topicEntities.value) {
     if (text.includes(entity)) {
-      questions.push({ label: `${entity}的详细介绍`, query: `能详细介绍一下${entity}吗？` });
+      questions.push({
+        label: t('dh.quickAsk.entityDetailLabel', { name: entity }),
+        query: t('dh.quickAsk.entityDetailQuery', { name: entity }),
+      });
       break;
     }
   }
@@ -834,22 +1018,70 @@ function toggleSearch() {
   }
 }
 
+function clearSearch() {
+  searchQuery.value = '';
+  searchResults.value = [];
+}
+
 function onSearchInput() {
   window.clearTimeout(searchDebounceTimer);
   const q = searchQuery.value.trim();
   if (!q) {
     searchResults.value = [];
+    isSearching.value = false;
     return;
   }
   searchDebounceTimer = window.setTimeout(() => {
-    isSearching.value = true;
-    // Search in local messages
-    const results = state.messages
-      .filter(m => m.text.toLowerCase().includes(q.toLowerCase()))
-      .map(m => ({ text: m.text, time: m.time }));
-    searchResults.value = results.slice(0, 20);
-    isSearching.value = false;
+    void performSearch(q);
   }, 300);
+}
+
+async function performSearch(keyword: string) {
+  const q = keyword.trim();
+  if (!q) return;
+  try {
+    isSearching.value = true;
+    const [historyResults, localResults] = await Promise.all([
+      sessionStore.searchMessages(q, 1, 20),
+      Promise.resolve(state.messages
+      .filter(m => m.text.toLowerCase().includes(q.toLowerCase()))
+      .map(m => ({
+        id: `local-${m.id}`,
+        text: m.text,
+        time: m.time,
+        role: m.role,
+        sessionId: sessionStore.currentSessionId || getOrCreateSessionId(),
+        sessionTitle: t('dh.currentSession'),
+      }))),
+    ]);
+
+    const results = historyResults.list.map(item => ({
+      id: `history-${item.id}`,
+      text: item.content,
+      time: formatSearchTime(item.created_at),
+      role: item.role as ChatMessage['role'],
+      sessionId: item.session_id,
+      sessionTitle: item.session_title || t('dh.sessionDefaultTitle'),
+    }));
+    const seen = new Set(results.map(item => `${item.sessionId}:${item.text}`));
+    for (const item of localResults) {
+      const key = `${item.sessionId}:${item.text}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        results.push(item);
+      }
+    }
+    searchResults.value = results.slice(0, 20);
+  } finally {
+    isSearching.value = false;
+  }
+}
+
+async function openSearchResult(result: { sessionId?: string }) {
+  if (!result.sessionId) return;
+  await switchSession(result.sessionId);
+  showSearch.value = false;
+  clearSearch();
 }
 
 // --- Session drawer ---
@@ -869,7 +1101,7 @@ async function switchSession(sessionId: string) {
         id: `hist-${m.id}`,
         role: m.role as ChatMessage['role'],
         text: m.content,
-        time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(m.created_at),
       }));
     } else {
       const localMsgs = loadLocalMessages(sessionId);
@@ -906,7 +1138,7 @@ function onHeadClick() {
 
 function onBodyClick() {
   // Playful feedback on body click
-  addMessage('system', '👋 你戳了戳小灵');
+  addMessage('system', t('dh.avatar.poked', { name: selectedAvatar.value?.name || t('dh.avatar.fallbackName') }));
 }
 
 // --- LocalStorage recovery ---
@@ -919,7 +1151,7 @@ function loadLocalMessages(sessionId = getOrCreateSessionId()): ChatMessage[] {
       id: uid(),
       role: item.role as ChatMessage['role'],
       text: item.content,
-      time: new Date(item.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(item.time),
     }));
   } catch {
     return [];
@@ -929,7 +1161,7 @@ function loadLocalMessages(sessionId = getOrCreateSessionId()): ChatMessage[] {
 function buildFallbackAnswer(_text: string) {
   // 通用兜底：当 WebSocket 不可用时引导用户使用文字聊天
   // 具体景区信息已通过 RAG 知识库 + ScenicProfile 配置化，不再硬编码景区内容
-  return t('dh.fallbackGeneric') || '语音服务暂时不可用，请尝试文字聊天，我会根据知识库为您解答。';
+  return t('dh.fallbackGeneric');
 }
 
 onErrorCaptured((err) => {
@@ -949,7 +1181,7 @@ onMounted(async () => {
         id: `hist-${m.id}`,
         role: m.role as ChatMessage['role'],
         text: m.content,
-        time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(m.created_at),
       }));
     } else {
       const localMsgs = loadLocalMessages(sessionId);
@@ -964,6 +1196,7 @@ onMounted(async () => {
       state.messages = localMsgs;
     }
   }
+  await loadAvatarOptionsAndPreference();
   // 加载景区配置（topic_entities 用于动态关键词匹配）
   try {
     const profile = await apiFetch<{ topic_entities?: string[] }>('/scenic/profile');
@@ -977,7 +1210,18 @@ onMounted(async () => {
   if (autoGuideEnabled.value) startWatch();
   window.addEventListener('resize', onWindowResize);
 
-  // QR 扫码后自动提问
+  // QR 扫码后直接播放接口返回的讲解词，避免再次触发 RAG 推理。
+  const qrPayload = readQRIntroPayload();
+  if (qrPayload.intro) {
+    if (qrPayload.spot) {
+      addMessage('system', t('dh.scanSuccess', { name: qrPayload.spot }));
+    }
+    showAssistantSpeech(qrPayload.intro);
+    await playAnswerAudio(qrPayload.intro);
+    return;
+  }
+
+  // QR 扫码追问仍保留自动提问能力。
   const autoAsk = route.query.auto_ask as string;
   if (autoAsk) {
     let autoAsked = false;
@@ -1021,16 +1265,32 @@ onUnmounted(() => {
 <template>
   <main class="dh-view" :class="{ 'senior-mode-page': seniorModeEnabled }">
     <!-- 左侧：数字人展示区 -->
-    <section class="dh-stage" v-show="mobileTab === 'avatar' || !isMobileView">
+    <section v-show="mobileTab === 'avatar' || !isMobileView" class="dh-stage">
       <div class="dh-status">
         <span class="status-dot" :class="{ online: state.connected }"></span>
         <span class="status-text">{{ statusLabel }}</span>
+      </div>
+
+      <div v-if="avatarOptions.length > 0" class="avatar-switcher" :class="{ locked: avatarOptions.length === 1 }" :aria-label="$t('dh.avatar.ariaLabel')">
+        <span v-if="avatarOptions.length === 1" class="avatar-lock-label">{{ $t('dh.avatar.lockedLabel') }}</span>
+        <button
+          v-for="avatar in avatarOptions"
+          :key="avatar.id"
+          class="avatar-choice"
+          :class="{ active: selectedAvatarId === avatar.id }"
+          :disabled="avatarSaving"
+          @click="selectAvatar(avatar.id)"
+        >
+          <span class="avatar-dot" :style="{ background: avatar.preview_color }">{{ avatar.fallback_label }}</span>
+          <span>{{ avatar.name }}</span>
+        </button>
       </div>
 
       <Live2DStage
         :state="state.conversation"
         :mouth-open="mouthOpen"
         :expression="state.expression"
+        :model-url="selectedAvatar?.model_url"
         @head-click="onHeadClick"
         @body-click="onBodyClick"
       />
@@ -1049,7 +1309,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 字幕气泡 -->
-      <div class="subtitle-bubble">
+      <div v-if="isMobileView" class="subtitle-bubble">
         {{ state.subtitle }}
       </div>
 
@@ -1060,17 +1320,17 @@ onUnmounted(() => {
           :class="{ ready: audioStatus === 'ready' || audioStatus === 'playing', error: audioStatus === 'error' }"
           @click="enableSound"
         >
-          {{ audioStatus === 'playing' ? '播放中' : audioStatus === 'ready' ? '声音已启用' : '启用声音' }}
+          {{ audioStatus === 'playing' ? $t('dh.controls.soundPlaying') : audioStatus === 'ready' ? $t('dh.controls.soundReady') : $t('dh.controls.soundEnable') }}
         </button>
         <button class="ctrl-btn danger" :disabled="!canInterrupt" @click="interruptAnswer">
           {{ $t('dh.interrupt') }}
         </button>
         <button class="ctrl-btn" @click="connectSocket">{{ $t('dh.reconnect') }}</button>
         <button class="ctrl-btn" :class="{ ready: autoGuideEnabled }" @click="toggleAutoGuide">
-          {{ autoGuideEnabled ? '到点讲解已开' : '到点讲解' }}
+          {{ autoGuideEnabled ? $t('dh.controls.autoGuideOn') : $t('dh.controls.autoGuideOff') }}
         </button>
         <button class="ctrl-btn" :class="{ ready: seniorModeEnabled }" @click="toggleSeniorMode">
-          {{ seniorModeEnabled ? '退出老年模式' : '老年模式' }}
+          {{ seniorModeEnabled ? $t('dh.controls.exitSeniorMode') : $t('dh.controls.seniorMode') }}
         </button>
         <span v-if="autoGuideEnabled && geoError" class="interrupt-count">{{ geoError }}</span>
         <span class="interrupt-count">{{ $t('dh.interruptCount', { count: state.interruptCount }) }}</span>
@@ -1084,27 +1344,27 @@ onUnmounted(() => {
       v-if="!isMobileView"
       class="chat-resizer"
       :class="{ resizing: isChatResizing }"
-      title="拖动调整聊天框宽度"
+      :title="$t('dh.controls.chatResizeTitle')"
       @pointerdown.prevent="startChatResize"
     ></div>
 
     <!-- 右侧：聊天面板 -->
-    <aside class="dh-chat" :style="chatPanelStyle" v-show="mobileTab === 'chat' || !isMobileView">
+    <aside v-show="mobileTab === 'chat' || !isMobileView" class="dh-chat" :style="chatPanelStyle">
       <div class="chat-header">
         <div class="chat-header-top">
           <h2>{{ $t('dh.title') }}</h2>
           <div class="header-actions">
-            <button class="icon-btn" :class="{ active: showSearch }" @click="toggleSearch" title="搜索">
+            <button class="icon-btn" :class="{ active: showSearch }" :title="$t('dh.actions.search')" @click="toggleSearch">
               🔍
             </button>
-            <button class="icon-btn" @click="toggleSessionDrawer" title="历史会话">
+            <button class="icon-btn" :title="$t('dh.actions.history')" @click="toggleSessionDrawer">
               📋
             </button>
             <button
               v-if="authStore.isGuest"
               class="icon-btn upgrade-btn"
+              :title="$t('dh.actions.register')"
               @click="showUpgradeModal = true"
-              title="注册账号"
             >
               👤
             </button>
@@ -1116,11 +1376,11 @@ onUnmounted(() => {
         <div v-if="showSearch" class="search-bar">
           <input
             v-model="searchQuery"
+            autofocus
             :placeholder="$t('dh.searchPlaceholder')"
             @input="onSearchInput"
-            autofocus
           />
-          <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''; searchResults = []">✕</button>
+          <button v-if="searchQuery" class="search-clear" @click="clearSearch">✕</button>
         </div>
       </div>
 
@@ -1136,28 +1396,51 @@ onUnmounted(() => {
         <button
           v-if="followUpQuestions.length > 0"
           class="refresh-btn"
+          :title="$t('dh.actions.refresh')"
           @click="state.expression = 'neutral'"
-          title="刷新"
         >
           🔄
         </button>
       </div>
 
+      <section v-if="currentInsight" class="answer-visual-card">
+        <div class="answer-visual-thumb">{{ currentInsight.image }}</div>
+        <div class="answer-visual-body">
+          <div class="answer-visual-header">
+            <strong>{{ currentInsight.title }}</strong>
+            <span v-for="tag in currentInsight.tags" :key="tag">{{ tag }}</span>
+          </div>
+          <div class="answer-visual-points">
+            <i v-for="point in currentInsight.points" :key="point">{{ point }}</i>
+          </div>
+        </div>
+      </section>
+
       <!-- 搜索结果 -->
       <div v-if="showSearch && searchResults.length > 0" class="search-results">
-        <div
+        <button
           v-for="(result, i) in searchResults"
           :key="i"
           class="search-result-item"
-          v-html="highlightMatch(result.text, searchQuery)"
-        />
+          @click="openSearchResult(result)"
+        >
+          <span class="search-result-meta">
+            {{ result.sessionTitle || $t('dh.sessionDefaultTitle') }} · {{ result.time }}
+          </span>
+          <!-- eslint-disable vue/no-v-html -- highlightMatch escapes the search query before injecting mark tags -->
+          <span
+            class="search-result-text"
+            v-html="highlightMatch(result.text, searchQuery)"
+          />
+          <!-- eslint-enable vue/no-v-html -->
+        </button>
       </div>
       <div v-else-if="showSearch && searchQuery && !isSearching" class="search-empty">
         {{ $t('dh.searchNoResults') }}
       </div>
 
       <!-- 消息列表 -->
-      <div v-if="!showSearch || !searchQuery" class="message-list" @scroll.passive>
+      <div v-if="!showSearch || !searchQuery" class="message-list">
         <article v-for="msg in state.messages" :key="msg.id" :class="['msg', msg.role]">
           <div class="msg-label">
             {{ msg.role === 'user' ? $t('dh.user') : msg.role === 'assistant' ? $t('dh.assistant') : $t('dh.system') }}
@@ -1169,6 +1452,17 @@ onUnmounted(() => {
               :streaming="typewriterStreaming && msg.id === state.messages[state.messages.length - 1]?.id"
             />
             <span v-else>{{ msg.text }}</span>
+          </div>
+          <div v-if="msg.role === 'assistant' && msg.sources?.length" class="msg-sources">
+            <span class="msg-sources-label">{{ $t('dh.sourcesLabel') }}</span>
+            <span
+              v-for="source in msg.sources"
+              :key="source.id || source.title"
+              class="msg-source"
+              :title="source.preview || formatRAGSource(source)"
+            >
+              {{ formatRAGSource(source) }}
+            </span>
           </div>
           <div class="msg-time">{{ msg.time }}</div>
         </article>
@@ -1215,7 +1509,7 @@ onUnmounted(() => {
             >
               <div class="session-info">
                 <span class="session-title">{{ sess.title || $t('dh.sessionDefaultTitle') }}</span>
-                <span class="session-meta">{{ sess.message_count }} 条消息 · {{ new Date(sess.last_active_at).toLocaleDateString('zh-CN') }}</span>
+                <span class="session-meta">{{ $t('dh.sessionMessageCount', { count: sess.message_count }) }} · {{ new Date(sess.last_active_at).toLocaleDateString(locale) }}</span>
               </div>
               <button
                 class="session-delete"
@@ -1234,17 +1528,17 @@ onUnmounted(() => {
       <div v-if="showUpgradeModal" class="drawer-overlay" @click.self="showUpgradeModal = false">
         <div class="upgrade-modal">
           <div class="drawer-header">
-            <h3>📝 {{ $t('auth.upgradeTitle') || '注册正式账号' }}</h3>
+            <h3>📝 {{ $t('auth.upgradeTitle') }}</h3>
             <button class="drawer-close" @click="showUpgradeModal = false">✕</button>
           </div>
           <div class="upgrade-form">
-            <p class="upgrade-hint">{{ $t('auth.upgradeHint') || '升级后可保存所有对话记录，跨设备同步。' }}</p>
-            <input v-model="upgradeForm.username" :placeholder="$t('auth.usernamePlaceholder') || '用户名'" autocomplete="username" />
-            <input v-model="upgradeForm.password" type="password" :placeholder="$t('auth.passwordPlaceholder') || '密码（至少6位）'" autocomplete="new-password" />
-            <input v-model="upgradeForm.email" type="email" :placeholder="$t('auth.emailPlaceholder') || '邮箱（可选）'" autocomplete="email" />
+            <p class="upgrade-hint">{{ $t('auth.upgradeHint') }}</p>
+            <input v-model="upgradeForm.username" :placeholder="$t('auth.usernamePlaceholder')" autocomplete="username" />
+            <input v-model="upgradeForm.password" type="password" :placeholder="$t('auth.passwordPlaceholder')" autocomplete="new-password" />
+            <input v-model="upgradeForm.email" type="email" :placeholder="$t('auth.emailPlaceholder')" autocomplete="email" />
             <p v-if="upgradeError" class="upgrade-error">{{ upgradeError }}</p>
             <button class="upgrade-submit" :disabled="upgradeLoading" @click="handleUpgrade">
-              {{ upgradeLoading ? '...' : ($t('auth.upgradeButton') || '确认注册') }}
+              {{ upgradeLoading ? $t('auth.upgradeLoading') : $t('auth.upgradeButton') }}
             </button>
           </div>
         </div>
@@ -1319,6 +1613,69 @@ function highlightMatch(text: string, query: string): string {
 .status-text {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.avatar-switcher {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(10, 10, 15, 0.52);
+  backdrop-filter: blur(12px);
+  z-index: 2;
+}
+
+.avatar-lock-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.avatar-choice {
+  min-width: 78px;
+  height: 34px;
+  padding: 0 10px 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatar-choice:hover,
+.avatar-choice.active {
+  border-color: rgba(99, 226, 183, 0.4);
+  background: rgba(99, 226, 183, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.avatar-choice:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.avatar-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  color: #081014;
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
 }
 
 .emotion-bar {
@@ -1493,11 +1850,28 @@ function highlightMatch(text: string, query: string): string {
   padding: 8px 16px;
 }
 .search-result-item {
-  padding: 6px 0;
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 8px 0;
   font-size: 12px;
   color: rgba(255,255,255,.6);
+  text-align: left;
+  background: transparent;
+  border: none;
   border-bottom: 1px solid rgba(255,255,255,.04);
   line-height: 1.5;
+  cursor: pointer;
+}
+.search-result-item:hover {
+  color: rgba(255,255,255,.86);
+}
+.search-result-meta {
+  color: var(--sg-text-hint, rgba(255,255,255,.35));
+  font-size: 10px;
+}
+.search-result-text {
+  color: inherit;
 }
 .search-empty {
   padding: 20px;
@@ -1530,6 +1904,65 @@ function highlightMatch(text: string, query: string): string {
   margin-left: auto;
   padding: 5px 8px;
   font-size: 14px;
+}
+
+.answer-visual-card {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  margin: 10px 16px 0;
+  padding: 12px;
+  border: 1px solid rgba(82, 240, 238, 0.14);
+  border-radius: 10px;
+  background: rgba(82, 240, 238, 0.045);
+}
+.answer-visual-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #051214;
+  background: var(--sg-gold, #f4c765);
+  font-size: 20px;
+  font-weight: 800;
+}
+.answer-visual-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.answer-visual-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.answer-visual-header strong {
+  color: var(--sg-text-heading, rgba(255,255,255,.92));
+  font-size: 13px;
+}
+.answer-visual-header span {
+  color: var(--sg-jade-bright, #63e2b7);
+  background: rgba(99,226,183,.08);
+  border: 1px solid rgba(99,226,183,.14);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+.answer-visual-points {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.answer-visual-points i {
+  font-style: normal;
+  color: rgba(255,255,255,.68);
+  background: rgba(255,255,255,.045);
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .message-list {
@@ -1570,6 +2003,26 @@ function highlightMatch(text: string, query: string): string {
   font-size: 12px;
   text-align: center;
   border-radius: 8px;
+}
+.msg-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--sg-text-faint, rgba(255, 255, 255, 0.34));
+}
+.msg-source {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border: 1px solid rgba(99, 226, 183, 0.18);
+  border-radius: 8px;
+  color: rgba(99, 226, 183, 0.78);
+  background: rgba(99, 226, 183, 0.06);
 }
 .msg-time { font-size: 10px; color: var(--sg-text-ghost, rgba(255, 255, 255, 0.2)); margin-top: 4px; }
 
@@ -1706,6 +2159,17 @@ function highlightMatch(text: string, query: string): string {
     flex: none;
     height: 45vh;
   }
+  .avatar-switcher {
+    top: 48px;
+    right: 12px;
+    max-width: calc(100% - 24px);
+    overflow-x: auto;
+  }
+  .avatar-choice {
+    min-width: 68px;
+    height: 32px;
+    padding-right: 8px;
+  }
   .dh-chat {
     width: 100%;
     max-width: none;
@@ -1823,5 +2287,320 @@ function highlightMatch(text: string, query: string): string {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+/* 游客端自然景区服务风 */
+.dh-view {
+  height: calc(100vh - 58px);
+  color: var(--visitor-ink);
+  background:
+    radial-gradient(ellipse at 22% 8%, rgba(232, 220, 199, 0.36), transparent 36%),
+    radial-gradient(ellipse at 78% 90%, rgba(198, 107, 61, 0.18), transparent 34%),
+    linear-gradient(135deg, var(--visitor-sage), var(--visitor-moss));
+}
+
+.dh-stage {
+  margin: 16px 0 16px 18px;
+  border: 1px solid rgba(232, 220, 199, 0.24);
+  border-radius: 30px;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(232, 220, 199, 0.36), transparent 48%),
+    rgba(232, 220, 199, 0.18);
+  box-shadow: var(--visitor-shadow);
+  overflow: hidden;
+}
+
+.dh-stage::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.12;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(232, 220, 199, 0.85) 0 1px, transparent 1px),
+    radial-gradient(circle at 72% 68%, rgba(38, 51, 31, 0.62) 0 1px, transparent 1px);
+  background-size: 18px 18px, 26px 26px;
+}
+
+.dh-status {
+  z-index: 3;
+  padding: 8px 12px;
+  border: 1px solid rgba(232, 220, 199, 0.34);
+  border-radius: 999px;
+  background: rgba(232, 220, 199, 0.72);
+}
+
+.status-dot.online {
+  background: var(--visitor-moss);
+  box-shadow: none;
+}
+
+.status-text {
+  color: var(--visitor-ink);
+  font-weight: 700;
+}
+
+.avatar-switcher {
+  z-index: 3;
+  border-color: rgba(232, 220, 199, 0.34);
+  border-radius: 18px;
+  background: rgba(232, 220, 199, 0.72);
+}
+
+.avatar-lock-label,
+.avatar-choice {
+  color: var(--visitor-muted);
+}
+
+.avatar-choice {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.avatar-choice:hover,
+.avatar-choice.active {
+  color: var(--visitor-sand);
+  border-color: var(--visitor-moss);
+  background: var(--visitor-moss);
+}
+
+.subtitle-bubble {
+  position: relative;
+  z-index: 3;
+  max-width: min(520px, 86%);
+  border-color: var(--visitor-line);
+  border-radius: 24px;
+  color: var(--visitor-ink);
+  background: var(--visitor-sand);
+  box-shadow: 0 16px 34px rgba(38, 51, 31, 0.18);
+}
+
+.dh-controls {
+  z-index: 3;
+}
+
+.ctrl-btn {
+  min-height: 38px;
+  border-color: rgba(232, 220, 199, 0.34);
+  border-radius: 999px;
+  color: var(--visitor-ink);
+  background: rgba(232, 220, 199, 0.72);
+}
+
+.ctrl-btn:hover,
+.ctrl-btn.sound.ready {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+}
+
+.ctrl-btn.sound,
+.ctrl-btn.danger,
+.ctrl-btn.sound.error {
+  color: var(--visitor-ink);
+  border-color: var(--visitor-line);
+}
+
+.audio-hint {
+  z-index: 3;
+  color: rgba(232, 220, 199, 0.9);
+}
+
+.audio-hint.ready,
+.audio-hint.error {
+  color: var(--visitor-sand);
+}
+
+.chat-resizer::after {
+  background: rgba(232, 220, 199, 0.42);
+}
+
+.dh-chat {
+  margin: 16px 18px 16px 0;
+  border: 1px solid var(--visitor-line);
+  border-radius: 28px;
+  background: var(--visitor-sand);
+  box-shadow: var(--visitor-shadow);
+  overflow: hidden;
+}
+
+.chat-header,
+.quick-asks,
+.chat-input {
+  border-color: var(--visitor-line);
+}
+
+.chat-header {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.chat-header-top h2 {
+  color: var(--visitor-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.chat-header p,
+.msg-label,
+.msg-time,
+.search-result-meta,
+.search-empty {
+  color: var(--visitor-muted);
+}
+
+.icon-btn,
+.quick-asks button,
+.search-bar input,
+.chat-input input,
+.voice-btn {
+  border-color: var(--visitor-line);
+  border-radius: 999px;
+  color: var(--visitor-ink);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.icon-btn:hover,
+.icon-btn.active,
+.quick-asks button:hover,
+.voice-btn:hover {
+  border-color: var(--visitor-line-strong);
+  background: rgba(96, 108, 56, 0.12);
+}
+
+.search-bar input,
+.chat-input input {
+  color: var(--visitor-ink);
+}
+
+.answer-visual-card,
+.msg-bubble,
+.search-result-item {
+  border-color: var(--visitor-line);
+}
+
+.answer-visual-card {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.answer-visual-thumb {
+  color: var(--visitor-sand);
+  background: var(--visitor-terracotta);
+}
+
+.answer-visual-header strong,
+.session-title {
+  color: var(--visitor-ink);
+}
+
+.answer-visual-header span,
+.msg-source {
+  color: var(--visitor-moss);
+  border-color: var(--visitor-line);
+  background: rgba(96, 108, 56, 0.1);
+}
+
+.answer-visual-points i {
+  color: var(--visitor-muted);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.msg.user .msg-bubble {
+  color: var(--visitor-sand);
+  border-color: var(--visitor-moss);
+  background: var(--visitor-moss);
+}
+
+.msg.assistant .msg-bubble {
+  color: var(--visitor-ink);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.msg.system .msg-bubble {
+  color: var(--visitor-ink);
+  border-color: rgba(198, 107, 61, 0.22);
+  background: rgba(198, 107, 61, 0.12);
+}
+
+.send-btn {
+  border-radius: 999px;
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+}
+
+.drawer-overlay {
+  background: rgba(38, 51, 31, 0.48);
+}
+
+.session-drawer,
+.upgrade-modal {
+  color: var(--visitor-ink);
+  border-color: var(--visitor-line);
+  background: var(--visitor-sand);
+}
+
+.drawer-header {
+  border-color: var(--visitor-line);
+}
+
+.drawer-header h3,
+.upgrade-hint,
+.upgrade-form input {
+  color: var(--visitor-ink);
+}
+
+.drawer-close {
+  color: var(--visitor-muted);
+}
+
+.session-item:hover,
+.session-item.active {
+  background: rgba(96, 108, 56, 0.1);
+}
+
+.session-meta,
+.drawer-empty {
+  color: var(--visitor-muted);
+}
+
+.upgrade-form input {
+  border-color: var(--visitor-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.upgrade-submit {
+  border-radius: 999px;
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+}
+
+.mobile-tabs {
+  border-top-color: var(--visitor-line);
+  background: var(--visitor-sand);
+}
+
+.mobile-tabs button {
+  color: var(--visitor-muted);
+}
+
+.mobile-tabs button.active {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
+}
+
+@media (max-width: 768px) {
+  .dh-view {
+    height: calc(100dvh - 58px);
+  }
+
+  .dh-stage {
+    margin: 10px;
+    border-radius: 24px;
+  }
+
+  .dh-chat {
+    margin: 0 10px 10px;
+    border-radius: 24px;
+  }
 }
 </style>

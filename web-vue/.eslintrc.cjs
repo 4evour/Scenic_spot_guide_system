@@ -7,10 +7,14 @@ module.exports = {
     'eslint:recommended',
     'plugin:vue/vue3-recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
+    'prettier',
   ],
   rules: {
     'vue/multi-word-component-names': 'off',
+    'vue/valid-define-props': 'off',
+    'vue/valid-define-emits': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
+    'no-constant-condition': ['error', { checkLoops: false }],
+    'no-undef': 'off',
   },
 }

@@ -1,4 +1,4 @@
-﻿# Scenic Spot Guide System
+# Scenic Spot Guide System
 
 [![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
 
@@ -67,8 +67,8 @@ flowchart LR
 - **游客问答（RAG）**：基于景区知识库进行检索增强问答，支持 5 种检索模式（BM25、Embedding、加权混合、RRF 融合、可解释重排），SSE 流式回答（打字机效果），多轮对话上下文追问改写。
 - **用户反馈闭环**：每个 AI 回答支持 👍👎 反馈，数据自动进入统计大屏。
 - **数字人导览**：Live2D 虚拟形象 + 情绪检测 + 语音合成，通过 OpenAI 兼容接口和 `/vtuber-ws/*` 代理对接 Open-LLM-VTuber。
-- **数据大屏**：5 个 KPI 卡片 + 24h 趋势 + 热门问答 + 满意度 + RAG 评估指标可视化，30 秒自动刷新。
-- **管理后台**：知识库在线编辑/文件上传、数字人形象配置、游客感受度报告、系统设置。
+- **数据大屏**：基于真实接口展示 5 个 KPI 卡片、24h 趋势、关注点分布、热门问答、满意度趋势、知识库条目和最近对话；暂无后端来源的热力、终端、活动等运营态势显示空状态，不再使用硬编码演示数值。
+- **管理后台**：景点、路线、讲解内容、二维码、知识库、数字人形象、游客问题处理、游客感受度报告和系统设置。
 - **Prometheus 监控**：`/metrics` 端点暴露请求量、延迟 P50/P95/P99、RAG 查询耗时、缓存命中率等指标。
 - **安全加固**：JWT 算法混淆防护、IDOR 权限校验、密码策略、全局限流、CSP/HSTS 安全头、登录统一错误防枚举、CSRF 防护、Secure Cookie 策略、限流器优雅停止、API 响应体大小限制、/metrics 端点管理员鉴权保护。
 - **RAG 评估框架**：203 条真实问答评测集，Recall@8 99.5%，支持 5 种模式对比、分组统计、失败分析。
@@ -80,6 +80,7 @@ flowchart LR
 - 对外 JSON 字段统一使用 `snake_case`，例如 `image_url`、`sort_order`、`spot_id`、`content_type`、`audio_url`、`created_at`、`updated_at`。
 - 管理员用户管理接口为 `/api/v1/admin/users`：支持分页列表、创建、编辑和删除；创建/改密复用后端密码策略与 bcrypt，编辑时密码留空表示不修改。
 - `/api/v1/contents` 是管理员分页列表；公开导览内容查询保留 `/api/v1/contents/:id`、`/api/v1/contents/spot/:spot_id` 和 `/api/v1/contents/spot/:spot_id/type`。
+- 游客问题处理使用 `/api/v1/queries` 和 `/api/v1/queries/unanswered` 管理接口，Vue 管理端提供全部/未回答切换、回复编辑、处理状态和删除。
 - `/vtuber-ws/*` WebSocket 代理支持从同源浏览器自动携带的 `auth_token` Cookie 鉴权，同时保留子协议 token 和 query token 兼容路径。
 
 ## 技术栈
@@ -219,6 +220,8 @@ go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval
 
 Set-Location web-vue
 npm.cmd run check
+npm.cmd run lint
+npm.cmd run check:data-boundaries
 npm.cmd run check:encoding
 npm.cmd run build
 Set-Location ..
@@ -296,15 +299,14 @@ go run ./cmd/demo-seed -admin-password "替换成本地演示密码"
 - **密钥检测增强**：scripts/check-secrets.mjs 新增高德地图 API Key 检测规则。
 
 ### 代码质量改进
-- **统一输入校验**：user_handler.go 提取 alidateUsername、alidateEmail、alidateRole、userPayload 等共享函数，消除重复代码。
+- **统一输入校验**：user_handler.go 提取 validateUsername、validateEmail、validateRole、userPayload 等共享函数，消除重复代码。
 - **统一错误处理**：新增 handler/errors.go，提供 isRecordNotFound 统一封装 gorm.ErrRecordNotFound 判断。
-- **限流器可测试化**：
-ewRateLimitMiddlewareWithStopper 内部构造函数支持单元测试中精确控制清理 goroutine。
+- **限流器可测试化**：NewRateLimitMiddlewareWithStopper 内部构造函数支持单元测试中精确控制清理 goroutine。
 - **路由整理**：新增 /map Vue SPA 路由、/api/v1/scenic/profile 景区信息接口、/api/v1/track 轻量行为追踪接口。
 
 ### 前端改进
 - **ESLint + Prettier**：web-vue 新增 .eslintrc.cjs、.prettierrc.json、.prettierignore 配置文件。
-- **Vue 路由完善**：outer/index.ts 补充缺失路由定义，修复首次导航空白问题。
+- **Vue 路由完善**：router/index.ts 补充缺失路由定义，修复首次导航空白问题。
 - **CRUD 表格修复**：useCrudTable.ts 简化逻辑，修复 Go PascalCase 与前端 camelCase 字段名不匹配导致数据不显示的问题。
 
 ### 测试覆盖

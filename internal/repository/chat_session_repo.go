@@ -11,6 +11,7 @@ import (
 type ChatSessionRepository interface {
 	Create(session *model.ChatSession) error
 	FindBySessionID(sessionID string) (*model.ChatSession, error)
+	FindByIDs(ids []uint) ([]model.ChatSession, error)
 	ListByUserID(userID uint, page, pageSize int) ([]model.ChatSession, int64, error)
 	UpdateActivity(sessionID string, title string) error
 	DeleteBySessionID(sessionID string) error
@@ -36,6 +37,15 @@ func (r *chatSessionRepository) FindBySessionID(sessionID string) (*model.ChatSe
 		return nil, err
 	}
 	return &session, nil
+}
+
+func (r *chatSessionRepository) FindByIDs(ids []uint) ([]model.ChatSession, error) {
+	var sessions []model.ChatSession
+	if len(ids) == 0 {
+		return sessions, nil
+	}
+	err := r.db.Where("id IN ?", ids).Find(&sessions).Error
+	return sessions, err
 }
 
 func (r *chatSessionRepository) ListByUserID(userID uint, page, pageSize int) ([]model.ChatSession, int64, error) {

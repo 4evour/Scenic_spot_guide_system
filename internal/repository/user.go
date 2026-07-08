@@ -56,10 +56,11 @@ func (r *userRepository) Update(user *model.User) error {
 			return err
 		}
 		return tx.Model(&model.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
-			"username": user.Username,
-			"password": user.Password,
-			"email":    user.Email,
-			"role":     user.Role,
+			"username":            user.Username,
+			"password":            user.Password,
+			"email":               user.Email,
+			"role":                user.Role,
+			"preferred_avatar_id": user.PreferredAvatarID,
 		}).Error
 	})
 }

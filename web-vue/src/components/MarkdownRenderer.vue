@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 const props = withDefaults(defineProps<{
   text: string;
@@ -102,6 +102,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- eslint-disable-next-line vue/no-v-html -- sanitized by DOMPurify in renderMarkdown -->
   <div class="markdown-renderer" v-html="rendered" />
 </template>
 

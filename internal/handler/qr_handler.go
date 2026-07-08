@@ -195,6 +195,7 @@ func (h *QRHandler) UpdateQRCode(c *gin.Context) {
 		return
 	}
 
+	oldQRCode := spot.QRCode
 	spot.QRCode = req.QRCode
 	spot.QRIntroText = req.QRIntroText
 	spot.QREnabled = req.QREnabled
@@ -205,7 +206,8 @@ func (h *QRHandler) UpdateQRCode(c *gin.Context) {
 		return
 	}
 
-	// 清除该景点的缓存
+	// 清除新旧二维码缓存，避免改码后旧码仍返回缓存讲解。
+	h.invalidateCache(oldQRCode)
 	h.invalidateCache(req.QRCode)
 
 	pkg.Success(c, spotToResponse(spot))

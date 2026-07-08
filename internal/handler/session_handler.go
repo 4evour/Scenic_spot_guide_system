@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 
@@ -81,6 +82,50 @@ func (h *SessionHandler) GetSessionMessages(c *gin.Context) {
 	})
 }
 
+// AddSessionMessage 保存单条会话消息
+// POST /api/v1/sessions/:session_id/messages
+func (h *SessionHandler) AddSessionMessage(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := userID.(uint)
+	if uid == 0 {
+		pkg.Unauthorized(c, "未登录")
+		return
+	}
+
+	sessionID := c.Param("session_id")
+	if sessionID == "" {
+		pkg.BadRequest(c, "会话 ID 不能为空")
+		return
+	}
+
+	var req struct {
+		Role           string `json:"role"`
+		Content        string `json:"content"`
+		Emotion        string `json:"emotion"`
+		ResponseTimeMs int64  `json:"response_time_ms"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		pkg.BadRequest(c, "消息参数无效")
+		return
+	}
+
+	if err := h.chatSessionService.AddMessage(sessionID, uid, req.Role, req.Content, req.Emotion, req.ResponseTimeMs); err != nil {
+		if errors.Is(err, service.ErrSessionAccessDenied) {
+			pkg.Forbidden(c, "无权访问该会话")
+			return
+		}
+		if errors.Is(err, service.ErrInvalidSessionMessage) {
+			pkg.BadRequest(c, "消息内容或角色无效")
+			return
+		}
+		slog.Error("保存会话消息失败", "error", err, "session_id", sessionID, "user_id", uid)
+		pkg.InternalError(c, "保存会话消息失败")
+		return
+	}
+
+	pkg.Success(c, gin.H{"session_id": sessionID})
+}
+
 // DeleteSession 删除会话
 // DELETE /api/v1/sessions/:session_id
 func (h *SessionHandler) DeleteSession(c *gin.Context) {
@@ -150,6 +195,7 @@ func (h *SessionHandler) Routes(r *gin.RouterGroup) {
 		sessions.GET("", h.ListSessions)
 		sessions.GET("/search", h.SearchMessages)
 		sessions.GET("/:session_id/messages", h.GetSessionMessages)
+		sessions.POST("/:session_id/messages", h.AddSessionMessage)
 		sessions.DELETE("/:session_id", h.DeleteSession)
 	}
 }

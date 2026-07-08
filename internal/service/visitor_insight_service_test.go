@@ -95,6 +95,46 @@ func TestAnalyzeSessionSendsSanitizedMessagesToLLM(t *testing.T) {
 	}
 }
 
+func TestSaveFeedbackCreatesKnowledgeCandidateForLowRating(t *testing.T) {
+	db := newVisitorInsightDB(t)
+	rag := NewRAGService(repository.NewKnowledgeRepository(db), "", "", "", nil, nil)
+	svc := NewVisitorInsightService(db, rag)
+
+	err := svc.SaveFeedback(&model.UserFeedback{
+		SessionID: "s-feedback",
+		Query:     "停车场入口在哪里？",
+		Response:  "可以咨询游客中心。",
+		Helpful:   false,
+		Rating:    1,
+		Comment:   "没有回答到停车入口",
+		Source:    "web",
+		SpotID:    5,
+	})
+	if err != nil {
+		t.Fatalf("SaveFeedback: %v", err)
+	}
+
+	candidates, _, err := svc.ListCandidates("pending", 1, 20)
+	if err != nil {
+		t.Fatalf("ListCandidates: %v", err)
+	}
+	if len(candidates) != 1 {
+		t.Fatalf("candidates len = %d, want 1: %+v", len(candidates), candidates)
+	}
+	candidate := candidates[0]
+	if candidate.Source != "feedback-low-rating" || candidate.SpotID != 5 {
+		t.Fatalf("unexpected candidate source fields: %+v", candidate)
+	}
+	if !strings.Contains(candidate.Title, "停车场入口") {
+		t.Fatalf("candidate title should include feedback topic: %q", candidate.Title)
+	}
+	if !strings.Contains(candidate.Content, "游客问题：停车场入口在哪里？") ||
+		!strings.Contains(candidate.Content, "反馈：没有回答到停车入口") ||
+		!strings.Contains(candidate.Content, "请管理员补充官方准确答复后再入库。") {
+		t.Fatalf("unexpected candidate content: %q", candidate.Content)
+	}
+}
+
 func TestApproveKnowledgeCandidateCreatesKnowledgeChunk(t *testing.T) {
 	db := newVisitorInsightDB(t)
 	rag := NewRAGService(repository.NewKnowledgeRepository(db), "key", "test-model", "http://example.invalid", nil, nil)

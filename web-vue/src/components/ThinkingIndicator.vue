@@ -1,16 +1,10 @@
 <template>
-  <div v-if="visible" class="thinking-indicator">
+  <div class="thinking-indicator">
     <span class="think-dot" style="animation-delay: 0s" />
     <span class="think-dot" style="animation-delay: 0.2s" />
     <span class="think-dot" style="animation-delay: 0.4s" />
   </div>
 </template>
-
-<script setup lang="ts">
-defineProps<{
-  visible: boolean;
-}>();
-</script>
 
 <style scoped>
 .thinking-indicator {

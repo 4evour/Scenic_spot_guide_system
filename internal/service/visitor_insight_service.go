@@ -63,7 +63,76 @@ func (s *VisitorInsightService) SaveFeedback(feedback *model.UserFeedback) error
 	if feedback.Rating > 5 {
 		feedback.Rating = 5
 	}
-	return s.db.Create(feedback).Error
+	candidate := buildFeedbackKnowledgeCandidate(feedback)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(feedback).Error; err != nil {
+			return err
+		}
+		if candidate == nil {
+			return nil
+		}
+		var existing int64
+		if err := tx.Model(&model.KnowledgeCandidate{}).
+			Where("session_id = ? AND title = ? AND source = ? AND status = ?", candidate.SessionID, candidate.Title, candidate.Source, "pending").
+			Count(&existing).Error; err != nil {
+			return err
+		}
+		if existing > 0 {
+			return nil
+		}
+		return tx.Create(candidate).Error
+	})
+}
+
+func buildFeedbackKnowledgeCandidate(feedback *model.UserFeedback) *model.KnowledgeCandidate {
+	if feedback == nil {
+		return nil
+	}
+	isLowRating := feedback.Rating > 0 && feedback.Rating <= 2
+	isNegativeHelpful := !feedback.Helpful && feedback.Rating > 0
+	if !isLowRating && !isNegativeHelpful {
+		return nil
+	}
+	query := strings.TrimSpace(sanitizeInsightText(feedback.Query))
+	comment := strings.TrimSpace(sanitizeInsightText(feedback.Comment))
+	if query == "" && comment == "" {
+		return nil
+	}
+	topic := firstNonEmptyString(query, comment)
+	title := "待补充：" + truncateRunes(topic, 40)
+	content := "游客问题：" + firstNonEmptyString(query, "未提供") +
+		"\n反馈：" + firstNonEmptyString(comment, "未提供") +
+		"\n请管理员补充官方准确答复后再入库。"
+	return &model.KnowledgeCandidate{
+		SessionID:         strings.TrimSpace(feedback.SessionID),
+		Title:             title,
+		Content:           content,
+		Source:            "feedback-low-rating",
+		KnowledgeCategory: "游客 FAQ",
+		SpotID:            feedback.SpotID,
+		Status:            "pending",
+	}
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func truncateRunes(text string, limit int) string {
+	text = strings.TrimSpace(text)
+	if limit <= 0 {
+		return ""
+	}
+	runes := []rune(text)
+	if len(runes) <= limit {
+		return text
+	}
+	return string(runes[:limit]) + "..."
 }
 
 func (s *VisitorInsightService) AnalyzeSession(sessionID string) (*model.VisitorInsightAnalysis, error) {

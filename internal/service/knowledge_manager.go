@@ -38,36 +38,8 @@ func (s *RAGService) LoadKnowledgeFromFile(filePath string) error {
 			continue
 		}
 
-		exists, err := s.repo.Exists(chunk.ID)
-		if err != nil {
-			return fmt.Errorf("检查ID存在失败: %v", err)
-		}
-
-		if exists {
-			continue
-		}
-
-		vector, err := s.GenerateEmbedding(chunk.Content)
-		if err != nil {
-			vector = s.bm25FallbackVector(chunk.Content)
-		}
-
-		metadataJSON, _ := json.Marshal(chunk.Metadata)
-
-		knowledge := &model.KnowledgeChunk{
-			ID:                chunk.ID,
-			Content:           chunk.Content,
-			Source:            chunk.Source,
-			Title:             chunk.Title,
-			Metadata:          string(metadataJSON),
-			KnowledgeCategory: chunk.KnowledgeCategory,
-			SpotID:            chunk.SpotID,
-			SpotCategory:      chunk.SpotCategory,
-			Vector:            vector,
-		}
-
-		if err := s.repo.Create(knowledge); err != nil {
-			continue
+		if _, err := s.upsertChunkData(&chunk); err != nil {
+			return fmt.Errorf("写入知识片段失败: %v", err)
 		}
 
 		loadedCount++

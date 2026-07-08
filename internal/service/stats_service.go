@@ -317,6 +317,7 @@ func (s *StatsService) GetRecentConversations(limit int) []RecentConversation {
 // ==================== 游客感受度报告 ====================
 
 type VisitorReport struct {
+	Period              string             `json:"period"`
 	AttentionAnalysis   []AttentionItem    `json:"attention_analysis"`
 	EmotionDistribution []EmotionItem      `json:"emotion_distribution"`
 	EmotionTrend        []EmotionTrendItem `json:"emotion_trend"`
@@ -361,15 +362,20 @@ type ReportSummary struct {
 	PeakHour          string  `json:"peak_hour"`
 }
 
-func (s *StatsService) GetVisitorReport() VisitorReport {
-	weekAgo := time.Now().Add(-7 * 24 * time.Hour)
-	totalInteractions, err := s.interactionRepo.GetTotalCount(weekAgo)
+func (s *StatsService) GetVisitorReport(days int) VisitorReport {
+	if days != 30 {
+		days = 7
+	}
+	since := time.Now().AddDate(0, 0, -(days - 1)).Truncate(24 * time.Hour)
+	period := fmt.Sprintf("%dd", days)
+
+	totalInteractions, err := s.interactionRepo.GetTotalCount(since)
 	if err != nil {
 		slog.Error("查询交互总数失败", "error", err)
 	}
 
 	// 关注点分析 - 从分类分布获取
-	cats, err := s.interactionRepo.GetCategoryDistribution(weekAgo)
+	cats, err := s.interactionRepo.GetCategoryDistribution(since)
 	if err != nil {
 		slog.Error("查询分类分布失败", "error", err)
 	}
@@ -413,20 +419,8 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 		attention = append(attention, AttentionItem{Label: label, Value: value})
 	}
 
-	// 补充默认数据
-	if len(attention) == 0 {
-		attention = []AttentionItem{
-			{Label: "历史文化", Value: 85},
-			{Label: "自然风光", Value: 72},
-			{Label: "路线规划", Value: 65},
-			{Label: "拍照打卡", Value: 88},
-			{Label: "亲子活动", Value: 55},
-		}
-		topConcern = "拍照打卡"
-	}
-
 	// 情感分布
-	dist, err := s.interactionRepo.GetEmotionDistribution(weekAgo)
+	dist, err := s.interactionRepo.GetEmotionDistribution(since)
 	if err != nil {
 		slog.Error("查询情感分布失败", "error", err)
 	}
@@ -463,21 +457,16 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 			emotions[i].Percent = math.Round(float64(emotions[i].Count) / float64(emotionTotal) * 100)
 		}
 	}
-	// 至少有默认值
 	if emotionTotal == 0 {
-		emotions = []EmotionItem{
-			{Label: "正面", Icon: "😊", Percent: 78},
-			{Label: "中性", Icon: "😐", Percent: 15},
-			{Label: "负面", Icon: "😞", Percent: 7},
-		}
+		emotions = []EmotionItem{}
 	}
 	satisfactionRate := findEmotionPercent(emotions, "正面")
 	negativeRate := findEmotionPercent(emotions, "负面")
 
-	emotionTrend := s.buildEmotionTrend(weekAgo)
+	emotionTrend := s.buildEmotionTrend(since, days)
 
 	// 热门时段
-	hourlyStats, err := s.interactionRepo.GetHourlyStats(weekAgo)
+	hourlyStats, err := s.interactionRepo.GetHourlyStats(since)
 	if err != nil {
 		slog.Error("查询小时统计失败", "error", err)
 	}
@@ -501,21 +490,10 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 	sort.Slice(peakHours, func(i, j int) bool {
 		return peakHours[i].Hour < peakHours[j].Hour
 	})
-	if len(peakHours) == 0 {
-		peakHours = []PeakHourItem{
-			{Hour: "09:00", Count: 40},
-			{Hour: "10:00", Count: 65},
-			{Hour: "11:00", Count: 90},
-			{Hour: "14:00", Count: 85},
-			{Hour: "15:00", Count: 70},
-			{Hour: "16:00", Count: 55},
-		}
-		peakHour = "11:00"
-	}
-
-	suggestions := buildServiceSuggestions(attention, emotions, peakHour, totalInteractions)
+	suggestions := buildServiceSuggestions(attention, emotions, peakHour, totalInteractions, days)
 
 	return VisitorReport{
+		Period:              period,
 		AttentionAnalysis:   attention,
 		EmotionDistribution: emotions,
 		EmotionTrend:        emotionTrend,
@@ -531,7 +509,7 @@ func (s *StatsService) GetVisitorReport() VisitorReport {
 	}
 }
 
-func (s *StatsService) buildEmotionTrend(since time.Time) []EmotionTrendItem {
+func (s *StatsService) buildEmotionTrend(since time.Time, days int) []EmotionTrendItem {
 	stats, err := s.interactionRepo.GetDailyEmotionTrend(since)
 	if err != nil {
 		slog.Error("查询情感趋势失败", "error", err)
@@ -541,10 +519,9 @@ func (s *StatsService) buildEmotionTrend(since time.Time) []EmotionTrendItem {
 		byDate[item.Date] = item
 	}
 
-	result := make([]EmotionTrendItem, 0, 7)
-	start := time.Now().AddDate(0, 0, -6)
-	for i := 0; i < 7; i++ {
-		day := start.AddDate(0, 0, i).Format("2006-01-02")
+	result := make([]EmotionTrendItem, 0, days)
+	for i := 0; i < days; i++ {
+		day := since.AddDate(0, 0, i).Format("2006-01-02")
 		stat := byDate[day]
 		item := EmotionTrendItem{Date: day, Total: stat.Total}
 		if stat.Total > 0 {
@@ -566,12 +543,12 @@ func findEmotionPercent(items []EmotionItem, label string) float64 {
 	return 0
 }
 
-func buildServiceSuggestions(attention []AttentionItem, emotions []EmotionItem, peakHour string, totalInteractions int64) []SuggestionItem {
+func buildServiceSuggestions(attention []AttentionItem, emotions []EmotionItem, peakHour string, totalInteractions int64, days int) []SuggestionItem {
 	suggestions := make([]SuggestionItem, 0, 5)
 
 	if totalInteractions == 0 {
 		return []SuggestionItem{
-			{Content: "近 7 天暂无有效交互记录，建议先引导游客通过数字人入口咨询路线、票务和服务设施问题。"},
+			{Content: fmt.Sprintf("近 %d 天暂无有效交互记录，建议先引导游客通过数字人入口咨询路线、票务和服务设施问题。", days)},
 			{Content: "运营初期可预置讲解词、常见问答和游客服务知识，提升首批问答覆盖率。"},
 		}
 	}
@@ -618,19 +595,21 @@ func buildServiceSuggestions(attention []AttentionItem, emotions []EmotionItem, 
 // ==================== 数字人配置 ====================
 
 type DigitalHumanSettings struct {
-	Name           string  `json:"name"`
-	Appearance     string  `json:"appearance"`
-	Costume        string  `json:"costume"`
-	Style          string  `json:"style"`
-	Color          string  `json:"color"`
-	CultureTheme   string  `json:"culture_theme"`
-	VoiceType      string  `json:"voice_type"`
-	VoiceTone      string  `json:"voice_tone"`
-	Speed          float64 `json:"speed"`
-	Volume         int     `json:"volume"`
-	Greeting       string  `json:"greeting"`
-	DefaultEmotion string  `json:"default_emotion"`
-	EmotionLevel   int     `json:"emotion_level"`
+	Name              string  `json:"name"`
+	Appearance        string  `json:"appearance"`
+	Costume           string  `json:"costume"`
+	Style             string  `json:"style"`
+	Color             string  `json:"color"`
+	CultureTheme      string  `json:"culture_theme"`
+	VoiceType         string  `json:"voice_type"`
+	VoiceTone         string  `json:"voice_tone"`
+	Speed             float64 `json:"speed"`
+	Volume            int     `json:"volume"`
+	Greeting          string  `json:"greeting"`
+	DefaultEmotion    string  `json:"default_emotion"`
+	EmotionLevel      int     `json:"emotion_level"`
+	DefaultAvatarID   string  `json:"default_avatar_id"`
+	AllowAvatarSwitch bool    `json:"allow_avatar_switch"`
 }
 
 func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
@@ -642,6 +621,8 @@ func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
 			VoiceType: "温柔女声", VoiceTone: "温暖、端庄、亲切", Speed: 0.8, Volume: 80,
 			Greeting:       "欢迎来到灵山胜境，我是您的数字导览员小灵。",
 			DefaultEmotion: "joy", EmotionLevel: 3,
+			DefaultAvatarID:   DefaultDigitalHumanAvatarID,
+			AllowAvatarSwitch: true,
 		}
 	}
 	return DigitalHumanSettings{
@@ -650,10 +631,15 @@ func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
 		VoiceType: config.VoiceType, VoiceTone: config.VoiceTone, Speed: config.Speed, Volume: config.Volume,
 		Greeting:       config.Greeting,
 		DefaultEmotion: config.DefaultEmotion, EmotionLevel: config.EmotionLevel,
+		DefaultAvatarID:   NormalizeDigitalHumanAvatarID(config.DefaultAvatarID),
+		AllowAvatarSwitch: config.AllowAvatarSwitch,
 	}
 }
 
 func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) error {
+	if err := ValidateDigitalHumanAvatarID(settings.DefaultAvatarID); err != nil {
+		return err
+	}
 	config, err := s.dhConfigRepo.Get()
 	if err != nil {
 		// 获取失败时构造默认记录并创建
@@ -674,6 +660,8 @@ func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) e
 	config.Greeting = settings.Greeting
 	config.DefaultEmotion = settings.DefaultEmotion
 	config.EmotionLevel = settings.EmotionLevel
+	config.DefaultAvatarID = NormalizeDigitalHumanAvatarID(settings.DefaultAvatarID)
+	config.AllowAvatarSwitch = settings.AllowAvatarSwitch
 	return s.dhConfigRepo.Update(config)
 }
 

@@ -135,7 +135,7 @@ func (h *AdminHandler) GetRecentConversations(c *gin.Context) {
 
 // GetVisitorReport 获取游客感受度报告
 func (h *AdminHandler) GetVisitorReport(c *gin.Context) {
-	report := h.statsService.GetVisitorReport()
+	report := h.statsService.GetVisitorReport(parseReportPeriodDays(c.Query("period")))
 	pkg.Success(c, report)
 }
 
@@ -154,9 +154,13 @@ func (h *AdminHandler) UpdateDigitalHumanConfig(c *gin.Context) {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
+	if settings.DefaultAvatarID != "" && !service.IsValidDigitalHumanAvatarID(settings.DefaultAvatarID) {
+		pkg.BadRequest(c, "unknown digital human avatar: "+settings.DefaultAvatarID)
+		return
+	}
 	if err := h.statsService.UpdateDigitalHumanConfig(settings); err != nil {
 		slog.Error("更新数字人配置失败", "error", err)
-		pkg.InternalError(c, pkg.T(c, "msg_save_failed"))
+		pkg.InternalError(c, err.Error())
 		return
 	}
 	pkg.SuccessWithMessage(c, pkg.T(c, "msg_save_success"), nil)
@@ -311,4 +315,13 @@ func parsePageQuery(c *gin.Context) (int, int) {
 		pageSize = 20
 	}
 	return page, pageSize
+}
+
+func parseReportPeriodDays(period string) int {
+	switch period {
+	case "30d":
+		return 30
+	default:
+		return 7
+	}
 }

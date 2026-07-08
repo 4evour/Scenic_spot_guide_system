@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ThinkingIndicator from './ThinkingIndicator.vue';
 import type { ConversationState, Live2DExpression, PixiAppLike, Live2DModelLike, MotionGroup } from '../types/digitalHuman';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   state: ConversationState;
   mouthOpen: number;
   expression: Live2DExpression;
-}>();
+  modelUrl?: string;
+}>(), {
+  modelUrl: '/static/live2d-models/mao_pro/runtime/mao_pro.model3.json',
+});
+
+const CUBISM_CORE_SCRIPT_ID = 'live2d-cubism-core';
+const CUBISM_CORE_SCRIPT_SRC = '/static/digital-human/libs/live2dcubismcore.min.js';
 
 const emit = defineEmits<{
   (e: 'head-click'): void;
   (e: 'body-click'): void;
 }>();
+
+const { t } = useI18n();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const live2dHost = ref<HTMLDivElement | null>(null);
@@ -28,25 +37,29 @@ let resizeObserver: ResizeObserver | null = null;
 let appliedExpression = '';
 let expressionSeq = 0;
 let idleMotionTimer = 0;
-let currentMotionGroup: MotionGroup | null = null;
 let smoothedMouthOpen = 0;
 let resizeRafId = 0;
+let modelMotionGroups = new Set<string>();
+let modelLoadGeneration = 0;
 
-// --- lip-sync parameter IDs (read from model3.json Groups) ---
-const lipSyncParameterIds = ['ParamA'];
 let modelLipSyncIds: string[] = ['ParamA'];
 
 // --- expression class ---
 const expressionClass = computed(() => `expr-${props.expression}`);
 
 const statusText = computed(() => {
-  if (props.state === 'speaking') return '讲解中';
-  if (props.state === 'thinking') return '思考中';
-  if (props.state === 'listening') return '聆听中';
-  if (props.state === 'interrupted') return '已打断';
-  if (props.state === 'connecting') return '连接中';
-  if (props.state === 'error') return '异常';
-  return '待命';
+  if (props.state === 'speaking') return t('live2dStage.status.speaking');
+  if (props.state === 'thinking') return t('live2dStage.status.thinking');
+  if (props.state === 'listening') return t('live2dStage.status.listening');
+  if (props.state === 'interrupted') return t('live2dStage.status.interrupted');
+  if (props.state === 'connecting') return t('live2dStage.status.connecting');
+  if (props.state === 'error') return t('live2dStage.status.error');
+  return t('live2dStage.status.idle');
+});
+
+const live2dNote = computed(() => {
+  if (live2dLoaded.value) return t('live2dStage.readyNote');
+  return live2dError.value || t('live2dStage.loadingNote');
 });
 
 // --- fallback drawing helpers ---
@@ -175,17 +188,26 @@ function drawFallback() {
 // --- Live2D model loading ---
 async function loadLive2DModel() {
   if (!live2dHost.value) return;
+  const generation = ++modelLoadGeneration;
+  const host = live2dHost.value;
   try {
+    destroyLive2DModel(false);
+    await loadCubismCore();
     const PIXI = await import('pixi.js');
     const { Live2DModel } = await import('pixi-live2d-display/cubism4');
     window.PIXI = PIXI;
 
-    pixiApp = new PIXI.Application({
-      resizeTo: live2dHost.value,
+    const app = new PIXI.Application({
+      resizeTo: host,
       transparent: true,
       antialias: true,
       autoStart: true,
     }) as unknown as PixiAppLike;
+    if (generation !== modelLoadGeneration || !live2dHost.value) {
+      app.destroy(true);
+      return;
+    }
+    pixiApp = app;
 
     // Set FPS cap for mobile
     isMobile.value = window.innerWidth < 768;
@@ -193,27 +215,32 @@ async function loadLive2DModel() {
       pixiApp.ticker.maxFPS = isMobile.value ? 30 : 60;
     }
 
-    live2dHost.value.appendChild(pixiApp.view);
+    host.appendChild(pixiApp.view);
 
-    const modelUrl = '/static/live2d-models/mao_pro/runtime/mao_pro.model3.json';
-    live2dModel = await Live2DModel.from(modelUrl) as unknown as Live2DModelLike;
-    live2dModel!.autoUpdate = false;
-    live2dModel!.anchor.set(0.5, 0.5);
+    const model = await Live2DModel.from(props.modelUrl) as unknown as Live2DModelLike;
+    if (generation !== modelLoadGeneration || pixiApp !== app) {
+      (model as Live2DModelLike & { destroy?: () => void }).destroy?.();
+      return;
+    }
+    live2dModel = model;
+    live2dModel.autoUpdate = false;
+    live2dModel.anchor.set(0.5, 0.5);
     syncLive2DLayout();
 
     // Parse LipSync params from model config
     await detectLipSyncParams();
+    if (generation !== modelLoadGeneration || pixiApp !== app || live2dModel !== model) return;
 
-    pixiApp!.stage.addChild(live2dModel!);
-    pixiApp!.ticker.add(syncLive2DFrame);
-    live2dModel!.internalModel?.on?.('beforeModelUpdate', applyLipSyncParameters);
+    pixiApp.stage.addChild(live2dModel);
+    pixiApp.ticker.add(syncLive2DFrame);
+    live2dModel.internalModel?.on?.('beforeModelUpdate', applyLipSyncParameters);
     live2dLoaded.value = true;
     live2dError.value = '';
 
     cancelAnimationFrame(raf);
-    window.addEventListener('resize', syncLive2DLayout);
+    window.addEventListener('resize', onResize);
     resizeObserver = new ResizeObserver(syncLive2DLayout);
-    resizeObserver.observe(live2dHost.value!);
+    resizeObserver.observe(host);
 
     // Register hit area handlers
     registerHitAreas();
@@ -225,16 +252,41 @@ async function loadLive2DModel() {
     applyLive2DState();
   } catch (error) {
     live2dLoaded.value = false;
-    live2dError.value = 'Live2D SDK 未就绪，已启用备用动效预览';
+    live2dError.value = t('live2dStage.sdkFallback');
     console.warn('Live2D SDK unavailable, fallback avatar is active.', error);
   }
+}
+
+function loadCubismCore(): Promise<void> {
+  const existing = document.getElementById(CUBISM_CORE_SCRIPT_ID) as HTMLScriptElement | null;
+  if (existing?.dataset.loaded === 'true') return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = existing || document.createElement('script');
+    const onLoad = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    const onError = () => reject(new Error('Live2D Cubism Core failed to load'));
+
+    script.addEventListener('load', onLoad, { once: true });
+    script.addEventListener('error', onError, { once: true });
+
+    if (!existing) {
+      script.id = CUBISM_CORE_SCRIPT_ID;
+      script.src = CUBISM_CORE_SCRIPT_SRC;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  });
 }
 
 // --- Lip-Sync parameter detection ---
 async function detectLipSyncParams() {
   try {
-    const resp = await fetch('/static/live2d-models/mao_pro/runtime/mao_pro.model3.json');
+    const resp = await fetch(props.modelUrl);
     const modelJson = await resp.json();
+    modelMotionGroups = new Set(Object.keys(modelJson.FileReferences?.Motions || {}));
     const lipGroup = (modelJson.Groups || []).find(
       (g: { Name: string }) => g.Name === 'LipSync',
     );
@@ -244,6 +296,7 @@ async function detectLipSyncParams() {
   } catch {
     // Fallback to default ParamA
     modelLipSyncIds = ['ParamA'];
+    modelMotionGroups = new Set(['Idle']);
   }
 }
 
@@ -328,7 +381,11 @@ const MOTION_NAMES: Record<string, string> = {
 
 function playMotion(group: MotionGroup, index?: number) {
   if (!live2dModel || typeof live2dModel.motion !== 'function') return;
-  const groupName = MOTION_NAMES[group] ?? group;
+  let groupName = MOTION_NAMES[group] ?? group;
+  if (!modelMotionGroups.has(groupName)) {
+    groupName = modelMotionGroups.has('Tap') ? 'Tap' : 'Idle';
+    index = 0;
+  }
   if (!groupName && groupName !== '') return;
   try {
     if (index !== undefined) {
@@ -336,7 +393,6 @@ function playMotion(group: MotionGroup, index?: number) {
     } else {
       live2dModel.motion(groupName);
     }
-    currentMotionGroup = group;
   } catch (e) {
     console.warn('Live2D motion failed:', e);
   }
@@ -354,11 +410,6 @@ function playStateMotion(state: ConversationState) {
   } else {
     playMotion('', motionIndex);
   }
-}
-
-function getRandomMotionIndex(): number {
-  // Random from speaking pool for idle variations
-  return SPEAKING_MOTION_POOL[Math.floor(Math.random() * SPEAKING_MOTION_POOL.length)];
 }
 
 function startIdleMotionCycle() {
@@ -588,25 +639,43 @@ onMounted(() => {
   void loadLive2DModel();
 });
 
-onUnmounted(() => {
+function destroyLive2DModel(invalidate = true) {
+  if (invalidate) modelLoadGeneration += 1;
   window.clearInterval(idleMotionTimer);
-  cancelAnimationFrame(raf);
   window.removeEventListener('resize', onResize);
   window.cancelAnimationFrame(resizeRafId);
   resizeObserver?.disconnect();
+  resizeObserver = null;
   // Cleanup touch gestures
   touchCleanup?.();
+  touchCleanup = null;
   // Cleanup hit area handler
   const model = live2dModel as Record<string, unknown> | null;
   if (model?._cleanupHitArea) (model._cleanupHitArea as () => void)();
   pixiApp?.ticker?.remove?.(syncLive2DFrame);
   live2dModel?.internalModel?.off?.('beforeModelUpdate', applyLipSyncParameters);
   pixiApp?.destroy?.(true);
+  pixiApp = null;
+  live2dModel = null;
+  live2dLoaded.value = false;
+  appliedExpression = '';
+  modelMotionGroups = new Set();
+}
+
+onUnmounted(() => {
+  cancelAnimationFrame(raf);
+  destroyLive2DModel();
 });
 
 watch(() => [props.state, props.mouthOpen, props.expression], () => {
   drawFallback();
   applyLive2DState();
+});
+
+watch(() => props.modelUrl, () => {
+  cancelAnimationFrame(raf);
+  loop();
+  void loadLive2DModel();
 });
 </script>
 
@@ -616,7 +685,7 @@ watch(() => [props.state, props.mouthOpen, props.expression], () => {
     <div ref="live2dHost" class="live2d-host" :class="{ loaded: live2dLoaded }" />
     <canvas ref="canvas" class="live2d-canvas" :class="{ hidden: live2dLoaded }" />
 
-    <ThinkingIndicator :visible="state === 'thinking' && live2dLoaded" />
+    <ThinkingIndicator v-if="state === 'thinking' && live2dLoaded" />
 
     <div class="model-status">
       <span class="status-pulse" />
@@ -624,7 +693,7 @@ watch(() => [props.state, props.mouthOpen, props.expression], () => {
     </div>
 
     <div class="live2d-note">
-      {{ live2dLoaded ? 'Live2D 模型已接入，表情与口型由前端状态驱动。' : live2dError || '正在加载 Live2D 模型...' }}
+      {{ live2dNote }}
     </div>
   </section>
 </template>

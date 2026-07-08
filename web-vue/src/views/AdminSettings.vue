@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   NCard,
   NForm,
@@ -18,6 +19,7 @@ import { apiFetch } from '../services/api'
 import type { SystemSettings } from '../types/admin'
 import { defaultSettings } from '../types/admin'
 
+const { t } = useI18n()
 const message = useMessage()
 
 const loading = ref(false)
@@ -27,29 +29,29 @@ const settings = reactive<SystemSettings>({ ...defaultSettings })
 
 const formRef = ref<FormInst | null>(null)
 
-const backupFrequencyOptions = [
-  { label: '每日', value: '每日' },
-  { label: '每周', value: '每周' },
-  { label: '每月', value: '每月' },
-  { label: '手动', value: '手动' },
-]
+const backupFrequencyOptions = computed(() => [
+  { label: t('adminSettings.backupFrequency.daily'), value: '每日' },
+  { label: t('adminSettings.backupFrequency.weekly'), value: '每周' },
+  { label: t('adminSettings.backupFrequency.monthly'), value: '每月' },
+  { label: t('adminSettings.backupFrequency.manual'), value: '手动' },
+])
 
-const rules: FormRules = {
-  scenic_name: [{ required: true, message: '请输入景区名称', trigger: 'blur' }],
+const rules = computed<FormRules>(() => ({
+  scenic_name: [{ required: true, message: t('adminSettings.validation.scenicNameRequired'), trigger: 'blur' }],
   data_retention: [
-    { required: true, message: '请输入数据保留天数', trigger: 'blur' },
+    { required: true, message: t('adminSettings.validation.dataRetentionRequired'), trigger: 'blur' },
     {
       validator: (_rule, value: string) => {
         const num = Number(value)
         if (Number.isNaN(num) || num < 1 || num > 365) {
-          return new Error('1-365天')
+          return new Error(t('adminSettings.validation.dataRetentionRange'))
         }
         return true
       },
       trigger: 'blur',
     },
   ],
-}
+}))
 
 async function loadSettings() {
   loading.value = true
@@ -57,7 +59,7 @@ async function loadSettings() {
     const data = await apiFetch<Partial<SystemSettings>>('/admin/settings')
     Object.assign(settings, { ...defaultSettings, ...data })
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '系统设置加载失败')
+    message.error(error instanceof Error ? error.message : t('adminSettings.messages.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -72,9 +74,9 @@ async function saveSettings() {
   saving.value = true
   try {
     await apiFetch('/admin/settings', { method: 'PUT', body: JSON.stringify(settings) })
-    message.success('系统设置已保存')
+    message.success(t('adminSettings.messages.saveSuccess'))
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '保存失败')
+    message.error(error instanceof Error ? error.message : t('adminSettings.messages.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -84,7 +86,7 @@ onMounted(loadSettings)
 </script>
 
 <template>
-  <NCard title="系统设置" :bordered="false" class="settings-card">
+  <NCard :title="t('adminSettings.title')" :bordered="false" class="settings-card">
     <template v-if="loading">
       <NSkeleton v-for="n in 6" :key="n" :height="40" :width="n <= 4 ? '100%' : '60%'" style="margin-bottom: 20px" />
     </template>
@@ -98,58 +100,58 @@ onMounted(loadSettings)
         label-width="120"
         require-mark-placement="right-hanging"
       >
-        <NDivider>基本信息</NDivider>
+        <NDivider>{{ t('adminSettings.sections.basic') }}</NDivider>
 
-        <NFormItem label="景区名称" path="scenic_name">
-          <NInput v-model:value="settings.scenic_name" placeholder="请输入景区名称" />
+        <NFormItem :label="t('adminSettings.form.scenicName')" path="scenic_name">
+          <NInput v-model:value="settings.scenic_name" :placeholder="t('adminSettings.placeholders.scenicName')" />
         </NFormItem>
 
-        <NFormItem label="景区简介" path="scenic_desc">
+        <NFormItem :label="t('adminSettings.form.scenicDesc')" path="scenic_desc">
           <NInput
             v-model:value="settings.scenic_desc"
             type="textarea"
             :rows="3"
-            placeholder="请输入景区简介"
+            :placeholder="t('adminSettings.placeholders.scenicDesc')"
           />
         </NFormItem>
 
-        <NFormItem label="服务热线" path="service_hotline">
-          <NInput v-model:value="settings.service_hotline" placeholder="请输入服务热线" />
+        <NFormItem :label="t('adminSettings.form.serviceHotline')" path="service_hotline">
+          <NInput v-model:value="settings.service_hotline" :placeholder="t('adminSettings.placeholders.serviceHotline')" />
         </NFormItem>
 
-        <NDivider>系统功能</NDivider>
+        <NDivider>{{ t('adminSettings.sections.features') }}</NDivider>
 
-        <NFormItem label="启用用户登录">
+        <NFormItem :label="t('adminSettings.form.enableLogin')">
           <NSwitch v-model:value="settings.enable_login" />
         </NFormItem>
 
-        <NFormItem label="启用语音服务">
+        <NFormItem :label="t('adminSettings.form.enableVoice')">
           <NSwitch v-model:value="settings.enable_voice" />
         </NFormItem>
 
-        <NFormItem label="启用游客感受度分析">
+        <NFormItem :label="t('adminSettings.form.enableFilter')">
           <NSwitch v-model:value="settings.enable_filter" />
         </NFormItem>
 
-        <NDivider>数据管理</NDivider>
+        <NDivider>{{ t('adminSettings.sections.data') }}</NDivider>
 
-        <NFormItem label="数据保留天数" path="data_retention">
+        <NFormItem :label="t('adminSettings.form.dataRetention')" path="data_retention">
           <NInput v-model:value="settings.data_retention" placeholder="1-365" />
         </NFormItem>
 
-        <NFormItem label="备份频率" path="backup_frequency">
+        <NFormItem :label="t('adminSettings.form.backupFrequency')" path="backup_frequency">
           <NSelect
             v-model:value="settings.backup_frequency"
             :options="backupFrequencyOptions"
-            placeholder="请选择备份频率"
+            :placeholder="t('adminSettings.placeholders.backupFrequency')"
           />
         </NFormItem>
 
         <div class="button-row">
           <NButton type="primary" :loading="saving" @click="saveSettings">
-            保存设置
+            {{ t('adminSettings.actions.save') }}
           </NButton>
-          <NButton @click="loadSettings">重置</NButton>
+          <NButton @click="loadSettings">{{ t('adminSettings.actions.reset') }}</NButton>
         </div>
       </NForm>
     </template>

@@ -50,6 +50,25 @@
   --sg-shadow-action: 0 0 0 1px rgba(82, 240, 238, 0.08), 0 10px 28px rgba(0, 0, 0, 0.24);
   --sg-blur-panel: blur(14px);
 
+  --visitor-bg: #606c38;
+  --visitor-bg-deep: #26331f;
+  --visitor-sage: #8b9d83;
+  --visitor-moss: #606c38;
+  --visitor-clay: #b08b6e;
+  --visitor-terracotta: #c66b3d;
+  --visitor-ochre: #c08e3a;
+  --visitor-sand: #e8dcc7;
+  --visitor-oat: #d4b895;
+  --visitor-ink: #26331f;
+  --visitor-muted: rgba(38, 51, 31, 0.68);
+  --visitor-line: rgba(96, 108, 56, 0.2);
+  --visitor-line-strong: rgba(96, 108, 56, 0.36);
+  --visitor-card: rgba(232, 220, 199, 0.84);
+  --visitor-card-soft: rgba(232, 220, 199, 0.28);
+  --visitor-radius: 22px;
+  --visitor-radius-sm: 16px;
+  --visitor-shadow: 0 22px 56px rgba(38, 51, 31, 0.22);
+
   --bg: var(--sg-bg);
   --panel: var(--sg-surface);
   --panel-strong: var(--sg-surface-strong);

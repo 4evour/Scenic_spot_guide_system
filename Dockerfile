@@ -16,6 +16,7 @@ RUN go build -o /out/scenic-guide .
 
 FROM alpine:3.22
 WORKDIR /app
+RUN apk add --no-cache wget
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=backend /out/scenic-guide ./scenic-guide
 COPY configs/config.example.yaml ./configs/config.yaml

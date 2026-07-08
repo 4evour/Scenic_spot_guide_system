@@ -41,6 +41,12 @@ services:
       SCENIC_GUIDE_EMBEDDING_API_KEY: "${SCENIC_GUIDE_EMBEDDING_API_KEY:-}"
     volumes:
       - scenic-guide-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
 
 volumes:
   scenic-guide-data:

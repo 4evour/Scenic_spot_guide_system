@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, h, onMounted } from 'vue'
+import { computed, ref, h, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { DataTableColumns, FormInst, FormRules } from 'naive-ui'
 import {
   NButton,
@@ -13,7 +14,6 @@ import {
   NSelect,
   NTag,
   NSpace,
-  NPopconfirm,
   NSwitch,
 } from 'naive-ui'
 import { useCrudTable } from '../composables/useCrudTable'
@@ -39,12 +39,14 @@ interface SpotForm {
   geofence_cooldown_minutes: number
 }
 
-const categoryOptions = [
-  { label: '核心景点', value: '核心景点' },
-  { label: '演艺体验', value: '演艺体验' },
-  { label: '文化建筑', value: '文化建筑' },
-  { label: '服务设施', value: '服务设施' },
-]
+const { t } = useI18n()
+
+const categoryOptions = computed(() => [
+  { label: t('adminSpots.categories.core'), value: '核心景点' },
+  { label: t('adminSpots.categories.performance'), value: '演艺体验' },
+  { label: t('adminSpots.categories.culture'), value: '文化建筑' },
+  { label: t('adminSpots.categories.service'), value: '服务设施' },
+])
 
 const categoryTagType: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
   '核心景点': 'success',
@@ -103,52 +105,60 @@ const {
 
 const formRef = ref<FormInst | null>(null)
 
-const formRules: FormRules = {
+const formRules = computed<FormRules>(() => ({
   name: [
-    { required: true, message: '请输入景点名称', trigger: ['blur', 'input'] },
+    { required: true, message: t('adminSpots.validation.nameRequired'), trigger: ['blur', 'input'] },
   ],
   location: [
-    { required: true, message: '请输入位置信息', trigger: ['blur', 'input'] },
+    { required: true, message: t('adminSpots.validation.locationRequired'), trigger: ['blur', 'input'] },
   ],
   category: [
-    { required: true, message: '请选择分类', trigger: ['blur', 'change'] },
+    { required: true, message: t('adminSpots.validation.categoryRequired'), trigger: ['blur', 'change'] },
   ],
   rating: [
     {
       type: 'number',
       min: 0,
       max: 5,
-      message: '评分范围为 0-5',
+      message: t('adminSpots.validation.ratingRange'),
       trigger: ['blur', 'input'],
     },
   ],
+}))
+
+function categoryLabel(value: string) {
+  if (value === '核心景点') return t('adminSpots.categories.core')
+  if (value === '演艺体验') return t('adminSpots.categories.performance')
+  if (value === '文化建筑') return t('adminSpots.categories.culture')
+  if (value === '服务设施') return t('adminSpots.categories.service')
+  return value
 }
 
-const columns: DataTableColumns<Record<string, unknown>> = [
+const columns = computed<DataTableColumns<Record<string, unknown>>>(() => [
   {
-    title: '名称',
+    title: t('adminSpots.columns.name'),
     key: 'name',
     width: 180,
     ellipsis: { tooltip: true },
   },
   {
-    title: '分类',
+    title: t('adminSpots.columns.category'),
     key: 'category',
     width: 120,
     render(row) {
       const cat = String(row.category || '')
       const type = categoryTagType[cat] || 'info'
-      return h(NTag, { type, size: 'small', bordered: false }, { default: () => cat || '-' })
+      return h(NTag, { type, size: 'small', bordered: false }, { default: () => (cat ? categoryLabel(cat) : '-') })
     },
   },
   {
-    title: '位置',
+    title: t('adminSpots.columns.location'),
     key: 'location',
     width: 200,
     ellipsis: { tooltip: true },
   },
   {
-    title: '评分',
+    title: t('adminSpots.columns.rating'),
     key: 'rating',
     width: 80,
     align: 'center',
@@ -158,38 +168,38 @@ const columns: DataTableColumns<Record<string, unknown>> = [
     },
   },
   {
-    title: '价格',
+    title: t('adminSpots.columns.price'),
     key: 'price',
     width: 100,
     align: 'right',
     render(row) {
       const price = Number(row.price ?? 0)
-      return price > 0 ? `¥${price.toFixed(0)}` : '免费'
+      return price > 0 ? `¥${price.toFixed(0)}` : t('adminSpots.price.free')
     },
   },
   {
-    title: '二维码',
+    title: t('adminSpots.columns.qrCode'),
     key: 'qr_code',
     width: 140,
     render(row) {
       const code = String(row.qr_code || '')
       const enabled = Boolean(row.qr_enabled)
-      if (!code) return h('span', { style: 'color:rgba(255,255,255,.25);font-size:12px' }, '未配置')
+      if (!code) return h('span', { style: 'color:rgba(255,255,255,.25);font-size:12px' }, t('adminSpots.status.notConfigured'))
       return h(NTag, { type: enabled ? 'success' : 'default', size: 'small', bordered: false }, { default: () => code })
     },
   },
   {
-    title: '电子围栏',
+    title: t('adminSpots.columns.geofence'),
     key: 'geofence_enabled',
     width: 120,
     render(row) {
       return h(NTag, { type: row.geofence_enabled ? 'success' : 'default', size: 'small', bordered: false }, {
-        default: () => row.geofence_enabled ? `${Number(row.geofence_radius_m || 100)}m` : '未启用',
+        default: () => row.geofence_enabled ? `${Number(row.geofence_radius_m || 100)}m` : t('adminSpots.status.disabled'),
       })
     },
   },
   {
-    title: '操作',
+    title: t('adminSpots.columns.actions'),
     key: 'actions',
     width: 160,
     align: 'center',
@@ -202,23 +212,18 @@ const columns: DataTableColumns<Record<string, unknown>> = [
             tertiary: true,
             type: 'primary',
             onClick: () => openEdit(row),
-          }, { default: () => '编辑' }),
-          h(NPopconfirm, {
-            onPositiveClick: () => handleDelete(row),
-          }, {
-            trigger: () =>
-              h(NButton, {
-                size: 'small',
-                tertiary: true,
-                type: 'error',
-              }, { default: () => '删除' }),
-            default: () => '确认删除该景点？',
-          }),
+          }, { default: () => t('adminSpots.actions.edit') }),
+          h(NButton, {
+            size: 'small',
+            tertiary: true,
+            type: 'error',
+            onClick: () => handleDelete(row),
+          }, { default: () => t('adminSpots.actions.delete') }),
         ],
       })
     },
   },
-]
+])
 
 function getForm(): SpotForm {
   return formData.value as unknown as SpotForm
@@ -243,11 +248,11 @@ onMounted(fetchData)
   <section class="spots-page">
     <div class="spots-header">
       <div>
-        <h2 class="spots-title">景点管理</h2>
-        <p class="spots-subtitle">管理景区内的所有景点信息、分类与位置</p>
+        <h2 class="spots-title">{{ t('adminSpots.title') }}</h2>
+        <p class="spots-subtitle">{{ t('adminSpots.subtitle') }}</p>
       </div>
       <NButton type="primary" @click="openCreate">
-        新增景点
+        {{ t('adminSpots.actions.create') }}
       </NButton>
     </div>
 
@@ -270,7 +275,7 @@ onMounted(fetchData)
       :width="500"
       placement="right"
     >
-      <NDrawerContent :title="isEditing ? '编辑景点' : '新增景点'" closable>
+      <NDrawerContent :title="isEditing ? t('adminSpots.drawer.editTitle') : t('adminSpots.drawer.createTitle')" closable>
         <NForm
           ref="formRef"
           :model="formData as unknown as SpotForm"
@@ -279,42 +284,42 @@ onMounted(fetchData)
           label-width="80"
           require-mark-placement="right-hanging"
         >
-          <NFormItem label="名称" path="name">
+          <NFormItem :label="t('adminSpots.form.name')" path="name">
             <NInput
               :value="getForm().name"
-              placeholder="请输入景点名称"
+              :placeholder="t('adminSpots.placeholders.name')"
               @update:value="(v: string) => { getForm().name = v }"
             />
           </NFormItem>
 
-          <NFormItem label="描述" path="description">
+          <NFormItem :label="t('adminSpots.form.description')" path="description">
             <NInput
               :value="getForm().description"
               type="textarea"
               :rows="3"
-              placeholder="请输入景点描述"
+              :placeholder="t('adminSpots.placeholders.description')"
               @update:value="(v: string) => { getForm().description = v }"
             />
           </NFormItem>
 
-          <NFormItem label="位置" path="location">
+          <NFormItem :label="t('adminSpots.form.location')" path="location">
             <NInput
               :value="getForm().location"
-              placeholder="请输入位置信息"
+              :placeholder="t('adminSpots.placeholders.location')"
               @update:value="(v: string) => { getForm().location = v }"
             />
           </NFormItem>
 
-          <NFormItem label="分类" path="category">
+          <NFormItem :label="t('adminSpots.form.category')" path="category">
             <NSelect
               :value="getForm().category"
               :options="categoryOptions"
-              placeholder="请选择分类"
+              :placeholder="t('adminSpots.placeholders.category')"
               @update:value="(v: string) => { getForm().category = v }"
             />
           </NFormItem>
 
-          <NFormItem label="评分" path="rating">
+          <NFormItem :label="t('adminSpots.form.rating')" path="rating">
             <NInputNumber
               :value="getForm().rating"
               :min="0"
@@ -327,96 +332,96 @@ onMounted(fetchData)
             />
           </NFormItem>
 
-          <NFormItem label="价格" path="price">
+          <NFormItem :label="t('adminSpots.form.price')" path="price">
             <NInputNumber
               :value="getForm().price"
               :min="0"
               :precision="0"
-              placeholder="0 为免费"
+              :placeholder="t('adminSpots.placeholders.price')"
               style="width: 100%"
               @update:value="(v: number | null) => { getForm().price = v ?? 0 }"
             />
           </NFormItem>
 
-          <NFormItem label="图片链接" path="image_url">
+          <NFormItem :label="t('adminSpots.form.imageURL')" path="image_url">
             <NInput
               :value="getForm().image_url"
-              placeholder="可选，图片 URL"
+              :placeholder="t('adminSpots.placeholders.imageURL')"
               @update:value="(v: string) => { getForm().image_url = v }"
             />
           </NFormItem>
 
           <div class="coord-row">
-            <NFormItem label="经度" path="longitude" class="coord-item">
+            <NFormItem :label="t('adminSpots.form.longitude')" path="longitude" class="coord-item">
               <NInputNumber
                 :value="getForm().longitude"
                 :precision="6"
-                placeholder="经度"
+                :placeholder="t('adminSpots.placeholders.longitude')"
                 style="width: 100%"
                 @update:value="(v: number | null) => { getForm().longitude = v ?? 0 }"
               />
             </NFormItem>
 
-            <NFormItem label="纬度" path="latitude" class="coord-item">
+            <NFormItem :label="t('adminSpots.form.latitude')" path="latitude" class="coord-item">
               <NInputNumber
                 :value="getForm().latitude"
                 :precision="6"
-                placeholder="纬度"
+                :placeholder="t('adminSpots.placeholders.latitude')"
                 style="width: 100%"
                 @update:value="(v: number | null) => { getForm().latitude = v ?? 0 }"
               />
             </NFormItem>
           </div>
 
-          <NFormItem label="排序" path="sort_order">
+          <NFormItem :label="t('adminSpots.form.sortOrder')" path="sort_order">
             <NInputNumber
               :value="getForm().sort_order"
               :precision="0"
-              placeholder="数值越小越靠前"
+              :placeholder="t('adminSpots.placeholders.sortOrder')"
               style="width: 100%"
               @update:value="(v: number | null) => { getForm().sort_order = v ?? 0 }"
             />
           </NFormItem>
-          <NFormItem label="二维码 ID" path="qr_code">
+          <NFormItem :label="t('adminSpots.form.qrCode')" path="qr_code">
             <NInput
               :value="getForm().qr_code"
-              placeholder="留空则自动生成，如 SPOT-0001"
+              :placeholder="t('adminSpots.placeholders.qrCode')"
               @update:value="(v: string) => { getForm().qr_code = v }"
             />
           </NFormItem>
 
-          <NFormItem label="开场白" path="qr_intro_text">
+          <NFormItem :label="t('adminSpots.form.qrIntro')" path="qr_intro_text">
             <NInput
               :value="getForm().qr_intro_text"
               type="textarea"
               :rows="2"
-              placeholder="扫码后数字人自动说的开场白（留空则自动AI生成）"
+              :placeholder="t('adminSpots.placeholders.qrIntro')"
               @update:value="(v: string) => { getForm().qr_intro_text = v }"
             />
           </NFormItem>
 
-          <NFormItem label="启用扫码" path="qr_enabled">
+          <NFormItem :label="t('adminSpots.form.qrEnabled')" path="qr_enabled">
             <NSwitch
               :value="getForm().qr_enabled"
               @update:value="(v: boolean) => { getForm().qr_enabled = v }"
             />
             <span style="margin-left:8px;font-size:12px;color:rgba(255,255,255,.4)">
-              {{ getForm().qr_enabled ? '游客可扫码触发讲解' : '扫码功能已关闭' }}
+              {{ getForm().qr_enabled ? t('adminSpots.switches.qrEnabled') : t('adminSpots.switches.qrDisabled') }}
             </span>
           </NFormItem>
 
-          <NFormItem label="到点讲解" path="geofence_enabled">
+          <NFormItem :label="t('adminSpots.form.geofenceEnabled')" path="geofence_enabled">
             <NSwitch
               :value="getForm().geofence_enabled"
               @update:value="(v: boolean) => { getForm().geofence_enabled = v }"
             />
             <span style="margin-left:8px;font-size:12px;color:rgba(255,255,255,.4)">
-              {{ getForm().geofence_enabled ? '游客到达附近自动触发' : '电子围栏已关闭' }}
+              {{ getForm().geofence_enabled ? t('adminSpots.switches.geofenceEnabled') : t('adminSpots.switches.geofenceDisabled') }}
             </span>
           </NFormItem>
 
           <div class="coord-row">
-            <NFormItem label="半径(m)" path="geofence_radius_m" class="coord-item">
+            <NFormItem :label="t('adminSpots.form.geofenceRadius')" path="geofence_radius_m" class="coord-item">
               <NInputNumber
                 :value="getForm().geofence_radius_m"
                 :min="20"
@@ -426,7 +431,7 @@ onMounted(fetchData)
                 @update:value="(v: number | null) => { getForm().geofence_radius_m = v ?? 100 }"
               />
             </NFormItem>
-            <NFormItem label="冷却(分)" path="geofence_cooldown_minutes" class="coord-item">
+            <NFormItem :label="t('adminSpots.form.geofenceCooldown')" path="geofence_cooldown_minutes" class="coord-item">
               <NInputNumber
                 :value="getForm().geofence_cooldown_minutes"
                 :min="1"
@@ -438,12 +443,12 @@ onMounted(fetchData)
             </NFormItem>
           </div>
 
-          <NFormItem label="触发文案" path="geofence_intro_text">
+          <NFormItem :label="t('adminSpots.form.geofenceIntro')" path="geofence_intro_text">
             <NInput
               :value="getForm().geofence_intro_text"
               type="textarea"
               :rows="2"
-              placeholder="到达该景点时优先播报的数字人语音文案，留空则使用讲解内容"
+              :placeholder="t('adminSpots.placeholders.geofenceIntro')"
               @update:value="(v: string) => { getForm().geofence_intro_text = v }"
             />
           </NFormItem>
@@ -451,9 +456,9 @@ onMounted(fetchData)
 
         <template #footer>
           <NSpace justify="end">
-            <NButton @click="closeDrawer">取消</NButton>
+            <NButton @click="closeDrawer">{{ t('adminSpots.actions.cancel') }}</NButton>
             <NButton type="primary" :loading="saving" @click="onSaveClick">
-              {{ isEditing ? '保存修改' : '确认新增' }}
+              {{ isEditing ? t('adminSpots.actions.save') : t('adminSpots.actions.submitCreate') }}
             </NButton>
           </NSpace>
         </template>

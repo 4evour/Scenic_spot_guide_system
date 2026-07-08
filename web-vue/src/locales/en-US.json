@@ -48,20 +48,74 @@
     "zh-CN": "中文",
     "en-US": "English"
   },
+  "appShell": {
+    "brand": "Scenic Guide",
+    "map": "🗺️ Map",
+    "digitalHuman": "💬 Guide",
+    "admin": "⚙️ Admin",
+    "account": "Account",
+    "logout": "Logout"
+  },
+  "account": {
+    "title": "Account",
+    "current": "Current identity",
+    "guestName": "Visitor",
+    "guestHint": "Register an account to keep conversations and avatar preferences long term.",
+    "passwordHint": "Verify your current password before changing it.",
+    "username": "Username",
+    "usernamePlaceholder": "Enter username",
+    "email": "Email",
+    "emailPlaceholder": "Email (optional)",
+    "password": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "currentPasswordPlaceholder": "Enter current password",
+    "passwordPlaceholder": "8-128 chars with uppercase, lowercase, and number",
+    "confirmPasswordPlaceholder": "Enter new password again",
+    "passwordPolicy": "Password must be 8-128 characters and include uppercase, lowercase, and a number.",
+    "usernamePasswordRequired": "Username and password are required",
+    "passwordFieldsRequired": "Current password and new password are required",
+    "passwordMismatch": "New passwords do not match",
+    "upgrade": "Register",
+    "changePassword": "Change password",
+    "upgradeSuccess": "Account registered",
+    "upgradeFailed": "Registration failed, username may already be taken",
+    "passwordChangeSuccess": "Password changed",
+    "passwordChangeFailed": "Password change failed. Check your current password.",
+    "roles": {
+      "guest": "Visitor",
+      "visitor": "User",
+      "admin": "Admin"
+    }
+  },
   "login": {
     "title": "Scenic Spot Guide System",
     "subtitle": "Scenic Spot Guide System",
     "username": "Username",
     "usernamePlaceholder": "Enter username",
+    "email": "Email",
+    "emailPlaceholder": "Email (optional)",
     "password": "Password",
     "passwordPlaceholder": "Enter password",
+    "modeLogin": "Login",
+    "modeRegister": "Register",
     "submit": "Login",
+    "registerSubmit": "Register",
     "hint": "Admin login to access dashboard and management console",
+    "registerHint": "After registration, return to login manually. Visitors can continue without an account.",
     "version": "Scenic Guide v1.0",
     "success": "Login successful",
     "failed": "Login failed",
+    "registerSuccess": "Registration successful. Please log in.",
+    "registerFailed": "Registration failed",
     "networkError": "Network error, please retry",
-    "emptyFields": "Please enter username and password"
+    "emptyFields": "Please enter username and password",
+    "passwordPolicy": "Password must be 8-128 characters and include uppercase, lowercase, and a number.",
+    "passwordPolicyInvalid": "Password must be 8-128 characters and include uppercase, lowercase, and a number",
+    "guestContinue": "Continue as visitor",
+    "guestSuccess": "Signed in as visitor",
+    "guestFailed": "Visitor sign-in failed. Please retry later."
   },
   "map": {
     "title": "Real-time Tourist Map",
@@ -71,8 +125,17 @@
     "demoData": "Demo Data",
     "liveData": "Live Data",
     "demoDataNoCoord": "Demo Data (coordinates missing)",
+    "structuredGuide": "Structured Guide",
+    "offlineDiagram": "Offline Diagram",
+    "rating": "Rating {rating}",
+    "offlineMapLabel": "Scenic route map",
+    "offlineMapWatermark": "Lingshan / Nianhua Bay Offline Guide Map",
+    "spotFallbackName": "Spot {id}",
+    "defaultArea": "Lingshan Scenic Area",
+    "defaultCategory": "Culture & Rest",
     "loadFailed": "Failed to load spots",
     "ready": "Map Ready",
+    "offlineMap": "Offline Map",
     "loading": "Loading",
     "myLocation": "📍 My Location",
     "loadingSpots": "Loading spots…",
@@ -85,11 +148,52 @@
     "autoGuideOn": "Auto Guide",
     "autoGuideOff": "Stop Guide",
     "autoGuideArrived": "You have arrived at {name}. Playing audio guide...",
+    "seniorMode": "Senior Mode",
+    "exitSeniorMode": "Exit Senior Mode",
     "gpsDenied": "Location permission denied. Please enable in browser settings.",
     "gpsUnavailable": "Unable to get location. Check GPS signal.",
     "gpsTimeout": "Location timeout. Retrying...",
     "gpsNotSupported": "Geolocation not supported in this browser",
-    "gpsLabel": "GPS {accuracy}m"
+    "gpsFailed": "Location failed: {message}",
+    "gpsLabel": "GPS {accuracy}m",
+    "ar": {
+      "autoGuideWaiting": "Auto guide is on. Waiting for browser location permission; you can still tap attractions for offline routes.",
+      "gpsWeakFallback": "GPS signal is weak. Switched to the offline attraction list; weak-signal areas can be marked for on-site guidance.",
+      "ready": "AR guidance is ready. Current accuracy is about {accuracy}m.",
+      "idle": "Turn on proximity guide to show direction hints. Offline attraction selection remains available without permission.",
+      "offlineMode": "Offline Guide Mode",
+      "navigationHint": "AR Navigation Hint"
+    },
+    "messages": {
+      "locateFallback": "Location permission requested. The offline map keeps attractions and routes available.",
+      "autoGuideStarted": "Auto guide is on. Narration starts when you approach an attraction.",
+      "autoGuideStopped": "Auto guide is off.",
+      "seniorModeEnabled": "Senior mode is on. Text and buttons are enlarged.",
+      "seniorModeDisabled": "Senior mode is off."
+    },
+    "routes": {
+      "title": "Personalized Route"
+    },
+    "reminders": {
+      "title": "Service Reminders",
+      "advanceMinutes": "{minutes} min early"
+    },
+    "visualTypes": {
+      "landmark": "Landmark",
+      "experience": "Experience",
+      "culture": "Culture & Rest"
+    },
+    "spotDetail": {
+      "parameters": "Architecture Details",
+      "culture": "Cultural Context",
+      "highlights": "Visit Highlights",
+      "openInfo": "Hours / Shows",
+      "noParameters": "No details",
+      "noDescription": "No description",
+      "noHighlights": "No highlights",
+      "defaultOpenInfo": "Open with the scenic area",
+      "weakSignal": "Weak signal"
+    }
   },
   "dh": {
     "title": "Chat with Xiao Ling",
@@ -122,14 +226,25 @@
     "interruptedServer": "Interrupted current narration and sent interrupt signal to server.",
     "interruptReceived": "Received interrupt confirmation from server. Voice playback stopped.",
     "componentError": "An error occurred. Please refresh the page.",
+    "spotFallbackName": "Spot {id}",
+    "autoGuideIntro": "Welcome to {name}. Let me introduce the highlights here.",
+    "autoGuideTriggered": "Arrived at {name}. Auto guide triggered.",
+    "currentSession": "Current Session",
     "searchPlaceholder": "Search messages…",
     "searchNoResults": "No matching messages",
     "historySessions": "History",
     "noSessions": "No saved sessions",
     "sessionDefaultTitle": "Untitled Session",
+    "sessionMessageCount": "{count} messages",
     "user": "Visitor",
     "assistant": "🤖 Xiao Ling",
     "system": "⚙ System",
+    "actions": {
+      "search": "Search",
+      "history": "History",
+      "register": "Register account",
+      "refresh": "Refresh"
+    },
     "quickAsk": {
       "buddhaHeight": "How tall is the Buddha?",
       "withKids": "Best route for kids?",
@@ -139,7 +254,12 @@
       "hoursLabel": "Hours",
       "routeDetail": "What spots are on this route?",
       "routeTime": "How long does it take?",
+      "routeDetailQuery": "What are the main attractions on this route?",
+      "routeTimeQuery": "How long does the route take?",
       "historyDetail": "Any historical stories?",
+      "historyDetailQuery": "Can you tell me the history here?",
+      "entityDetailLabel": "{name} details",
+      "entityDetailQuery": "Can you introduce {name} in detail?",
       "buddhaStory": "What's special about the Buddha?"
     },
     "tabAvatar": "Avatar",
@@ -147,7 +267,58 @@
     "scanSuccess": "📍 Attraction identified: {name}",
     "scanFailed": "QR code not recognized. Please check if this is a valid scenic area QR code.",
     "scanIntroDefault": "Welcome to {name}! Let me introduce this special place to you.",
-    "scanFollowUp": "You can also ask:"
+    "scanFollowUp": "You can also ask:",
+    "sourcesLabel": "Sources",
+    "audio": {
+      "initialNotice": "Tap \"Enable sound\" and I will read answers aloud with lip sync.",
+      "playingNotice": "Voice is playing. Lip sync follows the audio.",
+      "readyNotice": "Sound enabled.",
+      "lockedNotice": "Tap \"Enable sound\" first, then I will read answers aloud with lip sync.",
+      "ttsFallback": "Speech synthesis is temporarily unavailable. Switched to browser speech.",
+      "ttsFallbackWithMessage": "Speech synthesis is temporarily unavailable. Switched to browser speech: {message}",
+      "enabledNotice": "Sound enabled. Future answers will be read aloud with audio or browser speech lip sync.",
+      "emptyStreamFallback": "Speech synthesis returned no audio. Switched to browser speech.",
+      "browserSpeechBlocked": "Browser speech was blocked. Tap \"Enable sound\" and retry.",
+      "soundPermissionDenied": "The browser did not allow audio playback. Check site sound permissions.",
+      "autoplayBlocked": "The browser blocked autoplay. Tap \"Enable sound\".",
+      "playbackFailedNext": "Audio playback failed. Trying the next segment."
+    },
+    "socket": {
+      "notConnected": "Digital guide voice service is not connected. Text chat still works; start Open-LLM-VTuber to use voice.",
+      "invalidMessage": "Received a digital guide message that could not be parsed.",
+      "reconnectFailed": "Digital guide voice service reconnect failed. Check whether the service is running."
+    },
+    "controls": {
+      "soundPlaying": "Playing",
+      "soundReady": "Sound enabled",
+      "soundEnable": "Enable sound",
+      "autoGuideOn": "Proximity guide on",
+      "autoGuideOff": "Proximity guide",
+      "seniorMode": "Senior Mode",
+      "exitSeniorMode": "Exit Senior Mode",
+      "chatResizeTitle": "Drag to adjust chat width"
+    },
+    "avatar": {
+      "ariaLabel": "Digital guide avatar selection",
+      "lockedLabel": "Scenic area assigned",
+      "fallbackName": "digital guide",
+      "saveFailed": "Failed to save digital guide preference",
+      "poked": "👋 You tapped {name}"
+    }
+  },
+  "live2dStage": {
+    "status": {
+      "speaking": "Speaking",
+      "thinking": "Thinking",
+      "listening": "Listening",
+      "interrupted": "Interrupted",
+      "connecting": "Connecting",
+      "error": "Error",
+      "idle": "Idle"
+    },
+    "sdkFallback": "Live2D SDK is not ready. Fallback animation preview is enabled.",
+    "readyNote": "Live2D model connected. Expressions and lip sync follow frontend state.",
+    "loadingNote": "Loading Live2D model..."
   },
   "qr": {
     "scanning": "Identifying attraction...",
@@ -156,7 +327,10 @@
     "chatNow": "Ask a Question",
     "backToDH": "Back to Chat",
     "invalidCode": "Invalid QR code",
-    "spotNotFound": "Attraction not found. Please check the QR code."
+    "spotNotFound": "Attraction not found. Please check the QR code.",
+    "autoAsk": "Please introduce {name} in detail",
+    "seniorMode": "Senior Mode",
+    "exitSeniorMode": "Exit Senior Mode"
   },
   "nav": {
     "brand": "Scenic Guide",
@@ -169,11 +343,754 @@
     "digitalCenter": "Digital Guide",
     "avatar": "Avatar Config",
     "reports": "Feedback Reports",
+    "queries": "Visitor Questions",
     "knowledge": "Knowledge Base",
     "systemMgmt": "System",
     "users": "Users",
     "settings": "Settings",
     "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Real-time operations overview",
+    "common": {
+      "none": "None",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "kpis": {
+      "todayVisitors": "Visitors Served Today",
+      "weeklyChats": "Weekly Q&A",
+      "satisfaction": "User Satisfaction",
+      "avgResponseTime": "Average Response Time",
+      "knowledgeItems": "Knowledge Items"
+    },
+    "sections": {
+      "hotSpots": "Top 5 Attractions",
+      "questionCloud": "Question Cloud",
+      "crowdHeat": "Real-time Crowd Heat",
+      "activityStatus": "Show / Activity Status",
+      "terminalStatus": "Digital Guide Terminal Status",
+      "knowledgeOps": "Knowledge Operations",
+      "hourlyTrend": "24-hour Traffic Trend",
+      "categoryDistribution": "Topic Distribution",
+      "satisfactionTrend": "7-day Satisfaction Trend",
+      "topQuestions": "Top 10 Questions",
+      "recentConversations": "Recent Conversations"
+    },
+    "empty": {
+      "hotSpots": "No real hot-attraction data",
+      "questionCloud": "No question-cloud data",
+      "crowdHeat": "No real-time crowd heat data",
+      "activityStatus": "No real show or activity status data",
+      "terminalStatus": "No real terminal status data",
+      "knowledgeGaps": "No real knowledge-gap data",
+      "avatarSummary": "No real configuration summary data",
+      "satisfactionTrend": "No satisfaction trend data",
+      "topQuestions": "No top question data",
+      "recentConversations": "No conversation records"
+    },
+    "labels": {
+      "lastUpdated": "Last Updated",
+      "avatarPreview": "Digital Guide Config Preview",
+      "todayInteractions": "Today's Interactions",
+      "peakHour": "Peak Hour",
+      "peakInteractions": "Peak Interactions",
+      "guideName": "Guide Name",
+      "avatarModel": "Avatar Model",
+      "voiceType": "Voice Type",
+      "avatarSwitch": "Visitor Switch",
+      "trackedQuestions": "Tracked Questions",
+      "knowledgeCoverageHint": "Knowledge operations are summarized from today's frequent questions. Add candidate content in Knowledge Base as needed."
+    },
+    "columns": {
+      "time": "Time",
+      "visitorQuery": "Visitor Question",
+      "aiResponse": "AI Response",
+      "emotion": "Emotion",
+      "hotQuestion": "Hot Question",
+      "count": "Count"
+    },
+    "emotions": {
+      "joy": "Positive",
+      "surprise": "Surprised",
+      "neutral": "Neutral",
+      "sadness": "Negative",
+      "fear": "Concerned"
+    },
+    "units": {
+      "times": "{count} times",
+      "minutes": "{count} min"
+    },
+    "tooltips": {
+      "satisfaction": "Satisfaction",
+      "conversations": "Conversations"
+    }
+  },
+  "adminQueries": {
+    "title": "Visitor Questions",
+    "subtitle": "Handle visitor questions that need manual follow-up from digital guide chats and feedback.",
+    "filters": {
+      "unanswered": "Unanswered",
+      "all": "All"
+    },
+    "status": {
+      "answered": "Answered",
+      "unanswered": "Unanswered"
+    },
+    "statusHints": {
+      "done": "Completed",
+      "pending": "Needs follow-up"
+    },
+    "kpis": {
+      "currentList": "Current list: {count}",
+      "unanswered": "Unanswered: {count}",
+      "answered": "Answered: {count}"
+    },
+    "columns": {
+      "query": "Question",
+      "status": "Status",
+      "spotId": "Spot ID",
+      "responsePreview": "Response Preview",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "process": "Process",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "deleteDialog": {
+      "title": "Confirm Delete",
+      "content": "This cannot be undone. Delete this visitor question?"
+    },
+    "drawerTitle": "Process Visitor Question",
+    "empty": "No visitor questions",
+    "form": {
+      "query": "Visitor Question",
+      "spotId": "Spot ID",
+      "response": "Response",
+      "status": "Status"
+    },
+    "placeholders": {
+      "query": "Question raised by the visitor",
+      "spotId": "Use 0 when no spot is linked",
+      "response": "Write a reply or operations follow-up note"
+    },
+    "messages": {
+      "loadFailed": "Failed to load visitor questions",
+      "queryRequired": "Visitor question is required.",
+      "saveSuccess": "Visitor question saved.",
+      "saveFailed": "Failed to save visitor question",
+      "deleteSuccess": "Visitor question deleted.",
+      "deleteFailed": "Failed to delete visitor question"
+    }
+  },
+  "adminQRCode": {
+    "title": "QR Code Management",
+    "subtitle": "Generate, copy, and download QR codes for attraction audio guides.",
+    "columns": {
+      "spot": "Attraction",
+      "category": "Category",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "statusHints": {
+      "enabled": "Visitors can scan to enter the guide",
+      "disabled": "Scan entry disabled"
+    },
+    "kpis": {
+      "enabled": "Enabled: {count}",
+      "withQr": "With QR: {count}",
+      "cache": "Cache: {count}"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "generate": "Batch Generate",
+      "edit": "Edit",
+      "copyLink": "Copy Link",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "drawerTitle": "Edit QR Code: {name}",
+    "empty": "No attraction QR code settings",
+    "form": {
+      "qrCode": "QR Code ID",
+      "enabled": "Enable Scan",
+      "intro": "Guide Script"
+    },
+    "placeholders": {
+      "qrCode": "Example: SPOT-0001",
+      "intro": "Leave empty to let the backend generate a guide from attraction data"
+    },
+    "messages": {
+      "loadFailed": "Failed to load QR code data",
+      "generateSuccess": "Generated {count} QR code IDs.",
+      "generateFailed": "Batch generation failed",
+      "copySuccess": "Scan link copied.",
+      "copyFailed": "Copy failed. Please copy the link manually.",
+      "qrCodeTooLong": "QR Code ID can be at most 100 characters.",
+      "saveSuccess": "QR code settings saved.",
+      "saveFailed": "Failed to save QR code settings"
+    }
+  },
+  "adminAvatar": {
+    "previewTitle": "Digital Guide Preview",
+    "formTitle": "Avatar and Voice Settings",
+    "currentPlan": "Current plan: {plan}",
+    "summary": {
+      "defaultAvatar": "Default Avatar",
+      "costume": "Costume",
+      "voice": "Voice",
+      "tone": "Tone"
+    },
+    "sections": {
+      "appearance": "Appearance",
+      "voice": "Voice and Expression"
+    },
+    "form": {
+      "defaultAvatar": "Default Digital Guide",
+      "allowSwitch": "Visitor Switching",
+      "name": "Guide Name",
+      "appearance": "Persona",
+      "costume": "Costume Style",
+      "color": "Primary Color",
+      "cultureTheme": "Scenic Culture Theme",
+      "greeting": "Greeting",
+      "voice": "Narration Voice",
+      "tone": "Narration Tone",
+      "speed": "Speed",
+      "volume": "Volume",
+      "defaultEmotion": "Default Emotion",
+      "emotionLevel": "Emotion Level"
+    },
+    "switch": {
+      "allow": "Allow",
+      "locked": "Default Only"
+    },
+    "actions": {
+      "save": "Save Settings",
+      "reload": "Reload"
+    },
+    "placeholders": {
+      "name": "Enter digital guide name"
+    },
+    "options": {
+      "appearance": {
+        "friendly": "Friendly cultural guide",
+        "formal": "Formal etiquette guide",
+        "youthful": "Energetic travel recommender",
+        "zen": "Zen culture storyteller"
+      },
+      "costume": {
+        "hanfu": "Classical Hanfu",
+        "uniform": "Scenic area uniform",
+        "landscape": "Landscape guide uniform",
+        "zenRobe": "Minimal Zen robe",
+        "festival": "Festival themed outfit"
+      },
+      "voice": {
+        "gentle": "Gentle natural female voice",
+        "professional": "Calm professional female voice",
+        "energetic": "Energetic friendly female voice",
+        "ceremonial": "Formal etiquette female voice"
+      },
+      "tone": {
+        "warm": "Warm, formal, friendly",
+        "clear": "Professional, clear, restrained",
+        "lively": "Lively, light, companionable",
+        "zen": "Calm, Zen-inspired, suited for culture"
+      },
+      "emotion": {
+        "joy": "Friendly Smile",
+        "neutral": "Calm Neutral",
+        "surprise": "Warm Reminder",
+        "sadness": "Gentle Apology"
+      }
+    },
+    "messages": {
+      "loadFailed": "Failed to load digital guide settings",
+      "saveSuccess": "Digital guide avatar settings saved.",
+      "saveFailed": "Save failed",
+      "nameRequired": "Please enter a digital guide name"
+    }
+  },
+  "adminReports": {
+    "title": "Visitor Feedback Report",
+    "subtitle": "Automatically generated from {period} digital guide, voice, and web Q&A interactions.",
+    "periods": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days"
+    },
+    "periodButtons": {
+      "7d": "7 days",
+      "30d": "30 days"
+    },
+    "actions": {
+      "refresh": "Refresh Report"
+    },
+    "kpis": {
+      "interactions": "Interactions",
+      "satisfaction": "Satisfaction",
+      "negative": "Negative Share",
+      "peakHour": "Peak Hour"
+    },
+    "kpiNotes": {
+      "periodTotal": "{period} total",
+      "positiveEmotion": "Positive emotion share",
+      "needsReview": "Needs review",
+      "topConcern": "Top concern: {concern}"
+    },
+    "sections": {
+      "attention": "Visitor Attention Analysis",
+      "emotionDistribution": "Emotion Distribution",
+      "emotionTrend": "Emotion Trend",
+      "negativeReasons": "Negative Feedback Reasons",
+      "audienceProfiles": "Audience Profiles and Route Fit",
+      "routeSatisfaction": "Route Click Rate / Satisfaction",
+      "peakHours": "Peak Hours",
+      "suggestions": "Automated Improvement Suggestions"
+    },
+    "messages": {
+      "loadFailed": "Failed to load visitor feedback report",
+      "generating": "Generating report..."
+    },
+    "empty": {
+      "wordCloud": "No real word-cloud data",
+      "audienceProfiles": "No real audience profile data",
+      "routeSatisfaction": "No real route satisfaction data",
+      "suggestions": "No real interaction data, so suggestions cannot be generated yet."
+    },
+    "labels": {
+      "satisfactionPercent": "Satisfaction {value}%",
+      "clickRatePercent": "Click rate {value}%"
+    },
+    "emotions": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative"
+    }
+  },
+  "adminUsers": {
+    "title": "User Management",
+    "subtitle": "Manage system user accounts and permissions.",
+    "actions": {
+      "create": "Create User",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "columns": {
+      "username": "Username",
+      "email": "Email",
+      "role": "Role",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "roles": {
+      "admin": "Admin",
+      "visitor": "Visitor"
+    },
+    "drawer": {
+      "createTitle": "Create User",
+      "editTitle": "Edit User"
+    },
+    "form": {
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "role": "Role"
+    },
+    "placeholders": {
+      "username": "Enter username",
+      "email": "Enter email address",
+      "password": "Enter password",
+      "passwordEdit": "Leave blank to keep current password",
+      "role": "Select role"
+    },
+    "validation": {
+      "usernameRequired": "Username is required",
+      "usernameLength": "Username must be 3-32 letters, numbers, or underscores",
+      "emailInvalid": "Enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordPolicy": "Password must be 8-128 characters and include uppercase, lowercase, and a number",
+      "roleRequired": "Select a role"
+    }
+  },
+  "adminSettings": {
+    "title": "System Settings",
+    "sections": {
+      "basic": "Basic Information",
+      "features": "System Features",
+      "data": "Data Management"
+    },
+    "form": {
+      "scenicName": "Scenic Area Name",
+      "scenicDesc": "Scenic Area Description",
+      "serviceHotline": "Service Hotline",
+      "enableLogin": "Enable User Login",
+      "enableVoice": "Enable Voice Service",
+      "enableFilter": "Enable Visitor Feedback Analysis",
+      "dataRetention": "Data Retention Days",
+      "backupFrequency": "Backup Frequency"
+    },
+    "placeholders": {
+      "scenicName": "Enter scenic area name",
+      "scenicDesc": "Enter scenic area description",
+      "serviceHotline": "Enter service hotline",
+      "backupFrequency": "Select backup frequency"
+    },
+    "backupFrequency": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "manual": "Manual"
+    },
+    "actions": {
+      "save": "Save Settings",
+      "reset": "Reset"
+    },
+    "validation": {
+      "scenicNameRequired": "Scenic area name is required",
+      "dataRetentionRequired": "Data retention days are required",
+      "dataRetentionRange": "Enter 1-365 days"
+    },
+    "messages": {
+      "loadFailed": "Failed to load system settings",
+      "saveSuccess": "System settings saved",
+      "saveFailed": "Save failed"
+    }
+  },
+  "adminKnowledge": {
+    "categories": {
+      "all": "All Categories",
+      "guide": "Guide Script",
+      "history": "Historical Material",
+      "faq": "Visitor FAQ",
+      "route": "Route Recommendation",
+      "service": "Service Facility",
+      "ticket": "Ticketing & Transport",
+      "official": "Official Material",
+      "government": "Government Material",
+      "overview": "Scenic Overview",
+      "spot": "Spot Introduction",
+      "boundary": "Realtime Boundary",
+      "uncategorized": "Uncategorized"
+    },
+    "spotCategories": {
+      "all": "All Spot Categories",
+      "core": "Core Attraction",
+      "performance": "Performance",
+      "culture": "Cultural Site",
+      "service": "Service Facility"
+    },
+    "spots": {
+      "all": "All Spots",
+      "fallback": "Spot {id}"
+    },
+    "validation": {
+      "contentRequired": "Enter knowledge content"
+    },
+    "kpis": {
+      "items": {
+        "label": "Knowledge Items",
+        "note": "From the RAG knowledge base"
+      },
+      "current": {
+        "label": "Current Page",
+        "note": "Server-side filtered results"
+      },
+      "formats": {
+        "label": "Supported Formats",
+        "note": "Also supports JSON and TXT"
+      },
+      "cache": {
+        "label": "Cache Status",
+        "value": "Auto refresh",
+        "note": "Changes take effect immediately"
+      }
+    },
+    "editor": {
+      "createTitle": "Create Knowledge Item",
+      "editTitle": "Edit Knowledge Item"
+    },
+    "form": {
+      "title": "Title",
+      "category": "Category",
+      "source": "Source",
+      "content": "Knowledge Content"
+    },
+    "placeholders": {
+      "title": "Example: Nine Dragons Bathing guide script",
+      "source": "admin / file name / scenic spot name",
+      "content": "Enter guide scripts, historical context, FAQ answers, or operations notes"
+    },
+    "actions": {
+      "save": "Save Changes",
+      "add": "Add to Knowledge Base",
+      "clear": "Clear",
+      "search": "Search",
+      "refresh": "Refresh",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "upload": {
+      "title": "Upload Knowledge Document",
+      "submit": "Upload and Import",
+      "hint": "JSONL/JSON must include title, content, source, and metadata fields. Markdown/TXT is chunked by paragraph."
+    },
+    "filters": {
+      "searchPlaceholder": "Search spots, scripts, FAQ, or source..."
+    },
+    "empty": {
+      "knowledge": "No knowledge items",
+      "analyses": "No AI analysis records",
+      "candidates": "No pending knowledge candidates"
+    },
+    "labels": {
+      "source": "Source: {source} / {updated}",
+      "session": "Session: {session}"
+    },
+    "analysis": {
+      "title": "AI Analysis Records",
+      "sessionPlaceholder": "Enter a session ID to generate candidates",
+      "analyze": "Analyze Session",
+      "refresh": "Refresh Records",
+      "satisfaction": "Satisfaction {score}",
+      "emptySummary": "No analysis summary",
+      "attentionPoint": "Attention: {item}",
+      "negativeReason": "Negative reason: {item}"
+    },
+    "candidates": {
+      "title": "AI Knowledge Candidates",
+      "latestAnalysis": "Latest analysis: {session}",
+      "refresh": "Refresh Candidates"
+    },
+    "dialog": {
+      "deleteTitle": "Confirm Delete",
+      "deleteContent": "Delete \"{title}\"?"
+    },
+    "messages": {
+      "loadFailed": "Failed to load knowledge base",
+      "updateSuccess": "Knowledge item updated and the digital guide retrieval cache refreshed.",
+      "createSuccess": "Knowledge item added to the digital guide knowledge base.",
+      "saveFailed": "Save failed",
+      "deleteSuccess": "Knowledge item deleted.",
+      "deleteFailed": "Delete failed",
+      "chooseFile": "Select a knowledge document first.",
+      "uploadSuccess": "Upload complete. Imported {count} knowledge chunks.",
+      "uploadFailed": "Upload failed",
+      "sessionRequired": "Enter a session ID to analyze.",
+      "analyzeSuccess": "AI analysis complete and knowledge candidates generated.",
+      "analyzeFailed": "AI analysis failed",
+      "analysesLoadFailed": "Failed to load AI analysis records",
+      "candidatesLoadFailed": "Failed to load knowledge candidates",
+      "approveSuccess": "Candidate knowledge approved.",
+      "approveFailed": "Approval failed",
+      "rejectSuccess": "Candidate knowledge rejected.",
+      "rejectFailed": "Reject failed"
+    }
+  },
+  "adminSpots": {
+    "title": "Scenic Spot Management",
+    "subtitle": "Manage scenic spot details, categories, and locations",
+    "actions": {
+      "create": "Create Spot",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "submitCreate": "Create Spot"
+    },
+    "drawer": {
+      "createTitle": "Create Spot",
+      "editTitle": "Edit Spot"
+    },
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "location": "Location",
+      "rating": "Rating",
+      "price": "Price",
+      "qrCode": "QR Code",
+      "geofence": "Geofence",
+      "actions": "Actions"
+    },
+    "categories": {
+      "core": "Core Attraction",
+      "performance": "Performance",
+      "culture": "Cultural Site",
+      "service": "Service Facility"
+    },
+    "price": {
+      "free": "Free"
+    },
+    "status": {
+      "notConfigured": "Not configured",
+      "disabled": "Disabled"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "location": "Location",
+      "category": "Category",
+      "rating": "Rating",
+      "price": "Price",
+      "imageURL": "Image URL",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "sortOrder": "Sort Order",
+      "qrCode": "QR Code ID",
+      "qrIntro": "Opening Line",
+      "qrEnabled": "Enable Scan",
+      "geofenceEnabled": "Arrival Guide",
+      "geofenceRadius": "Radius (m)",
+      "geofenceCooldown": "Cooldown (min)",
+      "geofenceIntro": "Trigger Copy"
+    },
+    "placeholders": {
+      "name": "Enter scenic spot name",
+      "description": "Enter scenic spot description",
+      "location": "Enter location",
+      "category": "Select a category",
+      "price": "0 means free",
+      "imageURL": "Optional image URL",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "sortOrder": "Lower numbers appear first",
+      "qrCode": "Leave blank to generate automatically, e.g. SPOT-0001",
+      "qrIntro": "Opening line spoken after scanning; leave blank for AI generation",
+      "geofenceIntro": "Preferred voice line when visitors arrive; leave blank to use guide content"
+    },
+    "validation": {
+      "nameRequired": "Enter scenic spot name",
+      "locationRequired": "Enter location",
+      "categoryRequired": "Select a category",
+      "ratingRange": "Rating must be between 0 and 5"
+    },
+    "switches": {
+      "qrEnabled": "Visitors can scan to trigger the guide",
+      "qrDisabled": "Scan is disabled",
+      "geofenceEnabled": "Triggers automatically when visitors arrive nearby",
+      "geofenceDisabled": "Geofence is disabled"
+    }
+  },
+  "adminContent": {
+    "title": "Guide Content Management",
+    "actions": {
+      "create": "Create Content",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "submitCreate": "Create"
+    },
+    "drawer": {
+      "createTitle": "Create Content",
+      "editTitle": "Edit Content"
+    },
+    "columns": {
+      "title": "Title",
+      "type": "Type",
+      "preview": "Content Preview",
+      "spotID": "Spot ID",
+      "audio": "Audio",
+      "actions": "Actions"
+    },
+    "contentTypes": {
+      "guide": "Guide Script",
+      "faq": "FAQ",
+      "history": "Historical Material",
+      "service": "Service Info"
+    },
+    "audio": {
+      "available": "Yes",
+      "missing": "No"
+    },
+    "form": {
+      "title": "Title",
+      "type": "Type",
+      "spotID": "Spot ID",
+      "content": "Content",
+      "audioURL": "Audio URL"
+    },
+    "placeholders": {
+      "title": "Enter a title",
+      "type": "Select a type",
+      "spotID": "Enter a spot ID",
+      "content": "Enter guide content",
+      "audioURL": "Optional audio file URL"
+    },
+    "validation": {
+      "titleRequired": "Enter a title",
+      "typeRequired": "Select a type",
+      "contentRequired": "Enter content"
+    }
+  },
+  "adminRoutes": {
+    "title": "Route Management",
+    "actions": {
+      "create": "Create Route",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "update": "Update"
+    },
+    "drawer": {
+      "createTitle": "Create Route",
+      "editTitle": "Edit Route"
+    },
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "spotCount": "Spots",
+      "duration": "Duration",
+      "difficulty": "Difficulty",
+      "rating": "Rating",
+      "actions": "Actions"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Challenging"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "spots": "Spot List",
+      "duration": "Duration (min)",
+      "difficulty": "Difficulty",
+      "rating": "Rating"
+    },
+    "placeholders": {
+      "name": "Enter route name",
+      "description": "Enter route description",
+      "spots": "Separate spot names with commas, e.g. Grand Buddha, Brahma Palace",
+      "duration": "Enter duration",
+      "difficulty": "Select difficulty",
+      "rating": "Enter rating"
+    },
+    "validation": {
+      "nameRequired": "Route name is required",
+      "durationRequired": "Duration is required",
+      "durationMin": "Duration must be at least 1 minute",
+      "difficultyRequired": "Select a difficulty",
+      "ratingRange": "Rating must be between 0 and 5"
+    },
+    "units": {
+      "hour": "h",
+      "minute": "min"
+    }
   },
   "error": {
     "title": "Something went wrong",
@@ -189,6 +1106,9 @@
     "err_internal": "Internal server error",
     "err_csrf": "CSRF token validation failed",
     "err_ratelimit": "Too many requests. Please wait.",
+    "unauthorizedExpired": "Not logged in or session expired",
+    "nonJsonResponse": "API returned a non-JSON response ({status})",
+    "requestFailed": "Request failed ({status})",
     "msg_feedback_thanks": "Thanks for your feedback",
     "msg_knowledge_uploaded": "Knowledge uploaded successfully",
     "msg_knowledge_deleted": "Knowledge deleted",
@@ -198,11 +1118,13 @@
     "upgradeTitle": "Register Account",
     "upgradeHint": "Save all conversations and sync across devices.",
     "upgradeButton": "Register",
+    "upgradeLoading": "Registering…",
     "usernamePlaceholder": "Username",
-    "passwordPlaceholder": "Password (min 6 chars)",
+    "passwordPlaceholder": "Password (8-128 chars with uppercase, lowercase, and number)",
     "emailPlaceholder": "Email (optional)",
     "usernamePasswordRequired": "Username and password are required",
-    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordTooShort": "Password must be 8-128 characters and include uppercase, lowercase, and a number",
+    "passwordPolicy": "Password must be 8-128 characters and include uppercase, lowercase, and a number",
     "upgradeFailed": "Upgrade failed, username may already be taken"
   }
 }

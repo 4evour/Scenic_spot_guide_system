@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
@@ -86,5 +87,47 @@ func TestGetQRCodeImageReturnsSVG(t *testing.T) {
 	}
 	if !strings.Contains(resp.Body.String(), "<svg") || !strings.Contains(resp.Body.String(), "<rect") {
 		t.Fatalf("expected svg rectangles, got %s", resp.Body.String())
+	}
+}
+
+func TestUpdateQRCodeInvalidatesPreviousIntroCache(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, db := newQRHandlerForTest(t)
+	spot := model.ScenicSpot{
+		Name:        "灵山大佛",
+		Location:    "中轴",
+		Category:    "核心景点",
+		QRCode:      "SPOT-OLD",
+		QRIntroText: "旧二维码讲解",
+		QREnabled:   true,
+	}
+	if err := db.Create(&spot).Error; err != nil {
+		t.Fatalf("seed spot: %v", err)
+	}
+	router := gin.New()
+	router.POST("/qr/:code/intro", handler.ScanAndIntro)
+	router.PUT("/admin/qr/spots/:id", handler.UpdateQRCode)
+
+	cacheReq := httptest.NewRequest(http.MethodPost, "/qr/SPOT-OLD/intro", nil)
+	cacheResp := httptest.NewRecorder()
+	router.ServeHTTP(cacheResp, cacheReq)
+	if cacheResp.Code != http.StatusOK {
+		t.Fatalf("cache warm status = %d, body=%s", cacheResp.Code, cacheResp.Body.String())
+	}
+
+	updateBody := bytes.NewBufferString(`{"qr_code":"SPOT-NEW","qr_intro_text":"新二维码讲解","qr_enabled":true}`)
+	updateReq := httptest.NewRequest(http.MethodPut, "/admin/qr/spots/1", updateBody)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateResp := httptest.NewRecorder()
+	router.ServeHTTP(updateResp, updateReq)
+	if updateResp.Code != http.StatusOK {
+		t.Fatalf("update status = %d, body=%s", updateResp.Code, updateResp.Body.String())
+	}
+
+	oldReq := httptest.NewRequest(http.MethodPost, "/qr/SPOT-OLD/intro", nil)
+	oldResp := httptest.NewRecorder()
+	router.ServeHTTP(oldResp, oldReq)
+	if oldResp.Code != http.StatusNotFound {
+		t.Fatalf("old code status = %d, want %d, body=%s", oldResp.Code, http.StatusNotFound, oldResp.Body.String())
 	}
 }

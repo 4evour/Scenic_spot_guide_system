@@ -48,20 +48,74 @@
     "zh-CN": "中文",
     "en-US": "English"
   },
+  "appShell": {
+    "brand": "景区智能导览",
+    "map": "🗺️ 地图",
+    "digitalHuman": "💬 数字人",
+    "admin": "⚙️ 管理",
+    "account": "账号",
+    "logout": "退出"
+  },
+  "account": {
+    "title": "账号",
+    "current": "当前身份",
+    "guestName": "游客",
+    "guestHint": "注册正式账号后，可以长期保存对话记录和数字人偏好。",
+    "passwordHint": "修改密码需要先验证当前密码。",
+    "username": "用户名",
+    "usernamePlaceholder": "请输入用户名",
+    "email": "邮箱",
+    "emailPlaceholder": "邮箱（可选）",
+    "password": "密码",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "confirmPassword": "确认新密码",
+    "currentPasswordPlaceholder": "请输入当前密码",
+    "passwordPlaceholder": "8-128 位，含大小写字母和数字",
+    "confirmPasswordPlaceholder": "请再次输入新密码",
+    "passwordPolicy": "密码需 8-128 位，并包含大写字母、小写字母和数字。",
+    "usernamePasswordRequired": "请填写用户名和密码",
+    "passwordFieldsRequired": "请填写当前密码和新密码",
+    "passwordMismatch": "两次输入的新密码不一致",
+    "upgrade": "注册账号",
+    "changePassword": "修改密码",
+    "upgradeSuccess": "账号注册成功",
+    "upgradeFailed": "注册失败，用户名可能已被占用",
+    "passwordChangeSuccess": "密码已修改",
+    "passwordChangeFailed": "密码修改失败，请检查当前密码",
+    "roles": {
+      "guest": "游客",
+      "visitor": "普通用户",
+      "admin": "管理员"
+    }
+  },
   "login": {
     "title": "景区智能导览系统",
     "subtitle": "Scenic Spot Guide System",
     "username": "用户名",
     "usernamePlaceholder": "请输入用户名",
+    "email": "邮箱",
+    "emailPlaceholder": "邮箱（可选）",
     "password": "密码",
     "passwordPlaceholder": "请输入密码",
+    "modeLogin": "账号登录",
+    "modeRegister": "注册账号",
     "submit": "登 录",
+    "registerSubmit": "注册账号",
     "hint": "管理员登录后可访问数据大屏和管理后台",
+    "registerHint": "注册成功后请返回登录页手动登录，游客也可以免账号体验。",
     "version": "Scenic Guide v1.0",
     "success": "登录成功",
     "failed": "登录失败",
+    "registerSuccess": "注册成功，请登录",
+    "registerFailed": "注册失败",
     "networkError": "网络错误，请重试",
-    "emptyFields": "请输入用户名和密码"
+    "emptyFields": "请输入用户名和密码",
+    "passwordPolicy": "密码需 8-128 位，并包含大写字母、小写字母和数字。",
+    "passwordPolicyInvalid": "密码需 8-128 位，并包含大写字母、小写字母和数字",
+    "guestContinue": "以游客身份继续",
+    "guestSuccess": "已以游客身份登录",
+    "guestFailed": "游客登录失败，请稍后重试"
   },
   "map": {
     "title": "游客实时导览地图",
@@ -71,8 +125,17 @@
     "demoData": "演示数据",
     "liveData": "实时数据",
     "demoDataNoCoord": "演示数据（景点未配置经纬度）",
+    "structuredGuide": "结构化导览",
+    "offlineDiagram": "离线示意图",
+    "rating": "评分 {rating}",
+    "offlineMapLabel": "景区路线图",
+    "offlineMapWatermark": "灵山胜境 / 拈花湾离线导览图",
+    "spotFallbackName": "景点{id}",
+    "defaultArea": "灵山胜境",
+    "defaultCategory": "文化休憩",
     "loadFailed": "加载景点失败",
     "ready": "地图就绪",
+    "offlineMap": "离线示意图",
     "loading": "加载中",
     "myLocation": "📍 我的位置",
     "loadingSpots": "加载景点数据…",
@@ -85,11 +148,52 @@
     "autoGuideOn": "自动导览",
     "autoGuideOff": "停止导览",
     "autoGuideArrived": "您已到达 {name}，正在为您播放讲解",
+    "seniorMode": "老年模式",
+    "exitSeniorMode": "退出老年模式",
     "gpsDenied": "位置权限被拒绝，请在浏览器设置中允许定位",
     "gpsUnavailable": "无法获取位置信息，请检查GPS信号",
     "gpsTimeout": "定位超时，正在重试",
     "gpsNotSupported": "浏览器不支持地理位置",
-    "gpsLabel": "GPS {accuracy}m"
+    "gpsFailed": "定位失败：{message}",
+    "gpsLabel": "GPS {accuracy}m",
+    "ar": {
+      "autoGuideWaiting": "自动导览已开启，等待浏览器定位授权；未授权时仍可点击景点查看离线路线。",
+      "gpsWeakFallback": "GPS 信号弱，已切换离线景点列表；后台可标注梵宫等弱信号区域用于现场疏导。",
+      "ready": "AR 指引已就绪，当前位置精度约 {accuracy}m。",
+      "idle": "开启到点讲解后，可基于定位显示方向提示；未授权时保留离线景点选择。",
+      "offlineMode": "离线导览模式",
+      "navigationHint": "AR 导航提示"
+    },
+    "messages": {
+      "locateFallback": "已请求定位权限，离线示意图会保留景点和路线。",
+      "autoGuideStarted": "自动导览已开启，靠近景点后会自动讲解。",
+      "autoGuideStopped": "自动导览已关闭。",
+      "seniorModeEnabled": "老年模式已开启，文字和按钮会放大。",
+      "seniorModeDisabled": "老年模式已关闭。"
+    },
+    "routes": {
+      "title": "个性化路线"
+    },
+    "reminders": {
+      "title": "服务提醒",
+      "advanceMinutes": "提前{minutes}分钟"
+    },
+    "visualTypes": {
+      "landmark": "地标建筑",
+      "experience": "体验景点",
+      "culture": "休憩文化"
+    },
+    "spotDetail": {
+      "parameters": "建筑参数",
+      "culture": "文化内涵",
+      "highlights": "游玩亮点",
+      "openInfo": "开放/演出",
+      "noParameters": "暂无参数",
+      "noDescription": "暂无说明",
+      "noHighlights": "暂无亮点",
+      "defaultOpenInfo": "随景区开放",
+      "weakSignal": "弱信号"
+    }
   },
   "dh": {
     "title": "与小灵对话",
@@ -122,6 +226,10 @@
     "interruptedServer": "已打断当前讲解，并向数字人服务发送中断信号。",
     "interruptReceived": "已收到数字人服务的中断确认，当前语音已停止。",
     "componentError": "发生了一个错误，请刷新页面重试。",
+    "spotFallbackName": "景点{id}",
+    "autoGuideIntro": "欢迎来到{name}，我来为您介绍这里的看点。",
+    "autoGuideTriggered": "已到达{name}，自动讲解已触发。",
+    "currentSession": "当前会话",
     "user": "游客",
     "assistant": "🤖 小灵",
     "system": "⚙ 系统",
@@ -130,6 +238,13 @@
     "historySessions": "历史会话",
     "noSessions": "暂无历史会话",
     "sessionDefaultTitle": "未命名会话",
+    "sessionMessageCount": "{count} 条消息",
+    "actions": {
+      "search": "搜索",
+      "history": "历史会话",
+      "register": "注册账号",
+      "refresh": "刷新"
+    },
     "quickAsk": {
       "buddhaHeight": "灵山大佛有多高？",
       "withKids": "带孩子怎么玩？",
@@ -139,7 +254,12 @@
       "hoursLabel": "开放时间",
       "routeDetail": "这条路线有哪些景点？",
       "routeTime": "需要多长时间？",
+      "routeDetailQuery": "这条路线有哪些主要景点？",
+      "routeTimeQuery": "需要多长时间走完？",
       "historyDetail": "这里有什么历史故事吗？",
+      "historyDetailQuery": "能讲讲这里的历史故事吗？",
+      "entityDetailLabel": "{name}的详细介绍",
+      "entityDetailQuery": "能详细介绍一下{name}吗？",
       "buddhaStory": "灵山大佛有什么特别之处？"
     },
     "tabAvatar": "数字人",
@@ -147,7 +267,58 @@
     "scanSuccess": "📍 已识别景点：{name}",
     "scanFailed": "二维码无法识别，请确认是否为本景区的景点二维码",
     "scanIntroDefault": "欢迎来到{name}！让我为您详细介绍这里的特色。",
-    "scanFollowUp": "您还可以继续提问："
+    "scanFollowUp": "您还可以继续提问：",
+    "sourcesLabel": "参考来源",
+    "audio": {
+      "initialNotice": "点击“启用声音”后，我会朗读回答并驱动口型。",
+      "playingNotice": "正在播放语音，口型会跟随音频变化。",
+      "readyNotice": "声音已启用。",
+      "lockedNotice": "请先点击“启用声音”，之后我会朗读回答并驱动口型。",
+      "ttsFallback": "语音合成暂时不可用，已切换为浏览器朗读。",
+      "ttsFallbackWithMessage": "语音合成暂时不可用，已切换为浏览器朗读：{message}",
+      "enabledNotice": "声音已启用。后续回答会自动朗读，口型会跟随音频或文字朗读节奏。",
+      "emptyStreamFallback": "语音合成没有返回音频，已切换为浏览器朗读。",
+      "browserSpeechBlocked": "浏览器朗读被阻止，请点击“启用声音”后重试。",
+      "soundPermissionDenied": "浏览器未允许播放声音，请检查站点声音权限。",
+      "autoplayBlocked": "浏览器阻止了自动播放，请点击“启用声音”。",
+      "playbackFailedNext": "音频播放失败，已尝试播放下一段。"
+    },
+    "socket": {
+      "notConnected": "数字人语音服务未连接。文字聊天仍可正常使用，如需语音功能请启动 Open-LLM-VTuber 服务。",
+      "invalidMessage": "收到无法解析的数字人消息。",
+      "reconnectFailed": "数字人语音服务重连失败，请检查服务是否启动。"
+    },
+    "controls": {
+      "soundPlaying": "播放中",
+      "soundReady": "声音已启用",
+      "soundEnable": "启用声音",
+      "autoGuideOn": "到点讲解已开",
+      "autoGuideOff": "到点讲解",
+      "seniorMode": "老年模式",
+      "exitSeniorMode": "退出老年模式",
+      "chatResizeTitle": "拖动调整聊天框宽度"
+    },
+    "avatar": {
+      "ariaLabel": "数字人形象选择",
+      "lockedLabel": "景区指定",
+      "fallbackName": "数字人",
+      "saveFailed": "数字人偏好保存失败",
+      "poked": "👋 你戳了戳{name}"
+    }
+  },
+  "live2dStage": {
+    "status": {
+      "speaking": "讲解中",
+      "thinking": "思考中",
+      "listening": "聆听中",
+      "interrupted": "已打断",
+      "connecting": "连接中",
+      "error": "异常",
+      "idle": "待命"
+    },
+    "sdkFallback": "Live2D SDK 未就绪，已启用备用动效预览",
+    "readyNote": "Live2D 模型已接入，表情与口型由前端状态驱动。",
+    "loadingNote": "正在加载 Live2D 模型..."
   },
   "qr": {
     "scanning": "正在识别景点...",
@@ -156,7 +327,10 @@
     "chatNow": "直接提问",
     "backToDH": "返回对话",
     "invalidCode": "二维码无效",
-    "spotNotFound": "未找到对应景点，请检查二维码"
+    "spotNotFound": "未找到对应景点，请检查二维码",
+    "autoAsk": "请详细介绍{name}这个景点",
+    "seniorMode": "老年模式",
+    "exitSeniorMode": "退出老年模式"
   },
   "nav": {
     "brand": "景区智能导览",
@@ -169,11 +343,754 @@
     "digitalCenter": "数字人中心",
     "avatar": "形象配置",
     "reports": "感受度报告",
+    "queries": "游客问题",
     "knowledge": "知识库管理",
     "systemMgmt": "系统管理",
     "users": "用户管理",
     "settings": "系统设置",
     "logout": "退出"
+  },
+  "dashboard": {
+    "title": "数据大屏",
+    "subtitle": "实时运营数据概览",
+    "common": {
+      "none": "暂无",
+      "enabled": "已启用",
+      "disabled": "已关闭"
+    },
+    "kpis": {
+      "todayVisitors": "今日服务人次",
+      "weeklyChats": "本周问答次数",
+      "satisfaction": "用户满意度",
+      "avgResponseTime": "平均响应延迟",
+      "knowledgeItems": "知识库条目"
+    },
+    "sections": {
+      "hotSpots": "热门景点 TOP5",
+      "questionCloud": "热门问答云图",
+      "crowdHeat": "实时人流热力",
+      "activityStatus": "演出/活动状态",
+      "terminalStatus": "数字人终端状态",
+      "knowledgeOps": "知识库运营",
+      "hourlyTrend": "24 小时流量趋势",
+      "categoryDistribution": "关注点分布",
+      "satisfactionTrend": "7 日满意度趋势",
+      "topQuestions": "热门问题 Top 10",
+      "recentConversations": "最近对话"
+    },
+    "empty": {
+      "hotSpots": "暂无真实热门景点数据",
+      "questionCloud": "暂无热门问答云图数据",
+      "crowdHeat": "暂无实时人流热力数据",
+      "activityStatus": "暂无真实演出/活动状态数据",
+      "terminalStatus": "暂无真实终端状态数据",
+      "knowledgeGaps": "暂无真实知识缺口数据",
+      "avatarSummary": "暂无真实配置摘要数据",
+      "satisfactionTrend": "暂无满意度趋势数据",
+      "topQuestions": "暂无热门问题数据",
+      "recentConversations": "暂无对话记录"
+    },
+    "labels": {
+      "lastUpdated": "最近更新",
+      "avatarPreview": "数字人配置预览",
+      "todayInteractions": "今日交互",
+      "peakHour": "高峰时段",
+      "peakInteractions": "高峰交互",
+      "guideName": "讲解员",
+      "avatarModel": "形象模型",
+      "voiceType": "语音类型",
+      "avatarSwitch": "游客切换",
+      "trackedQuestions": "追踪问题",
+      "knowledgeCoverageHint": "已基于今日高频问题展示知识运营概览，可在知识库管理中继续补充候选内容。"
+    },
+    "columns": {
+      "time": "时间",
+      "visitorQuery": "游客问题",
+      "aiResponse": "AI 回答",
+      "emotion": "情绪",
+      "hotQuestion": "热门问题",
+      "count": "次数"
+    },
+    "emotions": {
+      "joy": "正面",
+      "surprise": "惊喜",
+      "neutral": "中性",
+      "sadness": "负面",
+      "fear": "恐惧"
+    },
+    "units": {
+      "times": "{count} 次",
+      "minutes": "{count} 分钟"
+    },
+    "tooltips": {
+      "satisfaction": "满意度",
+      "conversations": "对话数"
+    }
+  },
+  "adminQueries": {
+    "title": "游客问题处理",
+    "subtitle": "承接数字人问答和游客反馈中需要人工处理的问题。",
+    "filters": {
+      "unanswered": "未回答",
+      "all": "全部"
+    },
+    "status": {
+      "answered": "已回答",
+      "unanswered": "未回答"
+    },
+    "statusHints": {
+      "done": "已完成处理",
+      "pending": "仍需跟进"
+    },
+    "kpis": {
+      "currentList": "当前列表：{count}",
+      "unanswered": "未回答：{count}",
+      "answered": "已回答：{count}"
+    },
+    "columns": {
+      "query": "问题",
+      "status": "状态",
+      "spotId": "关联景点ID",
+      "responsePreview": "回复预览",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "process": "处理",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "deleteDialog": {
+      "title": "确认删除",
+      "content": "删除后不可恢复，确定要删除这条游客问题吗？"
+    },
+    "drawerTitle": "处理游客问题",
+    "empty": "暂无游客问题",
+    "form": {
+      "query": "游客问题",
+      "spotId": "关联景点 ID",
+      "response": "处理回复",
+      "status": "处理状态"
+    },
+    "placeholders": {
+      "query": "游客提出的问题",
+      "spotId": "没有关联景点时为 0",
+      "response": "填写给游客或运营复盘使用的处理说明"
+    },
+    "messages": {
+      "loadFailed": "游客问题加载失败",
+      "queryRequired": "游客问题不能为空。",
+      "saveSuccess": "游客问题已保存。",
+      "saveFailed": "游客问题保存失败",
+      "deleteSuccess": "游客问题已删除。",
+      "deleteFailed": "游客问题删除失败"
+    }
+  },
+  "adminQRCode": {
+    "title": "二维码管理",
+    "subtitle": "生成、复制和下载景点扫码导览二维码。",
+    "columns": {
+      "spot": "景点",
+      "category": "分类",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "status": {
+      "enabled": "已启用",
+      "disabled": "未启用"
+    },
+    "statusHints": {
+      "enabled": "游客可扫码进入讲解",
+      "disabled": "扫码入口停用"
+    },
+    "kpis": {
+      "enabled": "已启用：{count}",
+      "withQr": "有二维码：{count}",
+      "cache": "缓存：{count}"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "generate": "批量生成",
+      "edit": "编辑",
+      "copyLink": "复制链接",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "drawerTitle": "编辑二维码：{name}",
+    "empty": "暂无景点二维码配置",
+    "form": {
+      "qrCode": "二维码 ID",
+      "enabled": "启用扫码",
+      "intro": "讲解词"
+    },
+    "placeholders": {
+      "qrCode": "例如 SPOT-0001",
+      "intro": "留空时由后端根据景点信息生成讲解"
+    },
+    "messages": {
+      "loadFailed": "二维码数据加载失败",
+      "generateSuccess": "已生成 {count} 个二维码 ID。",
+      "generateFailed": "批量生成失败",
+      "copySuccess": "扫码链接已复制。",
+      "copyFailed": "复制失败，请手动复制链接。",
+      "qrCodeTooLong": "二维码 ID 最多 100 个字符。",
+      "saveSuccess": "二维码配置已保存。",
+      "saveFailed": "二维码配置保存失败"
+    }
+  },
+  "adminAvatar": {
+    "previewTitle": "数字人预览",
+    "formTitle": "形象与声音设定",
+    "currentPlan": "当前方案：{plan}",
+    "summary": {
+      "defaultAvatar": "默认形象",
+      "costume": "服装",
+      "voice": "声音",
+      "tone": "语气"
+    },
+    "sections": {
+      "appearance": "形象设定",
+      "voice": "声音与表达"
+    },
+    "form": {
+      "defaultAvatar": "默认数字人",
+      "allowSwitch": "游客切换",
+      "name": "数字人名称",
+      "appearance": "外观定位",
+      "costume": "服装风格",
+      "color": "主视觉颜色",
+      "cultureTheme": "景区文化主题",
+      "greeting": "欢迎语",
+      "voice": "讲解声音",
+      "tone": "讲解语气",
+      "speed": "语速",
+      "volume": "音量",
+      "defaultEmotion": "默认表情",
+      "emotionLevel": "表情强度"
+    },
+    "switch": {
+      "allow": "允许",
+      "locked": "限制为默认"
+    },
+    "actions": {
+      "save": "保存配置",
+      "reload": "重新加载"
+    },
+    "placeholders": {
+      "name": "请输入数字人名称"
+    },
+    "options": {
+      "appearance": {
+        "friendly": "亲和型国风讲解员",
+        "formal": "端庄礼仪讲解员",
+        "youthful": "青春活力文旅推荐官",
+        "zen": "禅意文化讲述者"
+      },
+      "costume": {
+        "hanfu": "古典汉服",
+        "uniform": "景区文旅制服",
+        "landscape": "山水讲解员制服",
+        "zenRobe": "禅意素雅长衫",
+        "festival": "节庆主题服饰"
+      },
+      "voice": {
+        "gentle": "温柔自然女声",
+        "professional": "沉稳专业女声",
+        "energetic": "活力亲切女声",
+        "ceremonial": "端庄礼仪女声"
+      },
+      "tone": {
+        "warm": "温暖、端庄、亲切",
+        "clear": "专业、清晰、克制",
+        "lively": "活泼、轻快、有陪伴感",
+        "zen": "舒缓、禅意、适合文化讲解"
+      },
+      "emotion": {
+        "joy": "亲切微笑",
+        "neutral": "自然平和",
+        "surprise": "热情提示",
+        "sadness": "温和致歉"
+      }
+    },
+    "messages": {
+      "loadFailed": "数字人配置加载失败",
+      "saveSuccess": "数字人形象配置已保存。",
+      "saveFailed": "保存失败",
+      "nameRequired": "请输入数字人名称"
+    }
+  },
+  "adminReports": {
+    "title": "游客感受度报告",
+    "subtitle": "基于{period}数字人、语音和网页问答交互记录自动生成。",
+    "periods": {
+      "7d": "近 7 天",
+      "30d": "近 30 天"
+    },
+    "periodButtons": {
+      "7d": "7天",
+      "30d": "30天"
+    },
+    "actions": {
+      "refresh": "刷新报告"
+    },
+    "kpis": {
+      "interactions": "交互记录",
+      "satisfaction": "满意倾向",
+      "negative": "负面占比",
+      "peakHour": "高峰时段"
+    },
+    "kpiNotes": {
+      "periodTotal": "{period}累计",
+      "positiveEmotion": "正向情绪占比",
+      "needsReview": "需重点复盘",
+      "topConcern": "关注点：{concern}"
+    },
+    "sections": {
+      "attention": "游客关注点分析",
+      "emotionDistribution": "情绪分布",
+      "emotionTrend": "情感趋势",
+      "negativeReasons": "负面反馈原因下钻",
+      "audienceProfiles": "人群画像与路线匹配",
+      "routeSatisfaction": "路线点击率/满意度",
+      "peakHours": "热门时段",
+      "suggestions": "自动化改进建议"
+    },
+    "messages": {
+      "loadFailed": "感受度报告加载失败",
+      "generating": "正在生成报告..."
+    },
+    "empty": {
+      "wordCloud": "暂无真实词云数据",
+      "audienceProfiles": "暂无真实人群画像数据",
+      "routeSatisfaction": "暂无真实路线满意度数据",
+      "suggestions": "暂无真实交互数据，暂不能生成改进建议。"
+    },
+    "labels": {
+      "satisfactionPercent": "满意度 {value}%",
+      "clickRatePercent": "点击率 {value}%"
+    },
+    "emotions": {
+      "positive": "正面",
+      "neutral": "中性",
+      "negative": "负面"
+    }
+  },
+  "adminUsers": {
+    "title": "用户管理",
+    "subtitle": "管理系统的用户账号和权限。",
+    "actions": {
+      "create": "新增用户",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "columns": {
+      "username": "用户名",
+      "email": "邮箱",
+      "role": "角色",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "roles": {
+      "admin": "管理员",
+      "visitor": "游客"
+    },
+    "drawer": {
+      "createTitle": "新增用户",
+      "editTitle": "编辑用户"
+    },
+    "form": {
+      "username": "用户名",
+      "email": "邮箱",
+      "password": "密码",
+      "role": "角色"
+    },
+    "placeholders": {
+      "username": "请输入用户名",
+      "email": "请输入邮箱地址",
+      "password": "请输入密码",
+      "passwordEdit": "留空则不修改密码",
+      "role": "请选择角色"
+    },
+    "validation": {
+      "usernameRequired": "请输入用户名",
+      "usernameLength": "用户名需为 3-32 位字母、数字或下划线",
+      "emailInvalid": "请输入有效的邮箱地址",
+      "passwordRequired": "请输入密码",
+      "passwordPolicy": "密码需 8-128 位且包含大小写字母和数字",
+      "roleRequired": "请选择角色"
+    }
+  },
+  "adminSettings": {
+    "title": "系统设置",
+    "sections": {
+      "basic": "基本信息",
+      "features": "系统功能",
+      "data": "数据管理"
+    },
+    "form": {
+      "scenicName": "景区名称",
+      "scenicDesc": "景区简介",
+      "serviceHotline": "服务热线",
+      "enableLogin": "启用用户登录",
+      "enableVoice": "启用语音服务",
+      "enableFilter": "启用游客感受度分析",
+      "dataRetention": "数据保留天数",
+      "backupFrequency": "备份频率"
+    },
+    "placeholders": {
+      "scenicName": "请输入景区名称",
+      "scenicDesc": "请输入景区简介",
+      "serviceHotline": "请输入服务热线",
+      "backupFrequency": "请选择备份频率"
+    },
+    "backupFrequency": {
+      "daily": "每日",
+      "weekly": "每周",
+      "monthly": "每月",
+      "manual": "手动"
+    },
+    "actions": {
+      "save": "保存设置",
+      "reset": "重置"
+    },
+    "validation": {
+      "scenicNameRequired": "请输入景区名称",
+      "dataRetentionRequired": "请输入数据保留天数",
+      "dataRetentionRange": "请输入 1-365 天"
+    },
+    "messages": {
+      "loadFailed": "系统设置加载失败",
+      "saveSuccess": "系统设置已保存",
+      "saveFailed": "保存失败"
+    }
+  },
+  "adminKnowledge": {
+    "categories": {
+      "all": "全部分类",
+      "guide": "讲解词",
+      "history": "文史资料",
+      "faq": "游客 FAQ",
+      "route": "路线推荐",
+      "service": "服务设施",
+      "ticket": "票务交通",
+      "official": "官方资料",
+      "government": "政府资料",
+      "overview": "景区概况",
+      "spot": "景点介绍",
+      "boundary": "实时边界",
+      "uncategorized": "未分类"
+    },
+    "spotCategories": {
+      "all": "全部景点分类",
+      "core": "核心景点",
+      "performance": "演艺体验",
+      "culture": "文化建筑",
+      "service": "服务设施"
+    },
+    "spots": {
+      "all": "全部景点",
+      "fallback": "景点{id}"
+    },
+    "validation": {
+      "contentRequired": "请输入知识内容"
+    },
+    "kpis": {
+      "items": {
+        "label": "知识条目",
+        "note": "来自 RAG 知识库"
+      },
+      "current": {
+        "label": "当前页显示",
+        "note": "服务端筛选结果"
+      },
+      "formats": {
+        "label": "支持格式",
+        "note": "另支持 JSON、TXT"
+      },
+      "cache": {
+        "label": "缓存状态",
+        "value": "自动刷新",
+        "note": "增删改后立即生效"
+      }
+    },
+    "editor": {
+      "createTitle": "新增知识条目",
+      "editTitle": "编辑知识条目"
+    },
+    "form": {
+      "title": "标题",
+      "category": "分类",
+      "source": "来源",
+      "content": "知识内容"
+    },
+    "placeholders": {
+      "title": "例如：九龙灌浴讲解词",
+      "source": "admin / 文件名 / 景点名称",
+      "content": "填写讲解词、历史背景、FAQ 问答或运营说明"
+    },
+    "actions": {
+      "save": "保存更新",
+      "add": "加入知识库",
+      "clear": "清空",
+      "search": "查询",
+      "refresh": "刷新",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "approve": "入库",
+      "reject": "拒绝"
+    },
+    "upload": {
+      "title": "上传知识文档",
+      "submit": "上传并导入",
+      "hint": "JSONL/JSON 需包含 title、content、source、metadata 字段；Markdown/TXT 会按段落自动切片。"
+    },
+    "filters": {
+      "searchPlaceholder": "搜索景点、讲解词、FAQ、来源..."
+    },
+    "empty": {
+      "knowledge": "暂无知识条目",
+      "analyses": "暂无 AI 分析记录",
+      "candidates": "暂无待审核知识候选"
+    },
+    "labels": {
+      "source": "来源：{source} / {updated}",
+      "session": "会话：{session}"
+    },
+    "analysis": {
+      "title": "AI 分析记录",
+      "sessionPlaceholder": "输入会话 ID 生成候选",
+      "analyze": "AI 分析会话",
+      "refresh": "刷新记录",
+      "satisfaction": "满意度 {score}",
+      "emptySummary": "暂无分析摘要",
+      "attentionPoint": "关注点：{item}",
+      "negativeReason": "负面原因：{item}"
+    },
+    "candidates": {
+      "title": "AI 知识候选",
+      "latestAnalysis": "最近分析：{session}",
+      "refresh": "刷新候选"
+    },
+    "dialog": {
+      "deleteTitle": "确认删除",
+      "deleteContent": "确认删除「{title}」吗？"
+    },
+    "messages": {
+      "loadFailed": "知识库加载失败",
+      "updateSuccess": "知识条目已更新，数字人检索缓存已刷新。",
+      "createSuccess": "知识条目已加入数字人知识库。",
+      "saveFailed": "保存失败",
+      "deleteSuccess": "知识条目已删除。",
+      "deleteFailed": "删除失败",
+      "chooseFile": "请先选择知识文档。",
+      "uploadSuccess": "上传完成，已导入 {count} 条知识片段。",
+      "uploadFailed": "上传失败",
+      "sessionRequired": "请输入需要分析的会话 ID。",
+      "analyzeSuccess": "AI 分析完成，已生成知识候选。",
+      "analyzeFailed": "AI 分析失败",
+      "analysesLoadFailed": "AI 分析记录加载失败",
+      "candidatesLoadFailed": "知识候选加载失败",
+      "approveSuccess": "候选知识已入库。",
+      "approveFailed": "入库失败",
+      "rejectSuccess": "候选知识已拒绝。",
+      "rejectFailed": "拒绝失败"
+    }
+  },
+  "adminSpots": {
+    "title": "景点管理",
+    "subtitle": "管理景区内的所有景点信息、分类与位置",
+    "actions": {
+      "create": "新增景点",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存修改",
+      "submitCreate": "确认新增"
+    },
+    "drawer": {
+      "createTitle": "新增景点",
+      "editTitle": "编辑景点"
+    },
+    "columns": {
+      "name": "名称",
+      "category": "分类",
+      "location": "位置",
+      "rating": "评分",
+      "price": "价格",
+      "qrCode": "二维码",
+      "geofence": "电子围栏",
+      "actions": "操作"
+    },
+    "categories": {
+      "core": "核心景点",
+      "performance": "演艺体验",
+      "culture": "文化建筑",
+      "service": "服务设施"
+    },
+    "price": {
+      "free": "免费"
+    },
+    "status": {
+      "notConfigured": "未配置",
+      "disabled": "未启用"
+    },
+    "form": {
+      "name": "名称",
+      "description": "描述",
+      "location": "位置",
+      "category": "分类",
+      "rating": "评分",
+      "price": "价格",
+      "imageURL": "图片链接",
+      "longitude": "经度",
+      "latitude": "纬度",
+      "sortOrder": "排序",
+      "qrCode": "二维码 ID",
+      "qrIntro": "开场白",
+      "qrEnabled": "启用扫码",
+      "geofenceEnabled": "到点讲解",
+      "geofenceRadius": "半径(m)",
+      "geofenceCooldown": "冷却(分)",
+      "geofenceIntro": "触发文案"
+    },
+    "placeholders": {
+      "name": "请输入景点名称",
+      "description": "请输入景点描述",
+      "location": "请输入位置信息",
+      "category": "请选择分类",
+      "price": "0 为免费",
+      "imageURL": "可选，图片 URL",
+      "longitude": "经度",
+      "latitude": "纬度",
+      "sortOrder": "数值越小越靠前",
+      "qrCode": "留空则自动生成，如 SPOT-0001",
+      "qrIntro": "扫码后数字人自动说的开场白（留空则自动 AI 生成）",
+      "geofenceIntro": "到达该景点时优先播报的数字人语音文案，留空则使用讲解内容"
+    },
+    "validation": {
+      "nameRequired": "请输入景点名称",
+      "locationRequired": "请输入位置信息",
+      "categoryRequired": "请选择分类",
+      "ratingRange": "评分范围为 0-5"
+    },
+    "switches": {
+      "qrEnabled": "游客可扫码触发讲解",
+      "qrDisabled": "扫码功能已关闭",
+      "geofenceEnabled": "游客到达附近自动触发",
+      "geofenceDisabled": "电子围栏已关闭"
+    }
+  },
+  "adminContent": {
+    "title": "讲解内容管理",
+    "actions": {
+      "create": "新增内容",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "save": "保存",
+      "submitCreate": "创建"
+    },
+    "drawer": {
+      "createTitle": "新增内容",
+      "editTitle": "编辑内容"
+    },
+    "columns": {
+      "title": "标题",
+      "type": "类型",
+      "preview": "内容预览",
+      "spotID": "关联景点ID",
+      "audio": "音频",
+      "actions": "操作"
+    },
+    "contentTypes": {
+      "guide": "讲解词",
+      "faq": "FAQ",
+      "history": "文史资料",
+      "service": "服务信息"
+    },
+    "audio": {
+      "available": "有",
+      "missing": "无"
+    },
+    "form": {
+      "title": "标题",
+      "type": "类型",
+      "spotID": "关联景点ID",
+      "content": "内容",
+      "audioURL": "音频URL"
+    },
+    "placeholders": {
+      "title": "请输入标题",
+      "type": "请选择类型",
+      "spotID": "请输入景点ID",
+      "content": "请输入讲解内容",
+      "audioURL": "可选，音频文件链接"
+    },
+    "validation": {
+      "titleRequired": "请输入标题",
+      "typeRequired": "请选择类型",
+      "contentRequired": "请输入内容"
+    }
+  },
+  "adminRoutes": {
+    "title": "路线管理",
+    "actions": {
+      "create": "新增路线",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "update": "更新"
+    },
+    "drawer": {
+      "createTitle": "新增路线",
+      "editTitle": "编辑路线"
+    },
+    "columns": {
+      "name": "名称",
+      "description": "描述",
+      "spotCount": "景点数",
+      "duration": "时长",
+      "difficulty": "难度",
+      "rating": "评分",
+      "actions": "操作"
+    },
+    "difficulty": {
+      "easy": "轻松",
+      "medium": "中等",
+      "hard": "挑战"
+    },
+    "form": {
+      "name": "名称",
+      "description": "描述",
+      "spots": "景点列表",
+      "duration": "时长(分钟)",
+      "difficulty": "难度",
+      "rating": "评分"
+    },
+    "placeholders": {
+      "name": "请输入路线名称",
+      "description": "请输入路线描述",
+      "spots": "景点名称用逗号分隔，如：灵山大佛,梵宫",
+      "duration": "请输入时长",
+      "difficulty": "请选择难度",
+      "rating": "请输入评分"
+    },
+    "validation": {
+      "nameRequired": "请输入路线名称",
+      "durationRequired": "请输入时长",
+      "durationMin": "时长至少为 1 分钟",
+      "difficultyRequired": "请选择难度",
+      "ratingRange": "评分范围 0-5"
+    },
+    "units": {
+      "hour": "小时",
+      "minute": "分钟"
+    }
   },
   "error": {
     "title": "页面出现了异常",
@@ -189,6 +1106,9 @@
     "err_internal": "服务异常",
     "err_csrf": "CSRF token 校验失败",
     "err_ratelimit": "请求过于频繁，请稍后再试",
+    "unauthorizedExpired": "未登录或登录已过期",
+    "nonJsonResponse": "接口返回非 JSON 响应 ({status})",
+    "requestFailed": "请求失败 ({status})",
     "msg_feedback_thanks": "感谢您的反馈",
     "msg_knowledge_uploaded": "知识上传并加载成功",
     "msg_knowledge_deleted": "知识删除成功",
@@ -198,11 +1118,13 @@
     "upgradeTitle": "注册正式账号",
     "upgradeHint": "升级后可保存所有对话记录，跨设备同步。",
     "upgradeButton": "确认注册",
+    "upgradeLoading": "注册中…",
     "usernamePlaceholder": "用户名",
-    "passwordPlaceholder": "密码（至少6位）",
+    "passwordPlaceholder": "密码（8-128位，含大小写字母和数字）",
     "emailPlaceholder": "邮箱（可选）",
     "usernamePasswordRequired": "请填写用户名和密码",
-    "passwordTooShort": "密码至少6位",
+    "passwordTooShort": "密码需 8-128 位，并包含大写字母、小写字母和数字",
+    "passwordPolicy": "密码需 8-128 位，并包含大写字母、小写字母和数字",
     "upgradeFailed": "升级失败，用户名可能已被占用"
   }
 }

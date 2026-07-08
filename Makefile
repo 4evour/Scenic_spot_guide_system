@@ -1,6 +1,6 @@
-.PHONY: check test build frontend-check frontend-build encoding secrets rag-eval rag-bench demo-seed
+.PHONY: check test build frontend-check frontend-contracts frontend-build encoding secrets compose-healthcheck rag-eval rag-bench demo-seed
 
-check: encoding secrets test frontend-check
+check: encoding secrets compose-healthcheck test frontend-check frontend-contracts
 
 encoding:
 	cd web-vue && npm run check:encoding
@@ -8,11 +8,46 @@ encoding:
 secrets:
 	node scripts/check-secrets.mjs
 
+compose-healthcheck:
+	node scripts/check-compose-healthcheck.mjs
+
 test:
 	go test ./...
 
 frontend-check:
 	cd web-vue && npm run check
+
+frontend-contracts:
+	cd web-vue && npm run check:app-shell-i18n
+	cd web-vue && npm run check:login-i18n
+	cd web-vue && npm run check:qr-scan-i18n
+	cd web-vue && npm run check:live2d-stage-i18n
+	cd web-vue && npm run check:geolocation-i18n
+	cd web-vue && npm run check:map-guide-i18n
+	cd web-vue && npm run check:map-routes-i18n
+	cd web-vue && npm run check:map-spot-detail-i18n
+	cd web-vue && npm run check:map-spot-list-i18n
+	cd web-vue && npm run check:data-boundaries
+	cd web-vue && npm run check:admin-queries
+	cd web-vue && npm run check:admin-knowledge-insights
+	cd web-vue && npm run check:admin-knowledge-i18n
+	cd web-vue && npm run check:admin-content-i18n
+	cd web-vue && npm run check:admin-settings-i18n
+	cd web-vue && npm run check:admin-avatar-i18n
+	cd web-vue && npm run check:admin-query-i18n
+	cd web-vue && npm run check:admin-qrcode-i18n
+	cd web-vue && npm run check:admin-reports-i18n
+	cd web-vue && npm run check:admin-routes-i18n
+	cd web-vue && npm run check:admin-spots-i18n
+	cd web-vue && npm run check:admin-users-i18n
+	cd web-vue && npm run check:dashboard-i18n
+	cd web-vue && npm run check:digital-human-chat-panel-i18n
+	cd web-vue && npm run check:digital-human-controls-i18n
+	cd web-vue && npm run check:digital-human-upgrade-i18n
+	cd web-vue && npm run check:digital-human-runtime-i18n
+	cd web-vue && npm run check:digital-human-docs
+	cd web-vue && npm run check:service-i18n
+	cd web-vue && npm run check:scenic-visualization-i18n
 
 frontend-build:
 	cd web-vue && npm run build

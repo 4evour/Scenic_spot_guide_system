@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, h } from 'vue'
 import type { Ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   NButton,
   NDataTable,
@@ -11,8 +12,6 @@ import {
   NSelect,
   NTag,
   NSpace,
-  NEmpty,
-  NAlert,
   type DataTableColumns,
   type FormInst,
   type FormRules,
@@ -30,8 +29,8 @@ type User = {
   password?: string
 }
 
+const { t, locale } = useI18n()
 const formRef = ref<FormInst | null>(null)
-const apiReady = ref(true)
 
 const crud = useCrudTable<User>({
   listApi: '/admin/users',
@@ -54,14 +53,14 @@ const { loading, saving, total, pagination, drawerVisible, isEditing, fetchData,
 const tableData = crud.tableData as Ref<User[]>
 const formData = crud.formData as Ref<Partial<User>>
 
-const roleOptions = [
-  { label: '管理员', value: 'admin' },
-  { label: '游客', value: 'visitor' },
-]
+const roleOptions = computed(() => [
+  { label: t('adminUsers.roles.admin'), value: 'admin' },
+  { label: t('adminUsers.roles.visitor'), value: 'visitor' },
+])
 
 const passwordRule = computed(() => ({
   required: !isEditing.value,
-  message: '请输入密码',
+  message: t('adminUsers.validation.passwordRequired'),
   trigger: 'blur' as const,
 }))
 
@@ -72,28 +71,29 @@ function validatePassword(_rule: unknown, value: string | undefined): boolean {
 
 const formRules = computed<FormRules>(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, max: 32, message: '用户名长度为 2-32 个字符', trigger: 'blur' },
+    { required: true, message: t('adminUsers.validation.usernameRequired'), trigger: 'blur' },
+    { min: 3, max: 32, message: t('adminUsers.validation.usernameLength'), trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_]+$/, message: t('adminUsers.validation.usernameLength'), trigger: 'blur' },
   ],
   email: [
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
+    { type: 'email', message: t('adminUsers.validation.emailInvalid'), trigger: 'blur' },
   ],
   password: [
     passwordRule.value,
-    { validator: validatePassword, message: '密码需 8-128 位且包含大小写字母和数字', trigger: 'blur' },
+    { validator: validatePassword, message: t('adminUsers.validation.passwordPolicy'), trigger: 'blur' },
   ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' },
+    { required: true, message: t('adminUsers.validation.roleRequired'), trigger: 'change' },
   ],
 }))
 
-const modalTitle = computed(() => isEditing.value ? '编辑用户' : '新增用户')
+const modalTitle = computed(() => isEditing.value ? t('adminUsers.drawer.editTitle') : t('adminUsers.drawer.createTitle'))
 
-const columns: DataTableColumns<User> = [
-  { title: '用户名', key: 'username', ellipsis: { tooltip: true } },
-  { title: '邮箱', key: 'email', ellipsis: { tooltip: true } },
+const columns = computed<DataTableColumns<User>>(() => [
+  { title: t('adminUsers.columns.username'), key: 'username', ellipsis: { tooltip: true } },
+  { title: t('adminUsers.columns.email'), key: 'email', ellipsis: { tooltip: true } },
   {
-    title: '角色',
+    title: t('adminUsers.columns.role'),
     key: 'role',
     width: 100,
     render(row) {
@@ -105,17 +105,17 @@ const columns: DataTableColumns<User> = [
           bordered: false,
           size: 'small',
         },
-        { default: () => (isAdmin ? '管理员' : '游客') },
+        { default: () => (isAdmin ? t('adminUsers.roles.admin') : t('adminUsers.roles.visitor')) },
       )
     },
   },
   {
-    title: '创建时间',
+    title: t('adminUsers.columns.createdAt'),
     key: 'created_at',
     width: 180,
     render(row) {
       if (!row.created_at) return '-'
-      return new Date(row.created_at).toLocaleString('zh-CN', {
+      return new Date(row.created_at).toLocaleString(locale.value, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -125,7 +125,7 @@ const columns: DataTableColumns<User> = [
     },
   },
   {
-    title: '操作',
+    title: t('adminUsers.columns.actions'),
     key: 'actions',
     width: 160,
     render(row) {
@@ -139,7 +139,7 @@ const columns: DataTableColumns<User> = [
               type: 'info',
               onClick: () => openEdit(row),
             },
-            { default: () => '编辑' },
+            { default: () => t('adminUsers.actions.edit') },
           ),
           h(
             NButton,
@@ -149,13 +149,13 @@ const columns: DataTableColumns<User> = [
               type: 'error',
               onClick: () => handleDelete(row),
             },
-            { default: () => '删除' },
+            { default: () => t('adminUsers.actions.delete') },
           ),
         ],
       })
     },
   },
-]
+])
 
 async function handleFormSubmit() {
   try {
@@ -166,45 +166,23 @@ async function handleFormSubmit() {
   await handleSave()
 }
 
-async function loadUsers() {
-  try {
-    await fetchData()
-    apiReady.value = true
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : ''
-    if (msg.includes('404') || msg.includes('Not Found') || msg.includes('请求失败 (404)')) {
-      apiReady.value = false
-    }
-  }
-}
-
-onMounted(loadUsers)
+onMounted(fetchData)
 </script>
 
 <template>
   <div class="admin-users">
     <div class="page-header">
       <div>
-        <h2>用户管理</h2>
-        <p class="page-subtitle">管理系统的用户账号和权限</p>
+        <h2>{{ t('adminUsers.title') }}</h2>
+        <p class="page-subtitle">{{ t('adminUsers.subtitle') }}</p>
       </div>
       <NButton type="primary" @click="openCreate">
-        新增用户
+        {{ t('adminUsers.actions.create') }}
       </NButton>
     </div>
 
-    <NAlert
-      v-if="!apiReady"
-      type="warning"
-      :show-icon="true"
-      class="api-alert"
-    >
-      用户管理 API 尚未就绪，请先通过命令行创建管理员账号，或联系后端开发人员启用用户管理接口。
-    </NAlert>
-
     <div class="table-card">
       <NDataTable
-        v-if="apiReady"
         :columns="columns"
         :data="tableData"
         :loading="loading"
@@ -214,7 +192,6 @@ onMounted(loadUsers)
         striped
         remote
       />
-      <NEmpty v-else description="API 未就绪，无法加载用户列表" class="empty-placeholder" />
     </div>
 
     <NModal
@@ -233,40 +210,40 @@ onMounted(loadUsers)
         label-width="80"
         require-mark-placement="right-hanging"
       >
-        <NFormItem label="用户名" path="username">
+        <NFormItem :label="t('adminUsers.form.username')" path="username">
           <NInput
             v-model:value="formData.username"
-            placeholder="请输入用户名"
+            :placeholder="t('adminUsers.placeholders.username')"
             :maxlength="32"
           />
         </NFormItem>
-        <NFormItem label="邮箱" path="email">
+        <NFormItem :label="t('adminUsers.form.email')" path="email">
           <NInput
             v-model:value="formData.email"
-            placeholder="请输入邮箱地址"
+            :placeholder="t('adminUsers.placeholders.email')"
           />
         </NFormItem>
-        <NFormItem label="密码" path="password">
+        <NFormItem :label="t('adminUsers.form.password')" path="password">
           <NInput
             v-model:value="formData.password"
             type="password"
             show-password-on="click"
-            :placeholder="isEditing ? '留空则不修改密码' : '请输入密码'"
+            :placeholder="isEditing ? t('adminUsers.placeholders.passwordEdit') : t('adminUsers.placeholders.password')"
           />
         </NFormItem>
-        <NFormItem label="角色" path="role">
+        <NFormItem :label="t('adminUsers.form.role')" path="role">
           <NSelect
             v-model:value="formData.role"
             :options="roleOptions"
-            placeholder="请选择角色"
+            :placeholder="t('adminUsers.placeholders.role')"
           />
         </NFormItem>
       </NForm>
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="closeDrawer">取消</NButton>
+          <NButton @click="closeDrawer">{{ t('adminUsers.actions.cancel') }}</NButton>
           <NButton type="primary" :loading="saving" @click="handleFormSubmit">
-            {{ isEditing ? '保存' : '创建' }}
+            {{ isEditing ? t('adminUsers.actions.save') : t('adminUsers.actions.create') }}
           </NButton>
         </NSpace>
       </template>
@@ -299,18 +276,10 @@ onMounted(loadUsers)
   margin: 0;
 }
 
-.api-alert {
-  margin-bottom: 16px;
-}
-
 .table-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   padding: 20px;
-}
-
-.empty-placeholder {
-  padding: 64px 0;
 }
 </style>

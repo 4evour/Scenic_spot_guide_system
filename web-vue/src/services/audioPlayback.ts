@@ -1,4 +1,5 @@
 import { getBrowserSpeechRate } from '../composables/useSeniorMode';
+import i18n from '../i18n';
 
 export type PlaybackHooks = {
   onStart?: (text?: string, cue?: PlaybackCue) => void;
@@ -118,7 +119,7 @@ export class AudioPlaybackController {
             try { mediaSource.endOfStream(); } catch { /* ignore */ }
           }
           if (appendedBytes === 0 && !this.interrupted && token === this.playbackToken) {
-            this.hooks.onError?.('语音合成没有返回音频，已切换为浏览器朗读。');
+            this.hooks.onError?.(i18n.global.t('dh.audio.emptyStreamFallback'));
             void this.playTextFallback(text || '', cue);
           }
         }
@@ -138,7 +139,7 @@ export class AudioPlaybackController {
     const token = this.playbackToken;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-CN';
+    utterance.lang = i18n.global.locale.value;
     utterance.rate = getBrowserSpeechRate();
     utterance.pitch = 1.05;
     utterance.onstart = () => {
@@ -155,7 +156,7 @@ export class AudioPlaybackController {
       if (token !== this.playbackToken) return;
       this.stopVolumeTracking();
       this.hooks.onEnd?.();
-      this.hooks.onError?.('浏览器朗读被阻止，请点击“启用声音”后重试。');
+      this.hooks.onError?.(i18n.global.t('dh.audio.browserSpeechBlocked'));
     };
     window.speechSynthesis.speak(utterance);
   }
@@ -185,7 +186,7 @@ export class AudioPlaybackController {
       }
       return true;
     } catch {
-      this.hooks.onError?.('浏览器未允许播放声音，请检查站点声音权限。');
+      this.hooks.onError?.(i18n.global.t('dh.audio.soundPermissionDenied'));
       return false;
     }
   }
@@ -239,7 +240,7 @@ export class AudioPlaybackController {
     } catch (err) {
       if (this.interrupted || token !== this.playbackToken) return;
       this.stopVolumeTracking();
-      this.hooks.onError?.(isAutoplayError(err) ? '浏览器阻止了自动播放，请点击“启用声音”。' : '音频播放失败，已尝试播放下一段。');
+      this.hooks.onError?.(isAutoplayError(err) ? i18n.global.t('dh.audio.autoplayBlocked') : i18n.global.t('dh.audio.playbackFailedNext'));
       this.audio = null;
       void this.playNext();
     }
