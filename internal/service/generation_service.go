@@ -3,6 +3,7 @@ package service
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -108,16 +109,16 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 	return prompt
 }
 
-func (s *RAGService) QueryWithRAG(query string) (string, error) {
-	answer, _, err := s.QueryWithRAGTrace(query, "")
+func (s *RAGService) QueryWithRAG(ctx context.Context, query string) (string, error) {
+	answer, _, err := s.QueryWithRAGTrace(ctx, query, "")
 	return answer, err
 }
 
-func (s *RAGService) QueryWithRAGTrace(query, lang string) (answer string, trace RAGTrace, err error) {
-	return s.queryWithRAGTraceInternal(query, query, "", lang)
+func (s *RAGService) QueryWithRAGTrace(ctx context.Context, query, lang string) (answer string, trace RAGTrace, err error) {
+	return s.queryWithRAGTraceInternal(ctx, query, query, "", lang)
 }
 
-func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sessionContext, lang string) (answer string, trace RAGTrace, err error) {
+func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQuery, promptQuery, sessionContext, lang string) (answer string, trace RAGTrace, err error) {
 	retrievalQuery = strings.TrimSpace(retrievalQuery)
 	promptQuery = strings.TrimSpace(promptQuery)
 	if promptQuery == "" {
@@ -186,7 +187,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 	if len(chunks) == 0 {
 		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(promptQuery)))
 		generationStart := time.Now()
-		answer, err := s.QueryGeneralChat(promptQuery, lang)
+		answer, err := s.QueryGeneralChat(ctx, promptQuery, lang)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
 		return answer, trace, err
 	}
@@ -228,7 +229,7 @@ func (s *RAGService) queryWithRAGTraceInternal(retrievalQuery, promptQuery, sess
 
 	apiURL := s.chatBaseURL + "/chat/completions"
 
-	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		slog.Error("RAG 创建 HTTP 请求失败", "error", err)
 		return "", trace, fmt.Errorf("RAG Chat API 创建 HTTP 请求失败: %w", err)
@@ -293,7 +294,7 @@ type openAIStreamChunk struct {
 }
 
 // CallLLMStreaming calls the LLM API with stream=true and invokes onToken for each token.
-func (s *RAGService) CallLLMStreaming(systemPrompt, userPrompt string, onToken func(string)) (string, error) {
+func (s *RAGService) CallLLMStreaming(ctx context.Context, systemPrompt, userPrompt string, onToken func(string)) (string, error) {
 	reqBody := map[string]interface{}{
 		"model":  s.chatModel,
 		"stream": true,
@@ -308,7 +309,7 @@ func (s *RAGService) CallLLMStreaming(systemPrompt, userPrompt string, onToken f
 	}
 
 	apiURL := s.chatBaseURL + "/chat/completions"
-	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(bodyBytes))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return "", fmt.Errorf("stream request creation failed: %w", err)
 	}
@@ -493,7 +494,7 @@ func splitKnowledgeSentences(content string) []string {
 	}))
 }
 
-func (s *RAGService) QueryGeneralChat(query, lang string) (string, error) {
+func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (string, error) {
 	if cachedResp, _, ok := s.getCachedResponse(query); ok {
 		slog.Debug("通用 Chat 命中查询缓存", "query_len", len([]rune(query)))
 		return cachedResp, nil
@@ -548,7 +549,7 @@ func (s *RAGService) QueryGeneralChat(query, lang string) (string, error) {
 	apiURL := s.chatBaseURL + "/chat/completions"
 	slog.Debug("通用 Chat 请求体已生成", "body_len", len(reqBody), "api_url", apiURL)
 
-	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		slog.Error("通用 Chat 创建 HTTP 请求失败", "error", err)
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("创建HTTP请求失败: %v", err)
@@ -610,7 +611,7 @@ func (s *RAGService) HasConfiguredLLM() bool {
 	return s != nil && strings.TrimSpace(s.chatAPIKey) != "" && strings.TrimSpace(s.chatBaseURL) != ""
 }
 
-func (s *RAGService) CallLLM(systemPrompt, userPrompt string) (string, error) {
+func (s *RAGService) CallLLM(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
 	if !s.HasConfiguredLLM() {
 		return "", fmt.Errorf("AI API Key 未配置，无法执行 AI 分析")
 	}
@@ -628,7 +629,7 @@ func (s *RAGService) CallLLM(systemPrompt, userPrompt string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("AI 分析请求序列化失败: %w", err)
 	}
-	httpReq, err := http.NewRequest(http.MethodPost, strings.TrimRight(s.chatBaseURL, "/")+"/chat/completions", bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(s.chatBaseURL, "/")+"/chat/completions", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("AI 分析请求创建失败: %w", err)
 	}
@@ -735,5 +736,3 @@ func (s *RAGService) buildRouteRecommendation(query string) string {
 
 	return result
 }
-
-// contains 检查字符串是否包含子串

@@ -1,2 +1,0 @@
-# github.com/scenic-guide/internal/service
-internal\service\embedding_service.go:7:2: "io" imported and not used

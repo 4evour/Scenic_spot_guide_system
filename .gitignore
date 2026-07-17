@@ -79,3 +79,27 @@ yarn.lock
 *.tar
 *.tar.gz
 *.rar
+
+# --- 构建产物 / 运行日志 / 实验数据(不入版本控制) ---
+# 这些目录的内容要么是构建产物(应由 `npm run build` / Docker 构建重新生成),
+# 要么是工具运行日志/实验快照,不应纳入版本控制。
+
+# Agent/工具运行历史(含本地绝对路径,泄露开发机目录结构)
+.prismo/
+
+# Vue 前端构建产物(vite.config.ts 的 outDir,由 `cd web-vue && npm run build` 生成,
+# 或 Docker 构建时由 frontend 阶段产出,见 Dockerfile)
+static/vue-app/
+
+# 第三方数字人前端(Open-LLM-Vtuber 编译产物,体积大且无法审计源码,
+# 部署时应按独立流程获取)
+static/digital-human/
+
+# RAG 评测实验结果快照(由 `make rag-eval` 生成,属于实验产物而非源码)
+docs/eval-results/*
+!docs/eval-results/.gitkeep
+
+# Live2D 模型重复副本:static/live2d-models/mao_pro/mao_pro/ 是外层
+# mao_pro/runtime/ 的完整重复拷贝(无任何代码引用),误提交入库。
+# 保留磁盘文件以备核查,但不再跟踪。确认无引用后可手动删除以释放约 9.3MB。
+static/live2d-models/mao_pro/mao_pro/

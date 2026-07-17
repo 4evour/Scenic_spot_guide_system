@@ -16,6 +16,11 @@ func TestInitJWTRejectsInsecureSecrets(t *testing.T) {
 		"change-this-to-a-random-32-character-secret",
 		"scenic-guide-secret-key",
 		"short-secret",
+		// .env.example 的占位值:满足 64 字符但全网公开,必须拒绝。
+		"generate-a-random-64-char-string",
+		// 其他占位特征(满足长度但含占位关键词)。
+		"your-own-secret-key-with-enough-length-32+",
+		"replace-this-with-a-real-secret-value-now!!",
 	}
 
 	for _, secret := range tests {

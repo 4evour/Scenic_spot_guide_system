@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -121,7 +123,7 @@ func (h *QRHandler) ScanAndIntro(c *gin.Context) {
 	}
 
 	// 生成讲解内容
-	introText := h.generateIntro(spot)
+	introText := h.generateIntro(c.Request.Context(), spot)
 
 	// 写入缓存
 	h.setCache(code, spot, introText)
@@ -184,7 +186,8 @@ func (h *QRHandler) UpdateQRCode(c *gin.Context) {
 	}
 
 	var id uint
-	if _, err := parseUintParam(idStr, &id); err != nil {
+	id, err := parseUintParam(idStr)
+	if err != nil {
 		pkg.BadRequest(c, "ID 参数无效")
 		return
 	}
@@ -223,14 +226,16 @@ func (h *QRHandler) BulkGenerateQR(c *gin.Context) {
 	}
 
 	generated := 0
-	for _, spot := range spots {
-		if spot.QRCode != "" {
+	// 使用索引访问 spots[i] 而非 range 副本,避免对循环副本取地址(&spot)
+	// 在 Go 1.22 之前的版本会指向同一地址、且写入不会回切片,导致批量 QR 码写错或丢失。
+	for i := range spots {
+		if spots[i].QRCode != "" {
 			continue
 		}
 		// 自动生成 QR Code: SG-{景点ID的拼音首字母或数字}-{序号}
-		spot.QRCode = generateQRCode(spot.ID, spot.Name)
-		if err := h.spotService.UpdateSpot(&spot); err != nil {
-			slog.Warn("自动生成二维码失败", "spot_id", spot.ID, "error", err)
+		spots[i].QRCode = generateQRCode(spots[i].ID, spots[i].Name)
+		if err := h.spotService.UpdateSpot(&spots[i]); err != nil {
+			slog.Warn("自动生成二维码失败", "spot_id", spots[i].ID, "error", err)
 			continue
 		}
 		generated++
@@ -278,8 +283,8 @@ func (h *QRHandler) Routes(r *gin.RouterGroup) {
 }
 
 func (h *QRHandler) GetQRCodeImage(c *gin.Context) {
-	var id uint
-	if _, err := parseUintParam(c.Param("id"), &id); err != nil {
+	id, err := parseUintParam(c.Param("id"))
+	if err != nil {
 		pkg.BadRequest(c, "ID 参数无效")
 		return
 	}
@@ -349,7 +354,7 @@ func publicBaseURL(c *gin.Context) string {
 
 // --- 内部方法 ---
 
-func (h *QRHandler) generateIntro(spot *model.ScenicSpot) string {
+func (h *QRHandler) generateIntro(ctx context.Context, spot *model.ScenicSpot) string {
 	// 优先使用预设的 QRIntroText
 	if spot.QRIntroText != "" {
 		return spot.QRIntroText
@@ -358,7 +363,7 @@ func (h *QRHandler) generateIntro(spot *model.ScenicSpot) string {
 	// 尝试用 RAG 生成
 	if h.ragService != nil {
 		query := "请详细介绍" + spot.Name + "这个景点的特色和亮点"
-		resp, err := h.ragService.QueryWithRAG(query)
+		resp, err := h.ragService.QueryWithRAG(ctx, query)
 		if err == nil && resp != "" {
 			return resp
 		}
@@ -433,11 +438,15 @@ func (h *QRHandler) recordScan(code string, spot *model.ScenicSpot, source strin
 	if spot != nil {
 		response = spot.Name
 	}
+	// SessionID 必须填充,否则 stats 按 Distinct("session_id") 统计服务人次时,
+	// 所有扫码交互会因共享空字符串 session_id 被合并为 1 个人次(大屏 KPI 失真)。
+	// 用稳定的 "qr:<code>" 作为会话标识,区分不同二维码的扫码人次。
 	h.statsService.RecordInteraction(service.InteractionRecord{
-		Query:    query,
-		Response: response,
-		Source:   source,
-		Category: "qr_scan",
+		Query:     query,
+		Response:  response,
+		Source:    source,
+		Category:  "qr_scan",
+		SessionID: "qr:" + code,
 	})
 }
 
@@ -447,17 +456,15 @@ func generateQRCode(id uint, name string) string {
 	return fmt.Sprintf("SPOT-%04d", id)
 }
 
-// parseUintParam 解析 uint 参数
-func parseUintParam(s string, out *uint) (bool, error) {
-	var v uint
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false, nil
-		}
-		v = v*10 + uint(c-'0')
+// parseUintParam 解析 uint 参数。返回解析得到的值与错误。
+// 之前的实现返回的 error 恒为 nil,导致调用点 `if _, err := parseUintParam(...); err != nil`
+// 永远不会进入错误分支,非数字输入(如 "abc")会让 *out = 0 通过校验。
+func parseUintParam(s string) (uint, error) {
+	v, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return 0, err
 	}
-	*out = v
-	return true, nil
+	return uint(v), nil
 }
 
 // fmt 包在此文件中使用（generateQRCode）

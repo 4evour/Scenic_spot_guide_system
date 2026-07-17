@@ -52,7 +52,7 @@ func newAvatarTestUserHandler(t *testing.T) (*UserHandler, *gorm.DB, *model.User
 func TestDigitalHumanAvatarOptions(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	NewDigitalHumanHandler(nil, nil, nil, nil).Routes(router.Group("/api/v1"))
+	NewDigitalHumanHandler(nil, nil, nil).Routes(router.Group("/api/v1"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/digital-human/avatar-options", nil)
 	resp := httptest.NewRecorder()

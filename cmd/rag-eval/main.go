@@ -408,7 +408,7 @@ func attachRunInfo(report *service.RAGEvaluationReport, knowledgeFile, evalFile 
 	if options.reportEnv {
 		report.RunInfo.OS = runtime.GOOS
 		report.RunInfo.Arch = runtime.GOARCH
-		report.RunInfo.CPU = runtime.GOARCH
+		report.RunInfo.CPU = fmt.Sprintf("%d cores", runtime.NumCPU())
 		report.RunInfo.GoVersion = runtime.Version()
 	}
 }

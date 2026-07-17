@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"net/http"
@@ -8,12 +9,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/golang-lru/v2"
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/repository"
 
 	iconfig "github.com/scenic-guide/internal/config"
 )
+
+// newLRUWithOnError 创建一个容量受限的 LRU 缓存,构造失败时 panic(仅限启动期,表示 MaxCacheSize 非法)。
+// 用 LRU 取代"满则全清空"的 map 策略,避免访问模式略超容量时持续 thrashing 导致命中率掉到 0。
+func newLRUWithOnError[V any](name string, capacity int) *lru.Cache[string, V] {
+	c, err := lru.New[string, V](capacity)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create LRU cache %s: %v", name, err))
+	}
+	return c
+}
 
 const (
 	MinSimilarityThreshold = 0.01
@@ -173,8 +185,8 @@ type RAGService struct {
 	useBM25            bool
 	uploadDir          string
 	httpClient         *http.Client
-	queryCache         map[string]CacheEntry
-	embeddingCache     map[string]embeddingCacheEntry
+	queryCache         *lru.Cache[string, CacheEntry]
+	embeddingCache     *lru.Cache[string, embeddingCacheEntry]
 	knowledgeCache     []model.KnowledgeChunk
 	tokenCache         map[string][]string
 	tokenIndex         map[string][]string
@@ -219,8 +231,8 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		useBM25:        useBM25,
 		uploadDir:      "./knowledge",
 		httpClient:     createHTTPClient(),
-		queryCache:     make(map[string]CacheEntry),
-		embeddingCache: make(map[string]embeddingCacheEntry),
+		queryCache:     newLRUWithOnError[CacheEntry]("queryCache", MaxCacheSize),
+		embeddingCache: newLRUWithOnError[embeddingCacheEntry]("embeddingCache", MaxCacheSize),
 		knowledgeCache: nil,
 		tokenCache:     make(map[string][]string),
 		tokenIndex:     make(map[string][]string),
@@ -305,7 +317,7 @@ func (s *RAGService) getCachedKnowledge() ([]model.KnowledgeChunk, error) {
 
 func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 	s.cacheMutex.RLock()
-	if entry, ok := s.embeddingCache[text]; ok && time.Now().Before(entry.ExpireTime) {
+	if entry, ok := s.embeddingCache.Get(text); ok && time.Now().Before(entry.ExpireTime) {
 		s.cacheMutex.RUnlock()
 		return entry.Vector, nil
 	}
@@ -317,19 +329,8 @@ func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 	}
 
 	s.cacheMutex.Lock()
-	if len(s.embeddingCache) >= MaxCacheSize {
-		// Lazy eviction: remove expired entries first, then clear all if still full
-		now := time.Now()
-		for k, entry := range s.embeddingCache {
-			if now.After(entry.ExpireTime) {
-				delete(s.embeddingCache, k)
-			}
-		}
-		if len(s.embeddingCache) >= MaxCacheSize {
-			s.embeddingCache = make(map[string]embeddingCacheEntry)
-		}
-	}
-	s.embeddingCache[text] = embeddingCacheEntry{Vector: vec, ExpireTime: time.Now().Add(EmbeddingCacheTTL)}
+	// LRU 容量到上限时自动驱逐最久未访问的条目,无需手动全清空。
+	s.embeddingCache.Add(text, embeddingCacheEntry{Vector: vec, ExpireTime: time.Now().Add(EmbeddingCacheTTL)})
 	s.cacheMutex.Unlock()
 
 	return vec, nil
@@ -337,7 +338,7 @@ func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 
 func (s *RAGService) getCachedResponse(query string) (string, []RAGSource, bool) {
 	s.cacheMutex.RLock()
-	entry, ok := s.queryCache[query]
+	entry, ok := s.queryCache.Get(query)
 	s.cacheMutex.RUnlock()
 
 	if !ok {
@@ -346,7 +347,7 @@ func (s *RAGService) getCachedResponse(query string) (string, []RAGSource, bool)
 
 	if time.Now().After(entry.ExpireTime) {
 		s.cacheMutex.Lock()
-		delete(s.queryCache, query)
+		s.queryCache.Remove(query)
 		s.cacheMutex.Unlock()
 		return "", nil, false
 	}
@@ -358,15 +359,12 @@ func (s *RAGService) setCachedResponse(query, response string, sources []RAGSour
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 
-	if len(s.queryCache) >= MaxCacheSize {
-		s.queryCache = make(map[string]CacheEntry)
-	}
-
-	s.queryCache[query] = CacheEntry{
+	// LRU 容量到上限时自动驱逐最久未访问的条目,无需手动全清空。
+	s.queryCache.Add(query, CacheEntry{
 		Response:   response,
 		Sources:    sources,
 		ExpireTime: time.Now().Add(CacheTTL),
-	}
+	})
 }
 
 type ChunkData struct {
@@ -394,7 +392,7 @@ type KnowledgeUpsertInput struct {
 func (s *RAGService) invalidateKnowledgeCaches() {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
-	s.queryCache = make(map[string]CacheEntry)
+	s.queryCache.Purge()
 	s.knowledgeCache = nil
 	s.tokenCache = make(map[string][]string)
 	s.tokenIndex = make(map[string][]string)
@@ -610,8 +608,8 @@ func routeConfigToTourRoute(rc iconfig.RouteConfig) TourRoute {
 	}
 }
 
-func (s *RAGService) QueryWithRAGAndRoute(query, lang string) (string, *TourRoute, error) {
-	response, err := s.QueryWithRAG(query)
+func (s *RAGService) QueryWithRAGAndRoute(ctx context.Context, query, lang string) (string, *TourRoute, error) {
+	response, err := s.QueryWithRAG(ctx, query)
 	if err != nil {
 		return "", nil, err
 	}
@@ -620,8 +618,8 @@ func (s *RAGService) QueryWithRAGAndRoute(query, lang string) (string, *TourRout
 	return response, route, nil
 }
 
-func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query, lang string) (string, *TourRoute, error) {
-	response, _, err := s.QueryWithRAGTraceInSession(sessionID, query, lang)
+func (s *RAGService) QueryWithRAGAndRouteInSession(ctx context.Context, sessionID, query, lang string) (string, *TourRoute, error) {
+	response, _, err := s.QueryWithRAGTraceInSession(ctx, sessionID, query, lang)
 	if err != nil {
 		return "", nil, err
 	}
@@ -630,8 +628,8 @@ func (s *RAGService) QueryWithRAGAndRouteInSession(sessionID, query, lang string
 	return response, route, nil
 }
 
-func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query, lang string) (string, *TourRoute, RAGTrace, error) {
-	response, trace, err := s.QueryWithRAGTraceInSession(sessionID, query, lang)
+func (s *RAGService) QueryWithRAGAndRouteTraceInSession(ctx context.Context, sessionID, query, lang string) (string, *TourRoute, RAGTrace, error) {
+	response, trace, err := s.QueryWithRAGTraceInSession(ctx, sessionID, query, lang)
 	if err != nil {
 		return "", nil, trace, err
 	}
@@ -642,7 +640,7 @@ func (s *RAGService) QueryWithRAGAndRouteTraceInSession(sessionID, query, lang s
 
 // QueryWithRAGStreaming performs RAG retrieval then streams the LLM response via onToken callback.
 // Returns the full answer, tour route, trace, and error.
-func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToken func(string)) (string, *TourRoute, RAGTrace, error) {
+func (s *RAGService) QueryWithRAGStreaming(ctx context.Context, sessionID, query, lang string, onToken func(string)) (string, *TourRoute, RAGTrace, error) {
 	sessionID = normalizeSessionID(sessionID)
 	totalStart := time.Now()
 	defer func() {
@@ -682,7 +680,7 @@ func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToke
 		// 无知识命中，使用通用 Chat 流式
 		genStart := time.Now()
 		systemPrompt := s.getSystemPromptOrDefault(lang)
-		answer, err = s.CallLLMStreaming(systemPrompt, query, onToken)
+		answer, err = s.CallLLMStreaming(ctx, systemPrompt, query, onToken)
 		trace.GenerationMs = time.Since(genStart).Milliseconds()
 	} else if s.chatAPIKey == "" {
 		// 无 API key，使用本地生成
@@ -695,7 +693,7 @@ func (s *RAGService) QueryWithRAGStreaming(sessionID, query, lang string, onToke
 		prompt := s.BuildRAGPromptWithContext(query, chunks, sessionContext)
 		systemPrompt := s.getSystemPromptOrDefault(lang)
 		genStart := time.Now()
-		answer, err = s.CallLLMStreaming(systemPrompt, prompt, onToken)
+		answer, err = s.CallLLMStreaming(ctx, systemPrompt, prompt, onToken)
 		trace.GenerationMs = time.Since(genStart).Milliseconds()
 	}
 

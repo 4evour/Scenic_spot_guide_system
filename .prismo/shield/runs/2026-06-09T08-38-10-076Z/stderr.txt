@@ -1,4 +1,0 @@
-# github.com/scenic-guide/internal/pkg
-internal\pkg\middleware.go:194:68: too many arguments in call to c.SetCookie
-	have (string, string, number, string, string, bool, bool, bool)
-	want (string, string, int, string, string, bool, bool)

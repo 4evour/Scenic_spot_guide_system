@@ -186,7 +186,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		go func() {
 			defer close(doneCh)
 			response, route, trace, err := h.ragService.QueryWithRAGStreaming(
-				req.SessionID, req.Message, lang,
+				ctx, req.SessionID, req.Message, lang,
 				func(token string) {
 					data, _ := json.Marshal(gin.H{"token": token, "done": false})
 					writeMu.Lock()
@@ -214,7 +214,9 @@ func (h *AIHandler) Chat(c *gin.Context) {
 
 			// 异步持久化
 			if userID > 0 {
-				go h.ragService.AppendSessionTurnWithUser(req.SessionID, userID, req.Message, response)
+				pkg.SafeGo("AppendSessionTurnWithUser", func() {
+					h.ragService.AppendSessionTurnWithUser(req.SessionID, userID, req.Message, response)
+				})
 			}
 			if h.statsService != nil {
 				h.statsService.RecordInteraction(service.InteractionRecord{
@@ -240,7 +242,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		<-doneCh
 	} else {
 		// 非流式：阻塞等待完整响应
-		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Message, lang)
+		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(c.Request.Context(), req.SessionID, req.Message, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("AI Chat RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
@@ -256,7 +258,9 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			"elapsed_ms", elapsed,
 		)
 		if userID > 0 {
-			go h.ragService.AppendSessionTurnWithUser(req.SessionID, userID, req.Message, response)
+			pkg.SafeGo("AppendSessionTurnWithUser", func() {
+				h.ragService.AppendSessionTurnWithUser(req.SessionID, userID, req.Message, response)
+			})
 		}
 		if h.statsService != nil {
 			h.statsService.RecordInteraction(service.InteractionRecord{

@@ -229,7 +229,7 @@ func (h *AdminHandler) AnalyzeSession(c *gin.Context) {
 	if !h.ensureInsightService(c) {
 		return
 	}
-	analysis, err := h.insightService.AnalyzeSession(c.Param("session_id"))
+	analysis, err := h.insightService.AnalyzeSession(c.Request.Context(), c.Param("session_id"))
 	if err != nil {
 		pkg.BadRequest(c, err.Error())
 		return

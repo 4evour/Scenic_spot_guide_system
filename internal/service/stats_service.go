@@ -6,11 +6,17 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/repository"
 )
+
+// dashboardCacheTTL 是大屏概览数据的缓存有效期。
+// GetDashboardOverview 每次会串行执行约 10 次 DB 聚合查询,大屏高频刷新时 DB 压力大;
+// 缓存 30 秒可让多个并发请求共享同一次计算结果,数据延迟在可接受范围内。
+const dashboardCacheTTL = 30 * time.Second
 
 // StatsService 统计数据服务
 type StatsService struct {
@@ -18,6 +24,11 @@ type StatsService struct {
 	settingRepo     *repository.SystemSettingRepository
 	dhConfigRepo    *repository.DigitalHumanConfigRepository
 	knowledgeRepo   *repository.KnowledgeRepository
+
+	// dashboard 缓存:GetDashboardOverview 串行聚合查询开销大,缓存近期结果。
+	dashCacheMu    sync.Mutex
+	dashCacheData  *DashboardOverview
+	dashCacheExpAt time.Time
 }
 
 func NewStatsService(
@@ -51,6 +62,15 @@ type DashboardOverview struct {
 }
 
 func (s *StatsService) GetDashboardOverview() DashboardOverview {
+	// 命中缓存则直接返回,避免串行 ~10 次 DB 聚合查询被大屏高频刷新放大。
+	s.dashCacheMu.Lock()
+	if s.dashCacheData != nil && time.Now().Before(s.dashCacheExpAt) {
+		overview := *s.dashCacheData
+		s.dashCacheMu.Unlock()
+		return overview
+	}
+	s.dashCacheMu.Unlock()
+
 	now := time.Now()
 	today := now.Truncate(24 * time.Hour)
 	yesterday := today.Add(-24 * time.Hour)
@@ -115,7 +135,7 @@ func (s *StatsService) GetDashboardOverview() DashboardOverview {
 
 	avgRTSeconds := avgRT / 1000
 
-	return DashboardOverview{
+	overview := DashboardOverview{
 		TotalVisitors:     formatNumber(todayVisitors),
 		WeeklyVisitors:    formatNumber(weeklyVisitors),
 		TotalChats:        fmt.Sprintf("%d", todayChats),
@@ -127,6 +147,14 @@ func (s *StatsService) GetDashboardOverview() DashboardOverview {
 		SatisfactionTrend: math.Round(satisfactionTrend*10) / 10,
 		ResponseTrend:     math.Round(responseTrend*10) / 10,
 	}
+
+	// 写入缓存,后续 dashboardCacheTTL 内的请求直接复用。
+	s.dashCacheMu.Lock()
+	s.dashCacheData = &overview
+	s.dashCacheExpAt = time.Now().Add(dashboardCacheTTL)
+	s.dashCacheMu.Unlock()
+
+	return overview
 }
 
 // HourlyTrend 小时趋势数据

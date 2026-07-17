@@ -15,17 +15,15 @@ import (
 )
 
 type DigitalHumanHandler struct {
-	ragService          *service.RAGService
-	routeService        service.TourRouteService
-	visitorQueryService service.VisitorQueryService
-	statsService        *service.StatsService
-	insightService      *service.VisitorInsightService
+	ragService     *service.RAGService
+	routeService   service.TourRouteService
+	statsService   *service.StatsService
+	insightService *service.VisitorInsightService
 }
 
 func NewDigitalHumanHandler(
 	ragService *service.RAGService,
 	routeService service.TourRouteService,
-	visitorQueryService service.VisitorQueryService,
 	statsService *service.StatsService,
 	insightService ...*service.VisitorInsightService,
 ) *DigitalHumanHandler {
@@ -34,11 +32,10 @@ func NewDigitalHumanHandler(
 		insights = insightService[0]
 	}
 	return &DigitalHumanHandler{
-		ragService:          ragService,
-		routeService:        routeService,
-		visitorQueryService: visitorQueryService,
-		statsService:        statsService,
-		insightService:      insights,
+		ragService:     ragService,
+		routeService:   routeService,
+		statsService:   statsService,
+		insightService: insights,
 	}
 }
 
@@ -123,7 +120,7 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 
 	if h.ragService != nil {
 		lang := c.GetString("lang")
-		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.InputText, lang)
+		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(c.Request.Context(), req.SessionID, req.InputText, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("数字人文本聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
@@ -214,7 +211,7 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 
 	if h.ragService != nil {
 		lang := c.GetString("lang")
-		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(req.SessionID, req.Transcript, lang)
+		response, _, ragTrace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(c.Request.Context(), req.SessionID, req.Transcript, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("数字人语音聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
@@ -288,17 +285,9 @@ func (h *DigitalHumanHandler) SubmitFeedback(c *gin.Context) {
 		"comment_len", len([]rune(req.Comment)),
 	)
 
-	if h.visitorQueryService != nil {
-		query := &model.VisitorQuery{
-			Query:      req.QuestionType,
-			Response:   req.Comment,
-			IsAnswered: true,
-		}
-		err := h.visitorQueryService.CreateQuery(query)
-		if err != nil {
-			slog.Error("数字人反馈保存失败", "error", err, "trace_id", req.TraceID)
-		}
-	}
+	// 反馈只写入 UserFeedback 表。此前这里还会把反馈误写进 VisitorQuery 表
+	// (Query=QuestionType, Response=Comment),导致管理端 GetAllQueries 把用户反馈
+	// 当成游客提问展示,混淆了两张表的领域语义。UserFeedback 已完整记录所有反馈字段。
 	if h.insightService != nil {
 		var userID uint
 		if uid, exists := c.Get("user_id"); exists {

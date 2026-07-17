@@ -1,2 +1,0 @@
-# github.com/scenic-guide/internal/pkg
-internal\pkg\middleware.go:194:49: cannot use secure (variable of type bool) as string value in argument to c.SetCookie

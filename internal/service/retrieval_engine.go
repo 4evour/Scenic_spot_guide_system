@@ -40,23 +40,20 @@ func (s *RAGService) CosineSimilarity(vec1, vec2 []float64) float64 {
 	if len(vec1) == 0 || len(vec2) == 0 {
 		return 0
 	}
+	// 维度不一致的向量语义上不可比:不应截断后再做点积(会得到无意义的相似度),
+	// 直接返回 0。正常运行时 query 与 chunk 的 embedding 维度由同一 provider 决定、恒定相等;
+	// 此分支主要用于防御维度异常的数据。
+	if len(vec1) != len(vec2) {
+		return 0
+	}
 
 	dotProduct := 0.0
 	norm1 := 0.0
 	norm2 := 0.0
 
-	minLen := len(vec1)
-	if len(vec2) < minLen {
-		minLen = len(vec2)
-	}
-
-	for i := 0; i < minLen; i++ {
-		dotProduct += vec1[i] * vec2[i]
-	}
 	for i := 0; i < len(vec1); i++ {
+		dotProduct += vec1[i] * vec2[i]
 		norm1 += vec1[i] * vec1[i]
-	}
-	for i := 0; i < len(vec2); i++ {
 		norm2 += vec2[i] * vec2[i]
 	}
 

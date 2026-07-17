@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,14 +39,21 @@ func run() error {
 	slog.Info("启动景区导览服务", "log_level", cfg.Logging.Level)
 	slog.Info("配置加载成功")
 
+	// 安全护栏:dev 构建(含管理员旁路后门)禁止在 release 模式启动,
+	// 防止 -tags dev 编译的二进制被误部署到生产。
+	if pkg.IsDevBuild && strings.EqualFold(os.Getenv("GIN_MODE"), "release") {
+		return fmt.Errorf("安全拒绝: 当前为 dev 构建(含管理员认证旁路),禁止在 GIN_MODE=release 下运行。请使用默认构建(go build .)")
+	}
+
 	slog.Info("初始化 JWT")
 	if err := pkg.InitJWT(&cfg.Security); err != nil {
 		return fmt.Errorf("JWT 初始化失败: %w", err)
 	}
 	slog.Info("JWT 初始化成功")
 
-	if os.Getenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS") != "" {
-		slog.Warn("安全警告: 开发管理员旁路已启用，生产环境请务必禁用!", "env_var", "SCENIC_GUIDE_DEV_ADMIN_BYPASS")
+	if os.Getenv("SCENIC_GUIDE_DEV_ADMIN_BYPASS") != "" || os.Getenv("SCENIC_GUIDE_DEV_ALLOW_BYPASS") != "" {
+		slog.Warn("安全警告: 检测到开发管理员旁路环境变量。旁路需同时设置 SCENIC_GUIDE_DEV_ADMIN_BYPASS 与 SCENIC_GUIDE_DEV_ALLOW_BYPASS 才生效,且仅限本地开发!",
+			"main_var", "SCENIC_GUIDE_DEV_ADMIN_BYPASS", "confirm_var", "SCENIC_GUIDE_DEV_ALLOW_BYPASS")
 	}
 
 	if err := pkg.InitRedis(&cfg.Redis); err != nil {
@@ -90,6 +98,26 @@ func run() error {
 
 	slog.Info("设置路由")
 	r := gin.Default()
+
+	// 配置可信代理:默认不信任 X-Forwarded-For(关闭后 Gin 只取 RemoteAddr 作为客户端 IP,
+	// 防止攻击者伪造 XFF 头绕过基于 IP 的限流)。部署在反代后时,运维可通过
+	// SCENIC_GUIDE_TRUSTED_PROXIES 显式指定可信代理 IP(逗号分隔),以正确还原真实客户端 IP。
+	if trusted := strings.TrimSpace(os.Getenv("SCENIC_GUIDE_TRUSTED_PROXIES")); trusted != "" {
+		proxies := strings.Split(trusted, ",")
+		for i := range proxies {
+			proxies[i] = strings.TrimSpace(proxies[i])
+		}
+		if err := r.SetTrustedProxies(proxies); err != nil {
+			return fmt.Errorf("设置可信代理失败: %w", err)
+		}
+		slog.Info("已配置可信代理", "proxies", proxies)
+	} else {
+		// 显式关闭 XFF 信任,防止伪造 IP 绕过限流。
+		if err := r.SetTrustedProxies(nil); err != nil {
+			return fmt.Errorf("关闭可信代理失败: %w", err)
+		}
+		slog.Info("未配置可信代理,已关闭 X-Forwarded-For 信任(基于 IP 的限流将以 RemoteAddr 为准)")
+	}
 
 	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours, cfg.Security.AllowedOrigins, scenicProfile)
 	handler.SetupRoutes(r, setupHandlers)
@@ -281,7 +309,7 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 
 	aiHandler := handler.NewAIHandler(ragService, statsService, insightService)
 	ttsHandler := handler.NewTTSHandler()
-	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, visitorQueryService, statsService, insightService)
+	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, statsService, insightService)
 	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService, statsService)
 	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results", insightService)
 	scenicProfileHandler := handler.NewScenicProfileHandler(scenicProfile)

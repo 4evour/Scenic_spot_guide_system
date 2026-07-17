@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
@@ -135,7 +136,7 @@ func truncateRunes(text string, limit int) string {
 	return string(runes[:limit]) + "..."
 }
 
-func (s *VisitorInsightService) AnalyzeSession(sessionID string) (*model.VisitorInsightAnalysis, error) {
+func (s *VisitorInsightService) AnalyzeSession(ctx context.Context, sessionID string) (*model.VisitorInsightAnalysis, error) {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
 		return nil, fmt.Errorf("session_id 不能为空")
@@ -157,6 +158,7 @@ func (s *VisitorInsightService) AnalyzeSession(sessionID string) (*model.Visitor
 
 	prompt := buildInsightPrompt(messages)
 	raw, err := s.ragService.CallLLM(
+		ctx,
 		"你是景区数字人运营分析助手。只输出严格 JSON，不要输出 Markdown。",
 		prompt,
 	)

@@ -1,7 +1,0 @@
-# github.com/scenic-guide/internal/service
-internal\service\generation_service.go:571:7: undefined: contains
-internal\service\generation_service.go:594:8: undefined: contains
-internal\service\generation_service.go:598:8: undefined: contains
-internal\service\generation_service.go:602:8: undefined: contains
-internal\service\generation_service.go:606:8: undefined: contains
-internal\service\generation_service.go:610:8: undefined: contains

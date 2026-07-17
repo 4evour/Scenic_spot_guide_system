@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -66,7 +67,7 @@ func TestQueryWithRAGReturnsErrorWhenConfiguredLLMFails(t *testing.T) {
 	rag.chatModel = "deepseek-chat"
 	rag.chatBaseURL = server.URL
 
-	answer, _, err := rag.QueryWithRAGTrace("灵山大佛有什么特色？", "zh-CN")
+	answer, _, err := rag.QueryWithRAGTrace(context.Background(),"灵山大佛有什么特色？", "zh-CN")
 	if err == nil {
 		t.Fatalf("expected LLM failure error, got answer: %s", answer)
 	}
@@ -84,7 +85,7 @@ func TestQueryWithRAGRecordsPrometheusMetrics(t *testing.T) {
 	}
 
 	durationBefore, cacheBefore := ragMetricSnapshot(t)
-	if _, _, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN"); err != nil {
+	if _, _, err := rag.QueryWithRAGTrace(context.Background(),"灵山大佛有多高？", "zh-CN"); err != nil {
 		t.Fatalf("first QueryWithRAGTrace returned error: %v", err)
 	}
 	durationAfterFirst, cacheAfterFirst := ragMetricSnapshot(t)
@@ -95,7 +96,7 @@ func TestQueryWithRAGRecordsPrometheusMetrics(t *testing.T) {
 		t.Fatalf("first query should not count as cache hit: before=%.0f after=%.0f", cacheBefore, cacheAfterFirst)
 	}
 
-	if _, trace, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN"); err != nil {
+	if _, trace, err := rag.QueryWithRAGTrace(context.Background(),"灵山大佛有多高？", "zh-CN"); err != nil {
 		t.Fatalf("second QueryWithRAGTrace returned error: %v", err)
 	} else if !trace.CacheHit {
 		t.Fatalf("second query should hit cache")
@@ -117,7 +118,7 @@ func TestQueryWithRAGTraceReturnsSources(t *testing.T) {
 		t.Fatalf("seed knowledge: %v", err)
 	}
 
-	_, trace, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN")
+	_, trace, err := rag.QueryWithRAGTrace(context.Background(),"灵山大佛有多高？", "zh-CN")
 	if err != nil {
 		t.Fatalf("QueryWithRAGTrace returned error: %v", err)
 	}
@@ -144,10 +145,10 @@ func TestQueryWithRAGTraceReturnsSourcesOnCacheHit(t *testing.T) {
 		t.Fatalf("seed knowledge: %v", err)
 	}
 
-	if _, _, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN"); err != nil {
+	if _, _, err := rag.QueryWithRAGTrace(context.Background(),"灵山大佛有多高？", "zh-CN"); err != nil {
 		t.Fatalf("first QueryWithRAGTrace returned error: %v", err)
 	}
-	_, trace, err := rag.QueryWithRAGTrace("灵山大佛有多高？", "zh-CN")
+	_, trace, err := rag.QueryWithRAGTrace(context.Background(),"灵山大佛有多高？", "zh-CN")
 	if err != nil {
 		t.Fatalf("second QueryWithRAGTrace returned error: %v", err)
 	}
