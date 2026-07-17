@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -400,7 +401,7 @@ func TestRAGServiceRewritesFollowUpWithShortTermContext(t *testing.T) {
 		t.Fatalf("seed knowledge: %v", err)
 	}
 
-	response, err := rag.QueryWithRAGInSession("s1", "灵山大佛是什么？", "zh-CN")
+	response, err := rag.QueryWithRAGInSession(context.Background(), "s1", "灵山大佛是什么？", "zh-CN")
 	if err != nil {
 		t.Fatalf("QueryWithRAGInSession returned error: %v", err)
 	}

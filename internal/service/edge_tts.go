@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,8 +18,8 @@ import (
 // EdgeTTSService provides TTS via Microsoft Edge's free public TTS API.
 // It connects to the Edge speech service over WebSocket and streams audio back.
 type EdgeTTSService struct {
-	dialer   websocket.Dialer
-	timeout  time.Duration
+	dialer  websocket.Dialer
+	timeout time.Duration
 }
 
 // EdgeTTSConfig holds configuration for the Edge TTS service.
@@ -54,8 +55,8 @@ func NewEdgeTTSService(timeout time.Duration) *EdgeTTSService {
 }
 
 const (
-	edgeWSSURL   = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491C6F4"
-	edgeOrigin   = "chrome-extension://jdkknkkbebbapilgoeccciglkfbmbnfm"
+	edgeWSSURL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491C6F4"
+	edgeOrigin = "chrome-extension://jdkknkkbebbapilgoeccciglkfbmbnfm"
 )
 
 // edgeVoices maps friendly names to Microsoft Speech Service voice names.
@@ -69,16 +70,27 @@ var edgeVoices = map[string]string{
 	"female_yunxia":   "zh-CN-shaanxi-YunxiaNeural",
 }
 
-// ResolveVoice returns the full voice name for a friendly key, falling back to the input.
+// ResolveVoice returns the full voice name for a friendly key.
+// 仅接受 edgeVoices 白名单内的 key,未命中时回退到默认声音(女声-晓晓)。
+// 此前这里有一个"key 含 Neural 则原样返回"的透传分支,会被攻击者用于 SSML 注入,
+// 现已移除——voice 必须来自固定白名单。
 func ResolveVoice(key string) string {
 	if v, ok := edgeVoices[key]; ok {
 		return v
 	}
-	// If it already looks like a full voice name (contains "Neural"), use as-is.
-	if strings.Contains(key, "Neural") {
-		return key
-	}
 	return edgeVoices["female_xiaoxiao"]
+}
+
+// validRatePattern 匹配合法的 SSML prosody rate 值,如 "+0%"、"-10%"、"+150%"。
+// rate 会被直接拼入 <prosody rate='%s'>,必须严格校验以防止 SSML 注入。
+var validRatePattern = regexp.MustCompile(`^[+-]\d{1,3}%$`)
+
+// validateRate 校验 rate 格式,非法时返回默认值 "+0%"。
+func validateRate(rate string) string {
+	if validRatePattern.MatchString(rate) {
+		return rate
+	}
+	return "+0%"
 }
 
 // Synthesize generates audio for the given text, returning the complete MP3 data.
@@ -132,6 +144,8 @@ func (s *EdgeTTSService) streamInternal(ctx context.Context, text, voice, rate s
 	if rate == "" {
 		rate = "+0%"
 	}
+	// 严格校验 rate 格式,防止 SSML 注入(rate 会直接拼入 <prosody rate='%s'>)。
+	rate = validateRate(rate)
 
 	// Build SSML
 	ssml := buildSSML(text, voice, rate)

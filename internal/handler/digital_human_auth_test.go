@@ -18,7 +18,7 @@ func TestDigitalHumanChatTextRequiresAuthCookie(t *testing.T) {
 	}
 
 	router := gin.New()
-	NewDigitalHumanHandler(nil, nil, nil, nil).Routes(router.Group("/api/v1"))
+	NewDigitalHumanHandler(nil, nil, nil).Routes(router.Group("/api/v1"))
 
 	body := []byte(`{"session_id":"s1","input_text":"hello"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dh/chat/text", bytes.NewReader(body))

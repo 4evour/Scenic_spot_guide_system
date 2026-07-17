@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"github.com/scenic-guide/internal/model"
 	"gorm.io/gorm"
 )
@@ -69,7 +71,11 @@ func (r *chatMessageRepository) SearchByUser(userID uint, keyword string, page, 
 	var msgs []model.ChatMessage
 	var total int64
 
-	query := r.db.Where("user_id = ? AND content LIKE ?", userID, "%"+keyword+"%")
+	// 转义 LIKE 通配符,使 keyword 中的 %、_、\ 被当作字面字符而非通配符。
+	// 例如搜索 "折扣50%" 时,不转义会匹配所有含 "50" 后接任意字符的记录。
+	// 使用 ESCAPE '\' 子句声明转义字符(SQLite 与 Postgres 均支持)。
+	escaped := escapeLikePattern(keyword)
+	query := r.db.Where("user_id = ? AND content LIKE ? ESCAPE '\\'", userID, "%"+escaped+"%")
 	if err := query.Model(&model.ChatMessage{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -80,6 +86,15 @@ func (r *chatMessageRepository) SearchByUser(userID uint, keyword string, page, 
 		Limit(pageSize).
 		Find(&msgs).Error
 	return msgs, total, err
+}
+
+// escapeLikePattern 转义 SQL LIKE 模式中的特殊字符(\、%、_),使它们被当作字面值。
+// 必须与查询中的 ESCAPE '\' 子句配合使用。
+func escapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
 }
 
 func (r *chatMessageRepository) DeleteBySession(chatSessionID uint) error {

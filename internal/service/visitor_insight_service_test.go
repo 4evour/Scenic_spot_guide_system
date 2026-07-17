@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -42,7 +43,7 @@ func TestAnalyzeSessionRequiresConfiguredLLM(t *testing.T) {
 	rag := NewRAGService(repository.NewKnowledgeRepository(db), "", "", "", nil, nil)
 	svc := NewVisitorInsightService(db, rag)
 
-	if _, err := svc.AnalyzeSession("missing"); err == nil {
+	if _, err := svc.AnalyzeSession(context.Background(), "missing"); err == nil {
 		t.Fatal("expected missing AI configuration error")
 	}
 }
@@ -76,7 +77,7 @@ func TestAnalyzeSessionSendsSanitizedMessagesToLLM(t *testing.T) {
 
 	rag := NewRAGService(repository.NewKnowledgeRepository(db), "key", "test-model", llm.URL, nil, nil)
 	svc := NewVisitorInsightService(db, rag)
-	analysis, err := svc.AnalyzeSession("s1")
+	analysis, err := svc.AnalyzeSession(context.Background(), "s1")
 	if err != nil {
 		t.Fatalf("AnalyzeSession: %v", err)
 	}

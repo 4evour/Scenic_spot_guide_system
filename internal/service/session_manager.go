@@ -1,10 +1,13 @@
-﻿package service
+package service
 
 import (
+	"context"
 	"log/slog"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/scenic-guide/internal/pkg"
 )
 
 // SetChatSessionService 注入会话持久化服务（后期注入，避免循环依赖）
@@ -12,15 +15,15 @@ func (s *RAGService) SetChatSessionService(svc *ChatSessionService) {
 	s.chatSessionService = svc
 }
 
-func (s *RAGService) QueryWithRAGInSession(sessionID, query, lang string) (string, error) {
-	answer, _, err := s.QueryWithRAGTraceInSession(sessionID, query, lang)
+func (s *RAGService) QueryWithRAGInSession(ctx context.Context, sessionID, query, lang string) (string, error) {
+	answer, _, err := s.QueryWithRAGTraceInSession(ctx, sessionID, query, lang)
 	return answer, err
 }
 
-func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query, lang string) (string, RAGTrace, error) {
+func (s *RAGService) QueryWithRAGTraceInSession(ctx context.Context, sessionID, query, lang string) (string, RAGTrace, error) {
 	sessionID = normalizeSessionID(sessionID)
 	if sessionID == "" {
-		return s.QueryWithRAGTrace(query, lang)
+		return s.QueryWithRAGTrace(ctx, query, lang)
 	}
 	// 缓存未命中时尝试从 DB 加载历史
 	s.cacheMutex.RLock()
@@ -31,7 +34,7 @@ func (s *RAGService) QueryWithRAGTraceInSession(sessionID, query, lang string) (
 	}
 	rewritten := s.RewriteFollowUpQuery(sessionID, query)
 	sessionContext := s.buildSessionContextText(sessionID, query)
-	answer, trace, err := s.queryWithRAGTraceInternal(rewritten, query, sessionContext, lang)
+	answer, trace, err := s.queryWithRAGTraceInternal(ctx, rewritten, query, sessionContext, lang)
 	if rewritten != query {
 		trace.RewrittenQuery = rewritten
 	}
@@ -80,6 +83,15 @@ func (s *RAGService) appendTurnLocked(sessionID, query, answer string) {
 	s.cleanupSessionHistoryLocked(now)
 }
 
+// appendSessionTurn 仅更新内存中的会话历史缓存(用于追问改写、上下文构建),
+// 不再持久化到数据库。
+//
+// 设计说明:此前本函数会在内部异步调用 AddMessages 写库,而 Handler 层
+// (ai_handler / ai_proxy_handler)又会调用 AppendSessionTurnWithUser 再次写库,
+// 导致同一轮对话被持久化两次(消息历史冗余、统计翻倍)。现把写库职责统一收口到
+// AppendSessionTurnWithUser(它携带真实 userID,可正确归属消息),本函数只负责内存缓存。
+// 流式路径(QueryWithRAGStreaming)本就不调用此函数,仅由 Handler 写一次;非流式路径
+// (QueryWithRAGTraceInSession)调用此函数更新内存后,同样由 Handler 写一次。
 func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
 	sessionID = normalizeSessionID(sessionID)
 	if sessionID == "" {
@@ -88,18 +100,10 @@ func (s *RAGService) appendSessionTurn(sessionID, query, answer string) {
 	s.cacheMutex.Lock()
 	s.appendTurnLocked(sessionID, query, answer)
 	s.cacheMutex.Unlock()
-
-	// 异步持久化到数据库
-	if s.chatSessionService != nil {
-		go func() {
-			if err := s.chatSessionService.AddMessages(sessionID, 0, query, answer, "", 0); err != nil {
-				slog.Warn("会话持久化失败", "session_id", sessionID, "error", err)
-			}
-		}()
-	}
 }
 
-// AppendSessionTurnWithUser 带用户ID的会话写入（供 Handler 层调用）
+// AppendSessionTurnWithUser 带用户ID的会话写入(供 Handler 层调用)。
+// 同时更新内存缓存与异步持久化到数据库,是会话消息的唯一写库入口。
 func (s *RAGService) AppendSessionTurnWithUser(sessionID string, userID uint, query, answer string) {
 	sessionID = normalizeSessionID(sessionID)
 	if sessionID == "" {
@@ -111,11 +115,11 @@ func (s *RAGService) AppendSessionTurnWithUser(sessionID string, userID uint, qu
 
 	// 异步持久化到数据库
 	if s.chatSessionService != nil {
-		go func() {
+		pkg.SafeGo("AppendSessionTurnWithUser", func() {
 			if err := s.chatSessionService.AddMessages(sessionID, userID, query, answer, "", 0); err != nil {
 				slog.Warn("会话持久化失败", "session_id", sessionID, "user_id", userID, "error", err)
 			}
-		}()
+		})
 	}
 }
 
@@ -166,7 +170,6 @@ func (s *RAGService) LoadSessionHistoryFromDB(sessionID string) {
 	}
 	s.cacheMutex.Unlock()
 }
-
 
 func normalizeSessionID(sessionID string) string {
 	sessionID = strings.TrimSpace(sessionID)

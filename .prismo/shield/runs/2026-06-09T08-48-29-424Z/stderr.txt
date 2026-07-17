@@ -1,2 +1,0 @@
-# github.com/scenic-guide/internal/handler
-internal\handler\scenic_profile_handler.go:119:10: undefined: strings

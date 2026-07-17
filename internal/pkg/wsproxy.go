@@ -120,6 +120,19 @@ func isWebSocketUpgrade(r *http.Request) bool {
 	return false
 }
 
+// sensitiveForwardHeaders 是不应透传给下游后端的敏感请求头(小写)。
+// 这些头携带本服务与客户端之间的认证凭据,透传会给下游造成凭据泄露面。
+var sensitiveForwardHeaders = map[string]bool{
+	"authorization": true,
+	"cookie":        true,
+	"x-api-key":     true,
+	"x-csrf-token":  true,
+}
+
+func isSensitiveHeader(lowerName string) bool {
+	return sensitiveForwardHeaders[lowerName]
+}
+
 func hijackClient(w http.ResponseWriter) (net.Conn, *bufio.ReadWriter, error) {
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
@@ -146,6 +159,11 @@ func performBackendUpgrade(clientConn net.Conn, clientBuf *bufio.ReadWriter, bac
 		lower := strings.ToLower(k)
 		if lower == "host" || lower == "connection" || lower == "upgrade" ||
 			lower == "sec-websocket-key" || lower == "sec-websocket-version" {
+			continue
+		}
+		// 剔除敏感头:这些凭据属于本服务与客户端之间的认证,不应透传给下游 VTuber 后端,
+		// 避免下游日志记录或二次转发导致凭据泄露。
+		if isSensitiveHeader(lower) {
 			continue
 		}
 		for _, v := range vv {

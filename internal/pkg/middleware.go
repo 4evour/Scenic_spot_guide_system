@@ -162,16 +162,19 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	}
 }
 
-// csrfExemptPaths 列出无需 CSRF 校验的认证类端点（用户尚无 CSRF cookie）
+// csrfExemptPaths 列出无需 CSRF 校验的认证类端点（用户尚无 CSRF cookie）。
+// 使用完整的注册路径(api/v1 前缀),配合 isCSRFExempt 的精确匹配,
+// 避免 /api/v1/admin/x/login 之类同后缀路径被误豁免。
 var csrfExemptPaths = []string{
-	"/auth/guest-login",
-	"/login",
-	"/register",
+	"/api/v1/auth/guest-login",
+	"/api/v1/login",
+	"/api/v1/register",
 }
 
 func isCSRFExempt(path string) bool {
 	for _, p := range csrfExemptPaths {
-		if strings.HasSuffix(path, p) {
+		// 精确匹配,避免 /api/v1/admin/evil/login 之类同后缀路径被误豁免。
+		if path == p {
 			return true
 		}
 	}
@@ -189,10 +192,10 @@ func csrfProtection() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if strings.EqualFold(c.GetHeader("X-Requested-With"), "XMLHttpRequest") {
-			c.Next()
-			return
-		}
+		// Double-submit cookie:严格校验 X-CSRF-Token header 必须与 csrf_token cookie 一致。
+		// 此前此处有一个 "带 X-Requested-With: XMLHttpRequest 头即放行" 的分支,该头完全由
+		// 客户端可控,攻击者跨站携带受害者 cookie 发起请求时只需加这个头即可绕过 CSRF,
+		// 使双重提交形同虚设。现已移除——配合 cookie 的 SameSite=Strict 形成纵深防御。
 		cookieToken, _ := c.Cookie("csrf_token")
 		if strings.TrimSpace(cookieToken) == "" {
 			c.AbortWithStatusJSON(403, Response{Code: 403, Message: "missing csrf token"})
@@ -317,13 +320,9 @@ func WSTokenAuth() gin.HandlerFunc {
 				break
 			}
 		}
-		// 回退到 query 参数（兼容旧客户端）
-		if token == "" {
-			token = c.Query("token")
-			if token != "" {
-				slog.Warn("WebSocket token 通过 URL query 传递，建议迁移至子协议")
-			}
-		}
+		// 回退到 HttpOnly Cookie。此前还有一个 c.Query("token") 回退分支,
+		// 它会把 JWT 暴露在 URL(访问日志/代理日志可见),且当前前端已改用 cookie,
+		// 故移除该回退,避免凭据经 URL 泄露。
 		if token == "" {
 			token, _ = c.Cookie("auth_token")
 		}

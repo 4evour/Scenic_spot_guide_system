@@ -7,13 +7,17 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # 测试库密码每次 CI 运行动态生成(基于 run_id),避免在 workflow 中硬编码固定密码,
+    # 消除"秘密入库"的坏习惯被误用到生产配置的风险。
+    env:
+      TEST_DB_PASSWORD: ci-test-${{ github.run_id }}-${{ github.run_attempt }}
     services:
       postgres:
         image: postgres:16-alpine
         env:
           POSTGRES_DB: scenic_guide_test
           POSTGRES_USER: scenic
-          POSTGRES_PASSWORD: scenic_test_password
+          POSTGRES_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -38,7 +42,7 @@ jobs:
           SCENIC_GUIDE_DATABASE_PORT: 5432
           SCENIC_GUIDE_DATABASE_NAME: scenic_guide_test
           SCENIC_GUIDE_DATABASE_USER: scenic
-          SCENIC_GUIDE_DATABASE_PASSWORD: scenic_test_password
+          SCENIC_GUIDE_DATABASE_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
         run: go test ./...
 
       - name: Vet

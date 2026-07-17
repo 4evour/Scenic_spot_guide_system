@@ -5,8 +5,8 @@ services:
       POSTGRES_DB: "${SCENIC_GUIDE_DATABASE_NAME:-scenic_guide}"
       POSTGRES_USER: "${SCENIC_GUIDE_DATABASE_USER:-scenic}"
       POSTGRES_PASSWORD: "${SCENIC_GUIDE_DATABASE_PASSWORD:?set a database password via SCENIC_GUIDE_DATABASE_PASSWORD}"
-    ports:
-      - "5432:5432"
+    # 不向宿主机暴露端口:scenic-guide 服务通过 compose 内部网络以 postgres:5432 访问即可。
+    # 本地开发如需用工具直连 PG,可改用 docker-compose.override.yml 临时加 ports 映射。
     volumes:
       - scenic-guide-postgres:/var/lib/postgresql/data
     healthcheck:

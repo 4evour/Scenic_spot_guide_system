@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -197,7 +198,8 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 		if options.RetrievalOnly {
 			response = joinChunkContent(chunks)
 		} else {
-			response, err = s.QueryWithRAG(item.Question)
+			// 评测为离线工具,无 HTTP request 上下文,使用 background context。
+			response, err = s.QueryWithRAG(context.Background(), item.Question)
 			if err != nil {
 				result.Error = err.Error()
 				result.MissingKeywords = keywords
@@ -420,6 +422,10 @@ func previewRunes(text string, limit int) string {
 	return string(runes[:limit]) + "..."
 }
 
+// numberPattern 匹配答案中的数字(整数或小数),用于派生关键词。
+// 提到包级避免在 deriveKeywordsFromAnswer 的每次调用中重新编译正则。
+var numberPattern = regexp.MustCompile(`[0-9]+(?:\.[0-9]+)?`)
+
 func deriveKeywordsFromAnswer(answer string) []string {
 	answer = strings.TrimSpace(answer)
 	if answer == "" {
@@ -427,7 +433,6 @@ func deriveKeywordsFromAnswer(answer string) []string {
 	}
 
 	candidates := make([]string, 0)
-	numberPattern := regexp.MustCompile(`[0-9]+(?:\.[0-9]+)?`)
 	candidates = append(candidates, numberPattern.FindAllString(answer, -1)...)
 
 	for _, part := range strings.FieldsFunc(answer, func(r rune) bool {
