@@ -67,6 +67,8 @@ flowchart LR
 - **游客问答（RAG）**：基于景区知识库进行检索增强问答，支持 5 种检索模式（BM25、Embedding、加权混合、RRF 融合、可解释重排），SSE 流式回答（打字机效果），多轮对话上下文追问改写。
 - **用户反馈闭环**：每个 AI 回答支持 👍👎 反馈，数据自动进入统计大屏。
 - **数字人导览**：Live2D 虚拟形象 + 情绪检测 + 语音合成，通过 OpenAI 兼容接口和 `/vtuber-ws/*` 代理对接 Open-LLM-VTuber。
+
+当前仓库中的 `mao_pro` 为 Live2D Inc. 提供的 Niziiro Mao 官方示例数据，仅作为临时联调形象，不代表灵山专属角色或古典汉服形象。This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with terms and conditions set by Live2D Inc. This content itself is created at the author’s sole discretion. 完整条款见 `LICENSE-Live2D.md`；正式参赛发布版本应替换为具有独立授权的 `lingshan_xiaoling` 模型。
 - **数据大屏**：基于真实接口展示 5 个 KPI 卡片、24h 趋势、关注点分布、热门问答、满意度趋势、知识库条目和最近对话；暂无后端来源的热力、终端、活动等运营态势显示空状态，不再使用硬编码演示数值。
 - **管理后台**：景点、路线、讲解内容、二维码、知识库、数字人形象、游客问题处理、游客感受度报告和系统设置。
 - **Prometheus 监控**：`/metrics` 端点暴露请求量、延迟 P50/P95/P99、RAG 查询耗时、缓存命中率等指标。
@@ -81,7 +83,7 @@ flowchart LR
 - 管理员用户管理接口为 `/api/v1/admin/users`：支持分页列表、创建、编辑和删除；创建/改密复用后端密码策略与 bcrypt，编辑时密码留空表示不修改。
 - `/api/v1/contents` 是管理员分页列表；公开导览内容查询保留 `/api/v1/contents/:id`、`/api/v1/contents/spot/:spot_id` 和 `/api/v1/contents/spot/:spot_id/type`。
 - 游客问题处理使用 `/api/v1/queries` 和 `/api/v1/queries/unanswered` 管理接口，Vue 管理端提供全部/未回答切换、回复编辑、处理状态和删除。
-- `/vtuber-ws/*` WebSocket 代理支持从同源浏览器自动携带的 `auth_token` Cookie 鉴权，同时保留子协议 token 和 query token 兼容路径。
+- `/vtuber-ws/*` WebSocket 代理只接受同源浏览器自动携带的 HttpOnly `auth_token` Cookie，或 `auth.token.<JWT>` 子协议；URL query 不再接受 JWT，避免凭据进入访问日志和代理日志。
 
 ## 技术栈
 
@@ -120,12 +122,36 @@ flowchart LR
 Copy-Item configs/config.example.yaml configs/config.yaml
 ```
 
-在 `configs/config.yaml` 中按需填写 `ai.api_key`、`embedding.api_key`、`speech.api_key`，并将 `security.jwt_secret` 改为自己的随机密钥。真实配置文件已被 `.gitignore` 忽略，不应提交。
+在 `configs/config.yaml` 中按需填写 `ai.api_key`、`embedding.api_key`、`speech.api_key`。JWT 密钥优先通过部署环境或密钥管理系统注入；真实配置文件已被 `.gitignore` 忽略，不应提交。
+
+JWT 密钥仅接受以下两种格式：恰好 64 个 hex 字符（32 bytes），或 base64 解码后不少于 32 bytes。任意普通字符串（即使长度达到 32 字符）和包含 `generate`、`change`、`your` 等占位词的值都会被拒绝；校验错误只说明允许的格式，不回显输入密钥。
+
+已安装 OpenSSL 的环境可用以下跨平台命令生成 64 hex：
+
+```shell
+openssl rand -hex 32
+```
+
+不依赖 OpenSSL 时，可在 PowerShell 中生成：
+
+```powershell
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
+```
+
+迁移时要注意签名语义已经变化：旧版本把配置文本本身作为签名密钥，新版本会先把 64-hex 或 base64 文本解码为字节材料。即使升级前后 `SCENIC_GUIDE_SECURITY_JWT_SECRET` 的 64-hex 文本完全不变，新版本也会改用解码后的 32 bytes 签名，因此旧 JWT 仍会失效。多实例不得在新旧版本混跑时做普通滚动发布，否则两种签名语义会导致实例互相拒绝 JWT；应先把同一个合规值同步到所有实例，再协调或原子切换版本，并安排用户重新登录。不要把密钥或启动错误中的敏感值复制到仓库；排查时只检查格式、注入位置和实例一致性。
 
 2. 使用 Docker Compose 启动 PostgreSQL 和应用：
 
 ```powershell
-$env:SCENIC_GUIDE_SECURITY_JWT_SECRET="至少32位随机字符串"
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 docker compose up --build
 ```
 
@@ -173,7 +199,11 @@ go run .
 本项目不提供公网 Demo 链接，仓库负责可复现，博客负责展示说明。默认复现路径不需要 DeepSeek、DashScope 或语音服务 Key：
 
 ```powershell
-$env:SCENIC_GUIDE_SECURITY_JWT_SECRET="至少32位随机字符串"
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 docker compose up --build
 ```
 
@@ -232,7 +262,11 @@ Set-Location ..
 运行时配置默认读取 `configs/config.yaml`，也可以用 `SCENIC_GUIDE_` 前缀的环境变量覆盖嵌套配置，例如：
 
 ```powershell
-$env:SCENIC_GUIDE_SECURITY_JWT_SECRET="至少32位随机字符串"
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 $env:SCENIC_GUIDE_DATABASE_DRIVER="postgres"
 $env:SCENIC_GUIDE_DATABASE_HOST="127.0.0.1"
 $env:SCENIC_GUIDE_DATABASE_PORT="5432"
@@ -242,6 +276,10 @@ $env:SCENIC_GUIDE_DATABASE_PASSWORD="scenic_password"
 $env:SCENIC_GUIDE_SECURITY_TOKEN_EXPIRE_HOURS="4"
 $env:SCENIC_GUIDE_AI_API_KEY="你的服务端密钥"
 ```
+
+生产环境部署在反向代理后时，必须将 `SCENIC_GUIDE_TRUSTED_PROXIES` 设为实际代理 IP 或 CIDR，多个值使用逗号分隔，例如 `<reverse-proxy-ip>,<reverse-proxy-cidr>`。未配置时服务仍会启动，但会显式关闭对 `X-Forwarded-For` 的信任并按直连地址限流；当前实现无法自动判断是否处于生产反代之后，因此不会因“生产环境缺失该变量”而主动失败。配置了非法 IP/CIDR 时，Gin 的可信代理初始化会报错并终止启动。
+
+安全头按路由隔离：游客主站、管理端等普通页面的 `script-src` 不包含 `'unsafe-eval'`；只有 `/digital-human` 及其子路由为 Live2D 运行时保留必要的 `'unsafe-eval'`。浏览器 CSP 回归结果见 `docs/digital-human-production-check.md` 的验证记录。
 
 ## 编码约定
 
@@ -285,6 +323,16 @@ go run ./cmd/demo-seed -admin-password "替换成本地演示密码"
 
 默认账号 `admin / DemoAdmin123456` 仅用于本地演示，公开部署或生产环境不要使用默认演示密码。
 
+景点坐标存放在 `configs/scenic_spot_coordinates.json`。重新查询高德 Web 服务时，只通过环境变量提供密钥：
+
+```powershell
+$env:AMAP_API_KEY = "替换为高德 Web 服务 Key"
+# 可选：$env:AMAP_SECURITY_CODE = "替换为安全密钥"
+go run ./cmd/amap-calibrate
+```
+
+命令仅在五个景点全部返回有效且名称明确匹配时原子替换校准文件；新结果默认 `verified: false`。人工核对入口或主要观景点后填写 `verified_at` 并改为 `verified: true`，再运行 `cmd/demo-seed`。任一查询失败、空结果、坐标越界或名称不确定时，命令返回失败且保留原文件。
+
 ## 代码审查修复记录
 
 本次代码审查对后端安全性、健壮性和代码质量进行了全面加固，主要变更如下：
@@ -293,7 +341,7 @@ go run ./cmd/demo-seed -admin-password "替换成本地演示密码"
 - **CSRF 防护**：所有 /api/v1 路由新增 CSRF Token 校验中间件，登录时同步设置 CSRF Cookie。
 - **Secure Cookie**：登录/登出 Cookie 的 Secure 标志根据 GIN_MODE=release 或 SCENIC_GUIDE_COOKIE_SECURE=true 环境变量自动启用。
 - **限流器优雅停止**：RateLimitMiddleware 后台清理 goroutine 支持通过 channel 信号停止，新增 StopRateLimiters() 函数供服务关闭时调用，避免 goroutine 泄漏。
-- **API 响应体大小限制**：LLM API 响应读取增加 20MB 上限（eadLimitedBody），防止异常响应耗尽内存。
+- **API 响应体大小限制**：LLM API 响应读取增加 20MB 上限（`readLimitedBody`），防止异常响应耗尽内存。
 - **IDOR 修复**：用户更新/删除操作增加 isRecordNotFound 错误区分，避免信息泄露。
 - **/metrics 端点保护**：Prometheus 指标端点现在需要 AuthMiddleware + AdminMiddleware 鉴权。
 - **密钥检测增强**：scripts/check-secrets.mjs 新增高德地图 API Key 检测规则。

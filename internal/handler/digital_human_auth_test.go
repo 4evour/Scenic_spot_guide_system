@@ -13,7 +13,7 @@ import (
 
 func TestDigitalHumanChatTextRequiresAuthCookie(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: handlerTestJWTSecret}); err != nil {
 		t.Fatalf("InitJWT: %v", err)
 	}
 
@@ -30,7 +30,7 @@ func TestDigitalHumanChatTextRequiresAuthCookie(t *testing.T) {
 		t.Fatalf("missing cookie status = %d, want %d", resp.Code, http.StatusUnauthorized)
 	}
 
-	token, err := pkg.GenerateToken(3, "visitor", "visitor", 1)
+	token, err := pkg.GenerateToken(3, "visitor", "visitor", 0, 1)
 	if err != nil {
 		t.Fatalf("GenerateToken: %v", err)
 	}

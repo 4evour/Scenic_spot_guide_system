@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -225,17 +226,6 @@ func (s *RAGService) callLLMForTask(prompt string, maxTokens int) (string, error
 		return "", err
 	}
 
-	url := strings.TrimRight(s.chatBaseURL, "/") + "/chat/completions"
-	resp, err := s.httpClient.Post(url, "application/json", strings.NewReader(string(jsonBody)))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("LLM API returned %d", resp.StatusCode)
-	}
-
 	var result struct {
 		Choices []struct {
 			Message struct {
@@ -243,7 +233,18 @@ func (s *RAGService) callLLMForTask(prompt string, maxTokens int) (string, error
 			} `json:"message"`
 		} `json:"choices"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	cacheKey := fmt.Sprintf("task:%d:%s", maxTokens, prompt)
+	modelResult, err, _ := s.modelRequests.Do(cacheKey, func() (interface{}, error) {
+		return s.callChatCompletion(context.Background(), jsonBody)
+	})
+	if err != nil {
+		return "", err
+	}
+	responseBody, ok := modelResult.([]byte)
+	if !ok {
+		return "", fmt.Errorf("LLM task response type is invalid")
+	}
+	if err := json.Unmarshal(responseBody, &result); err != nil {
 		return "", err
 	}
 

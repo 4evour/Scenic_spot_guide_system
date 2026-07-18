@@ -52,3 +52,23 @@ func TestSecurityHeadersAllowLive2DEvalRuntime(t *testing.T) {
 		t.Fatalf("CSP script-src does not allow Live2D eval runtime: %q", csp)
 	}
 }
+
+func TestSecurityHeadersDoNotAllowEvalOutsideDigitalHuman(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(securityHeaders())
+	router.GET("/app", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	router.GET("/admin", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+
+	for _, path := range []string{"/app", "/admin"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		csp := resp.Header().Get("Content-Security-Policy")
+		if strings.Contains(csp, "'unsafe-eval'") {
+			t.Fatalf("ordinary route %s unexpectedly allows eval: %q", path, csp)
+		}
+	}
+}

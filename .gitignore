@@ -86,6 +86,9 @@ yarn.lock
 
 # Agent/工具运行历史(含本地绝对路径,泄露开发机目录结构)
 .prismo/
+.playwright-cli/
+output/
+scripts/__pycache__/
 
 # Vue 前端构建产物(vite.config.ts 的 outDir,由 `cd web-vue && npm run build` 生成,
 # 或 Docker 构建时由 frontend 阶段产出,见 Dockerfile)

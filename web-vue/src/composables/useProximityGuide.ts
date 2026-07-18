@@ -1,28 +1,13 @@
 import { ref, watch, type Ref } from 'vue';
 import type { GeolocationPosition } from './useGeolocation';
+import {
+  isAccuracyAcceptable,
+  isValidCoordinate,
+  selectClosestEligibleSpot,
+} from '../utils/geolocation.ts';
 
-const EARTH_RADIUS_M = 6_371_000;
-
-/**
- * 使用 Haversine 公式计算两个经纬度坐标之间的球面距离（单位：米）。
- */
-export function haversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return EARTH_RADIUS_M * c;
-}
+const REQUIRED_STABLE_SAMPLES = 3;
+const MAX_SAMPLE_WINDOW = 5;
 
 export interface SpotWithCoords {
   id: string | number;
@@ -38,6 +23,10 @@ export interface SpotWithCoords {
 export interface UseProximityGuideOptions {
   /** 触发半径（米），默认 100m */
   triggerRadiusM?: number;
+  /** 允许自动触发的设备定位误差上限（米），默认 10m */
+  maxAccuracyM?: number;
+  /** 是否允许本次位置消耗景点触发机会 */
+  canTrigger?: Ref<boolean>;
   /** 跨页面本地冷却记录 key */
   storageKey?: string;
 }
@@ -57,48 +46,50 @@ export function useProximityGuide(
   currentPosition: Ref<GeolocationPosition | null>,
   options: UseProximityGuideOptions = {},
 ): UseProximityGuideReturn {
-  const { triggerRadiusM = 100, storageKey = 'sg_geofence_triggered_at' } = options;
+  const {
+    triggerRadiusM = 100,
+    maxAccuracyM = 10,
+    canTrigger,
+    storageKey = 'sg_geofence_triggered_at',
+  } = options;
 
   const spots = ref<SpotWithCoords[]>([]);
   const nearbySpot = ref<SpotWithCoords | null>(null);
   const triggeredSpots = ref<Set<string | number>>(new Set());
+  const positionSamples: GeolocationPosition[] = [];
+  let lastSampleTimestamp: number | null = null;
 
   function setSpots(newSpots: SpotWithCoords[]) {
     spots.value = newSpots;
+    evaluatePosition(currentPosition.value);
   }
 
   function resetTriggered() {
     triggeredSpots.value = new Set();
     nearbySpot.value = null;
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {
-      // Ignore storage failures; in-memory reset still keeps the current page usable.
-    }
+    positionSamples.length = 0;
+    lastSampleTimestamp = null;
   }
 
-  watch(currentPosition, (pos) => {
-    if (!pos || spots.value.length === 0) {
+  function evaluatePosition(pos: GeolocationPosition | null) {
+    if (!pos) {
       nearbySpot.value = null;
       return;
     }
 
-    let closest: { spot: SpotWithCoords; dist: number } | null = null;
-
-    for (const spot of spots.value) {
-      if (spot.triggerEnabled === false) continue;
-      // 跳过已触发的景点（每页生命周期内只触发一次）
-      if (triggeredSpots.value.has(spot.id)) continue;
-      if (isCoolingDown(spot, storageKey)) continue;
-
-      const dist = haversineDistance(pos.lat, pos.lng, spot.lat, spot.lng);
-      const radius = spot.triggerRadiusM && spot.triggerRadiusM > 0 ? spot.triggerRadiusM : triggerRadiusM;
-      if (dist <= radius) {
-        if (!closest || dist < closest.dist) {
-          closest = { spot, dist };
-        }
-      }
+    const stablePosition = updateStablePosition(pos);
+    if (!stablePosition || spots.value.length === 0 || (canTrigger && !canTrigger.value)) {
+      nearbySpot.value = null;
+      return;
     }
+
+    const eligibleSpots = spots.value.filter(
+      (spot) => !triggeredSpots.value.has(spot.id) && !isCoolingDown(spot, storageKey),
+    );
+    const closest = selectClosestEligibleSpot(stablePosition, eligibleSpots, {
+      maxAccuracyM,
+      defaultRadiusM: triggerRadiusM,
+    });
 
     if (closest) {
       // 标记为已触发
@@ -108,7 +99,30 @@ export function useProximityGuide(
     } else {
       nearbySpot.value = null;
     }
-  });
+  }
+
+  function updateStablePosition(pos: GeolocationPosition) {
+    if (!isValidCoordinate(pos) || !isAccuracyAcceptable(pos.accuracy, maxAccuracyM)) {
+      return null;
+    }
+    if (pos.timestamp !== lastSampleTimestamp) {
+      positionSamples.push(pos);
+      if (positionSamples.length > MAX_SAMPLE_WINDOW) positionSamples.shift();
+      lastSampleTimestamp = pos.timestamp;
+    }
+    if (positionSamples.length < REQUIRED_STABLE_SAMPLES) return null;
+
+    const recent = positionSamples.slice(-REQUIRED_STABLE_SAMPLES);
+    return {
+      lat: median(recent.map((sample) => sample.lat)),
+      lng: median(recent.map((sample) => sample.lng)),
+      accuracy: median(recent.map((sample) => sample.accuracy)),
+      timestamp: recent[recent.length - 1].timestamp,
+    };
+  }
+
+  watch(currentPosition, evaluatePosition);
+  if (canTrigger) watch(canTrigger, () => evaluatePosition(currentPosition.value));
 
   return {
     nearbySpot,
@@ -116,6 +130,13 @@ export function useProximityGuide(
     resetTriggered,
     setSpots,
   };
+}
+
+function median(values: number[]) {
+  const [first, second, third] = values;
+  if ((first <= second && second <= third) || (third <= second && second <= first)) return second;
+  if ((second <= first && first <= third) || (third <= first && first <= second)) return first;
+  return third;
 }
 
 function readTriggered(storageKey: string): Record<string, number> {
@@ -127,9 +148,13 @@ function readTriggered(storageKey: string): Record<string, number> {
 }
 
 function markTriggered(spot: SpotWithCoords, storageKey: string) {
-  const data = readTriggered(storageKey);
-  data[String(spot.id)] = Date.now();
-  localStorage.setItem(storageKey, JSON.stringify(data));
+  try {
+    const data = readTriggered(storageKey);
+    data[String(spot.id)] = Date.now();
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  } catch {
+    // Keep in-memory triggering usable when browser storage is unavailable.
+  }
 }
 
 function isCoolingDown(spot: SpotWithCoords, storageKey: string) {

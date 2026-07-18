@@ -196,8 +196,8 @@ func (r *InteractionRepository) GetDailyEmotionTrend(since time.Time) ([]DailyEm
 	err := r.db.Model(&model.InteractionLog{}).
 		Where("created_at >= ?", since).
 		Select(r.dateExpr("created_at", "YYYY-MM-DD") + ` as date,
-			SUM(CASE WHEN emotion IN ('joy', 'surprise') THEN 1 ELSE 0 END) as positive,
-			SUM(CASE WHEN emotion IN ('sadness', 'fear', 'anger', 'disgust') THEN 1 ELSE 0 END) as negative,
+			SUM(CASE WHEN emotion IN ('joy', 'surprise', 'satisfaction', 'excitement') THEN 1 ELSE 0 END) as positive,
+			SUM(CASE WHEN emotion IN ('sadness', 'fear', 'anger', 'disgust', 'complaint', 'anxiety') THEN 1 ELSE 0 END) as negative,
 			COUNT(*) as total`).
 		Group("date").
 		Order("date").
@@ -254,7 +254,7 @@ func (r *InteractionRepository) GetSatisfactionRate(since time.Time) (float64, e
 	var total, positive int64
 	for emotion, count := range dist {
 		total += count
-		if emotion == "joy" || emotion == "surprise" {
+		if emotion == "joy" || emotion == "surprise" || emotion == "satisfaction" || emotion == "excitement" {
 			positive += count
 		}
 	}

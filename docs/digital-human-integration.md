@@ -215,7 +215,7 @@ sequenceDiagram
 - Go 后端配置：`configs/config.example.yaml` 与 `SCENIC_GUIDE_*` 环境变量。
 - 景区与数字人角色配置：`configs/scenic_profiles/*.yaml`。
 - 管理端默认数字人和游客是否允许切换：`/api/v1/admin/digital-human/config`。
-- 游客可选 Live2D 形象：`/api/v1/digital-human/avatar-options`，当前为 `mao_pro` 和 `shizuku`。
+- 游客可选 Live2D 形象：`/api/v1/digital-human/avatar-options`。当前仅开放 Live2D 官方 `mao_pro` 临时示例模型；Shizuku 因许可要求不得改名或改变设定，已停止作为灵山角色提供。
 - Open-LLM-VTuber WebSocket 代理：Vue 端连接同源 `/vtuber-ws/client-ws`，Go 后端转发到 `127.0.0.1:12393`。
 
 ## 7. 错误处理

@@ -43,6 +43,9 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	handlers.ScenicSpot.Routes(api)
 	handlers.GuideContent.Routes(api)
 	handlers.TourRoute.Routes(api)
+	if handlers.VisitorExperience != nil {
+		handlers.VisitorExperience.Routes(api)
+	}
 	handlers.VisitorQuery.Routes(api)
 	handlers.User.Routes(api)
 	handlers.TTS.Routes(api)
@@ -67,6 +70,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 
 	// AI Chat 路由（带可选认证 + 自动游客登录）
 	if handlers.AI != nil {
+		api.GET("/ai/model-health", handlers.AI.ModelHealth)
 		chatGroup := api.Group("")
 		chatGroup.Use(pkg.OptionalAuthMiddleware())
 		if handlers.Guest != nil {
@@ -74,6 +78,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 			chatGroup.Use(ensureGuest.Handle())
 		}
 		chatGroup.POST("/ai/chat", pkg.RateLimitMiddleware(30, time.Minute), handlers.AI.Chat)
+		chatGroup.POST("/ai/multimodal/chat", pkg.RateLimitMiddleware(10, time.Minute), handlers.AI.MultimodalChat)
 		chatGroup.POST("/ai/feedback", handlers.AI.Feedback)
 		handlers.AI.KnowledgeRoutes(api)
 	}
@@ -172,10 +177,16 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 // maxBodySize is the default maximum request body size (12 MB).
 const maxBodySize = 12 << 20
 
+const maxMultimodalBodySize = 64 << 20
+
 // bodySizeMiddleware wraps the request body with a size limit.
 func bodySizeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodySize)
+		limit := int64(maxBodySize)
+		if c.Request.URL.Path == "/api/v1/ai/multimodal/chat" {
+			limit = maxMultimodalBodySize
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit)
 		c.Next()
 	}
 }
@@ -187,9 +198,17 @@ func securityHeaders() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self), geolocation=(self)")
 		c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://webapi.amap.com https://*.amap.com; connect-src 'self' ws: wss: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://cdnjs.cloudflare.com; media-src 'self' blob:;")
+		c.Header("Content-Security-Policy", contentSecurityPolicy(c.Request.URL.Path))
 		c.Next()
 	}
+}
+
+func contentSecurityPolicy(path string) string {
+	scriptSrc := "script-src 'self' https://webapi.amap.com https://restapi.amap.com"
+	if path == "/digital-human" || strings.HasPrefix(path, "/digital-human/") {
+		scriptSrc = "script-src 'self' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com"
+	}
+	return "default-src 'self'; " + scriptSrc + "; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://webapi.amap.com https://*.amap.com; connect-src 'self' ws: wss: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://cdnjs.cloudflare.com; media-src 'self' blob:;"
 }
 
 func isAllowedTrackingPage(page string) bool {
@@ -217,19 +236,20 @@ func getRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 }
 
 type Handlers struct {
-	ScenicSpot     *ScenicSpotHandler
-	GuideContent   *GuideContentHandler
-	TourRoute      *TourRouteHandler
-	VisitorQuery   *VisitorQueryHandler
-	User           *UserHandler
-	AI             *AIHandler
-	TTS            *TTSHandler
-	DigitalHuman   *DigitalHumanHandler
-	OpenAIProxy    *OpenAIProxyHandler
-	Admin          *AdminHandler
-	ScenicProfile  *ScenicProfileHandler
-	Guest          *GuestHandler
-	Session        *SessionHandler
-	QR             *QRHandler
-	AllowedOrigins []string
+	ScenicSpot        *ScenicSpotHandler
+	GuideContent      *GuideContentHandler
+	TourRoute         *TourRouteHandler
+	VisitorExperience *VisitorExperienceHandler
+	VisitorQuery      *VisitorQueryHandler
+	User              *UserHandler
+	AI                *AIHandler
+	TTS               *TTSHandler
+	DigitalHuman      *DigitalHumanHandler
+	OpenAIProxy       *OpenAIProxyHandler
+	Admin             *AdminHandler
+	ScenicProfile     *ScenicProfileHandler
+	Guest             *GuestHandler
+	Session           *SessionHandler
+	QR                *QRHandler
+	AllowedOrigins    []string
 }

@@ -1,9 +1,26 @@
 import { getCSRFToken } from '../utils/csrf';
 
+function mergeAbortSignals(...signals: Array<AbortSignal | undefined>) {
+  const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
+  if (activeSignals.length <= 1) return activeSignals[0];
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any(activeSignals);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  for (const signal of activeSignals) {
+    if (signal.aborted) {
+      abort();
+      break;
+    }
+    signal.addEventListener('abort', abort, { once: true });
+  }
+  return controller.signal;
+}
+
 export interface TTSOptions {
   text: string;
   voice?: string;
   rate?: string;
+  signal?: AbortSignal;
 }
 
 /**
@@ -12,6 +29,7 @@ export interface TTSOptions {
  */
 export async function streamTTS(options: TTSOptions): Promise<Response> {
   const csrfToken = getCSRFToken();
+  const timeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
 
   const response = await fetch('/api/v1/ai/tts/stream', {
     method: 'POST',
@@ -24,6 +42,7 @@ export async function streamTTS(options: TTSOptions): Promise<Response> {
       voice: options.voice || 'female_xiaoxiao',
       rate: options.rate || '+0%',
     }),
+    signal: mergeAbortSignals(options.signal, AbortSignal.timeout(timeoutMs)),
     credentials: 'include',
   });
 

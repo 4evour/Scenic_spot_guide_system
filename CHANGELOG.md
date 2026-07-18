@@ -1,5 +1,141 @@
 ﻿# CHANGELOG
 
+## 2026-07-19 09:00 - 收口数字人发布验收边界
+
+### 变更内容
+- `docs/digital-human-production-check.md` — 记录 Open-LLM-VTuber 连接、外部生成错误降级、移动端复测结果，并明确 Live2D Core 部署与真实 ASR/TTS 端到端测量仍是生产前置条件。
+- `web-vue/index.html`、`static/favicon.svg` — 增加本地 SVG favicon，消除浏览器 404。
+- `.gitignore` — 排除 Playwright 快照、运行输出和 Python 缓存等验证生成物。
+- `scripts/e2e_eval.js`、`scripts/voice_latency_eval.js`、`web-vue/src/services/api.ts`、`web-vue/src/views/DashboardView.vue`、`web-vue/src/components/Live2DStage.vue` — 修复提交前 Oxlint 在本次变更文件中发现的原地排序、无效转义、变量遮蔽和事件清理问题，不改变业务行为。
+
+### 原因
+- 阶段收尾需要区分已实际验证的 Go/RAG/文字链路与依赖授权资源、真实音频设备的外部验收项，避免把备用动效或单元测试误报为完整生产能力。
+
+### 影响范围
+- 影响数字人生产验收文档和页面 favicon；不放宽 CSP，不改变 WebSocket、RAG、TTS 或认证契约。
+
+## 2026-07-19 02:06 - 修复数字人错误音频降级与 CSP 播放
+
+### 变更内容
+- `web-vue/src/views/DigitalHumanView.vue` — 在 WebSocket 音频消息的展示文本中识别外部生成错误并切换到 Go 后端 RAG。
+- `web-vue/src/services/audioPlayback.ts` — 将 Base64 WAV 转为 Blob URL 播放并及时释放对象 URL，避免 `media-src` CSP 阻止 `data:` 音频。
+- `scripts/check-digital-human-runtime-i18n.mjs` — 增加 Blob 音频与禁用 `data:` 音频的静态回归检查。
+
+### 原因
+- 浏览器复测确认外部错误通过 `audio.display_text` 返回，且 `data:audio/wav` 被现有 CSP 拦截。
+
+### 影响范围
+- 影响数字人 WebSocket 错误降级、Base64 音频播放和对象 URL 生命周期；不放宽 CSP。
+
+## 2026-07-19 02:01 - 将数字人外部生成错误降级到本地 RAG
+
+### 变更内容
+- `web-vue/src/views/DigitalHumanView.vue` — 保留待回答问题直到外部首段有效内容到达；识别 Open-LLM-VTuber 生成错误后切换到 Go 后端 RAG，并清理失速状态。
+- `scripts/check-digital-human-runtime-i18n.mjs` — 将错误识别与待问题状态纳入运行时静态回归。
+
+### 原因
+- 浏览器复测发现外部服务会先接受会话、随后返回生成错误，单纯等待会话开始超时无法覆盖该失败模式。
+
+### 影响范围
+- 影响数字人外部生成失败时的回答降级；正常外部首段回答仍沿用 WebSocket 链路。
+
+## 2026-07-19 01:53 - 清理数字人变更集静态检查问题
+
+### 变更内容
+- `web-vue/src/views/DigitalHumanView.vue` — 消除局部变量遮蔽，并使用事件监听器绑定语音识别结果，保持原行为不变。
+
+### 原因
+- 阶段性合并前 Oxlint 检查在本次变更文件中发现三处机械质量问题。
+
+### 影响范围
+- 仅影响数字人前端内部命名和事件绑定方式；不改变接口、文案或交互流程。
+
+## 2026-07-19 01:50 - 修复数字人 WebSocket 失速兜底
+
+### 变更内容
+- `web-vue/src/views/DigitalHumanView.vue` — WebSocket 发出问题后若 2.5 秒内未收到会话开始信号，断开失速连接并切换到 Go 后端 RAG；阻止旧消息回写，重连前关闭旧 socket，并对连接提示去重。
+- `scripts/check-digital-human-runtime-i18n.mjs` — 增加数字人运行时兜底关键路径静态回归检查。
+
+### 原因
+- 阶段性浏览器验收复现 Open-LLM-VTuber 已连接但不返回回答时，页面会无限等待，已有 `fallbackTimer` 从未实际启动。
+
+### 影响范围
+- 影响数字人文字问答的 WebSocket/Go 后端降级选择与重连提示；不改变正常 WebSocket 回答协议或 RAG API 契约。
+
+## 2026-07-19 01:33 - 修复本地启动 JWT 密钥格式
+
+### 变更内容
+- `scripts/start-local.ps1` — 本地启动时生成 32 字节随机 JWT 密钥并编码为 64 位 hex，替换不再符合校验规则的旧明文常量。
+
+### 原因
+- 阶段性浏览器验收复现景区服务无法启动，错误为本地脚本注入的 JWT 密钥格式不合法。
+
+### 影响范围
+- 影响本地演示启动脚本；不改变生产密钥注入、JWT 校验或线上部署配置。
+
+## 2026-07-19 01:27 - 升级 DOMPurify 安全补丁
+
+### 变更内容
+- `web-vue/package.json`、`web-vue/package-lock.json` — 将 DOMPurify 升级到 `^3.4.12`。
+
+### 原因
+- 发布前依赖审计发现旧版本存在 `ALLOWED_ATTR` 配置污染漏洞，且 Markdown 渲染链路会实际调用该依赖。
+
+### 影响范围
+- 影响前端 Markdown/模型回答 HTML 清洗依赖；不改变渲染接口或页面交互契约。
+
+## 2026-07-19 01:24 - 收口消费分析脚本格式检查
+
+### 变更内容
+- `scripts/aggregate_consumption.py`、`scripts/aggregate_consumption_test.py` — 按 Ruff 统一 Python 格式，不改变聚合逻辑与测试语义。
+
+### 原因
+- 阶段性收尾审查发现两份新增脚本未通过 `ruff format --check`。
+
+### 影响范围
+- 仅影响消费分析脚本的代码格式；不改变 API、数据结构或运行行为。
+
+## 2026-07-18 23:20 - 修正 JWT 迁移与部署文档
+
+### 变更内容
+- `README.md`、`docs/digital-human-production-check.md` — 明确 64-hex 文本在新版会先解码为 32 bytes，即使配置文本不变也会使旧 JWT 失效；补充多实例协调切换要求，并将 Windows PowerShell 启动片段改为不依赖 OpenSSL 的可复制命令。
+- `docs/blog-scenic-guide-outline.md`、`docs/interview-qa.md` — 将旧的“任意 32 位字符串”口径统一为 64 hex 或 base64 解码后至少 32 bytes。
+- `README.md` — 修复 `readLimitedBody` 文档标识断行。
+
+### 原因
+- 原迁移说明没有覆盖“64-hex 文本不变但签名材料变化”的兼容性风险，部分公开文档和 PowerShell 示例也仍与当前实现不一致。
+
+### 影响范围
+- 仅影响景区主系统的安全迁移、启动和面试/博客文档，不修改 JWT、CSP 或其他生产代码。
+
+## 2026-07-18 22:55 - 收口 JWT、WebSocket、可信代理与 CSP 文档
+
+### 变更内容
+- `.env.example`、`README.md` — 按实际校验规则说明 64 hex/base64 JWT 密钥格式、生成与迁移方式，补充可信代理启动行为、WebSocket 鉴权边界和 CSP 路由隔离策略。
+- `docs/digital-human-production-check.md` — 增加生产认证与代理配置，并将尚未执行的 CSP 浏览器回归明确保留为待验证项。
+- `docs/api.md` — 移除已废弃的 WebSocket URL query token 契约，只保留 HttpOnly Cookie 与 `auth.token.<JWT>` 子协议。
+
+### 原因
+- 公开文档仍描述任意 32 位 JWT 字符串和 legacy `?token=`，与当前安全实现不一致，也未明确可信代理未配置时的真实启动行为。
+
+### 影响范围
+- 仅影响部署、迁移、WebSocket 接入和 CSP 验收文档，不改变运行时代码或安全策略。
+
+## 2026-07-12 22:21 - 增强游客路线推荐语义
+
+### 变更内容
+- internal/service/visitor_experience_service.go — 将路线 `Spots` 中文景点串纳入推荐评分，补充亲子、文化、老人、拍照画像的灵山演示语义关键词，并生成包含匹配偏好、覆盖景点和游览适配性的推荐理由。
+- internal/service/visitor_experience_service_test.go — 增加中文景点串路线推荐回归测试，覆盖“九龙灌浴,灵山梵宫,灵山大佛”这类真实演示数据。
+- web-vue/src/views/DigitalHumanView.vue — 增加路线中文景点名解析，推荐卡片和“评价这条路线”可从中文景点串映射到已有景点评分项。
+- scripts/check-visitor-loop-ui.mjs — 扩展游客闭环 UI 静态检查，要求保留中文景点名解析能力。
+- static/vue-app、output/playwright — 重新生成前端静态构建产物，并补充游客推荐、评分和后台大屏验收截图。
+
+### 原因
+- 浏览器验收发现当前路线推荐虽然可用，但中文景点串没有参与个性化匹配，导致推荐理由偏弱，且游客点击“评价这条路线”时不能自动选中路线里的中文景点。
+
+### 影响范围
+- 影响游客端路线推荐排序、推荐理由展示、推荐卡片景点显示和评分入口默认选中；不改变数据库表结构、登录流程、RAG 问答、数字人语音链路和后台 CRUD。
+
 ## 2026-07-08 21:46 - 补充生产数据库与账号 API 文档
 
 ### 变更内容
@@ -1367,6 +1503,168 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 ### 影响范围
 - 影响数字人页文本问答播报、本地一键启动行为和数字人运行文档；不改变二维码讲解、地理围栏讲解、Go TTS 兜底接口、登录账号和 WebSocket 代理路由。
 
+## 2026-07-12 20:59 - 增加游客体验闭环后端能力
+
+### 变更内容
+- internal/model/models.go — 新增 `VisitorSpotRating` 和 `RouteRecommendationLog` 两张模型表，并纳入 `AutoMigrate`。
+- internal/repository/visitor_experience.go — 新增游客体验仓储，支持景点评分 upsert、路线推荐日志写入、评分和推荐记录查询。
+- internal/service/visitor_experience_service.go — 新增游客体验服务，支持提交景点评分、按游客偏好推荐路线、记录推荐日志、聚合评分排行和路线偏好。
+- internal/handler/visitor_experience_handler.go — 新增游客端接口：`POST /api/v1/visitor/ratings`、`GET /api/v1/visitor/spots/:id/ratings/stats`、`POST /api/v1/visitor/routes/recommend`。
+- internal/handler/admin_handler.go、internal/handler/routes.go、main.go — 将游客体验服务接入 DI、总路由和后台 `GET /api/v1/admin/dashboard/visitor-experience` 统计接口。
+- internal/service/visitor_experience_service_test.go、internal/handler/visitor_experience_handler_test.go、internal/handler/admin_handler_test.go — 增加评分 upsert、路线推荐记录、游客体验聚合和 API 回归测试。
+
+### 原因
+- 对齐游客端闭环链路中的“路线推荐 -> 景点评分 -> 游客偏好沉淀 -> 后台大屏反馈”能力，为中国软件杯演示提供可验证的数据闭环基础。
+
+### 影响范围
+- 影响 Go 后端数据库迁移、游客端新增 API、后台新增游客体验统计接口和相关测试；不改变既有路线 CRUD、RAG 问答、数字人语音链路和前端页面展示。
+
+## 2026-07-12 21:27 - 接入游客端导览闭环前端
+
+### 变更内容
+- web-vue/src/services/api.ts — 新增游客体验闭环 API 封装和类型，覆盖路线推荐、景点评分和评分统计接口。
+- web-vue/src/views/DigitalHumanView.vue — 在数字人聊天面板加入游客画像选择、个性化路线推荐卡片、景点评分入口，并复用当前会话 ID 记录推荐和评分。
+- web-vue/src/views/DashboardView.vue — 接入 `GET /api/v1/admin/dashboard/visitor-experience`，展示评分总量、低分反馈、路线偏好、兴趣偏好和景点评分概览。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 增加数字人闭环面板和大屏体验闭环的中英文文案。
+- scripts/check-visitor-loop-ui.mjs、web-vue/package.json — 新增游客闭环 UI 静态检查脚本和 npm 检查命令。
+- static/vue-app — 重新构建 Vue 静态产物，包含本次游客端闭环和后台体验统计展示。
+
+### 原因
+- 承接后端新增的评分、推荐日志和体验统计能力，把“游客画像 -> 路线推荐 -> 景点评分 -> 后台可见反馈”串成比赛演示可操作闭环。
+
+### 影响范围
+- 影响数字人游客页、管理端数据大屏、前端 API 封装、本地前端检查脚本和构建产物；不改变登录、地图页、RAG 问答、TTS/数字人语音链路和后台 CRUD 管理逻辑。
+
+## 2026-07-13 13:38 - 设计真实定位到点语音导览
+
+### 变更内容
+- docs/superpowers/specs/2026-07-13-geolocation-auto-guide-design.md — 记录高德坐标校准、WGS84/GCJ-02 统一、10 米精度准入、真实 GPS、演示定位和自动播报验收设计。
+
+### 原因
+- 明确游客真实定位的可行边界，避免把设备上报精度误认为绝对物理误差，并为后续地理围栏实现建立可测试规格。
+
+### 影响范围
+- 仅新增设计文档，不改变当前运行代码、数据库和接口行为。
+
+## 2026-07-13 13:42 - 增加定位精度红灯测试
+
+### 变更内容
+- web-vue/scripts/test-geolocation.mjs — 新增 WGS84/GCJ-02 转换、10 米精度门槛和最近景点选择的失败优先测试。
+
+### 原因
+- 按 TDD 先固定真实定位核心规则，再实现地理围栏逻辑，避免自动播报绕过精度约束。
+
+### 影响范围
+- 仅新增前端定位核心测试，不改变当前运行代码和页面行为。
+
+## 2026-07-13 13:47 - 统一 GPS 坐标并强化地理围栏门槛
+
+### 变更内容
+- web-vue/src/utils/geolocation.ts — 新增 WGS84 转 GCJ-02、坐标校验、10 米精度门槛和最近景点选择工具。
+- web-vue/src/composables/useGeolocation.ts — 将浏览器 GPS 坐标转换为 GCJ-02 后提供给围栏逻辑。
+- web-vue/src/composables/useProximityGuide.ts — 增加 10 米精度门槛，并在景点数据晚于定位加载时重新判断；保护浏览器存储异常。
+- web-vue/scripts/test-geolocation.mjs — 覆盖异步加载顺序和精度不达标场景。
+
+### 原因
+- 高德坐标与浏览器 GPS 坐标系必须统一，且自动播报不能使用精度超过 10 米的定位样本。
+
+### 影响范围
+- 影响地图/数字人页面共用的浏览器定位与地理围栏判断；不改变高德地图展示和后端接口。
+
+## 2026-07-13 13:49 - 兼容原生 TypeScript 定位测试解析
+
+### 变更内容
+- web-vue/src/composables/useGeolocation.ts、web-vue/src/composables/useProximityGuide.ts — 为定位工具导入补充显式 TypeScript 扩展名。
+
+### 原因
+- Node 原生 strip-types 测试运行器不执行 Vite 的扩展名补全，需要让定位核心测试能够加载真实 composable。
+
+### 影响范围
+- 仅影响前端模块解析方式，不改变浏览器运行逻辑。
+
+## 2026-07-13 13:56 - 接入真实 GPS 精度状态与演示定位
+
+### 变更内容
+- web-vue/src/composables/useProximityGuide.ts — 增加触发许可控制，声音未解锁或自动导览关闭时不消耗围栏触发机会。
+- web-vue/src/views/DigitalHumanView.vue — 增加 GPS 精度状态、真实 GPS 切换和按景点演示定位入口，演示定位复用真实围栏与 TTS 链路。
+- web-vue/src/locales/zh-CN.json、web-vue/src/locales/en-US.json — 增加定位状态和操作文案。
+
+### 原因
+- 让游客端明确区分真实定位和比赛演示定位，并严格执行 10 米自动播报准入条件。
+
+### 影响范围
+- 影响数字人游客页到点讲解控制和共用地理围栏触发逻辑；不改变后端接口。
+
+## 2026-07-13 14:02 - 增加高德坐标 seed 红灯测试
+
+### 变更内容
+- cmd/demo-seed/main_test.go — 新增五个演示景点的高德坐标、围栏开关和未核验点位回归断言。
+
+### 原因
+- 在写入数据库前固定坐标来源和“文创驿站仅作地图参考、不自动播报”的安全边界。
+
+### 影响范围
+- 仅新增演示数据测试，不改变当前数据库和游客端行为。
+
+## 2026-07-13 14:09 - 写入高德景点坐标与围栏配置
+
+### 变更内容
+- cmd/demo-seed/main.go — 抽出演示景点数据，写入高德 POI 坐标、地址、围栏半径、冷却时间和自动讲解词。
+- cmd/demo-seed/main_test.go — 验证五个演示景点坐标和围栏开关；文创驿站保留游客中心参考坐标但关闭自动围栏。
+
+### 原因
+- 为游客真实 GPS 和演示定位提供可用的景点坐标；对高德未返回同名独立 POI 的文创驿站避免误触发。
+
+### 影响范围
+- 影响演示数据重新 seed 后的地图坐标、数字人到点讲解和地理围栏；不改变景点表结构。
+
+## 2026-07-13 14:18 - 增加定位核心测试命令
+
+### 变更内容
+- web-vue/package.json — 增加 `npm run test:geolocation`，统一执行定位坐标、精度和围栏回归测试。
+
+### 原因
+- 让定位核心测试可以作为前端验证流程的一部分重复执行。
+
+### 影响范围
+- 仅增加测试命令，不改变生产页面行为。
+
+## 2026-07-13 13:44 - 增加地理围栏精度回归测试
+
+### 变更内容
+- web-vue/scripts/test-geolocation.mjs — 增加定位先到、景点后到和精度不达标时不触发自动导览的回归断言。
+
+### 原因
+- 固定地理围栏对异步数据加载顺序和 10 米精度门槛的预期行为。
+
+### 影响范围
+- 仅扩展前端定位核心测试，不改变当前运行代码和页面行为。
+
+## 2026-07-13 17:44 - 完成真实定位稳定窗口与高德坐标校准
+
+### 变更内容
+- web-vue/src/composables/useProximityGuide.ts、web-vue/src/views/DigitalHumanView.vue、web-vue/scripts/test-geolocation.mjs — 自动导览改为最近三个合格样本的中位位置触发，保留持久冷却，声音解锁后重试稳定位置，并让演示定位连续注入同一围栏流程；补齐半径边界、连续样本、冷却、晚加载、声音锁定和演示定位测试，修正定位状态的国际化键路径，并在演示模式停止真实 GPS 监听与错误展示。
+- internal/geolocation/amap.go、internal/geolocation/amap_test.go、cmd/amap-calibrate/main.go — 增加高德地理编码解析、名称与坐标校验、全量成功后原子写文件的校准模块和命令，失败时不覆盖旧坐标。
+- configs/scenic_spot_coordinates.json、cmd/demo-seed/main.go、cmd/demo-seed/main_test.go — 将五个景点已有坐标、原地址描述、来源、坐标系和核验状态集中到校准文件，seed 从该文件写入数据库，未核验点位不启用自动围栏。
+- .env.example、README.md — 记录高德 Web 服务 Key、安全密钥、校准命令和人工核验流程。
+
+### 原因
+- 补齐设计文档中尚缺的连续定位稳定判断、跨页面冷却、演示定位回归、高德响应解析和失败不覆盖要求，避免单次漂移、未解锁音频或不确定坐标消耗自动讲解机会。
+
+### 影响范围
+- 影响游客端真实 GPS 与演示定位自动讲解、演示数据景点坐标导入和离线高德坐标校准；不改变高德 JS 地图 Key、景点数据库字段和手动讲解链路。
+
+## 2026-07-14 14:50 - 兼容缺少浏览器语音构造器的声音解锁
+
+### 变更内容
+- web-vue/src/services/audioPlayback.ts — 声音解锁和浏览器朗读仅在 `SpeechSynthesisUtterance` 构造器存在时调用语音合成，避免可选能力缺失导致整个声音授权失败。
+
+### 原因
+- 浏览器验收发现可选的语音合成构造器缺失会让整个声音授权返回失败，从而阻断演示定位在授权后的立即重试。
+
+### 影响范围
+- 影响数字人页声音解锁和浏览器朗读兜底兼容性；不改变服务端 TTS 请求、音频队列和围栏判断规则。
+
 ## 2026-07-18 21:47 - 固定离线评测生成模式与召回断言
 
 ### 变更内容
@@ -1379,3 +1677,61 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响 RAG 评测工具及其离线生成路径；不读取外部模型、真实配置或凭据，不改变线上问答接口。
+
+## 2026-07-18 22:21 - 补齐第四位证据的问答链路回归测试
+
+### 变更内容
+- `internal/service/generation_service_test.go`：新增普通与流式 RAG 端到端测试，用可控向量固定正确全文证据排在第 4 位，并断言不拒答、回答使用该证据、回调收到完整答案且展示来源不超过 3 项。
+
+### 原因
+- 固定证据评分必须使用完整召回切片、展示来源仍只取前三项的行为，防止正确证据位于第 4–8 位时再次被错误拒答。
+
+### 影响范围
+- 仅增加 RAG 服务回归测试，不修改生产问答逻辑、检索排序或对外来源契约。
+
+## 2026-07-18 22:39 - 修复本地事实答案互补覆盖
+
+### 变更内容
+- `internal/service/generation_service.go`：改用通用事实维度保护高度、位置、工艺与文化的互补句，移除位置查询及文化评分中的景区特定答案词，并将情绪包装后的最终回答限制在 700 rune、最多 4 条句子。
+- `internal/service/generation_service_test.go`：新增不依赖可变语料的合成表驱动回归测试，覆盖同名背景句竞争、部分首句覆盖、通用文化与工艺解释，以及最终长度和句数边界。
+
+### 原因
+- 首条候选只覆盖部分事实时会被错误裁成单句，且数据集特定评分词会降低规则迁移性；长度限制在情绪包装前执行还可能使最终回答超限。
+
+### 影响范围
+- 仅影响本地 RAG 降级答案的句子选择与最终裁剪，不改变检索排序、外部 LLM prompt 或 API 契约。
+
+## 2026-07-18 22:49 - 刷新 Phase 1 RAG 检查点报告
+
+### 变更内容
+- `docs/eval-results/rag-local-2026-07-18-d0b11cd-dirty.json`：记录纯本地生成模式的 5 题评测结果与环境元数据。
+- `docs/eval-results/rag-retrieval-2026-07-18-d0b11cd-dirty.json`：记录 retrieval-only 模式的 5 题召回结果与环境元数据。
+
+### 原因
+- 为 RAG 评测可信化、事实答案修复和完整切片证据评分提供可复查的同日检查点证据，并明确区分本地生成与纯检索模式。
+
+### 影响范围
+- 仅新增被 Git 忽略的本地评测报告与变更记录；报告不包含密钥、Token 或外部服务凭据，最终提交后仍需按最终 commit 刷新。
+
+## 2026-07-18 23:03 - 完成 CSP 路由隔离浏览器验证
+
+### 变更内容
+- `docs/digital-human-production-check.md`：记录 Chromium/Playwright 对 `/map` 与 `/digital-human` 的响应 CSP、资源加载和控制台结果，并将外部 Live2D/WebSocket 验证明示为未测量。
+
+### 原因
+- 用真实浏览器确认普通 Vue/Naive UI 路由不需要 `'unsafe-eval'`，且该权限只在数字人文档路由中出现，避免仅凭单元测试声称 CSP 收尾完成。
+
+### 影响范围
+- 仅更新数字人生产检查证据；不修改 CSP 逻辑，外部 Open-LLM-VTuber 未启动，因此不声称 Live2D 或 WebSocket 联调通过。
+
+## 2026-07-18 23:12 - 补强 TokenVersion 撤销回归验证
+
+### 变更内容
+- `internal/pkg/middleware_test.go`：分别使用 HTTP Bearer 与 WebSocket 子协议传递 JWT，覆盖旧版本撤销前后、新版本生效以及可选认证匿名降级。
+- `internal/handler/user_handler_test.go`：通过真实管理员删除接口和数据库校验，覆盖用户删除前 HTTP/WebSocket token 可用、删除后均被拒绝。
+
+### 原因
+- 原 WebSocket 撤销测试错误使用不受支持的 Authorization header，实际只验证了缺失 token；同时缺少用户删除后的会话撤销回归。
+
+### 影响范围
+- 仅补充认证安全回归测试，不修改生产认证、用户删除或 JWT 实现。

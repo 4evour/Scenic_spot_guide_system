@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"testing"
@@ -64,6 +64,8 @@ func TestIsBoundaryIntent(t *testing.T) {
 		expected bool
 	}{
 		{"今天开放吗", true},
+		{"景区附近今晚还有多少间酒店空房？", true},
+		{"根据游客消费样本，消费结构中占比最高的类别是什么？", false},
 		{"灵山大佛的历史", false},
 	}
 	for _, tt := range tests {

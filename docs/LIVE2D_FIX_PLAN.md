@@ -19,7 +19,7 @@ Live2D Phase 1-4 后留下的 6 项计划已经处理完毕，旧计划中部分
 
 ## 当前 Live2D 实装边界
 
-- 默认模型为 `mao_pro`，另有 `shizuku` 可选模型。
+- 默认模型为 Live2D 官方 `mao_pro` 临时示例。Shizuku 因许可要求不得改名或改变设定，不再作为灵山可选角色。
 - 后端公开 `/api/v1/digital-human/avatar-options`，管理员可通过 `/api/v1/admin/digital-human/config` 配置默认数字人和是否允许游客切换。
 - 游客偏好通过 `/api/v1/user/avatar-preference` 读写，前端选择后会同步 Open-LLM-VTuber 配置文件。
 - 会话消息采用 localStorage 兜底、Pinia 实时展示和后端 `/api/v1/sessions/:session_id/messages` 持久化。

@@ -51,6 +51,8 @@ export type AvatarConfig = {
   culture_theme: string
   voice_type: string
   voice_tone: string
+  voice_id: string
+  tts_rate: string
   speed: number
   volume: number
   greeting: string
@@ -103,13 +105,15 @@ export const defaultAvatarConfig: AvatarConfig = {
   default_avatar_id: 'mao_pro',
   allow_avatar_switch: true,
   name: '小灵',
-  appearance: '亲和型国风讲解员',
-  costume: '古典汉服',
-  style: '古典汉服',
+  appearance: 'Live2D 官方示例形象（临时）',
+  costume: '现代幻想服装',
+  style: 'Live2D 示例模型',
   color: '#D4AF37',
   culture_theme: '',
   voice_type: '温柔自然女声',
   voice_tone: '温暖、端庄、亲切',
+  voice_id: 'female_xiaoxiao',
+  tts_rate: '',
   speed: 0.8,
   volume: 80,
   greeting: '',

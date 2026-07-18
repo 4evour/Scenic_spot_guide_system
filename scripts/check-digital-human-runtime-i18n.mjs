@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const viewPath = path.join(root, 'web-vue/src/views/DigitalHumanView.vue');
+const audioPath = path.join(root, 'web-vue/src/services/audioPlayback.ts');
 const zhPath = path.join(root, 'web-vue/src/locales/zh-CN.json');
 const enPath = path.join(root, 'web-vue/src/locales/en-US.json');
 
 const source = fs.readFileSync(viewPath, 'utf8');
+const audioSource = fs.readFileSync(audioPath, 'utf8');
 const zhLocale = JSON.parse(fs.readFileSync(zhPath, 'utf8'));
 const enLocale = JSON.parse(fs.readFileSync(enPath, 'utf8'));
 
@@ -43,6 +45,15 @@ const requiredKeys = [
   'dh.avatar.poked',
 ];
 
+const requiredRuntimeSnippets = [
+  'SOCKET_RESPONSE_TIMEOUT_MS',
+  'fallbackTimer = window.setTimeout',
+  'backendFallbackActive = true',
+  'isVtuberGenerationError',
+  'pendingSocketQuestion',
+  'socket?.disconnect()',
+];
+
 function hasKey(locale, key) {
   return key.split('.').reduce((current, part) => {
     if (current && Object.prototype.hasOwnProperty.call(current, part)) {
@@ -67,6 +78,19 @@ for (const key of requiredKeys) {
   if (!hasKey(enLocale, key)) {
     failures.push(`en-US locale is missing ${key}`);
   }
+}
+
+for (const snippet of requiredRuntimeSnippets) {
+  if (!source.includes(snippet)) {
+    failures.push(`DigitalHumanView.vue is missing runtime fallback guard: ${snippet}`);
+  }
+}
+
+if (!audioSource.includes("URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }))")) {
+  failures.push('audioPlayback.ts must convert Base64 WAV data to a CSP-compatible Blob URL');
+}
+if (audioSource.includes('data:audio/wav;base64')) {
+  failures.push('audioPlayback.ts must not use CSP-blocked data: audio URLs');
 }
 
 if (failures.length > 0) {

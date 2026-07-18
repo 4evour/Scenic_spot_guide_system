@@ -85,6 +85,9 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 		prompt = strings.ReplaceAll(prompt, "{session_context}", conversation.String())
 		prompt = strings.ReplaceAll(prompt, "{query}", query)
 		prompt += "\n\n" + answerStyleGuard
+		if guidance := EmotionGuidance(query); guidance != "" {
+			prompt += "\n\n【游客沟通状态】\n" + guidance
+		}
 
 		// 注入个性化路线推荐（当查询匹配路线关键词时）
 		routeHint := s.buildRouteRecommendation(query)
@@ -106,6 +109,9 @@ func (s *RAGService) BuildRAGPromptWithContext(query string, chunks []model.Know
 
 请基于以上资料回答：`, context.String(), conversation.String(), query)
 	prompt += "\n\n" + answerStyleGuard
+	if guidance := EmotionGuidance(query); guidance != "" {
+		prompt += "\n\n【游客沟通状态】\n" + guidance
+	}
 	return prompt
 }
 
@@ -116,6 +122,51 @@ func (s *RAGService) QueryWithRAG(ctx context.Context, query string) (string, er
 
 func (s *RAGService) QueryWithRAGTrace(ctx context.Context, query, lang string) (answer string, trace RAGTrace, err error) {
 	return s.queryWithRAGTraceInternal(ctx, query, query, "", lang)
+}
+
+func (s *RAGService) buildCasualAnswer(query, lang string) (string, bool) {
+	intent, ok := DetectCasualIntent(query)
+	if !ok {
+		return "", false
+	}
+
+	if strings.TrimSpace(lang) == "en-US" {
+		switch intent {
+		case "greeting":
+			return "Hello! I am Xiaoling. I can introduce scenic spots, plan routes, or simply chat with you.", true
+		case "thanks":
+			return "You are welcome. Enjoy your visit! Is there anything else you would like to know?", true
+		case "farewell":
+			return "Goodbye, and have a pleasant trip!", true
+		case "identity":
+			return "I am Xiaoling, the scenic-area digital guide. I can answer questions about attractions, routes, culture, and visiting tips.", true
+		case "complaint":
+			return "It sounds like this has been frustrating. Tell me what happened and I will help you sort it out. For on-site issues, please contact the scenic-area service center.", true
+		case "anxiety":
+			return "Please do not worry. I can help you check the route and visiting tips step by step. For on-site assistance, please contact staff.", true
+		case "chat":
+			return "Of course. Would you like to talk about the scenic area, your travel plans, or anything else?", true
+		}
+	}
+
+	switch intent {
+	case "greeting":
+		return "你好，我是小灵，可以帮你介绍景点、规划路线，也可以陪你聊聊。", true
+	case "thanks":
+		return "不客气，祝你游玩愉快。还想了解哪个景点呢？", true
+	case "farewell":
+		return "再见，祝你旅途愉快！", true
+	case "identity":
+		return "我是景区数字人导览助手小灵，可以回答景点、路线、文化和游览注意事项。", true
+	case "complaint":
+		return "听起来这件事让你有些不舒服。你可以告诉我具体遇到的问题，我帮你梳理；如果涉及现场处理，也可以联系景区服务中心。", true
+	case "anxiety":
+		return "别着急，我可以一步一步帮你确认路线和注意事项；如果需要现场协助，建议联系景区工作人员。", true
+	case "chat":
+		return "当然可以。你想聊景区、旅行计划，还是随便聊聊？", true
+	default:
+		return "", false
+	}
 }
 
 func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQuery, promptQuery, sessionContext, lang string) (answer string, trace RAGTrace, err error) {
@@ -162,17 +213,37 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 		}
 	}()
 
+	if casualAnswer, ok := s.buildCasualAnswer(promptQuery, lang); ok {
+		trace.Provider = "local-conversation"
+		trace.RetrievalMode = "conversation"
+		trace.Confidence = 0.95
+		trace.ShouldAbstain = false
+		generationStart := time.Now()
+		answer = casualAnswer
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
+		return answer, trace, nil
+	}
+
 	cacheKey := retrievalQuery
 	if sessionContext != "" {
 		cacheKey = "prompt:" + promptQuery + "\nretrieval:" + retrievalQuery + "\nctx:" + sessionContext
 	}
-	if cachedResp, cachedSources, ok := s.getCachedResponse(cacheKey); ok {
+	if cached, ok := s.getCachedResponse(cacheKey); ok {
 		slog.Debug("RAG 查询命中缓存", "query_len", len([]rune(promptQuery)))
 		trace.CacheHit = true
-		trace.Sources = cachedSources
+		trace.Sources = cached.Sources
+		if cached.EvidenceEvaluated {
+			trace.Confidence = cached.Confidence
+			trace.ShouldAbstain = cached.ShouldAbstain
+		} else {
+			trace.Confidence, trace.ShouldAbstain = calculateAnswerEvidence(retrievalQuery+" "+promptQuery, trace.Sources)
+		}
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
 		trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
-		return cachedResp, trace, nil
+		if trace.ShouldAbstain && !isBoundaryIntent(promptQuery) {
+			return addEmotionCare(promptQuery, s.buildNoEvidenceAnswer(lang)), trace, nil
+		}
+		return cached.Response, trace, nil
 	}
 
 	retrievalStart := time.Now()
@@ -180,16 +251,23 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
 	trace.ChunkCount = len(chunks)
 	trace.Sources = buildRAGSources(chunks, 3)
+	trace.Confidence, trace.ShouldAbstain = calculateChunkEvidence(retrievalQuery+" "+promptQuery, chunks)
 	if err != nil {
 		return "", trace, fmt.Errorf("检索相关知识失败: %v", err)
 	}
 
 	if len(chunks) == 0 {
-		slog.Info("RAG 未检索到相关知识，使用通用 Chat 模式", "query_len", len([]rune(promptQuery)))
+		slog.Info("RAG 未检索到相关知识，拒绝无依据生成", "query_len", len([]rune(promptQuery)))
 		generationStart := time.Now()
-		answer, err := s.QueryGeneralChat(ctx, promptQuery, lang)
+		answer := addEmotionCare(promptQuery, s.buildNoEvidenceAnswer(lang))
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		return answer, trace, err
+		return answer, trace, nil
+	}
+	if trace.ShouldAbstain && !isBoundaryIntent(promptQuery) {
+		generationStart := time.Now()
+		answer := addEmotionCare(promptQuery, s.buildNoEvidenceAnswer(lang))
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
+		return answer, trace, nil
 	}
 
 	slog.Info("RAG 检索命中知识库", "query_len", len([]rune(promptQuery)), "chunks", len(chunks), "mode", map[bool]string{true: "bm25", false: "embedding"}[s.useBM25])
@@ -198,7 +276,7 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 		generationStart := time.Now()
 		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
 		trace.GenerationMs = time.Since(generationStart).Milliseconds()
-		s.setCachedResponse(cacheKey, answer, trace.Sources)
+		s.setCachedRAGResponse(cacheKey, answer, trace.Sources, trace.Confidence, trace.ShouldAbstain)
 		return answer, trace, nil
 	}
 
@@ -229,34 +307,45 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 
 	apiURL := s.chatBaseURL + "/chat/completions"
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(reqBody))
-	if err != nil {
-		slog.Error("RAG 创建 HTTP 请求失败", "error", err)
-		return "", trace, fmt.Errorf("RAG Chat API 创建 HTTP 请求失败: %w", err)
+	modelStart := time.Now()
+	modelResult, modelErr, _ := s.modelRequests.Do(cacheKey, func() (interface{}, error) {
+		var responseBody []byte
+		err := s.chatGuard.run(ctx, func(callCtx context.Context) error {
+			request, err := http.NewRequestWithContext(callCtx, http.MethodPost, apiURL, bytes.NewReader(reqBody))
+			if err != nil {
+				return err
+			}
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
+			resp, err := s.httpClient.Do(request)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				responseBody, _ := readLimitedBody(resp.Body)
+				slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(responseBody))
+				return &modelHTTPError{status: resp.StatusCode}
+			}
+			var readErr error
+			responseBody, readErr = io.ReadAll(resp.Body)
+			return readErr
+		})
+		return responseBody, err
+	})
+	trace.GenerationMs = time.Since(modelStart).Milliseconds()
+	if modelErr != nil {
+		slog.Warn("RAG Chat API 调用失败，使用本地知识库降级", "error", modelErr)
+		trace.Provider = "local-rag-fallback"
+		fallbackStart := time.Now()
+		answer := s.generateAnswerFromChunksWithContext(promptQuery, chunks, sessionContext)
+		trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
+		s.setCachedRAGResponse(cacheKey, answer, trace.Sources, trace.Confidence, trace.ShouldAbstain)
+		return answer, trace, nil
 	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
-
-	generationStart := time.Now()
-	resp, err := s.httpClient.Do(httpReq)
-	trace.GenerationMs = time.Since(generationStart).Milliseconds()
-	if err != nil {
-		slog.Error("RAG 调用 Chat API 失败", "error", err)
-		return "", trace, fmt.Errorf("RAG Chat API 调用失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := readLimitedBody(resp.Body)
-		slog.Warn("RAG Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
-		return "", trace, fmt.Errorf("RAG Chat API 返回非 200: status=%d", resp.StatusCode)
-	}
-
-	body, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		slog.Error("RAG 读取 Chat API 响应失败", "error", readErr)
-		return "", trace, fmt.Errorf("RAG 读取 Chat API 响应失败: %w", readErr)
+	body, ok := modelResult.([]byte)
+	if !ok {
+		return "", trace, fmt.Errorf("RAG Chat API 响应结果类型错误")
 	}
 
 	var openAIResp openAIResponse
@@ -276,7 +365,7 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 
 	if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
 		answer := openAIResp.Choices[0].Message.Content
-		s.setCachedResponse(cacheKey, answer, trace.Sources)
+		s.setCachedRAGResponse(cacheKey, answer, trace.Sources, trace.Confidence, trace.ShouldAbstain)
 		return answer, trace, nil
 	}
 
@@ -309,54 +398,57 @@ func (s *RAGService) CallLLMStreaming(ctx context.Context, systemPrompt, userPro
 	}
 
 	apiURL := s.chatBaseURL + "/chat/completions"
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(bodyBytes))
-	if err != nil {
-		return "", fmt.Errorf("stream request creation failed: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
-
-	resp, err := s.httpClient.Do(httpReq)
-	if err != nil {
-		return "", fmt.Errorf("stream LLM call failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := readLimitedBody(resp.Body)
-		return "", fmt.Errorf("stream LLM returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	var fullResponse strings.Builder
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.HasPrefix(line, "data: ") {
-			continue
+	return s.chatGuard.runStreaming(ctx, func(callCtx context.Context) (string, bool, error) {
+		request, err := http.NewRequestWithContext(callCtx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return "", false, err
 		}
-		data := strings.TrimPrefix(line, "data: ")
-		if data == "[DONE]" {
-			break
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
+		resp, err := s.httpClient.Do(request)
+		if err != nil {
+			return "", false, err
 		}
-		var chunk openAIStreamChunk
-		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-			continue
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			_, _ = readLimitedBody(resp.Body)
+			return "", false, &modelHTTPError{status: resp.StatusCode}
 		}
-		if len(chunk.Choices) > 0 {
-			token := chunk.Choices[0].Delta.Content
-			if token != "" {
-				fullResponse.WriteString(token)
-				if onToken != nil {
-					onToken(token)
+
+		scanner := bufio.NewScanner(resp.Body)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		var fullResponse strings.Builder
+		emitted := false
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			data := strings.TrimPrefix(line, "data: ")
+			if data == "[DONE]" {
+				break
+			}
+			var chunk openAIStreamChunk
+			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+				continue
+			}
+			if len(chunk.Choices) > 0 {
+				token := chunk.Choices[0].Delta.Content
+				if token != "" {
+					emitted = true
+					fullResponse.WriteString(token)
+					if onToken != nil {
+						onToken(token)
+					}
 				}
 			}
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		return fullResponse.String(), fmt.Errorf("stream response scan failed: %w", err)
-	}
-	return fullResponse.String(), nil
+		if err := scanner.Err(); err != nil {
+			return fullResponse.String(), emitted, fmt.Errorf("stream response scan failed: %w", err)
+		}
+		return fullResponse.String(), emitted, nil
+	})
 }
 
 const maxAPIResponseBytes = 20 << 20 // 20MB
@@ -387,13 +479,10 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 	fullContent := content.String()
 	intentText := query + "\n" + sessionContext
 
-	if isBoundaryIntent(intentText) {
-		snippets := s.extractRelevantSnippets(query+" 官方最新公告 现场公示 不能编造", chunks, 3)
-		if len(snippets) == 0 {
-			snippets = []string{previewRunes(fullContent, 260)}
-		}
-		answer := "这个不能直接替您确认或承诺。根据当前资料，可以先参考：\n\n" + formatNumberedLines(snippets, 3) + "\n\n涉及开放状态、票价、演出场次、实时客流、排队时间、无人机或宠物等现场规则时，请以景区官方最新公告或现场公示为准。"
-		return previewRunes(answer, 700)
+	carryBoundary := isFollowUpQuery(query) && strings.Contains(sessionContext, "边界状态：涉及实时信息")
+	if isBoundaryIntent(query) || carryBoundary {
+		answer := fmt.Sprintf("当前资料不足，无法确认%s，也不能直接替您确认或承诺。请以景区官方最新公告、官方渠道的实时查询结果或现场公示为准。", boundarySubject(query))
+		return finalizeLocalAnswer(query, answer)
 	}
 
 	if isRouteIntent(intentText) {
@@ -405,17 +494,22 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 		if containsAny(intentText, []string{"下雨", "雨天", "天气", "高温"}) {
 			answer += "\n\n如果现场降雨、高温或排队变化明显，建议优先选择室内点和休息点，并按景区现场指引调整。"
 		}
-		return previewRunes(answer, 700)
+		return finalizeLocalAnswer(query, answer)
 	}
 
 	// 使用 profile 配置的兜底答案（支持任意景区）
 	if s.profile != nil {
 		if fallbackAnswer, ok := s.profile.GetFallbackAnswer(query); ok {
-			return fallbackAnswer
+			return finalizeLocalAnswer(query, fallbackAnswer)
 		}
 	}
 
-	snippets := s.extractRelevantSnippets(query, chunks, 4)
+	snippetQuery := focusedSnippetQuery(query)
+	snippetLimit := 4
+	snippets := s.extractRelevantSnippets(snippetQuery, chunks, snippetLimit)
+	if isFocusedFactIntent(query) && len(snippets) > 1 && firstFactSnippetCoversAllDimensions(query, snippets) {
+		snippets = snippets[:1]
+	}
 	if len(snippets) == 0 {
 		snippets = []string{previewRunes(fullContent, 500)}
 	}
@@ -425,7 +519,73 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 		scenicName = s.profile.Name
 	}
 	answer := fmt.Sprintf("根据%s景区资料：\n\n", scenicName) + strings.Join(snippets, "\n\n")
-	return previewRunes(answer, 700)
+	return finalizeLocalAnswer(query, answer)
+}
+
+func finalizeLocalAnswer(query, answer string) string {
+	return previewRunes(addEmotionCare(query, answer), 697)
+}
+
+func isFocusedFactIntent(query string) bool {
+	return containsAny(query, []string{"哪个", "哪一个", "是什么", "多少", "多高", "位于哪里", "地址", "占比最高", "优先了解"})
+}
+
+func focusedSnippetQuery(query string) string {
+	switch {
+	case containsAny(query, []string{"多高", "高度"}):
+		return query + " 高度 通高 米"
+	case containsAny(query, []string{"位于哪里", "在哪里", "位置"}):
+		return query + " 位于 坐落 地址 省 市 区域 镇"
+	default:
+		return query
+	}
+}
+
+func firstFactSnippetCoversAllDimensions(query string, snippets []string) bool {
+	if len(snippets) == 0 {
+		return false
+	}
+	for _, dimension := range factIntentDimensions(query) {
+		available := false
+		for _, snippet := range snippets {
+			if sentenceHasFactDimension(query, snippet, dimension) {
+				available = true
+				break
+			}
+		}
+		if available && !sentenceHasFactDimension(query, snippets[0], dimension) {
+			return false
+		}
+	}
+	return len(factIntentDimensions(query)) > 0
+}
+
+func boundarySubject(query string) string {
+	switch {
+	case containsAny(query, []string{"门票", "票价", "优惠"}):
+		return "今天的票价或优惠信息"
+	case containsAny(query, []string{"酒店空房", "还有多少间", "房态", "剩余房间", "客房库存"}):
+		return "今晚的酒店空房或客房库存"
+	case containsAny(query, []string{"停车", "车位"}):
+		return "当前停车余位"
+	case containsAny(query, []string{"演出", "场次"}):
+		return "今天的演出场次"
+	case containsAny(query, []string{"几点", "开放", "开不开"}):
+		return "今天的开放时间或开放状态"
+	default:
+		return "这个实时、库存或现场运营信息"
+	}
+}
+
+func addEmotionCare(query, answer string) string {
+	return ApplyVisitorEmotionCare(DetectVisitorEmotion(query), answer)
+}
+
+func (s *RAGService) buildNoEvidenceAnswer(lang string) string {
+	if strings.TrimSpace(lang) == "en-US" {
+		return "I could not find reliable information about this question in the current scenic-area materials. Please check the latest official notice or ask the service center."
+	}
+	return "当前景区资料中没有找到足够依据回答这个问题。为避免提供不准确的信息，请以景区官方最新公告、购票页面或现场工作人员答复为准。"
 }
 
 func isRouteIntent(text string) bool {
@@ -450,21 +610,28 @@ func formatNumberedLines(lines []string, limit int) string {
 
 func (s *RAGService) extractRelevantSnippets(query string, chunks []model.KnowledgeChunk, limit int) []string {
 	type scoredSnippet struct {
-		text  string
-		score float64
+		text       string
+		score      float64
+		structural bool
+		chunkIndex int
 	}
 
 	snippets := make([]scoredSnippet, 0)
 	seen := make(map[string]struct{})
-	for _, chunk := range chunks {
+	for chunkIndex, chunk := range chunks {
 		for _, sentence := range splitKnowledgeSentences(chunk.Content) {
 			if len([]rune(sentence)) < 8 {
+				continue
+			}
+			if isKnowledgeMetaSentence(sentence) {
 				continue
 			}
 			score := s.BM25Similarity(query, sentence)
 			for _, cb := range s.getConditionalBoosts() {
 				score += conditionalTermBoost(query, sentence, cb.QueryTerms, cb.ContentTerms)
 			}
+			score += min(s.BM25Similarity(query, chunk.Title), 5)
+			score += factIntentSentenceBoost(query, sentence)
 			if score <= 0 {
 				continue
 			}
@@ -472,19 +639,252 @@ func (s *RAGService) extractRelevantSnippets(query string, chunks []model.Knowle
 				continue
 			}
 			seen[sentence] = struct{}{}
-			snippets = append(snippets, scoredSnippet{text: sentence, score: score})
+			snippets = append(snippets, scoredSnippet{
+				text:       sentence,
+				score:      score,
+				structural: isStructuralKnowledgeSentence(query, sentence),
+				chunkIndex: chunkIndex,
+			})
 		}
 	}
 
 	sort.Slice(snippets, func(i, j int) bool {
 		return snippets[i].score > snippets[j].score
 	})
-
 	result := make([]string, 0, limit)
-	for i := 0; i < min(limit, len(snippets)); i++ {
-		result = append(result, snippets[i].text)
+	selected := make(map[string]struct{}, limit)
+	appendSnippet := func(snippet scoredSnippet) bool {
+		if _, ok := selected[snippet.text]; ok {
+			return false
+		}
+		selected[snippet.text] = struct{}{}
+		result = append(result, snippet.text)
+		return len(result) == limit
+	}
+	preferredChunkIndex := s.preferredDetailedChunkIndex(query, chunks)
+	for _, dimension := range factIntentDimensions(query) {
+		foundInPreferredChunk := false
+		if preferredChunkIndex >= 0 {
+			for _, snippet := range snippets {
+				if snippet.structural || snippet.chunkIndex != preferredChunkIndex || !sentenceHasFactDimension(query, snippet.text, dimension) {
+					continue
+				}
+				foundInPreferredChunk = true
+				if appendSnippet(snippet) {
+					return result
+				}
+				break
+			}
+		}
+		if foundInPreferredChunk {
+			continue
+		}
+		for _, snippet := range snippets {
+			if snippet.structural || !sentenceHasFactDimension(query, snippet.text, dimension) {
+				continue
+			}
+			if appendSnippet(snippet) {
+				return result
+			}
+			break
+		}
+	}
+	if preferredChunkIndex >= 0 {
+		for _, snippet := range snippets {
+			if snippet.structural || snippet.chunkIndex != preferredChunkIndex {
+				continue
+			}
+			if appendSnippet(snippet) {
+				return result
+			}
+		}
+	}
+	if requiresComplementaryChunkEvidence(query) {
+		for chunkIndex := 0; chunkIndex < min(2, len(chunks)); chunkIndex++ {
+			for _, snippet := range snippets {
+				if snippet.structural || snippet.chunkIndex != chunkIndex {
+					continue
+				}
+				if appendSnippet(snippet) {
+					return result
+				}
+				break
+			}
+		}
+	}
+	for _, snippet := range snippets {
+		if snippet.structural {
+			continue
+		}
+		if appendSnippet(snippet) {
+			return result
+		}
+	}
+	for _, snippet := range snippets {
+		if !snippet.structural {
+			continue
+		}
+		if appendSnippet(snippet) {
+			break
+		}
 	}
 	return result
+}
+
+func (s *RAGService) preferredDetailedChunkIndex(query string, chunks []model.KnowledgeChunk) int {
+	if !containsAny(query, []string{"主要表现", "什么内容", "哪类", "文化"}) {
+		return -1
+	}
+
+	preferredTitles := []string{"详细介绍"}
+	if containsAny(query, []string{"主要表现", "什么内容"}) {
+		preferredTitles = []string{"文化定位", "文化内涵", "概览"}
+	}
+	bestIndex := -1
+	bestScore := 0.0
+	for i, chunk := range chunks {
+		if !containsAny(chunk.Title, preferredTitles) {
+			continue
+		}
+		score := s.BM25Similarity(query, chunk.Title)
+		if score > bestScore {
+			bestIndex = i
+			bestScore = score
+		}
+	}
+	return bestIndex
+}
+
+func requiresComplementaryChunkEvidence(query string) bool {
+	return containsAny(query, []string{"为什么", "为何", "原因"})
+}
+
+func isStructuralKnowledgeSentence(query, sentence string) bool {
+	trimmed := strings.TrimSpace(sentence)
+	if strings.HasPrefix(trimmed, "景点名称：") || strings.HasPrefix(trimmed, "备注：") {
+		return true
+	}
+	if strings.HasPrefix(trimmed, "具体位置：") && !containsAny(query, []string{"位于哪里", "在哪里", "位置", "地址"}) {
+		return true
+	}
+	return len([]rune(trimmed)) <= 32 && strings.Contains(trimmed, "：") && !containsAny(trimmed, []string{"，", "、", "（", "("})
+}
+
+func factIntentSentenceBoost(query, sentence string) float64 {
+	boost := 0.0
+
+	switch {
+	case containsAny(query, []string{"多高", "高度", "多少米", "多长", "多重"}):
+		if hasMeasurement(sentence) {
+			boost += 8
+		}
+		if containsAny(sentence, []string{"通高", "总高", "佛体", "高度", "长", "重"}) {
+			boost += 3
+		}
+	case containsAny(query, []string{"为什么", "为何", "原因"}):
+		hasExplanation := containsAny(sentence, []string{"凭借", "因为", "由于", "因而", "采用", "运用", "汇集", "融合", "结合", "形成", "体现"})
+		hasCraft := containsAny(sentence, []string{"工艺", "技艺", "艺术", "制作", "雕刻", "烧制", "镶嵌", "材料", "传统"})
+		if hasExplanation {
+			boost += 6
+		}
+		if hasCraft {
+			boost += 6
+		}
+		if hasExplanation && hasCraft {
+			boost += 6
+		}
+	case containsAny(query, []string{"主要表现", "什么内容", "哪类", "文化"}):
+		hasSubject := containsAny(sentence, []string{"文化", "宗教", "礼仪", "仪式", "传统", "主题", "主体"})
+		hasExplanation := isCultureExplanationSentence(sentence)
+		if hasSubject {
+			boost += 8
+		}
+		if hasExplanation {
+			boost += 8
+		}
+		if hasSubject && hasExplanation {
+			boost += 6
+		}
+	}
+
+	if strings.HasPrefix(strings.TrimSpace(sentence), "具体位置：") {
+		boost -= 2
+	}
+	return boost
+}
+
+func factIntentDimensions(query string) []string {
+	switch {
+	case containsAny(query, []string{"多高", "高度", "多少米", "多长", "多重"}):
+		return []string{"overall_measurement", "body_measurement", "total_measurement", "measurement"}
+	case containsAny(query, []string{"位于哪里", "在哪里", "位置", "地址"}):
+		return []string{"administrative_location", "region_location", "locality_location"}
+	case containsAny(query, []string{"为什么", "为何", "原因"}):
+		return []string{"craft_subject", "craft_explanation"}
+	case containsAny(query, []string{"主要表现", "什么内容", "哪类", "文化"}):
+		return []string{"culture_subject", "culture_explanation", "concrete_examples", "ritual_subject", "culture_practice"}
+	default:
+		return nil
+	}
+}
+
+func sentenceHasFactDimension(query, sentence, dimension string) bool {
+	trimmed := strings.TrimSpace(sentence)
+	switch dimension {
+	case "overall_measurement":
+		return hasMeasurement(trimmed) && containsAny(trimmed, []string{"通高", "整体", "全高"})
+	case "body_measurement":
+		return hasMeasurement(trimmed) && containsAny(trimmed, []string{"主体", "本体", "佛体", "雕像"})
+	case "total_measurement":
+		return hasMeasurement(trimmed) && containsAny(trimmed, []string{"总高", "台基", "底座", "基座"})
+	case "measurement":
+		return hasMeasurement(trimmed)
+	case "administrative_location":
+		return containsAny(trimmed, []string{"省", "市", "县"})
+	case "region_location":
+		return containsAny(trimmed, []string{"区域", "片区", "城区", "新区", "景区"})
+	case "locality_location":
+		return containsAny(trimmed, []string{"镇", "乡", "街道"})
+	case "craft_subject":
+		return containsAny(trimmed, []string{"工艺", "技艺", "艺术", "制作", "雕刻", "烧制", "镶嵌", "材料", "传统"})
+	case "craft_explanation":
+		return containsAny(trimmed, []string{"凭借", "因为", "由于", "因而", "采用", "运用", "汇集", "融合", "结合", "形成", "体现"})
+	case "culture_subject":
+		return containsAny(trimmed, []string{"文化", "宗教", "礼仪", "仪式", "传统", "主题", "主体"})
+	case "culture_explanation":
+		return isCultureExplanationSentence(trimmed)
+	case "concrete_examples":
+		return containsAny(trimmed, []string{"、", "与", "和"}) && sentenceHasFactDimension(query, trimmed, "culture_explanation")
+	case "ritual_subject":
+		return containsAny(trimmed, []string{"供奉", "祭祀", "礼拜"})
+	case "culture_practice":
+		return containsAny(trimmed, []string{"游客", "参观者", "体验", "参与", "转动", "使用"}) &&
+			sentenceHasFactDimension(query, trimmed, "culture_explanation")
+	default:
+		return false
+	}
+}
+
+func isCultureExplanationSentence(sentence string) bool {
+	if containsAny(sentence, []string{"主题", "再现", "解释", "介绍", "体现", "象征", "寓意", "包括", "涵盖", "设有", "供奉", "陈列", "场景", "意义", "过程"}) {
+		return true
+	}
+	return strings.Contains(sentence, "展示") && containsAny(sentence, []string{"、", "与", "和"})
+}
+
+func hasMeasurement(sentence string) bool {
+	hasDigit := false
+	for _, r := range sentence {
+		if r >= '0' && r <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+	return hasDigit && containsAny(sentence, []string{"米", "m", "吨", "级", "%"})
+}
+
+func isKnowledgeMetaSentence(sentence string) bool {
+	return containsAny(sentence, []string{"游客常问", "常见问法", "问答素材", "回答策略", "资料来源"})
 }
 
 func splitKnowledgeSentences(content string) []string {
@@ -495,14 +895,15 @@ func splitKnowledgeSentences(content string) []string {
 }
 
 func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (string, error) {
-	if cachedResp, _, ok := s.getCachedResponse(query); ok {
+	cacheKey := "general:" + lang + ":" + query
+	if cached, ok := s.getCachedResponse(cacheKey); ok {
 		slog.Debug("通用 Chat 命中查询缓存", "query_len", len([]rune(query)))
-		return cachedResp, nil
+		return cached.Response, nil
 	}
 
 	if strings.TrimSpace(s.chatAPIKey) == "" {
-		answer := "当前知识库没有检索到足够匹配的资料，并且 AI API Key 尚未配置。您可以先在管理后台补充相关知识，或配置 AI API Key 后再启用通用问答。"
-		s.setCachedResponse(query, answer, nil)
+		answer, sources := s.localRAGFallback(query, lang)
+		s.setCachedResponse(cacheKey, answer, sources)
 		return answer, nil
 	}
 
@@ -546,36 +947,18 @@ func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (
 		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("JSON序列化失败: %v", err)
 	}
 
-	apiURL := s.chatBaseURL + "/chat/completions"
-	slog.Debug("通用 Chat 请求体已生成", "body_len", len(reqBody), "api_url", apiURL)
-
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(reqBody))
-	if err != nil {
-		slog.Error("通用 Chat 创建 HTTP 请求失败", "error", err)
-		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("创建HTTP请求失败: %v", err)
+	modelResult, modelErr, _ := s.modelRequests.Do(cacheKey, func() (interface{}, error) {
+		return s.callChatCompletion(ctx, reqBody)
+	})
+	if modelErr != nil {
+		slog.Warn("通用 Chat API 调用失败，使用本地知识库降级", "error", modelErr)
+		answer, sources := s.localRAGFallback(query, lang)
+		s.setCachedResponse(cacheKey, answer, sources)
+		return answer, nil
 	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
-
-	resp, err := s.httpClient.Do(httpReq)
-	if err != nil {
-		slog.Error("通用 Chat API 调用失败", "error", err)
-		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("调用DeepSeek API失败: %v", err)
-	}
-	defer resp.Body.Close()
-
-	slog.Debug("通用 Chat API 已响应", "status", resp.StatusCode)
-
-	body, readErr := readLimitedBody(resp.Body)
-	if readErr != nil {
-		slog.Error("通用 Chat API 响应读取失败", "error", readErr)
-		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("读取响应体失败: %v", readErr)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		slog.Warn("通用 Chat API 返回非 200", "status", resp.StatusCode, "body_len", len(body))
-		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("API返回错误状态码: %d, 响应长度: %d bytes", resp.StatusCode, len(body))
+	body, ok := modelResult.([]byte)
+	if !ok {
+		return "", fmt.Errorf("通用 Chat API 响应结果类型错误")
 	}
 
 	var openAIResp openAIResponse
@@ -590,8 +973,9 @@ func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (
 			"code", openAIResp.Error.Code,
 			"message", openAIResp.Error.Message,
 		)
-		return "抱歉，我现在无法回答这个问题。", fmt.Errorf("DeepSeek API错误: %s - %s",
-			openAIResp.Error.Code, openAIResp.Error.Message)
+		answer, sources := s.localRAGFallback(query, lang)
+		s.setCachedResponse(cacheKey, answer, sources)
+		return answer, nil
 	}
 
 	var answer string
@@ -602,7 +986,7 @@ func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (
 		return "抱歉，我无法生成合适的回答。", fmt.Errorf("API返回空结果")
 	}
 
-	s.setCachedResponse(query, answer, nil)
+	s.setCachedResponse(cacheKey, answer, nil)
 	slog.Info("通用 Chat API 返回回答", "answer_len", len([]rune(answer)))
 	return answer, nil
 }
@@ -629,23 +1013,9 @@ func (s *RAGService) CallLLM(ctx context.Context, systemPrompt, userPrompt strin
 	if err != nil {
 		return "", fmt.Errorf("AI 分析请求序列化失败: %w", err)
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(s.chatBaseURL, "/")+"/chat/completions", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return "", fmt.Errorf("AI 分析请求创建失败: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
-	resp, err := s.httpClient.Do(httpReq)
+	body, err := s.callChatCompletion(ctx, reqBody)
 	if err != nil {
 		return "", fmt.Errorf("AI 分析调用失败: %w", err)
-	}
-	defer resp.Body.Close()
-	body, err := readLimitedBody(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("AI 分析响应读取失败: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("AI 分析返回错误状态码: %d", resp.StatusCode)
 	}
 	var parsed openAIResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
@@ -660,6 +1030,52 @@ func (s *RAGService) CallLLM(ctx context.Context, systemPrompt, userPrompt strin
 	return strings.TrimSpace(parsed.Choices[0].Message.Content), nil
 }
 
+func (s *RAGService) callChatCompletion(ctx context.Context, requestBody []byte) ([]byte, error) {
+	if s == nil || s.chatGuard == nil {
+		return nil, fmt.Errorf("Chat 模型保护器未初始化")
+	}
+
+	endpoint := strings.TrimRight(s.chatBaseURL, "/") + "/chat/completions"
+	var responseBody []byte
+	err := s.chatGuard.run(ctx, func(callCtx context.Context) error {
+		req, err := http.NewRequestWithContext(callCtx, http.MethodPost, endpoint, bytes.NewReader(requestBody))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
+		resp, err := s.httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			_, _ = readLimitedBody(resp.Body)
+			return &modelHTTPError{status: resp.StatusCode}
+		}
+		responseBody, err = readLimitedBody(resp.Body)
+		return err
+	})
+	return responseBody, err
+}
+
+func (s *RAGService) localRAGFallback(query, lang string) (string, []RAGSource) {
+	chunks, err := s.RetrieveRelevantKnowledgeWithOptions(query, RetrievalOptions{
+		TopK:                 TopK,
+		Mode:                 RetrievalModeBM25Local,
+		SkipModelEnhancement: true,
+	})
+	if err != nil {
+		slog.Warn("本地 RAG 降级检索失败", "error", err, "query_len", len([]rune(query)))
+		return addEmotionCare(query, s.buildNoEvidenceAnswer(lang)), nil
+	}
+	if len(chunks) == 0 {
+		return addEmotionCare(query, s.buildNoEvidenceAnswer(lang)), nil
+	}
+	sources := buildRAGSources(chunks, 3)
+	return s.generateAnswerFromChunks(query, chunks), sources
+}
+
 // buildRouteRecommendation 根据用户查询匹配路线关键词，返回路线推荐信息
 func (s *RAGService) buildRouteRecommendation(query string) string {
 	if s.profile == nil || len(s.profile.Routes) == 0 {
@@ -668,13 +1084,15 @@ func (s *RAGService) buildRouteRecommendation(query string) string {
 
 	// 路线匹配关键词映射
 	routeKeywords := map[string][]string{
-		"历史": {"历史", "文化", "古迹", "建筑", "佛教", "寺庙"},
-		"自然": {"自然", "风景", "拍照", "山水", "湖"},
-		"亲子": {"亲子", "儿童", "孩子", "家庭", "小朋友", "带孩子"},
-		"美食": {"美食", "小吃", "吃饭", "餐厅", "素食"},
-		"路线": {"路线", "推荐", "怎么玩", "怎么走", "规划", "行程"},
-		"轻松": {"轻松", "老人", "长辈", "不累"},
-		"深度": {"深度", "详细", "全面", "全部"},
+		"历史":  {"历史", "文化", "古迹", "建筑", "佛教", "寺庙"},
+		"自然":  {"自然", "风景", "拍照", "山水", "湖"},
+		"亲子":  {"亲子", "儿童", "孩子", "家庭", "小朋友", "带孩子"},
+		"美食":  {"美食", "小吃", "吃饭", "餐厅", "素食"},
+		"路线":  {"路线", "推荐", "怎么玩", "怎么走", "规划", "行程"},
+		"观光车": {"观光车", "摆渡车"},
+		"错峰":  {"错峰", "避开人流", "人多"},
+		"轻松":  {"轻松", "老人", "长辈", "不累"},
+		"深度":  {"深度", "详细", "全面", "全部"},
 	}
 
 	// 检查查询匹配哪些路线类别
@@ -726,6 +1144,10 @@ func (s *RAGService) buildRouteRecommendation(query string) string {
 				}
 			case "路线":
 				relevant = true // 用户问路线推荐，所有路线都相关
+			case "观光车":
+				relevant = route.RouteType == "sightseeing_bus"
+			case "错峰":
+				relevant = route.RouteType == "off_peak_walking"
 			}
 		}
 

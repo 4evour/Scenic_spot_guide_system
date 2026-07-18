@@ -143,7 +143,14 @@ function Set-ScenicGuideEnv {
     Import-DotEnv -Path (Join-Path $ProjectRoot ".env")
     Import-DotEnv -Path (Join-Path $ProjectRoot ".env.local")
 
-    $env:SCENIC_GUIDE_SECURITY_JWT_SECRET = "local-dev-jwt-secret-20260615-32chars"
+    $jwtBytes = New-Object byte[] 32
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($jwtBytes)
+    } finally {
+        $rng.Dispose()
+    }
+    $env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($jwtBytes | ForEach-Object { $_.ToString("x2") }) -join ""
     $aiSource = Resolve-ScenicGuideAIEnv
     $env:SCENIC_GUIDE_API_KEY = "not-needed"
     $env:SCENIC_GUIDE_DATABASE_DRIVER = "sqlite"

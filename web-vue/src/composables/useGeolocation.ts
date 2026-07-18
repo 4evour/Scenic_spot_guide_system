@@ -1,4 +1,5 @@
 import { ref, onUnmounted, type Ref } from 'vue';
+import { wgs84ToGcj02 } from '../utils/geolocation.ts';
 
 export interface GeolocationPosition {
   lat: number;
@@ -72,9 +73,10 @@ export function useGeolocation(
       (pos) => {
         permissionGranted.value = true;
         error.value = null;
+        const converted = wgs84ToGcj02(pos.coords.longitude, pos.coords.latitude);
         currentPosition.value = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
+          lat: converted.lat,
+          lng: converted.lng,
           accuracy: pos.coords.accuracy,
           timestamp: pos.timestamp,
         };

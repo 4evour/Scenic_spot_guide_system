@@ -68,13 +68,14 @@ func (r *DigitalHumanConfigRepository) Get() (*model.DigitalHumanConfig, error) 
 		// 返回默认配置
 		config = model.DigitalHumanConfig{
 			Name:              "小灵",
-			Appearance:        "亲和型国风讲解员",
-			Costume:           "古典汉服",
-			Style:             "古典汉服",
+			Appearance:        "Live2D 官方示例形象（临时）",
+			Costume:           "现代幻想服装",
+			Style:             "Live2D 示例模型",
 			Color:             "#D4AF37",
 			CultureTheme:      "灵山佛教文化与江南山水意境",
 			VoiceType:         "温柔女声",
 			VoiceTone:         "温暖、端庄、亲切",
+			VoiceID:           "female_xiaoxiao",
 			Speed:             0.8,
 			Volume:            80,
 			Greeting:          "欢迎来到灵山胜境，我是您的数字导览员小灵。",

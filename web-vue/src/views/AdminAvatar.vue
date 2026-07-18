@@ -44,6 +44,12 @@ const voiceOptions = [
   { label: t('adminAvatar.options.voice.energetic'), value: '活力亲切女声' },
   { label: t('adminAvatar.options.voice.ceremonial'), value: '端庄礼仪女声' },
 ]
+const voiceIdOptions = [
+  { label: t('adminAvatar.options.voiceId.xiaoxiao'), value: 'female_xiaoxiao' },
+  { label: t('adminAvatar.options.voiceId.xiaoyi'), value: 'female_xiaoyi' },
+  { label: t('adminAvatar.options.voiceId.yunxi'), value: 'female_yunxi' },
+  { label: t('adminAvatar.options.voiceId.yunyang'), value: 'male_yunyang' },
+]
 const toneOptions = [
   { label: t('adminAvatar.options.tone.warm'), value: '温暖、端庄、亲切' },
   { label: t('adminAvatar.options.tone.clear'), value: '专业、清晰、克制' },
@@ -85,6 +91,8 @@ function normalizeAvatarConfig(raw: Partial<AvatarConfig>): AvatarConfig {
     speed: Number(raw.speed ?? defaultAvatarConfig.speed),
     volume: Number(raw.volume ?? defaultAvatarConfig.volume),
     emotion_level: Number(raw.emotion_level ?? defaultAvatarConfig.emotion_level),
+    voice_id: raw.voice_id || defaultAvatarConfig.voice_id,
+    tts_rate: raw.tts_rate || defaultAvatarConfig.tts_rate,
   }
 }
 
@@ -213,6 +221,10 @@ onMounted(loadAvatarConfig)
 
         <NFormItem :label="t('adminAvatar.form.voice')" path="voice_type">
           <NSelect v-model:value="state.avatar.voice_type" :options="voiceOptions" />
+        </NFormItem>
+
+        <NFormItem :label="t('adminAvatar.form.voiceId')" path="voice_id">
+          <NSelect v-model:value="state.avatar.voice_id" :options="voiceIdOptions" />
         </NFormItem>
 
         <NFormItem :label="t('adminAvatar.form.tone')" path="voice_tone">

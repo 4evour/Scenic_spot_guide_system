@@ -126,6 +126,8 @@ keywords:
     - "祥符禅寺"
 
   conditional_boosts:
+    - query_terms: ["多高", "高度"]
+      content_terms: ["高", "米", "通高", "高度"]
     - query_terms: ["哪里", "位于", "地址", "位置"]
       content_terms: ["位于", "地处", "江苏", "无锡", "马山", "太湖"]
     - query_terms: ["表现", "内容", "讲什么", "展示"]
@@ -138,6 +140,10 @@ keywords:
       content_terms: ["藏传佛教", "五方五佛", "转经筒", "唐卡", "曼陀罗"]
 
   query_expansion:
+    - trigger: ["多高", "高度"]
+      expand: "高度 通高 米"
+    - trigger: ["位于哪里", "在哪里", "位置"]
+      expand: "位于 江苏 无锡 太湖"
     - trigger: ["半天", "优先", "先看"]
       expand: "初次到访 主线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛"
     - trigger: ["中轴线"]
@@ -344,6 +350,39 @@ prompts:
     "补充推荐": "补充推荐 大佛之外 文化建筑 灵山梵宫 五印坛城"
 
 routes:
+  - name: "完整参考步行路线"
+    description: "覆盖景区主轴与核心文化节点，适合首次到访且体力充足的游客"
+    spots: "南门,佛足坛,九龙灌浴,降魔浮雕,三圣殿,阿育王柱,天下第一掌,百子戏弥勒,祥符禅寺,杏坛广场,灵山大佛,灵山梵宫,曼飞龙塔,五印坛城,出口"
+    duration: 300
+    difficulty: "medium"
+    rating: 4.8
+    route_type: "reference_walking"
+    source: "第三方转载路线，声称为官方推荐"
+    source_url: "https://www.sohu.com/a/942013848_120104414"
+    confidence: 0.7
+    official_verified: false
+  - name: "错峰参考步行路线"
+    description: "优先安排文化点，适合希望避开主轴集中客流的游客"
+    spots: "南门,灵山大照壁,胜境门楼,佛足坛,五印坛城,曼飞龙塔,灵山梵宫,阿育王柱,天下第一掌,百子戏弥勒,祥符禅寺,杏坛广场,灵山大佛,三圣殿,降魔浮雕,九龙灌浴"
+    duration: 300
+    difficulty: "medium"
+    rating: 4.7
+    route_type: "off_peak_walking"
+    source: "第三方转载路线，声称为错峰建议"
+    source_url: "https://www.sohu.com/a/942013848_120104414"
+    confidence: 0.65
+    official_verified: false
+  - name: "观光车参考路线"
+    description: "适合减少步行的游客；站点运营以现场指引为准"
+    spots: "灵山大照壁,佛足坛,杏坛广场,灵山大佛,祥符禅寺,天下第一掌,百子戏弥勒,阿育王柱,灵山蔬食馆,灵山梵宫,九龙灌浴,降魔浮雕,曼飞龙塔,五印坛城,出口"
+    duration: 240
+    difficulty: "easy"
+    rating: 4.6
+    route_type: "sightseeing_bus"
+    source: "第三方转载路线，声称为观光车建议"
+    source_url: "https://www.sohu.com/a/942013848_120104414"
+    confidence: 0.65
+    official_verified: false
   - name: "经典文化路线"
     description: "适合首次来访、想看核心景观的游客"
     spots: "灵山大照壁,五明桥,佛足坛,九龙灌浴,灵山梵宫,灵山大佛"

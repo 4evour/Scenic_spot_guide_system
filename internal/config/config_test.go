@@ -63,4 +63,51 @@ security:
 	if cfg.Security.AllowedOrigins[0] != "http://localhost:5173" || cfg.Security.AllowedOrigins[1] != "https://example.com" {
 		t.Fatalf("unexpected allowed origins: %#v", cfg.Security.AllowedOrigins)
 	}
+	if cfg.Multimodal.Enabled {
+		t.Fatal("multimodal should be disabled by default")
+	}
+	if cfg.Multimodal.Model != "qwen3.5-omni-plus" || cfg.Multimodal.TimeoutSeconds != 60 {
+		t.Fatalf("unexpected multimodal defaults: %+v", cfg.Multimodal)
+	}
+}
+
+func TestLoadConfigRejectsEnabledMultimodalWithoutKey(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	configBody := []byte(`
+server: {host: "127.0.0.1", port: "8080"}
+ai: {api_key: "ai-key", model: "test", base_url: "https://example.com/v1"}
+security: {jwt_secret: "file-secret"}
+multimodal: {enabled: true, provider: "qwen", model: "qwen3.5-omni-plus", base_url: "https://example.com/v1", timeout_seconds: 60}
+`)
+	if err := os.WriteFile(configPath, configBody, 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	if _, err := LoadConfig(dir); err == nil {
+		t.Fatal("expected enabled multimodal config without key to fail")
+	}
+}
+
+func TestLoadConfigAllowsMissingAIKeyForLocalRAG(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	configBody := []byte(`
+server: {host: "127.0.0.1", port: "8080"}
+database: {driver: "sqlite", path: "./data/scenic_guide.db"}
+ai: {api_key: "", model: "qwen-vl-max", base_url: "https://example.com/v1"}
+security: {jwt_secret: "file-secret"}
+multimodal: {enabled: false}
+`)
+	if err := os.WriteFile(configPath, configBody, 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadConfig(dir)
+	if err != nil {
+		t.Fatalf("LoadConfig should allow local RAG without AI key: %v", err)
+	}
+	if cfg.AI.APIKey != "" {
+		t.Fatal("AI key should remain empty when local RAG fallback is selected")
+	}
 }

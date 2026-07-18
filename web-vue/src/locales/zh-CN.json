@@ -200,6 +200,30 @@
     "subtitle": "支持文字和语音输入",
     "placeholder": "输入您的问题…",
     "send": "发送",
+    "multimodal": {
+      "open": "添加图片、音频或视频",
+      "title": "多模态提问",
+      "subtitle": "上传素材后，让数字人帮您识别和讲解",
+      "chooseFile": "选择图片、音频或视频",
+      "changeFile": "更换文件",
+      "removeFile": "移除文件",
+      "promptPlaceholder": "补充问题，例如：请介绍图片中的景点",
+      "formatHint": "支持 JPG、PNG、WebP、WAV、MP3、OGG、WebM、MP4",
+      "analyze": "开始分析",
+      "analyzing": "分析中…",
+      "fileTooLarge": "文件无效或超过 {size} 限制",
+      "emptyResponse": "多模态服务没有返回有效回答",
+      "requestFailed": "多模态分析失败，请稍后重试",
+      "userAttachment": "已上传素材：{name}",
+      "userAttachmentWithPrompt": "已上传素材：{name}\n问题：{prompt}",
+      "types": {
+        "image": "图片",
+        "audio": "音频",
+        "video": "视频",
+        "file": "文件"
+      },
+      "close": "关闭多模态输入"
+    },
     "interrupt": "打断",
     "reconnect": "重连",
     "interruptCount": "打断 {count} 次",
@@ -239,9 +263,12 @@
     "noSessions": "暂无历史会话",
     "sessionDefaultTitle": "未命名会话",
     "sessionMessageCount": "{count} 条消息",
+    "traceExported": "已导出 {count} 条语音链路记录。",
+    "traceExportEmpty": "暂无可导出的语音链路记录。",
     "actions": {
       "search": "搜索",
       "history": "历史会话",
+      "exportVoiceTraces": "导出语音链路记录",
       "register": "注册账号",
       "refresh": "刷新"
     },
@@ -261,6 +288,43 @@
       "entityDetailLabel": "{name}的详细介绍",
       "entityDetailQuery": "能详细介绍一下{name}吗？",
       "buddhaStory": "灵山大佛有什么特别之处？"
+    },
+    "visitorLoop": {
+      "title": "导览闭环",
+      "subtitle": "按游客偏好推荐路线，并把评分反馈给后台",
+      "profileTitle": "游客画像",
+      "recommendRoutes": "推荐路线",
+      "expand": "展开导览闭环",
+      "collapse": "收起导览闭环",
+      "recommending": "推荐中...",
+      "recommendFailed": "路线推荐失败",
+      "noRoutes": "暂无匹配路线，请先在后台配置路线。",
+      "routeSpotsUnknown": "景点待配置",
+      "durationMinutes": "{count} 分钟",
+      "score": "匹配 {score}",
+      "rateThisRoute": "评价这条路线",
+      "ratingTitle": "景点评分",
+      "currentSpot": "当前景点",
+      "spotSelect": "选择要评价的景点",
+      "ratingScore": "评分",
+      "ratingCommentPlaceholder": "可补充排队、讲解、亲子体验等感受",
+      "ratingSubmit": "提交评分",
+      "ratingSubmitting": "提交中...",
+      "ratingSaved": "已记录{name}的评分",
+      "ratingFailed": "评分提交失败",
+      "ratingSpotRequired": "请先选择要评价的景点",
+      "profiles": {
+        "family": "亲子轻松",
+        "culture": "文化深度",
+        "senior": "长辈友好",
+        "photo": "拍照打卡"
+      },
+      "profileHints": {
+        "family": "少绕路，讲故事",
+        "culture": "典故、建筑、历史",
+        "senior": "慢节奏，低强度",
+        "photo": "高辨识度点位"
+      }
     },
     "tabAvatar": "数字人",
     "tabChat": "聊天",
@@ -296,6 +360,13 @@
       "autoGuideOff": "到点讲解",
       "seniorMode": "老年模式",
       "exitSeniorMode": "退出老年模式",
+      "location": {
+        "idle": "等待 GPS 定位",
+        "ready": "GPS 精度约 {accuracy} 米",
+        "waitingAccuracy": "GPS 精度 {accuracy} 米，需不超过 10 米才会自动讲解",
+        "demoMode": "演示定位：已到达景点坐标",
+        "useGps": "使用真实 GPS"
+      },
       "chatResizeTitle": "拖动调整聊天框宽度"
     },
     "avatar": {
@@ -372,6 +443,8 @@
       "activityStatus": "演出/活动状态",
       "terminalStatus": "数字人终端状态",
       "knowledgeOps": "知识库运营",
+      "visitorExperience": "游客体验闭环",
+      "consumptionAnalysis": "游客消费行为分析",
       "hourlyTrend": "24 小时流量趋势",
       "categoryDistribution": "关注点分布",
       "satisfactionTrend": "7 日满意度趋势",
@@ -390,6 +463,21 @@
       "topQuestions": "暂无热门问题数据",
       "recentConversations": "暂无对话记录"
     },
+    "consumption": {
+      "totalAll": "全量总消费（元）",
+      "lingshanAverage": "灵山人均消费（元）",
+      "lingshanSamples": "灵山样本数",
+      "categoryTitle": "灵山消费结构",
+      "recommendationTitle": "运营建议",
+      "empty": "暂无消费分析数据",
+      "categories": {
+        "ticket": "门票",
+        "food": "餐饮",
+        "shopping": "购物",
+        "transport": "交通",
+        "entertainment": "娱乐"
+      }
+    },
     "labels": {
       "lastUpdated": "最近更新",
       "avatarPreview": "数字人配置预览",
@@ -401,7 +489,12 @@
       "voiceType": "语音类型",
       "avatarSwitch": "游客切换",
       "trackedQuestions": "追踪问题",
-      "knowledgeCoverageHint": "已基于今日高频问题展示知识运营概览，可在知识库管理中继续补充候选内容。"
+      "knowledgeCoverageHint": "已基于今日高频问题展示知识运营概览，可在知识库管理中继续补充候选内容。",
+      "totalRatings": "累计评分",
+      "negativeRatings": "低分反馈",
+      "routePreference": "路线偏好",
+      "interestPreference": "兴趣偏好",
+      "avgSpotRating": "平均评分"
     },
     "columns": {
       "time": "时间",
@@ -564,6 +657,7 @@
       "cultureTheme": "景区文化主题",
       "greeting": "欢迎语",
       "voice": "讲解声音",
+      "voiceId": "实际音色",
       "tone": "讲解语气",
       "speed": "语速",
       "volume": "音量",
@@ -600,6 +694,12 @@
         "professional": "沉稳专业女声",
         "energetic": "活力亲切女声",
         "ceremonial": "端庄礼仪女声"
+      },
+      "voiceId": {
+        "xiaoxiao": "晓晓（温柔女声）",
+        "xiaoyi": "晓伊（专业女声）",
+        "yunxi": "云希（活力女声）",
+        "yunyang": "云扬（沉稳男声）"
       },
       "tone": {
         "warm": "温暖、端庄、亲切",

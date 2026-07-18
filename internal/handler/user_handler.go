@@ -99,7 +99,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, h.tokenExpireHours)
+	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, user.TokenVersion, h.tokenExpireHours)
 	if err != nil {
 		pkg.InternalError(c, pkg.T(c, "msg_token_failed"))
 		return
@@ -217,6 +217,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		pkg.BadRequest(c, err.Error())
 		return
 	}
+	h.clearAuthCookie(c)
 	pkg.SuccessWithMessage(c, pkg.T(c, "msg_password_changed"), nil)
 }
 
@@ -361,8 +362,17 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		pkg.InternalError(c, pkg.T(c, "msg_delete_failed"))
 		return
 	}
+	if uid == uint(id) {
+		h.clearAuthCookie(c)
+	}
 
 	pkg.SuccessWithMessage(c, pkg.T(c, "msg_delete_success"), nil)
+}
+
+func (h *UserHandler) clearAuthCookie(c *gin.Context) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	secureCookie := os.Getenv("SCENIC_GUIDE_COOKIE_SECURE") == "true" || os.Getenv("GIN_MODE") == "release"
+	c.SetCookie("auth_token", "", -1, "/", "", secureCookie, true)
 }
 
 func (h *UserHandler) AdminCreateUser(c *gin.Context) {
@@ -446,6 +456,11 @@ func (h *UserHandler) AdminUpdateUser(c *gin.Context) {
 		slog.Error("admin update user failed", "error", err, "user_id", id)
 		pkg.BadRequest(c, pkg.T(c, "msg_update_failed"))
 		return
+	}
+	currentUserID := c.GetUint("user_id")
+	currentTokenVersion := c.GetUint("token_version")
+	if currentUserID == uint(id) && user.TokenVersion != currentTokenVersion {
+		h.clearAuthCookie(c)
 	}
 
 	pkg.Success(c, userPayload(user))

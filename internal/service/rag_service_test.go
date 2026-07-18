@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -113,7 +114,7 @@ func newTestScenicProfile() *iconfig.ScenicProfile {
 			SystemRole: "你是灵山胜境景区的AI数字人导览员\"小灵\"，负责为游客提供专业、热情的导览服务。",
 			FallbackAnswers: map[string]string{
 				"灵山大佛高度": "灵山大佛高88米，主体高79米，是世界上最高的青铜立佛之一。",
-				"五印坛城":     "五印坛城以藏传佛教文化为主题，展示五方五佛、转经筒和唐卡艺术。",
+				"五印坛城":   "五印坛城以藏传佛教文化为主题，展示五方五佛、转经筒和唐卡艺术。",
 			},
 			FollowUpRewrite: map[string]string{
 				"路线规划": "初次到访 主线",
@@ -128,6 +129,20 @@ func newTestScenicProfile() *iconfig.ScenicProfile {
 
 type staticEmbeddingProvider struct {
 	vectors map[string][]float64
+}
+
+type failingEmbeddingProvider struct{}
+
+func (failingEmbeddingProvider) GenerateEmbedding(string) ([]float64, error) {
+	return nil, errors.New("embedding provider unavailable")
+}
+
+func (failingEmbeddingProvider) Name() string {
+	return "failing-test"
+}
+
+func (failingEmbeddingProvider) IsAvailable() bool {
+	return true
 }
 
 func (p staticEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error) {
@@ -167,6 +182,27 @@ func newTestRAGServiceWithEmbedding(t *testing.T, provider EmbeddingProvider) *R
 	repo := repository.NewKnowledgeRepository(db)
 	profile := newTestScenicProfile()
 	return NewRAGService(repo, "", "", "", provider, profile)
+}
+
+func TestRetrieveRelevantKnowledgeFallsBackToBM25WhenEmbeddingFails(t *testing.T) {
+	rag := newTestRAGServiceWithEmbedding(t, failingEmbeddingProvider{})
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"official","content":"灵山大佛通高88米。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	chunks, err := rag.RetrieveRelevantKnowledgeWithOptions("灵山大佛多高？", RetrievalOptions{
+		Mode:                 RetrievalModeEmbedding,
+		TopK:                 3,
+		SkipModelEnhancement: true,
+	})
+	if err != nil {
+		t.Fatalf("RetrieveRelevantKnowledgeWithOptions returned error: %v", err)
+	}
+	if len(chunks) != 1 || chunks[0].ID != "buddha-height" {
+		t.Fatalf("BM25 fallback chunks = %+v, want buddha-height", chunks)
+	}
 }
 
 func TestRAGServiceLoadsJSONAndRetrievesWithBM25(t *testing.T) {
@@ -430,6 +466,67 @@ func TestRAGServiceRewritesRouteFollowUpWithSessionContext(t *testing.T) {
 	}
 }
 
+func TestQueryWithRAGStreamingRestoresPersistedSessionHistory(t *testing.T) {
+	chatSessions := newTestChatSessionService(t)
+	if err := chatSessions.AddMessages(
+		"persisted-stream-session",
+		1,
+		"灵山大佛是什么？",
+		"灵山大佛是灵山胜境的标志性景观。",
+		"neutral",
+		10,
+	); err != nil {
+		t.Fatalf("seed persisted session: %v", err)
+	}
+
+	rag := newTestRAGService(t)
+	rag.SetChatSessionService(chatSessions)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"official","content":"灵山大佛通高88米。"},
+		{"id":"jiulong","title":"九龙灌浴","source":"official","content":"九龙灌浴展示佛陀诞生故事。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	answer, _, trace, err := rag.QueryWithRAGStreaming(
+		context.Background(),
+		"persisted-stream-session",
+		"它有多高？",
+		"zh-CN",
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("QueryWithRAGStreaming returned error: %v", err)
+	}
+	if !strings.Contains(trace.RewrittenQuery, "灵山大佛") {
+		t.Fatalf("streaming query did not restore persisted context: %+v", trace)
+	}
+	if !strings.Contains(answer, "88米") {
+		t.Fatalf("streaming answer did not use restored topic: %s", answer)
+	}
+}
+
+func TestGenerateTourRouteSelectsReferenceRouteTypes(t *testing.T) {
+	rag := newTestRAGService(t)
+	rag.profile.Routes = []iconfig.RouteConfig{
+		{Name: "完整参考步行路线", Spots: "南门,佛足坛,出口", Duration: 300, RouteType: "reference_walking"},
+		{Name: "错峰参考步行路线", Spots: "南门,五印坛城,九龙灌浴", Duration: 300, RouteType: "off_peak_walking"},
+		{Name: "观光车参考路线", Spots: "灵山大照壁,杏坛广场,出口", Duration: 240, RouteType: "sightseeing_bus"},
+		{Name: "亲子欢乐路线", Spots: "百子戏弥勒,九龙灌浴", Duration: 150, RouteType: "personalized"},
+	}
+	for query, want := range map[string]string{
+		"第一次到灵山走完整路线": "完整参考步行路线",
+		"人多怎么错峰游玩":    "错峰参考步行路线",
+		"观光车怎么坐":      "观光车参考路线",
+		"亲子怎么玩":       "亲子欢乐路线",
+	} {
+		route := rag.GenerateTourRoute(query)
+		if route == nil || route.Name != want {
+			t.Fatalf("query %q route = %+v, want %q", query, route, want)
+		}
+	}
+}
+
 func TestRAGServiceRewritesBoundaryFollowUpWithSessionContext(t *testing.T) {
 	rag := newTestRAGService(t)
 	rag.appendSessionTurn("boundary-session", "九龙灌浴值得看吗？", "九龙灌浴是灵山胜境的重要动态景观。")
@@ -491,7 +588,7 @@ func TestFallbackAnswerFormatsRouteAndBoundary(t *testing.T) {
 	}
 
 	boundaryAnswer := rag.generateAnswerFromChunksWithContext("现在人多吗？", chunks, "上一轮主题：九龙灌浴；当前意图：实时信息边界")
-	for _, want := range []string{"不能直接替您确认", "官方最新公告", "现场公示"} {
+	for _, want := range []string{"资料不足", "不能直接替您确认", "官方最新公告", "现场公示"} {
 		if !strings.Contains(boundaryAnswer, want) {
 			t.Fatalf("boundary fallback answer = %q, want %q", boundaryAnswer, want)
 		}
@@ -637,6 +734,39 @@ func TestRAGServiceEvaluateQuestionsDoesNotInventRetrievalMetricsWithoutGroundTr
 	}
 	if report.RetrievalEvaluatedCases != 0 || report.AverageRecallAtK != 0 || report.MRRAtK != 0 {
 		t.Fatalf("unexpected aggregate retrieval metrics: %+v", report)
+	}
+}
+
+func TestLocalRAGAnswersCoverBaseEvaluationFacts(t *testing.T) {
+	rag := newTestRAGService(t)
+	rag.profile = nil
+	knowledgePath := filepath.Join("..", "..", "knowledge", "lingshan_chunks.jsonl")
+	if err := rag.LoadKnowledgeFromFile(knowledgePath); err != nil {
+		t.Fatalf("load base knowledge: %v", err)
+	}
+
+	evalData, err := os.ReadFile(filepath.Join("..", "..", "knowledge", "lingshan_eval_qa.json"))
+	if err != nil {
+		t.Fatalf("read base evaluation: %v", err)
+	}
+	var cases []RAGEvaluationCase
+	if err := json.Unmarshal(evalData, &cases); err != nil {
+		t.Fatalf("unmarshal base evaluation: %v", err)
+	}
+
+	for _, item := range cases {
+		item := item
+		t.Run(item.Question, func(t *testing.T) {
+			answer, err := rag.QueryWithRAG(context.Background(), item.Question)
+			if err != nil {
+				t.Fatalf("QueryWithRAG returned error: %v", err)
+			}
+			for _, keyword := range item.ExpectedKeywords {
+				if !strings.Contains(answer, keyword) {
+					t.Fatalf("answer = %q, missing grounded fact %q", answer, keyword)
+				}
+			}
+		})
 	}
 }
 

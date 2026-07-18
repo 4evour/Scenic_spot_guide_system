@@ -24,7 +24,7 @@ import (
 func newSessionHandlerTestStack(t *testing.T) (*gin.Engine, *service.ChatSessionService) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: handlerTestJWTSecret}); err != nil {
 		t.Fatalf("InitJWT: %v", err)
 	}
 
@@ -52,7 +52,7 @@ func newSessionHandlerTestStack(t *testing.T) (*gin.Engine, *service.ChatSession
 
 func sessionAuthHeaderFor(t *testing.T, id uint, username, role string) string {
 	t.Helper()
-	token, err := pkg.GenerateToken(id, username, role, 1)
+	token, err := pkg.GenerateToken(id, username, role, 0, 1)
 	if err != nil {
 		t.Fatalf("GenerateToken: %v", err)
 	}

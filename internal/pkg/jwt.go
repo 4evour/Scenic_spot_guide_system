@@ -1,9 +1,12 @@
 package pkg
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -64,26 +67,69 @@ func InitJWT(cfg *config.SecurityConfig) error {
 	if looksLikePlaceholderSecret(secret) {
 		return errors.New("jwt secret looks like a placeholder (contains markers like 'generate'/'change'/'your'); replace it with a real random secret")
 	}
-	if len(secret) < 32 {
-		return errors.New("jwt secret must be at least 32 characters")
+	keyMaterial, err := decodeJWTKeyMaterial(secret)
+	if err != nil {
+		return err
 	}
 
-	jwtSecret = []byte(secret)
+	jwtSecret = keyMaterial
 	return nil
 }
 
+func decodeJWTKeyMaterial(secret string) ([]byte, error) {
+	if len(secret) == 64 {
+		if decoded, err := hex.DecodeString(secret); err == nil && len(decoded) == 32 {
+			return decoded, nil
+		}
+	}
+	for _, encoding := range []*base64.Encoding{
+		base64.StdEncoding.Strict(),
+		base64.RawStdEncoding.Strict(),
+		base64.URLEncoding.Strict(),
+		base64.RawURLEncoding.Strict(),
+	} {
+		decoded, err := encoding.DecodeString(secret)
+		if err == nil && len(decoded) >= 32 {
+			return decoded, nil
+		}
+	}
+	return nil, errors.New("jwt secret must be 64 hexadecimal characters or base64 encoding of at least 32 bytes")
+}
+
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID       uint   `json:"user_id"`
+	Username     string `json:"username"`
+	Role         string `json:"role"`
+	TokenVersion uint   `json:"token_version"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID uint, username, role string, expireHours int) (string, error) {
+type ClaimsValidator func(*Claims) bool
+
+var (
+	claimsValidatorMu sync.RWMutex
+	claimsValidator   ClaimsValidator
+)
+
+func SetClaimsValidator(validator ClaimsValidator) {
+	claimsValidatorMu.Lock()
+	claimsValidator = validator
+	claimsValidatorMu.Unlock()
+}
+
+func validateCurrentClaims(claims *Claims) bool {
+	claimsValidatorMu.RLock()
+	validator := claimsValidator
+	claimsValidatorMu.RUnlock()
+	return validator == nil || validator(claims)
+}
+
+func GenerateToken(userID uint, username, role string, tokenVersion uint, expireHours int) (string, error) {
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
-		Role:     role,
+		UserID:       userID,
+		Username:     username,
+		Role:         role,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(expireHours))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

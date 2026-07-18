@@ -9,15 +9,16 @@ import (
 )
 
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	Database  DatabaseConfig  `mapstructure:"database"`
-	Logging   LoggingConfig   `mapstructure:"logging"`
-	AI        AIConfig        `mapstructure:"ai"`
-	Embedding EmbeddingConfig `mapstructure:"embedding"`
-	Speech    SpeechConfig    `mapstructure:"speech"`
-	TTS       TTSConfig       `mapstructure:"tts"`
-	Security  SecurityConfig  `mapstructure:"security"`
-	Redis     RedisConfig     `mapstructure:"redis"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	Logging    LoggingConfig    `mapstructure:"logging"`
+	AI         AIConfig         `mapstructure:"ai"`
+	Embedding  EmbeddingConfig  `mapstructure:"embedding"`
+	Speech     SpeechConfig     `mapstructure:"speech"`
+	TTS        TTSConfig        `mapstructure:"tts"`
+	Multimodal MultimodalConfig `mapstructure:"multimodal"`
+	Security   SecurityConfig   `mapstructure:"security"`
+	Redis      RedisConfig      `mapstructure:"redis"`
 }
 
 type RedisConfig struct {
@@ -74,6 +75,38 @@ type TTSConfig struct {
 	Timeout  int    `mapstructure:"timeout"`  // seconds, default 30
 }
 
+// MultimodalConfig configures the optional Qwen Omni compatible endpoint.
+type MultimodalConfig struct {
+	Enabled        bool   `mapstructure:"enabled"`
+	Provider       string `mapstructure:"provider"`
+	Model          string `mapstructure:"model"`
+	BaseURL        string `mapstructure:"base_url"`
+	APIKey         string `mapstructure:"api_key"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
+}
+
+func (c MultimodalConfig) Validate() error {
+	if !c.Enabled {
+		return nil
+	}
+	if strings.TrimSpace(c.Provider) == "" {
+		return fmt.Errorf("multimodal.provider is required when multimodal is enabled")
+	}
+	if strings.TrimSpace(c.Model) == "" {
+		return fmt.Errorf("multimodal.model is required when multimodal is enabled")
+	}
+	if strings.TrimSpace(c.BaseURL) == "" {
+		return fmt.Errorf("multimodal.base_url is required when multimodal is enabled")
+	}
+	if strings.TrimSpace(c.APIKey) == "" {
+		return fmt.Errorf("multimodal.api_key is required when multimodal is enabled")
+	}
+	if c.TimeoutSeconds <= 0 || c.TimeoutSeconds > 300 {
+		return fmt.Errorf("multimodal.timeout_seconds must be between 1 and 300")
+	}
+	return nil
+}
+
 type SecurityConfig struct {
 	JWTSecret        string   `mapstructure:"jwt_secret"`
 	TokenExpireHours int      `mapstructure:"token_expire_hours"`
@@ -89,6 +122,11 @@ func LoadConfig(path string) (*Config, error) {
 	viper.SetEnvPrefix("SCENIC_GUIDE")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+	viper.SetDefault("multimodal.enabled", false)
+	viper.SetDefault("multimodal.provider", "qwen")
+	viper.SetDefault("multimodal.model", "qwen3.5-omni-plus")
+	viper.SetDefault("multimodal.base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+	viper.SetDefault("multimodal.timeout_seconds", 60)
 	bindEnvKeys()
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -103,12 +141,12 @@ func LoadConfig(path string) (*Config, error) {
 		config.Security.AllowedOrigins = splitCSV(origins)
 	}
 
-	// startup validation: sensitive fields must not be empty
-	if config.AI.APIKey == "" {
-		return nil, fmt.Errorf("ai.api_key is not configured, set SCENIC_GUIDE_AI_API_KEY environment variable")
-	}
+	// JWT is mandatory; AI credentials are optional because local RAG is the supported fallback.
 	if config.Security.JWTSecret == "" {
 		return nil, fmt.Errorf("security.jwt_secret is not configured, set SCENIC_GUIDE_SECURITY_JWT_SECRET environment variable")
+	}
+	if err := config.Multimodal.Validate(); err != nil {
+		return nil, err
 	}
 
 	return &config, nil
@@ -150,6 +188,12 @@ func bindEnvKeys() {
 		"embedding.base_url",
 		"speech.api_key",
 		"speech.region",
+		"multimodal.enabled",
+		"multimodal.provider",
+		"multimodal.model",
+		"multimodal.base_url",
+		"multimodal.api_key",
+		"multimodal.timeout_seconds",
 		"security.jwt_secret",
 		"security.token_expire_hours",
 		"security.allowed_origins",

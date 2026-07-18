@@ -108,7 +108,7 @@ func (h *GuestHandler) UpgradeGuest(c *gin.Context) {
 	}
 
 	// 重新签发 token
-	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, h.tokenExpireHours)
+	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, user.TokenVersion, h.tokenExpireHours)
 	if err != nil {
 		pkg.InternalError(c, "签发令牌失败")
 		return
@@ -151,4 +151,3 @@ func (h *GuestHandler) Routes(r *gin.RouterGroup) {
 		auth.POST("/auth/upgrade-guest", h.UpgradeGuest)
 	}
 }
-
