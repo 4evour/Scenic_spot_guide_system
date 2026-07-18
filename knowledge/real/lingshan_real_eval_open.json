@@ -2887,4 +2887,60 @@
     "difficulty": "medium",
     "source_type": "official"
   }
+  ,{
+    "question": "第一次到灵山的完整参考步行路线怎么走？",
+    "expected_keywords": ["南门", "九龙灌浴", "灵山大佛", "五印坛城"],
+    "expected_chunk_ids": ["real-route-config-001"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  },
+  {
+    "question": "人多时灵山怎么安排错峰参考步行路线？",
+    "expected_keywords": ["五印坛城", "灵山梵宫", "错峰"],
+    "expected_chunk_ids": ["real-route-config-002"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  },
+  {
+    "question": "灵山观光车参考路线经过哪些点？",
+    "expected_keywords": ["灵山大佛", "灵山梵宫", "观光车"],
+    "expected_chunk_ids": ["real-route-config-003"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  },
+  {
+    "question": "带孩子去灵山适合走哪条亲子欢乐路线？",
+    "expected_keywords": ["百子戏弥勒", "九龙灌浴", "文创驿站"],
+    "expected_chunk_ids": ["real-route-config-006"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  },
+  {
+    "question": "想了解灵山历史文化应该走哪条路线？",
+    "expected_keywords": ["祥符禅寺", "灵山梵宫", "五印坛城"],
+    "expected_chunk_ids": ["real-route-config-007"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  },
+  {
+    "question": "灵山有哪些禅意体验路线点位？",
+    "expected_keywords": ["五印坛城", "灵山梵宫", "祥符禅寺"],
+    "expected_chunk_ids": ["real-route-config-005"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  },
+  {
+    "question": "灵山经典文化路线包含哪些核心景点？",
+    "expected_keywords": ["五明桥", "九龙灌浴", "灵山大佛"],
+    "expected_chunk_ids": ["real-route-config-004"],
+    "category": "closed_real",
+    "difficulty": "medium",
+    "source_type": "scenic_profile"
+  }
 ]

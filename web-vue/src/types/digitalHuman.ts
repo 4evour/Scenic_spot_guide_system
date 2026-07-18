@@ -2,14 +2,14 @@ export type ConversationState = 'idle' | 'connecting' | 'listening' | 'thinking'
 
 /** Extended expression set: maps to all 8 mao_pro model expressions */
 export type Live2DExpression =
-  | 'neutral'   // exp_02
-  | 'happy'     // exp_01
-  | 'sad'       // exp_06
-  | 'angry'     // exp_03
-  | 'thinking'  // exp_04
-  | 'surprised' // exp_05
-  | 'interrupted' // exp_07
-  | 'blush'     // exp_08
+  | 'neutral'   // exp_01
+  | 'happy'     // exp_02
+  | 'sad'       // exp_03
+  | 'angry'     // exp_05
+  | 'thinking'  // exp_06
+  | 'surprised' // exp_04
+  | 'interrupted' // exp_08
+  | 'blush'     // exp_07
   | 'idle';     // no expression active
 
 /** Motion groups mapped to conversation states */

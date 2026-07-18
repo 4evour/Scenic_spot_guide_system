@@ -733,7 +733,7 @@ func (s *RAGService) GenerateTourRoute(query string) *TourRoute {
 				return &r
 			}
 		}
-	} else if strings.Contains(queryLower, "亲子") || strings.Contains(queryLower, "儿童") || strings.Contains(queryLower, "家庭") {
+	} else if strings.Contains(queryLower, "亲子") || strings.Contains(queryLower, "儿童") || strings.Contains(queryLower, "家庭") || strings.Contains(queryLower, "孩子") || strings.Contains(queryLower, "小朋友") {
 		for _, r := range routes {
 			if strings.Contains(r.Name, "亲子") {
 				return &r

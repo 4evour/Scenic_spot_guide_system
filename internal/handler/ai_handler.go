@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -83,6 +84,90 @@ type ChatRequest struct {
 	Stream        bool                           `json:"stream,omitempty"`
 	Lang          string                         `json:"lang,omitempty"` // 可选语言偏好: zh-CN / en-US
 	VoiceFeatures *service.VoiceAcousticFeatures `json:"voice_features,omitempty"`
+	Location      *ChatLocationContext           `json:"location_context,omitempty"`
+}
+
+type ChatLocationContext struct {
+	SpotName       string  `json:"spot_name"`
+	DistanceMeters float64 `json:"distance_meters"`
+	AccuracyMeters float64 `json:"accuracy_meters"`
+}
+
+func buildLocationAwareQuery(query string, location *ChatLocationContext) string {
+	if !hasUsableLocationContext(query, location) {
+		return query
+	}
+	return fmt.Sprintf("%s\n当前定位上下文：游客位于%s附近，距离约 %.0f 米。请优先结合该定位回答问题，不要把定位上下文当作景区事实来源。", strings.TrimSpace(query), strings.TrimSpace(location.SpotName), location.DistanceMeters)
+}
+
+func hasUsableLocationContext(query string, location *ChatLocationContext) bool {
+	return location != nil && strings.TrimSpace(location.SpotName) != "" && isLocationQuestion(query) &&
+		isFiniteNonNegative(location.DistanceMeters) && location.DistanceMeters <= 300 &&
+		isFiniteNonNegative(location.AccuracyMeters) && location.AccuracyMeters <= 10
+}
+
+func isDirectLocationQuestion(query string) bool {
+	for _, term := range []string{"我在哪", "当前位置", "现在在哪", "离我最近", "离我多远", "到哪个景点", "哪个景点附近"} {
+		if strings.Contains(query, term) {
+			return true
+		}
+	}
+	return false
+}
+
+func buildDirectLocationAnswer(query string, location *ChatLocationContext) (string, bool) {
+	if !hasUsableLocationContext(query, location) || !isDirectLocationQuestion(query) {
+		return "", false
+	}
+	return fmt.Sprintf("根据当前定位，您在%s附近，距离约 %.0f 米。", strings.TrimSpace(location.SpotName), location.DistanceMeters), true
+}
+
+func ensureRouteDetailsInAnswer(query, answer string, route *service.TourRoute) string {
+	if route == nil || len(route.Steps) == 0 || !isRouteQuestion(query) {
+		return answer
+	}
+	matchedSteps := 0
+	stepNames := make([]string, 0, len(route.Steps))
+	for _, step := range route.Steps {
+		name := strings.TrimSpace(step.Name)
+		if name == "" {
+			continue
+		}
+		stepNames = append(stepNames, name)
+		if strings.Contains(answer, name) {
+			matchedSteps++
+		}
+	}
+	requiredMatches := 3
+	if len(stepNames) < requiredMatches {
+		requiredMatches = len(stepNames)
+	}
+	if requiredMatches == 0 || matchedSteps >= requiredMatches {
+		return answer
+	}
+	return strings.TrimSpace(answer) + "\n\n参考路线：" + strings.Join(stepNames, " > ")
+}
+
+func isRouteQuestion(query string) bool {
+	for _, term := range []string{"路线", "怎么走", "游览顺序", "观光车", "带孩子", "小朋友", "亲子", "错峰"} {
+		if strings.Contains(query, term) {
+			return true
+		}
+	}
+	return false
+}
+
+func isLocationQuestion(query string) bool {
+	for _, term := range []string{"我在哪", "当前位置", "现在在哪", "附近", "离我最近", "离我多远", "到哪个景点", "哪个景点附近"} {
+		if strings.Contains(query, term) {
+			return true
+		}
+	}
+	return false
+}
+
+func isFiniteNonNegative(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0) && value >= 0
 }
 
 type KnowledgeRequest struct {
@@ -158,6 +243,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		lang = c.GetString("lang")
 	}
 	emotion := service.DetectVisitorEmotionWithVoice(req.Message, req.VoiceFeatures)
+	ragQuery := buildLocationAwareQuery(req.Message, req.Location)
 
 	// 从认证上下文获取用户 ID（可选，由 OptionalAuth + EnsureGuest 注入）
 	var userID uint
@@ -218,9 +304,13 @@ func (h *AIHandler) Chat(c *gin.Context) {
 
 		go func() {
 			defer close(doneCh)
+			directLocationAnswer, hasDirectLocationAnswer := buildDirectLocationAnswer(req.Message, req.Location)
 			response, route, trace, err := h.ragService.QueryWithRAGStreaming(
-				ctx, req.SessionID, req.Message, lang,
+				ctx, req.SessionID, ragQuery, lang,
 				func(token string) {
+					if hasDirectLocationAnswer {
+						return
+					}
 					data, _ := json.Marshal(gin.H{"token": token, "done": false})
 					writeMu.Lock()
 					fmt.Fprintf(writer, "data: %s\n\n", string(data))
@@ -237,6 +327,30 @@ func (h *AIHandler) Chat(c *gin.Context) {
 				flusher.Flush()
 				writeMu.Unlock()
 				return
+			}
+			if hasDirectLocationAnswer {
+				response = directLocationAnswer
+				route = nil
+				trace.Confidence = 1
+				trace.ShouldAbstain = false
+				trace.Provider = "validated-location"
+				trace.RetrievalMode = "location-context"
+				data, _ := json.Marshal(gin.H{"token": response, "done": false})
+				writeMu.Lock()
+				fmt.Fprintf(writer, "data: %s\n\n", string(data))
+				flusher.Flush()
+				writeMu.Unlock()
+			} else {
+				responseWithRoute := ensureRouteDetailsInAnswer(req.Message, response, route)
+				if responseWithRoute != response {
+					suffix := strings.TrimPrefix(responseWithRoute, response)
+					data, _ := json.Marshal(gin.H{"token": suffix, "done": false})
+					writeMu.Lock()
+					fmt.Fprintf(writer, "data: %s\n\n", string(data))
+					flusher.Flush()
+					writeMu.Unlock()
+					response = responseWithRoute
+				}
 			}
 			slog.Info("AI Chat RAG 流式查询完成",
 				"trace_id", trace.TraceID,
@@ -290,14 +404,24 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		<-doneCh
 	} else {
 		// 非流式：阻塞等待完整响应
-		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(c.Request.Context(), req.SessionID, req.Message, lang)
+		response, route, trace, err := h.ragService.QueryWithRAGAndRouteTraceInSession(c.Request.Context(), req.SessionID, ragQuery, lang)
 		elapsed := time.Since(startTime).Milliseconds()
 		if err != nil {
 			slog.Error("AI Chat RAG 查询失败", "error", err, "trace_id", trace.TraceID, "elapsed_ms", elapsed)
 			pkg.InternalError(c, pkg.T(c, "msg_ai_failed"))
 			return
 		}
-		response = service.ApplyVisitorEmotionCare(emotion, response)
+		if directLocationAnswer, ok := buildDirectLocationAnswer(req.Message, req.Location); ok {
+			response = directLocationAnswer
+			route = nil
+			trace.Confidence = 1
+			trace.ShouldAbstain = false
+			trace.Provider = "validated-location"
+			trace.RetrievalMode = "location-context"
+		} else {
+			response = ensureRouteDetailsInAnswer(req.Message, response, route)
+			response = service.ApplyVisitorEmotionCare(emotion, response)
+		}
 		slog.Info("AI Chat RAG 查询完成",
 			"trace_id", trace.TraceID,
 			"response_len", len([]rune(response)),

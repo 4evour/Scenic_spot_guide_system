@@ -172,7 +172,14 @@
       "seniorModeDisabled": "Senior mode is off."
     },
     "routes": {
-      "title": "Personalized Route"
+      "title": "Personalized Route",
+      "stopCount": "{count} stops",
+      "rating": "Rating {rating}",
+      "verified": "Verified route",
+      "reference": "Reference route",
+      "minutes": "About {count} min",
+      "hours": "About {count} hr",
+      "hoursMinutes": "About {hours} hr {minutes} min"
     },
     "reminders": {
       "title": "Service Reminders",

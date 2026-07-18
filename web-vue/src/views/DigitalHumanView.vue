@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useGeolocation, type GeolocationPosition } from '../composables/useGeolocation'
 import { useProximityGuide, type SpotWithCoords } from '../composables/useProximityGuide'
+import { selectClosestEligibleSpot } from '../utils/geolocation'
 import { useSeniorMode } from '../composables/useSeniorMode'
 import { AudioPlaybackController, type PlaybackCue } from '../services/audioPlayback'
 import {
@@ -99,6 +100,22 @@ const { nearbySpot, resetTriggered, setSpots } = useProximityGuide(activePositio
   maxAccuracyM: 10,
   canTrigger: canTriggerAutoGuide,
 })
+
+function currentLocationContextForQuestion(text: string) {
+  if (!/(我在哪|当前位置|现在在哪|附近|离我最近|离我多远|到哪个景点|哪个景点附近)/.test(text)) return null
+  const position = activePosition.value
+  if (!position) return null
+  const closest = selectClosestEligibleSpot(position, geofenceSpots.value, {
+    maxAccuracyM: 10,
+    defaultRadiusM: 300,
+  })
+  if (!closest) return null
+  return {
+    spot_name: closest.spot.name,
+    distance_meters: Math.round(closest.distanceMeters),
+    accuracy_meters: position.accuracy,
+  }
+}
 
 // Guest upgrade state
 const showUpgradeModal = ref(false)
@@ -575,23 +592,27 @@ function expressionFromToken(token?: string | number): Live2DExpression | undefi
   if (token === undefined || token === null) return undefined
   if (typeof token === 'number') {
     if (token === 0) return 'neutral'
-    if (token === 1) return 'thinking'
-    if (token === 2) return 'interrupted'
-    if (token === 3) return 'happy'
+    if (token === 1) return 'happy'
+    if (token === 2) return 'sad'
+    if (token === 3) return 'surprised'
+    if (token === 4) return 'angry'
+    if (token === 5) return 'thinking'
+    if (token === 6) return 'blush'
+    if (token === 7) return 'interrupted'
     return undefined
   }
 
   const normalized = token.toLowerCase().replace(/^\[|\]$/g, '')
   if (/^\d+$/.test(normalized)) return expressionFromToken(Number(normalized))
   if (normalized.startsWith('exp_')) {
-    if (normalized === 'exp_01') return 'happy'
-    if (normalized === 'exp_02') return 'neutral'
-    if (normalized === 'exp_03') return 'angry'
-    if (normalized === 'exp_04') return 'thinking'
-    if (normalized === 'exp_05') return 'surprised'
-    if (normalized === 'exp_06') return 'sad'
-    if (normalized === 'exp_07') return 'interrupted'
-    if (normalized === 'exp_08') return 'blush'
+    if (normalized === 'exp_01') return 'neutral'
+    if (normalized === 'exp_02') return 'happy'
+    if (normalized === 'exp_03') return 'sad'
+    if (normalized === 'exp_04') return 'surprised'
+    if (normalized === 'exp_05') return 'angry'
+    if (normalized === 'exp_06') return 'thinking'
+    if (normalized === 'exp_07') return 'blush'
+    if (normalized === 'exp_08') return 'interrupted'
   }
   return emotionTokenToExpression(normalized as EmotionToken)
 }
@@ -610,7 +631,7 @@ function emotionTokenToExpression(token?: string): Live2DExpression | undefined 
 }
 
 function resolveSpeechExpression(cueExpression?: string, text?: string): Live2DExpression {
-  return expressionFromToken(cueExpression) || expressionFromText(text) || 'happy'
+  return expressionFromToken(cueExpression) || expressionFromText(text) || 'neutral'
 }
 
 function resetAssistantTurn() {
@@ -1009,6 +1030,13 @@ function sendTextWithSource(source: 'text' | 'voice') {
     void answerWithBackendText(text, turn, voiceEmotion.features)
     return
   }
+  const locationContext = currentLocationContextForQuestion(text)
+  if (locationContext) {
+    waitingForFreshServerTurn = false
+    const turn = conversationTurn
+    void answerWithBackendText(text, turn, voiceEmotion?.features, locationContext)
+    return
+  }
   if (!backendFallbackActive && socket?.sendText(text)) {
     pendingSocketQuestion = { text, turn: conversationTurn, voiceFeatures: voiceEmotion?.features }
     const requestedTurn = conversationTurn
@@ -1086,7 +1114,12 @@ async function submitMultimodal(payload: { file: File; message: string }) {
   }
 }
 
-async function answerWithBackendText(text: string, turn: number, voiceFeatures?: VoiceAcousticFeatures) {
+async function answerWithBackendText(
+  text: string,
+  turn: number,
+  voiceFeatures?: VoiceAcousticFeatures,
+  locationContext = currentLocationContextForQuestion(text),
+) {
   const controller = new AbortController()
   activeChatAbortController = controller
   try {
@@ -1097,6 +1130,7 @@ async function answerWithBackendText(text: string, turn: number, voiceFeatures?:
         session_id: getOrCreateSessionId(),
         message: text,
         ...(voiceFeatures ? { voice_features: voiceFeatures } : {}),
+        ...(locationContext ? { location_context: locationContext } : {}),
       }),
     })
     if (turn !== conversationTurn || interruptedTurn === turn) return
@@ -1149,7 +1183,7 @@ async function playAnswerAudio(answer: string, responseExpression?: Live2DExpres
   const speechText = stripEmotionTags(answer)
   const configuredExpression = emotionTokenToExpression(runtimeConfig.default_emotion)
   const cue = {
-    expression: responseExpression || expressionFromText(answer) || configuredExpression || ('happy' as const),
+    expression: responseExpression || expressionFromText(answer) || configuredExpression || ('neutral' as const),
   }
   if (audioStatus.value === 'locked') {
     showAudioNotice('locked', t('dh.audio.lockedNotice'))

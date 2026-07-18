@@ -13,8 +13,8 @@ import { useProximityGuide } from '../src/composables/useProximityGuide.ts'
 const calibration = JSON.parse(
   readFileSync(new URL('../../configs/scenic_spot_coordinates.json', import.meta.url), 'utf8'),
 )
-assert.equal(calibration.spots.length, 19)
-assert.equal(Object.keys(SCENIC_ROUTE_COORDINATES).length, 19)
+assert.equal(calibration.spots.length, 20)
+assert.equal(Object.keys(SCENIC_ROUTE_COORDINATES).length, 20)
 for (const expected of calibration.spots) {
   const coordinate = SCENIC_ROUTE_COORDINATES[expected.name]
   assert.ok(coordinate, `missing route coordinate for ${expected.name}`)
@@ -38,8 +38,8 @@ assert.equal(isAccuracyAcceptable(Number.NaN), false)
 const spot = {
   id: 'LS-001',
   name: '灵山大佛',
-  lat: 31.5681,
-  lng: 120.4204,
+  lat: SCENIC_ROUTE_COORDINATES['灵山大佛'].lat,
+  lng: SCENIC_ROUTE_COORDINATES['灵山大佛'].lng,
   triggerRadiusM: 100,
   triggerEnabled: true,
 }

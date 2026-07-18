@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -75,5 +76,63 @@ func TestAIChatUsesValidatedVoiceFeatures(t *testing.T) {
 	if payload.Data.EmotionCategory != string(service.VisitorEmotionExcitement) ||
 		payload.Data.EmotionModality != "text+acoustic" || payload.Data.AcousticConfidence <= 0 {
 		t.Fatalf("unexpected voice emotion payload: %+v", payload.Data)
+	}
+}
+
+func TestBuildLocationAwareQueryOnlyAcceptsPreciseNearbyContext(t *testing.T) {
+	location := &ChatLocationContext{SpotName: "灵山大佛", DistanceMeters: 42, AccuracyMeters: 8}
+	query := buildLocationAwareQuery("我现在在哪个景点附近？", location)
+	if query == "我现在在哪个景点附近？" || !strings.Contains(query, "灵山大佛") {
+		t.Fatalf("location-aware query = %q", query)
+	}
+
+	for _, invalid := range []*ChatLocationContext{
+		{SpotName: "灵山大佛", DistanceMeters: 301, AccuracyMeters: 8},
+		{SpotName: "灵山大佛", DistanceMeters: 42, AccuracyMeters: 10.1},
+	} {
+		if got := buildLocationAwareQuery("我现在在哪个景点附近？", invalid); got != "我现在在哪个景点附近？" {
+			t.Fatalf("invalid location context changed query: %q", got)
+		}
+	}
+	if got := buildLocationAwareQuery("灵山大佛有多高？", location); got != "灵山大佛有多高？" {
+		t.Fatalf("non-location query changed: %q", got)
+	}
+}
+
+func TestBuildDirectLocationAnswerOnlyUsesValidatedContext(t *testing.T) {
+	answer, ok := buildDirectLocationAnswer("我现在在哪个景点附近？", &ChatLocationContext{
+		SpotName: "灵山大佛", DistanceMeters: 42, AccuracyMeters: 8,
+	})
+	if !ok || !strings.Contains(answer, "灵山大佛") || !strings.Contains(answer, "42") {
+		t.Fatalf("direct location answer = %q, ok=%v", answer, ok)
+	}
+	if _, ok := buildDirectLocationAnswer("灵山大佛有多高？", &ChatLocationContext{
+		SpotName: "灵山大佛", DistanceMeters: 42, AccuracyMeters: 8,
+	}); ok {
+		t.Fatal("fact query must not use direct location answer")
+	}
+	if _, ok := buildDirectLocationAnswer("我现在在哪个景点附近？", &ChatLocationContext{
+		SpotName: "灵山大佛", DistanceMeters: 42, AccuracyMeters: 11,
+	}); ok {
+		t.Fatal("inaccurate location context must not use direct location answer")
+	}
+}
+
+func TestEnsureRouteDetailsInAnswerAddsMissingStepsWithoutDuplication(t *testing.T) {
+	route := &service.TourRoute{Steps: []service.TourRouteStep{
+		{Number: 1, Name: "灵山大照壁"},
+		{Number: 2, Name: "佛足坛"},
+		{Number: 3, Name: "杏坛广场"},
+	}}
+	answer := ensureRouteDetailsInAnswer("观光车路线有哪些站点？", "观光车站点以现场公告为准。", route)
+	if !strings.Contains(answer, "灵山大照壁 > 佛足坛 > 杏坛广场") {
+		t.Fatalf("route details were not appended: %q", answer)
+	}
+	complete := "路线依次经过灵山大照壁、佛足坛和杏坛广场。"
+	if got := ensureRouteDetailsInAnswer("观光车路线有哪些站点？", complete, route); got != complete {
+		t.Fatalf("complete route answer was duplicated: %q", got)
+	}
+	if got := ensureRouteDetailsInAnswer("灵山大佛有多高？", "高88米。", route); got != "高88米。" {
+		t.Fatalf("non-route answer changed: %q", got)
 	}
 }

@@ -519,6 +519,8 @@ func TestGenerateTourRouteSelectsReferenceRouteTypes(t *testing.T) {
 		"人多怎么错峰游玩":    "错峰参考步行路线",
 		"观光车怎么坐":      "观光车参考路线",
 		"亲子怎么玩":       "亲子欢乐路线",
+		"带孩子怎么安排":     "亲子欢乐路线",
+		"小朋友适合哪些点":    "亲子欢乐路线",
 	} {
 		route := rag.GenerateTourRoute(query)
 		if route == nil || route.Name != want {

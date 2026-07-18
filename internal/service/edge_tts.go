@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -50,13 +51,20 @@ func NewEdgeTTSService(timeout time.Duration) *EdgeTTSService {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
-	return &EdgeTTSService{
-		dialer: websocket.Dialer{
-			HandshakeTimeout: 10 * time.Second,
-			TLSClientConfig: &tls.Config{
-				MinVersion: tls.VersionTLS12,
-			},
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 10 * time.Second,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
 		},
+	}
+	// Edge TTS intermittently closes IPv6 handshakes in environments where the
+	// host resolves to both address families. Keep the external connection on
+	// IPv4 so a transient IPv6 route cannot turn into a synthetic 500 response.
+	dialer.NetDialContext = func(ctx context.Context, _ string, address string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "tcp4", address)
+	}
+	return &EdgeTTSService{
+		dialer:  dialer,
 		timeout: timeout,
 	}
 }

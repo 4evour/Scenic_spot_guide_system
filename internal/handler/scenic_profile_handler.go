@@ -35,9 +35,9 @@ func (h *ScenicProfileHandler) GetProfile(c *gin.Context) {
 			"tts_voice":   h.profile.DigitalHuman.TTSVoice,
 			"tts_speed":   h.profile.DigitalHuman.TTSSpeed,
 		},
-		"quick_asks":      h.getQuickAsks(),
-		"routes":          h.GetRoutes(),
-		"topic_entities":  h.getTopicEntities(),
+		"quick_asks":     h.getQuickAsks(),
+		"routes":         h.GetRoutes(),
+		"topic_entities": h.getTopicEntities(),
 	})
 }
 
@@ -80,12 +80,17 @@ func (h *ScenicProfileHandler) GetRoutes() []gin.H {
 	var routes []gin.H
 	for _, r := range h.profile.Routes {
 		routes = append(routes, gin.H{
-			"name":        r.Name,
-			"description": r.Description,
-			"spots":       r.Spots,
-			"duration":    r.Duration,
-			"difficulty":  r.Difficulty,
-			"rating":      r.Rating,
+			"name":              r.Name,
+			"description":       r.Description,
+			"spots":             r.Spots,
+			"duration":          r.Duration,
+			"difficulty":        r.Difficulty,
+			"rating":            r.Rating,
+			"route_type":        r.RouteType,
+			"source":            r.Source,
+			"source_url":        r.SourceURL,
+			"confidence":        r.Confidence,
+			"official_verified": r.OfficialVerified,
 		})
 	}
 	return routes
@@ -149,4 +154,3 @@ func replacePlaceholder(s, key, value string) string {
 	}
 	return result
 }
-

@@ -386,7 +386,7 @@ func (h *DigitalHumanHandler) matchRoute(text string) *model.TourRoute {
 
 	textLower := strings.ToLower(text)
 
-	if strings.Contains(textLower, "亲子") || strings.Contains(textLower, "儿童") || strings.Contains(textLower, "家庭") {
+	if strings.Contains(textLower, "亲子") || strings.Contains(textLower, "儿童") || strings.Contains(textLower, "家庭") || strings.Contains(textLower, "孩子") || strings.Contains(textLower, "小朋友") {
 		routes, _ := h.routeService.GetRoutesByDifficulty("easy")
 		if len(routes) > 0 {
 			return &routes[0]

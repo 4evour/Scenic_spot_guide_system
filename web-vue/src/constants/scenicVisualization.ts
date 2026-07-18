@@ -30,12 +30,16 @@ export type StructuredScenicSpot = {
 }
 
 export type ScenicRoutePlan = {
-  id: 'history' | 'nature' | 'family'
+  id: string
   name: string
   duration: string
   summary: string
   spotIds: string[]
   nodeHighlights: Record<string, string>
+  difficulty?: string
+  rating?: number
+  source?: string
+  officialVerified?: boolean
   translations?: Partial<Record<LocaleCode, Partial<ScenicRoutePlan>>>
 }
 
@@ -59,6 +63,7 @@ export type GuideInsight = {
 export const SCENIC_ROUTE_COORDINATES: Record<string, { id: string; lng: number; lat: number }> = {
   南门: { id: 'LS-R01', lng: 120.102934, lat: 31.420115 },
   灵山大照壁: { id: 'LS-R02', lng: 120.102499, lat: 31.421388 },
+  五明桥: { id: 'LS-R15', lng: 120.102248, lat: 31.421749 },
   胜境门楼: { id: 'LS-R03', lng: 120.10173, lat: 31.422257 },
   佛足坛: { id: 'LS-R04', lng: 120.101497, lat: 31.422725 },
   五印坛城: { id: 'LS-R05', lng: 120.103054, lat: 31.424676 },
@@ -81,6 +86,7 @@ export const SCENIC_ROUTE_COORDINATES: Record<string, { id: string; lng: number;
 const SCENIC_ROUTE_ENGLISH_NAMES: Record<keyof typeof SCENIC_ROUTE_COORDINATES, string> = {
   南门: 'South Gate',
   灵山大照壁: 'Lingshan Screen Wall',
+  五明桥: 'Five Wisdom Bridge',
   胜境门楼: 'Scenic Realm Gate Tower',
   佛足坛: 'Buddha Foot Altar',
   五印坛城: 'Five Seal Mandala City',
@@ -369,13 +375,14 @@ export const SCENIC_SPOTS: StructuredScenicSpot[] = [
   },
   routeOnlySpot('南门', '出入口', '景区步行路线的主要入口。', '门'),
   routeOnlySpot('灵山大照壁', '文化景观', '位于景区入口区域的标志性照壁。', '壁'),
+  routeOnlySpot('五明桥', '文化景观', '连接入口区域与核心游线的石桥景观。', '桥'),
   routeOnlySpot('胜境门楼', '文化景观', '连接入口与景区主游线的门楼节点。', '楼'),
   routeOnlySpot('佛足坛', '文化景观', '以佛足印文化为主题的游览节点。', '足'),
   routeOnlySpot('五印坛城', '文化建筑', '展示藏传佛教文化的建筑景观。', '坛'),
   routeOnlySpot('三圣殿', '文化建筑', '景区佛教文化建筑节点。', '殿'),
   routeOnlySpot('降魔浮雕', '文化景观', '讲述释迦牟尼降伏心魔、彻悟成佛故事的浮雕景观。', '雕'),
   routeOnlySpot('阿育王柱', '文化景观', '以四方狮子等佛教文化意象构成的石柱景观。', '柱'),
-  routeOnlySpot('天下第一掌', '文化景观', '按灵山大佛右手复制的佛手文化景观。', '掌'),
+  { ...routeOnlySpot('天下第一掌', '文化景观', '按灵山大佛右手复制的佛手文化景观。', '掌'), aliases: ['佛手广场'] },
   routeOnlySpot('灵山蔬食馆', '餐饮服务', '景区内提供蔬食餐饮服务的设施。', '食'),
   routeOnlySpot('杏坛广场', '游览节点', '连接祥符禅寺与灵山大佛游线的广场节点。', '场'),
   routeOnlySpot('曼飞龙塔', '文化建筑', '展示南传佛教建筑风格的塔群景观。', '塔'),

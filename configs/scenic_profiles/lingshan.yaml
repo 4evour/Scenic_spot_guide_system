@@ -12,11 +12,14 @@ digital_human:
   personality: "热情、专业、温柔，熟悉佛教文化和灵山历史，说话像一个真实的导游"
   live2d_model: "/static/live2d-models/mao_pro/runtime/mao_pro.model3.json"
   live2d_expressions:
-    happy: "exp_01"
-    neutral: "exp_02"
-    thinking: "exp_04"
-    surprised: "exp_05"
-    interrupted: "exp_07"
+    neutral: "exp_01"
+    happy: "exp_02"
+    sad: "exp_03"
+    surprised: "exp_04"
+    angry: "exp_05"
+    thinking: "exp_06"
+    blush: "exp_07"
+    interrupted: "exp_08"
   tts_voice: "zh-CN-XiaoxiaoNeural"
   tts_speed: 0.8
   fallback_avatar: "灵"
@@ -411,6 +414,6 @@ routes:
 map:
   provider: "amap"
   api_key: "${AMAP_API_KEY}"
-  center: [120.42, 31.57]
+  center: [120.100, 31.425]
   zoom: 15
   style: "amap://styles/normal"

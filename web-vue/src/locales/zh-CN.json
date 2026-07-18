@@ -172,7 +172,14 @@
       "seniorModeDisabled": "老年模式已关闭。"
     },
     "routes": {
-      "title": "个性化路线"
+      "title": "个性化路线",
+      "stopCount": "{count} 个点位",
+      "rating": "评分 {rating}",
+      "verified": "已核验路线",
+      "reference": "参考路线",
+      "minutes": "约{count}分钟",
+      "hours": "约{count}小时",
+      "hoursMinutes": "约{hours}小时{minutes}分钟"
     },
     "reminders": {
       "title": "服务提醒",

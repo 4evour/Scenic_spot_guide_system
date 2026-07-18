@@ -151,6 +151,7 @@ func demoScenicSpotTemplates() []model.ScenicSpot {
 	return []model.ScenicSpot{
 		routeScenicSpot("南门", "景区步行路线的主要入口。", "出入口"),
 		routeScenicSpot("灵山大照壁", "位于景区入口区域的标志性照壁。", "文化景观"),
+		routeScenicSpot("五明桥", "连接入口区域与核心游线的石桥景观。", "文化景观"),
 		routeScenicSpot("胜境门楼", "连接入口与景区主游线的门楼节点。", "文化景观"),
 		routeScenicSpot("佛足坛", "以佛足印文化为主题的游览节点。", "文化景观"),
 		{

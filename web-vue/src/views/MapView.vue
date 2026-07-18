@@ -54,11 +54,26 @@ type ScenicSpot = {
   signalBlindSpot?: boolean;
 };
 
-const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '';
+type ProfileRoute = {
+  name: string;
+  description: string;
+  spots: string;
+  duration: number;
+  difficulty: string;
+  rating: number;
+  route_type?: string;
+  source?: string;
+  official_verified?: boolean;
+};
+
+const rawAMapKey = import.meta.env.VITE_AMAP_KEY || '';
+const AMAP_KEY = /your_amap_key_here|replace|changeme/i.test(rawAMapKey) ? '' : rawAMapKey;
 const AMAP_SECURITY = import.meta.env.VITE_AMAP_SECURITY || '';
 
 const fallbackSpots = computed<ScenicSpot[]>(() => localizeScenicSpots(locale.value).map(spot => ({ ...spot })));
 const localizedRoutes = computed(() => localizeScenicRoutes(locale.value));
+const profileRoutes = ref<ScenicRoutePlan[]>([]);
+const displayedRoutes = computed(() => profileRoutes.value.length > 0 ? profileRoutes.value : localizedRoutes.value);
 const localizedReminders = computed(() => localizeServiceReminders(locale.value));
 
 function escapeHtml(str: string): string {
@@ -95,7 +110,7 @@ const state = reactive({
   mapReady: false,
   mapFallback: false,
   search: '',
-  activeRouteId: 'family' as ScenicRoutePlan['id'],
+  activeRouteId: 'family' as string,
 });
 
 const filteredSpots = computed(() => {
@@ -108,7 +123,7 @@ const filteredSpots = computed(() => {
   );
 });
 
-const activeRoute = computed(() => localizedRoutes.value.find(route => route.id === state.activeRouteId) || localizedRoutes.value[0]);
+const activeRoute = computed(() => displayedRoutes.value.find(route => route.id === state.activeRouteId) || displayedRoutes.value[0]);
 const activeRouteSpotIds = computed(() => new Set(activeRoute.value.spotIds));
 const activeRouteSpots = computed(() => activeRoute.value.spotIds
   .map(id => state.spots.find(spot => spot.id === id))
@@ -147,6 +162,7 @@ const offlineMapPoints = computed(() => {
     x: 8 + ((spot.lng - minLng) / lngRange) * 84,
     y: 8 + ((maxLat - spot.lat) / latRange) * 84,
     inRoute: routeIds.has(spot.id),
+    routeIndex: activeRoute.value.spotIds.indexOf(spot.id),
   }));
 });
 const offlineRoutePoints = computed(() => activeRoute.value.spotIds
@@ -190,6 +206,8 @@ const {
   setSpots,
 } = useProximityGuide(currentPosition, {
   triggerRadiusM: 100,
+  maxAccuracyM: 10,
+  canTrigger: autoGuideEnabled,
 });
 
 // 音频播放器（单例，页面生命周期内复用）
@@ -239,6 +257,54 @@ async function loadSpots() {
     if (!state.mapReady) state.mapFallback = true;
   } finally {
     state.loading = false;
+  }
+}
+
+function formatRouteDuration(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '';
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) return t('map.routes.minutes', { count: minutes });
+  if (remainingMinutes === 0) return t('map.routes.hours', { count: hours });
+  return t('map.routes.hoursMinutes', { hours, minutes: remainingMinutes });
+}
+
+async function loadProfileRoutes() {
+  try {
+    const response = await fetch('/api/v1/scenic/profile', { signal: AbortSignal.timeout(15000) });
+    const payload = await response.json() as { code?: number; data?: { routes?: ProfileRoute[] } };
+    if (!response.ok || payload.code !== 0) throw new Error('profile routes unavailable');
+
+    profileRoutes.value = (payload.data?.routes || []).map((route, index) => {
+      const spotIds: string[] = [];
+      const nodeHighlights: Record<string, string> = {};
+      for (const name of route.spots.split(/[,，]/).map(item => item.trim()).filter(Boolean)) {
+        const structured = findStructuredSpot(name, locale.value);
+        const spot = state.spots.find(item => item.id === structured?.id || item.name === name);
+        if (!spot || spotIds.includes(spot.id)) continue;
+        spotIds.push(spot.id);
+        nodeHighlights[spot.id] = spot.description || route.description;
+      }
+      return {
+        id: `profile-${index + 1}`,
+        name: route.name,
+        duration: formatRouteDuration(route.duration),
+        summary: route.description,
+        spotIds,
+        nodeHighlights,
+        difficulty: route.difficulty,
+        rating: route.rating,
+        source: route.source,
+        officialVerified: route.official_verified,
+      };
+    }).filter(route => route.spotIds.length > 0);
+
+    if (profileRoutes.value.length > 0 && !profileRoutes.value.some(route => route.id === state.activeRouteId)) {
+      state.activeRouteId = profileRoutes.value[0].id;
+      state.selectedSpot = activeRouteSpots.value[0] || state.selectedSpot;
+    }
+  } catch {
+    profileRoutes.value = [];
   }
 }
 
@@ -323,9 +389,10 @@ function initMap() {
   const AMapMap = AMap.Map as new (container: HTMLElement, opts: Record<string, unknown>) => unknown;
   const AMapInfoWindow = AMap.InfoWindow as new (opts: Record<string, unknown>) => unknown;
 
+  const initialSpot = state.spots[0];
   map = new AMapMap(mapContainer.value, {
     zoom: 16,
-    center: [120.4200, 31.5670],
+    center: initialSpot ? [initialSpot.lng, initialSpot.lat] : [120.100, 31.425],
     mapStyle: 'amap://styles/normal',
     features: ['bg', 'road', 'building', 'point'],
   });
@@ -353,6 +420,8 @@ function renderMapOverlays() {
   for (const spot of state.spots) {
     const meta = visualTypeMeta[spot.visualType] || visualTypeMeta.culture;
     const isInRoute = routeIds.has(spot.id);
+    const routeIndex = activeRoute.value.spotIds.indexOf(spot.id);
+    const markerLabel = routeIndex >= 0 ? String(routeIndex + 1) : spot.name.charAt(0);
     const marker = new AMapMarker({
       position: [spot.lng, spot.lat],
       title: spot.name,
@@ -364,7 +433,7 @@ function renderMapOverlays() {
         font-size: 13px; color: #0a0a0f; font-weight: bold;
         box-shadow: 0 2px 12px rgba(0,0,0,0.3);
         cursor: pointer; transition: transform 0.2s; opacity:${isInRoute ? 1 : 0.48};
-      ">${escapeHtml(spot.name.charAt(0))}</div>`,
+      ">${escapeHtml(markerLabel)}</div>`,
       extData: spot,
     });
     (marker as unknown as { on: (event: string, cb: () => void) => void }).on('click', () => showSpotInfo(spot));
@@ -444,8 +513,16 @@ function locateMe() {
     .getCurrentPosition((status: string, result: Record<string, unknown>) => {
       if (status === 'complete' && result.position) {
         const pos = result.position as { lng: number; lat: number };
+        const accuracy = Number(result.accuracy);
+        currentPosition.value = {
+          lat: pos.lat,
+          lng: pos.lng,
+          accuracy: Number.isFinite(accuracy) ? accuracy : Number.POSITIVE_INFINITY,
+          timestamp: Date.now(),
+        };
         (map as { setCenter: (pos: number[]) => void }).setCenter([pos.lng, pos.lat]);
         (map as { setZoom: (z: number) => void }).setZoom(17);
+        if (autoGuideEnabled.value) startWatch();
       }
     });
 }
@@ -536,6 +613,7 @@ watch(nearbySpot, async (spot) => {
 
 onMounted(async () => {
   await loadSpots();
+  await loadProfileRoutes();
   if (autoGuideEnabled.value) startWatch();
   try {
     await loadAmapScript();
@@ -600,6 +678,8 @@ onUnmounted(() => {
               v-for="point in offlineMapPoints"
               :key="point.spot.id"
               class="offline-spot-marker"
+              :aria-label="point.spot.name"
+              :title="point.spot.name"
               :class="{ route: point.inRoute, active: state.selectedSpot?.id === point.spot.id }"
               :style="{
                 left: `${point.x}%`,
@@ -607,9 +687,9 @@ onUnmounted(() => {
                 '--spot-color': visualTypeMeta[point.spot.visualType].color,
               }"
               @click="flyToSpot(point.spot)"
-            >
-              <span>{{ point.spot.thumbnail || point.spot.name.charAt(0) }}</span>
-              <strong>{{ point.spot.name }}</strong>
+              >
+              <span>{{ point.routeIndex >= 0 ? point.routeIndex + 1 : point.spot.thumbnail || point.spot.name.charAt(0) }}</span>
+              <strong v-if="state.selectedSpot?.id === point.spot.id">{{ point.spot.name }}</strong>
             </button>
           </div>
         </div>
@@ -655,11 +735,18 @@ onUnmounted(() => {
             <div>
               <h2>{{ $t('map.routes.title') }}</h2>
               <p>{{ activeRoute.duration }} · {{ activeRoute.summary }}</p>
+              <div class="route-card-meta">
+                <span>{{ $t('map.routes.stopCount', { count: activeRouteSpots.length }) }}</span>
+                <span v-if="activeRoute.rating">{{ $t('map.routes.rating', { rating: activeRoute.rating }) }}</span>
+                <span v-if="activeRoute.source" class="route-source">
+                  {{ activeRoute.officialVerified ? $t('map.routes.verified') : $t('map.routes.reference') }}
+                </span>
+              </div>
             </div>
           </div>
           <div class="route-tabs">
             <button
-              v-for="route in localizedRoutes"
+              v-for="route in displayedRoutes"
               :key="route.id"
               :class="{ active: route.id === state.activeRouteId }"
               @click="switchRoute(route.id)"
@@ -668,9 +755,12 @@ onUnmounted(() => {
             </button>
           </div>
           <ol class="route-nodes">
-            <li v-for="spot in activeRouteSpots" :key="spot.id" @click="flyToSpot(spot)">
-              <span>{{ spot.name }}</span>
-              <small>{{ activeRoute.nodeHighlights[spot.id] }}</small>
+            <li v-for="(spot, index) in activeRouteSpots" :key="spot.id" @click="flyToSpot(spot)">
+              <span class="route-node-index">{{ index + 1 }}</span>
+              <div>
+                <span>{{ spot.name }}</span>
+                <small>{{ activeRoute.nodeHighlights[spot.id] }}</small>
+              </div>
             </li>
           </ol>
         </article>
@@ -892,7 +982,7 @@ onUnmounted(() => {
   display: grid;
   justify-items: center;
   gap: 4px;
-  min-width: 64px;
+  min-width: 34px;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
@@ -1011,16 +1101,36 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.5;
   color: var(--sg-text-hint, rgba(255,255,255,0.35));
-  margin: 0 0 12px;
+  margin: 0 0 8px;
+}
+.route-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.route-card-meta span {
+  padding: 3px 8px;
+  border: 1px solid var(--sg-border-soft, rgba(255,255,255,0.06));
+  border-radius: 999px;
+  color: var(--sg-text-secondary, rgba(255,255,255,0.58));
+  background: rgba(255,255,255,0.025);
+  font-size: 10px;
+}
+.route-card-meta .route-source {
+  color: var(--sg-gold, #f4c765);
+  border-color: rgba(244,199,101,0.24);
 }
 .route-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
 }
 .route-tabs button {
+  flex: 1 1 calc(50% - 3px);
   min-height: 34px;
+  min-width: 112px;
   border: 1px solid var(--sg-border-soft, rgba(255,255,255,0.06));
   border-radius: 8px;
   background: rgba(255,255,255,0.025);
@@ -1040,14 +1150,32 @@ onUnmounted(() => {
   margin: 0;
   padding: 0;
   list-style: none;
+  max-height: 330px;
+  overflow-y: auto;
 }
 .route-nodes li {
   display: grid;
-  gap: 3px;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
   padding: 8px 10px;
   border-radius: 8px;
   background: rgba(255,255,255,0.025);
   cursor: pointer;
+}
+.route-node-index {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sg-jade-bright, #63e2b7);
+  color: #041213;
+  font-size: 11px;
+  font-weight: 800;
+}
+.route-nodes li > div {
+  min-width: 0;
 }
 .route-nodes span {
   font-size: 13px;
@@ -1371,6 +1499,17 @@ onUnmounted(() => {
   color: var(--visitor-muted);
 }
 
+.route-card-meta span {
+  color: var(--visitor-muted);
+  border-color: var(--visitor-line);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.route-card-meta .route-source {
+  color: var(--visitor-terracotta);
+  border-color: rgba(198, 107, 61, 0.34);
+}
+
 .route-tabs button {
   border-color: var(--visitor-line);
   border-radius: 999px;
@@ -1387,6 +1526,11 @@ onUnmounted(() => {
 .route-nodes li,
 .reminder-item {
   background: rgba(255, 255, 255, 0.22);
+}
+
+.route-node-index {
+  color: var(--visitor-sand);
+  background: var(--visitor-moss);
 }
 
 .route-nodes span,

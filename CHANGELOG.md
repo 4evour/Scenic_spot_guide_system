@@ -1735,3 +1735,33 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 仅补充认证安全回归测试，不修改生产认证、用户删除或 JWT 实现。
+
+## 2026-07-19 03:48 - 完成数字人与路线定位阶段验收修复
+
+### 变更内容
+- `internal/service/edge_tts.go`、`internal/service/edge_tts_test.go`：Edge TTS 外部 WebSocket 固定使用 IPv4，并增加拨号器回归测试；真实 20 次合成复测为 20/20 成功。
+- `internal/service/rag_service.go`、`internal/handler/digital_human_handler.go` 及测试：识别“孩子/小朋友”亲子路线问法，避免错误返回完整路线。
+- `knowledge/real/lingshan_real_chunks.jsonl`、`knowledge/real/lingshan_real_eval_open.json`：补齐 7 条景区配置路线语料与评测样例，路线检索 7/7、Recall@8 100%、MRR 1.000。
+- `configs/scenic_spot_coordinates.json`、`cmd/demo-seed`、前端地理测试：补入“五明桥”高德候选坐标，统一 20 个路线点校验；仍保留现场核验边界。
+- `web-vue/src/views/MapView.vue`、`src/constants/scenicVisualization.ts`、本地化文件：读取配置路线、展示路线编号/点位数/评分/参考边界，修正地图中心、定位状态注入和自动导览触发条件，并减少离线地图标注重叠。
+- `web-vue/src/views/DigitalHumanView.vue`、`src/types/digitalHuman.ts`、景区配置：按 `Open-LLM-VTuber` 真实 emotionMap 修正 Live2D 表情索引，缺少情绪标签时回落 neutral；占位高德 Key 不再发起 SDK 请求。
+
+### 原因
+- 真实链路发现 IPv6 握手不稳定、亲子路线同义问法误选、知识库缺少配置路线、地图坐标与前端展示分层不一致，以及高德占位 Key 导致控制台报错。
+
+### 影响范围
+- 影响 Edge TTS、RAG 路线检索、游客地图路线展示、GCJ-02 坐标与接近触发、数字人 Live2D 表情映射；未将未现场核验的坐标标记为已验证，也未改变真实设备 ASR/多模态服务的未验证状态。
+
+## 2026-07-19 05:10 - 修复精确定位问答确定性回答
+
+### 变更内容
+- `internal/handler/ai_handler.go`：对精度不超过 10 米、距离不超过 300 米的直接定位问题生成确定性附近景点回答；流式和非流式路径统一清除无关路线与拒答状态。
+- `internal/handler/ai_handler.go`：路线文字回答缺少主要节点时，使用已选中的结构化路线补齐完整节点顺序，流式与非流式行为一致。
+- `internal/handler/ai_handler_test.go`：增加定位回答边界回归测试。
+
+### 原因
+- 真实 HTTP 验证发现定位上下文虽已传入 RAG，但生成器仍返回“资料不足”并附带错误完整路线，无法完成游客定位问答。
+- 观光车真实问答虽选中了正确结构化路线，但文字回答未列出站点，游客只听语音时无法获得完整路线。
+
+### 影响范围
+- 影响带精确定位上下文的直接定位问题，以及缺少主要节点的路线文字回答；普通事实问题和低精度定位仍保持原 RAG 行为。

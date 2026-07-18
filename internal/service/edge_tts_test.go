@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"encoding/binary"
+	"net"
 	"net/url"
 	"strings"
 	"testing"
@@ -41,6 +43,45 @@ func TestNewEdgeMUIDIsUppercaseHex(t *testing.T) {
 	muid := newEdgeMUID()
 	if len(muid) != 32 || strings.ToUpper(muid) != muid || strings.Contains(muid, "-") {
 		t.Fatalf("invalid MUID %q", muid)
+	}
+}
+
+func TestNewEdgeTTSServiceUsesIPv4Dialer(t *testing.T) {
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen tcp4: %v", err)
+	}
+	defer listener.Close()
+
+	accepted := make(chan net.Conn, 1)
+	acceptErr := make(chan error, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			acceptErr <- err
+			return
+		}
+		accepted <- conn
+	}()
+
+	service := NewEdgeTTSService(time.Second)
+	conn, err := service.dialer.NetDialContext(context.Background(), "tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatalf("dial through Edge TTS dialer: %v", err)
+	}
+	defer conn.Close()
+
+	select {
+	case peer := <-accepted:
+		defer peer.Close()
+		addr, ok := peer.RemoteAddr().(*net.TCPAddr)
+		if !ok || addr.IP.To4() == nil {
+			t.Fatalf("peer address = %v, want IPv4", peer.RemoteAddr())
+		}
+	case err := <-acceptErr:
+		t.Fatalf("accept: %v", err)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for IPv4 connection")
 	}
 }
 
