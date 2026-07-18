@@ -303,7 +303,32 @@ func (s *RAGService) detectTopicEntity(text string) string {
 }
 
 func isBoundaryIntent(query string) bool {
-	return containsAny(query, []string{"今天", "现在", "现场", "开不开", "开放", "几点", "门票", "票价", "演出", "场次", "人多", "排队", "无人机", "宠物", "公告", "实时", "不能替代", "不能编造", "酒店空房", "还有多少间", "房态", "剩余房间", "客房库存"})
+	if containsAny(query, []string{"夏令时", "冬令时", "建设时间线", "现代建设", "历史沿革"}) &&
+		!containsAny(query, []string{"今天", "现在", "当前", "现场", "最新"}) {
+		return false
+	}
+	if containsAny(query, []string{"今天", "现在", "当前", "实时", "最新", "开不开", "开放吗", "几点", "演出时间", "场次", "排队", "拥堵", "停车还有多少", "车位还有多少", "门票多少钱", "票价多少", "优惠是否"}) {
+		return true
+	}
+	if containsAny(query, []string{"现场有没有", "现场能否", "现场是否", "现场规定", "现场设施", "现场开放"}) {
+		return true
+	}
+	if containsAny(query, []string{"无人机", "宠物", "公告", "不能替代", "不能编造", "酒店空房", "还有多少间", "房态", "剩余房间", "客房库存"}) {
+		return true
+	}
+	if containsAny(query, []string{"人多", "客流"}) && containsAny(query, []string{"吗", "多少", "当前", "今天", "现在", "实时"}) {
+		return true
+	}
+	if containsAny(query, []string{"门票", "票价"}) && containsAny(query, []string{"价格", "多少钱", "购买", "优惠"}) {
+		return true
+	}
+	if containsAny(query, []string{"开放时间", "开放状态"}) && !containsAny(query, []string{"夏令时", "冬令时", "季节", "建设", "落成", "时间线", "资料"}) {
+		return true
+	}
+	if containsAny(query, []string{"检修", "取消"}) {
+		return true
+	}
+	return false
 }
 
 // buildFollowUpRewrite 构建追问改写查询（配置化，支持任意景区）

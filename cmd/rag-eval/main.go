@@ -185,7 +185,8 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 		chatBaseURL = ragConfig.AI.BaseURL
 	}
 
-	rag := service.NewRAGService(repository.NewKnowledgeRepository(db), chatAPIKey, chatModel, chatBaseURL, embeddingProvider, nil)
+	profile := loadEvaluationProfile()
+	rag := service.NewRAGService(repository.NewKnowledgeRepository(db), chatAPIKey, chatModel, chatBaseURL, embeddingProvider, profile)
 	if err := rag.LoadKnowledgeFromFile(knowledgeFile); err != nil {
 		return nil, err
 	}
@@ -206,6 +207,19 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 	}
 	attachRunInfo(report, knowledgeFile, evalFile, chunkCount, providerName(embeddingProvider), generationProviderName(ragConfig, options), options)
 	return report, nil
+}
+
+func loadEvaluationProfile() *config.ScenicProfile {
+	scenicID := strings.TrimSpace(os.Getenv("SCENIC_GUIDE_SCENIC_ID"))
+	if scenicID == "" {
+		scenicID = "lingshan"
+	}
+	profile, err := config.LoadScenicProfile(scenicID)
+	if err != nil {
+		slog.Debug("RAG 评测未加载景区 profile，继续使用通用检索", "scenic_id", scenicID, "error", err)
+		return nil
+	}
+	return profile
 }
 
 func (options evaluationRunOptions) retrievalOptions() service.RetrievalOptions {

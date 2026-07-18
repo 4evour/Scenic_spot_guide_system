@@ -81,8 +81,10 @@ func newTestScenicProfile() *iconfig.ScenicProfile {
 				{Trigger: []string{"中轴线"}, Expand: "初次到访 主线 中轴游览线 九龙灌浴 佛手广场 祥符禅寺 灵山大佛"},
 				{Trigger: []string{"带孩子", "小朋友", "亲子"}, Expand: "百子戏弥勒 佛手广场 九龙灌浴 亲子游客"},
 				{Trigger: []string{"拍照", "轻松点位"}, Expand: "佛手广场 百子戏弥勒 适合拍照"},
+				{Trigger: []string{"拍照礼仪", "拍照需要注意"}, Expand: "拍照提示 宗教场所 室内展陈 演出 人流秩序 现场工作人员"},
 				{Trigger: []string{"大佛之外", "文化建筑"}, Expand: "五印坛城 曼飞龙塔 灵山梵宫 佛教文化建筑"},
 				{Trigger: []string{"木雕", "壁画", "琉璃", "工艺"}, Expand: "灵山梵宫 艺术工艺"},
+				{Trigger: []string{"梵宫适合", "梵宫文化", "文化定位"}, Expand: "灵山梵宫 佛教艺术 文化交流 沉浸式演艺 文化建筑"},
 				{Trigger: []string{"藏式", "藏传"}, Expand: "五印坛城 藏传佛教"},
 				{Trigger: []string{"喷水", "花开见佛", "喷泉"}, Expand: "九龙灌浴"},
 				{Trigger: []string{"演艺", "剧场", "演出"}, Expand: "九龙灌浴 吉祥颂 演出场次 官方最新公告"},
@@ -367,6 +369,20 @@ func TestExpandQueryForRetrievalAddsFocusedTerms(t *testing.T) {
 	}
 }
 
+func TestExpandQueryForRetrievalAddsFangongCultureTerms(t *testing.T) {
+	rag := newTestRAGService(t)
+	query := "灵山梵宫适合什么游客参观，它的文化定位是什么？"
+	retrievalText, addedTerms := rag.configBasedQueryExpansion(rag.profile, query)
+	for _, term := range []string{"灵山梵宫", "佛教艺术", "文化交流", "沉浸式演艺"} {
+		if !strings.Contains(retrievalText, term) {
+			t.Fatalf("retrieval text %q does not contain expanded term %q", retrievalText, term)
+		}
+	}
+	if len(addedTerms) == 0 {
+		t.Fatal("expected added terms for Fangong culture query")
+	}
+}
+
 func TestQueryExpansionDoesNotChangePromptQuestion(t *testing.T) {
 	rag := newTestRAGService(t)
 	original := "半天游灵山优先看哪些点？"
@@ -594,6 +610,40 @@ func TestFallbackAnswerFormatsRouteAndBoundary(t *testing.T) {
 		if !strings.Contains(boundaryAnswer, want) {
 			t.Fatalf("boundary fallback answer = %q, want %q", boundaryAnswer, want)
 		}
+	}
+}
+
+func TestLocalGenerationKeepsSpecificEvidenceAndBoundaryGuidance(t *testing.T) {
+	rag := newTestRAGService(t)
+	chunks := []model.KnowledgeChunk{
+		{ID: "specific", Title: "五印坛城文化主题", Source: "official", Content: "五印坛城以释迦牟尼佛常用的五种手印和象征的五种智慧命名，集中展示藏传佛教文化和民俗艺术。"},
+		{ID: "boundary", Title: "停车边界", Source: "official", Content: "离线知识库不能确认停车余位，应查看官方最新页面或现场公告。"},
+	}
+	answer := rag.generateAnswerFromChunksWithContext("五印坛城的名字是什么意思？", chunks, "")
+	for _, want := range []string{"五种手印", "五种智慧", "藏传佛教"} {
+		if !strings.Contains(answer, want) {
+			t.Fatalf("specific answer missing %q: %s", want, answer)
+		}
+	}
+	boundaryAnswer := rag.generateAnswerFromChunksWithContext("今天停车还有多少空位？", chunks, "")
+	if !strings.Contains(boundaryAnswer, "现场公告") {
+		t.Fatalf("boundary answer dropped evidence guidance: %s", boundaryAnswer)
+	}
+}
+
+func TestLocalGenerationUsesDetailedWuyinEvidenceForCultureQuestion(t *testing.T) {
+	rag := newTestRAGService(t)
+	chunks := []model.KnowledgeChunk{
+		{ID: "overview", Title: "五印坛城概览与文化定位", Source: "official", Content: "五印坛城体现藏传佛教文化。坛城内供奉五方五佛。"},
+		{ID: "detail", Title: "五印坛城详细介绍", Source: "official", Content: "转经筒长廊环绕主殿，摆放着108个纯铜转经筒，游客可顺时针转动转经筒。"},
+	}
+	query := "五印坛城体现了哪类佛教文化？"
+	if index := rag.preferredDetailedChunkIndex(query, chunks); index != 1 {
+		t.Fatalf("preferred chunk index = %d, want detailed chunk index 1", index)
+	}
+	answer := rag.generateAnswerFromChunksWithContext(query, chunks, "")
+	if !strings.Contains(answer, "转经筒") {
+		t.Fatalf("answer missing detailed Wuyin evidence: %s", answer)
 	}
 }
 

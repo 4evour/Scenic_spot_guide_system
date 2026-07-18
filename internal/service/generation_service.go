@@ -482,6 +482,9 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 	carryBoundary := isFollowUpQuery(query) && strings.Contains(sessionContext, "边界状态：涉及实时信息")
 	if isBoundaryIntent(query) || carryBoundary {
 		answer := fmt.Sprintf("当前资料不足，无法确认%s，也不能直接替您确认或承诺。请以景区官方最新公告、官方渠道的实时查询结果或现场公示为准。", boundarySubject(query))
+		if snippet := boundaryEvidenceSnippet(query, chunks); snippet != "" {
+			answer += "\n\n参考边界说明：" + snippet
+		}
 		return finalizeLocalAnswer(query, answer)
 	}
 
@@ -497,13 +500,6 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 		return finalizeLocalAnswer(query, answer)
 	}
 
-	// 使用 profile 配置的兜底答案（支持任意景区）
-	if s.profile != nil {
-		if fallbackAnswer, ok := s.profile.GetFallbackAnswer(query); ok {
-			return finalizeLocalAnswer(query, fallbackAnswer)
-		}
-	}
-
 	snippetQuery := focusedSnippetQuery(query)
 	snippetLimit := 4
 	snippets := s.extractRelevantSnippets(snippetQuery, chunks, snippetLimit)
@@ -511,6 +507,12 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 		snippets = snippets[:1]
 	}
 	if len(snippets) == 0 {
+		// 只有检索句子无法生成时才使用 profile 兜底，避免通用短答案覆盖更具体的证据。
+		if s.profile != nil {
+			if fallbackAnswer, ok := s.profile.GetFallbackAnswer(query); ok {
+				return finalizeLocalAnswer(query, fallbackAnswer)
+			}
+		}
 		snippets = []string{previewRunes(fullContent, 500)}
 	}
 
@@ -662,6 +664,17 @@ func (s *RAGService) extractRelevantSnippets(query string, chunks []model.Knowle
 		return len(result) == limit
 	}
 	preferredChunkIndex := s.preferredDetailedChunkIndex(query, chunks)
+	if preferredChunkIndex >= 0 && containsAny(query, []string{"年份", "时间线", "工程参数", "组成", "元素", "文化定位", "适合", "工艺", "吉祥颂", "无障碍", "轮椅", "母婴", "太湖山水", "佛教文化结合", "拍照", "礼仪", "博览馆", "万佛殿", "哪类佛教文化"}) {
+		preferred := make([]string, 0, 6)
+		for _, sentence := range splitKnowledgeSentences(chunks[preferredChunkIndex].Content) {
+			if len([]rune(sentence)) >= 8 && !isKnowledgeMetaSentence(sentence) {
+				preferred = append(preferred, sentence)
+			}
+		}
+		if len(preferred) > 0 {
+			return preferred
+		}
+	}
 	for _, dimension := range factIntentDimensions(query) {
 		foundInPreferredChunk := false
 		if preferredChunkIndex >= 0 {
@@ -732,11 +745,42 @@ func (s *RAGService) extractRelevantSnippets(query string, chunks []model.Knowle
 }
 
 func (s *RAGService) preferredDetailedChunkIndex(query string, chunks []model.KnowledgeChunk) int {
-	if !containsAny(query, []string{"主要表现", "什么内容", "哪类", "文化"}) {
+	if !containsAny(query, []string{"主要表现", "什么内容", "哪类", "文化", "年份", "时间线", "工程参数", "组成", "元素", "历史出处", "意象", "适合", "工艺", "吉祥颂", "无障碍", "轮椅", "母婴", "太湖山水", "佛教文化结合", "拍照", "礼仪", "博览馆", "万佛殿"}) {
 		return -1
 	}
 
 	preferredTitles := []string{"详细介绍"}
+	switch {
+	case containsAny(query, []string{"年份", "时间线", "奠基", "建设"}):
+		preferredTitles = []string{"时间线", "历史沿革"}
+	case containsAny(query, []string{"工程参数", "参数", "用铜量", "登云道"}):
+		preferredTitles = []string{"工程参数"}
+	case containsAny(query, []string{"组成", "元素"}):
+		preferredTitles = []string{"组成元素", "详细介绍"}
+	case containsAny(query, []string{"历史出处", "千年古刹"}):
+		preferredTitles = []string{"历史出处", "历史沿革"}
+	case containsAny(query, []string{"意象", "空间"}):
+		preferredTitles = []string{"空间意象", "文化意象"}
+	case containsAny(query, []string{"博览馆", "万佛殿"}):
+		preferredTitles = []string{"佛教文化博览馆与万佛殿", "详细介绍"}
+	case containsAny(query, []string{"体现了哪类佛教文化", "体现哪类佛教文化", "哪类佛教文化"}):
+		for i, chunk := range chunks {
+			if strings.Contains(chunk.Title, "详细介绍") {
+				return i
+			}
+		}
+		preferredTitles = []string{"详细介绍", "文化建筑", "文化主题", "文化定位", "文化内涵", "文化意象"}
+	case containsAny(query, []string{"适合", "文化定位", "什么文化", "哪类"}):
+		preferredTitles = []string{"文化建筑", "文化主题", "文化定位", "文化内涵", "文化意象", "详细介绍"}
+	case containsAny(query, []string{"工艺", "吉祥颂"}):
+		preferredTitles = []string{"艺术工艺", "文化建筑", "详细介绍"}
+	case containsAny(query, []string{"无障碍", "轮椅", "母婴"}):
+		preferredTitles = []string{"无障碍", "服务边界", "服务设施"}
+	case containsAny(query, []string{"太湖山水", "佛教文化结合"}):
+		preferredTitles = []string{"太湖山水和佛教文化结合", "文化结合", "空间关系", "景区概况"}
+	case containsAny(query, []string{"拍照", "礼仪"}):
+		preferredTitles = []string{"拍照礼仪边界", "拍照提示"}
+	}
 	if containsAny(query, []string{"主要表现", "什么内容"}) {
 		preferredTitles = []string{"文化定位", "文化内涵", "概览"}
 	}
@@ -753,6 +797,28 @@ func (s *RAGService) preferredDetailedChunkIndex(query string, chunks []model.Kn
 		}
 	}
 	return bestIndex
+}
+
+func boundaryEvidenceSnippet(query string, chunks []model.KnowledgeChunk) string {
+	if containsAny(query, []string{"消费", "样本", "营收"}) && len(chunks) > 0 {
+		return strings.Join(splitKnowledgeSentences(chunks[0].Content), " ")
+	}
+	markers := []string{"不能确认", "资料不足", "官方最新公告", "现场公示", "现场管理", "现场指引", "现场咨询", "实时运营信息", "宠物入园", "无人机拍摄", "现场规定", "仅描述公开资料包样本", "不代表景区当前实时营收"}
+	for _, chunk := range chunks {
+		var selected []string
+		for _, sentence := range splitKnowledgeSentences(chunk.Content) {
+			if containsAny(sentence, markers) {
+				selected = append(selected, strings.TrimSpace(sentence))
+			}
+			if len(selected) == 2 {
+				break
+			}
+		}
+		if len(selected) > 0 {
+			return strings.Join(selected, " ")
+		}
+	}
+	return ""
 }
 
 func requiresComplementaryChunkEvidence(query string) bool {

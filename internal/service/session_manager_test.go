@@ -24,6 +24,32 @@ func TestDetectQuestionIntent(t *testing.T) {
 	}
 }
 
+func TestBoundaryIntentDistinguishesRealtimeFromStaticQuestions(t *testing.T) {
+	for _, query := range []string{
+		"今天开放吗",
+		"门票多少钱",
+		"景区现在人多吗",
+		"九龙灌浴今天是否因检修取消",
+		"现场有没有导览服务",
+	} {
+		if !isBoundaryIntent(query) {
+			t.Fatalf("query %q should be realtime boundary", query)
+		}
+	}
+	for _, query := range []string{
+		"现代灵山从奠基到梵宫开放经历了哪些年份",
+		"夏令时灵山梵宫几点开放",
+		"人多时想错峰步行怎么走",
+		"门票成人和半价政策资料如何说明",
+		"吉祥颂主要讲什么",
+		"游客服务中心电话是多少，可以咨询哪些现场问题",
+	} {
+		if isBoundaryIntent(query) {
+			t.Fatalf("query %q should not be treated as realtime boundary", query)
+		}
+	}
+}
+
 func TestNormalizeSessionID(t *testing.T) {
 	tests := []struct {
 		input    string
