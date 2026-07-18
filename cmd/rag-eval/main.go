@@ -34,6 +34,7 @@ func main() {
 	concurrency := flag.Int("concurrency", 1, "bench 并发数")
 	repeat := flag.Int("repeat", 1, "bench 每条评测重复次数")
 	retrievalOnly := flag.Bool("retrieval-only", false, "只评估检索与本地片段，不调用外部生成")
+	generationMode := flag.String("generation-mode", string(service.EvaluationGenerationModeLocal), "生成模式：local 或 configured")
 	useEmbedding := flag.Bool("embedding", false, "启用配置中的 Embedding Provider 参与检索评估")
 	retrievalMode := flag.String("mode", string(service.RetrievalModeDefault), "检索模式：bm25-local、embedding、hybrid-weighted、rrf-fusion、light-rerank")
 	compareModes := flag.String("compare-modes", "", "逗号分隔的检索模式对比列表，例如 bm25-local,rrf-fusion,light-rerank")
@@ -53,6 +54,7 @@ func main() {
 		concurrency:     *concurrency,
 		repeat:          *repeat,
 		retrievalOnly:   *retrievalOnly,
+		generationMode:  service.EvaluationGenerationMode(strings.TrimSpace(*generationMode)),
 		useEmbedding:    *useEmbedding,
 		retrievalMode:   service.RetrievalMode(strings.TrimSpace(*retrievalMode)),
 		embeddingWeight: *embeddingWeight,
@@ -117,6 +119,7 @@ type evaluationRunOptions struct {
 	concurrency     int
 	repeat          int
 	retrievalOnly   bool
+	generationMode  service.EvaluationGenerationMode
 	useEmbedding    bool
 	retrievalMode   service.RetrievalMode
 	embeddingWeight float64
@@ -176,7 +179,7 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 	chatAPIKey := ""
 	chatModel := ""
 	chatBaseURL := ""
-	if !options.retrievalOnly && ragConfig != nil {
+	if !options.retrievalOnly && options.generationMode == service.EvaluationGenerationModeConfigured && ragConfig != nil {
 		chatAPIKey = ragConfig.AI.APIKey
 		chatModel = ragConfig.AI.Model
 		chatBaseURL = ragConfig.AI.BaseURL
@@ -192,6 +195,7 @@ func runEvaluation(knowledgeFile, evalFile string, options evaluationRunOptions)
 		report, err = rag.EvaluateFileWithOptions(evalFile, service.EvaluationOptions{
 			TopK:             options.topK,
 			RetrievalOnly:    options.retrievalOnly,
+			GenerationMode:   options.generationMode,
 			RetrievalOptions: options.retrievalOptions(),
 		})
 	} else {
@@ -236,13 +240,19 @@ func runComparison(knowledgeFile, evalFile string, baseOptions evaluationRunOpti
 }
 
 func buildEvaluationProviders(options evaluationRunOptions) (*config.Config, service.EmbeddingProvider, error) {
-	if !options.useEmbedding && options.retrievalOnly {
+	if options.generationMode == "" {
+		options.generationMode = service.EvaluationGenerationModeLocal
+	}
+	if options.generationMode != service.EvaluationGenerationModeLocal && options.generationMode != service.EvaluationGenerationModeConfigured {
+		return nil, nil, fmt.Errorf("不支持的 generation-mode: %s", options.generationMode)
+	}
+	if !options.useEmbedding && options.generationMode == service.EvaluationGenerationModeLocal {
 		return nil, nil, nil
 	}
 
 	cfg, err := config.LoadConfig(options.configDir)
 	if err != nil {
-		if options.useEmbedding || !options.retrievalOnly {
+		if options.useEmbedding || options.generationMode == service.EvaluationGenerationModeConfigured {
 			return nil, nil, fmt.Errorf("读取配置失败: %w", err)
 		}
 		return nil, nil, nil
@@ -268,7 +278,13 @@ func providerName(provider service.EmbeddingProvider) string {
 }
 
 func generationProviderName(cfg *config.Config, options evaluationRunOptions) string {
-	if options.retrievalOnly || cfg == nil || strings.TrimSpace(cfg.AI.APIKey) == "" {
+	if options.retrievalOnly {
+		return "disabled"
+	}
+	if options.generationMode == "" || options.generationMode == service.EvaluationGenerationModeLocal {
+		return string(service.EvaluationGenerationModeLocal)
+	}
+	if cfg == nil || strings.TrimSpace(cfg.AI.APIKey) == "" {
 		return "disabled"
 	}
 	if strings.TrimSpace(cfg.AI.Model) != "" {
@@ -285,8 +301,12 @@ func printTextReport(report *service.RAGEvaluationReport) {
 	fmt.Printf("未通过用例: %d\n", report.Failed)
 	fmt.Printf("通过率: %.1f%%\n", report.PassRate*100)
 	fmt.Printf("关键词平均覆盖率: %.1f%%\n", report.AverageKeywordCoverage*100)
-	fmt.Printf("Recall@K: %.1f%%\n", report.AverageRecallAtK*100)
-	fmt.Printf("MRR@K: %.3f\n", report.MRRAtK)
+	if report.RetrievalEvaluatedCases > 0 {
+		fmt.Printf("Recall@K: %.1f%% (%d 个有效用例)\n", report.AverageRecallAtK*100, report.RetrievalEvaluatedCases)
+		fmt.Printf("MRR@K: %.3f\n", report.MRRAtK)
+	} else {
+		fmt.Println("Recall@K/MRR@K: 未评估（缺少 expected_chunk_ids）")
+	}
 	fmt.Printf("检索延迟 p50/p95: %dms / %dms\n\n", report.RetrievalP50Ms, report.RetrievalP95Ms)
 	if report.RunInfo.KnowledgeFile != "" {
 		fmt.Printf("数据集: %s\n", report.RunInfo.KnowledgeFile)
@@ -485,6 +505,7 @@ func runBench(rag *service.RAGService, evalFile string, options evaluationRunOpt
 		return rag.EvaluateQuestionsWithOptions(cases, service.EvaluationOptions{
 			TopK:             options.topK,
 			RetrievalOnly:    options.retrievalOnly,
+			GenerationMode:   options.generationMode,
 			RetrievalOptions: options.retrievalOptions(),
 		})
 	}
@@ -504,6 +525,7 @@ func runBench(rag *service.RAGService, evalFile string, options evaluationRunOpt
 				report, err := rag.EvaluateQuestionsWithOptions([]service.RAGEvaluationCase{cases[index]}, service.EvaluationOptions{
 					TopK:             options.topK,
 					RetrievalOnly:    options.retrievalOnly,
+					GenerationMode:   options.generationMode,
 					RetrievalOptions: options.retrievalOptions(),
 				})
 				if err != nil {
@@ -560,24 +582,31 @@ func summarizeResults(results []service.RAGEvaluationResult, topK int, retrieval
 	var coverageSum float64
 	var recallSum float64
 	var mrrSum float64
+	retrievalEvaluated := 0
 	latencies := make([]time.Duration, 0, len(results))
 	for _, result := range results {
 		if result.Passed {
 			report.Passed++
 		}
 		coverageSum += result.KeywordCoverage
-		recallSum += result.RecallAtK
-		mrrSum += result.ReciprocalRank
+		if result.RetrievalEvaluated {
+			retrievalEvaluated++
+			recallSum += result.RecallAtK
+			mrrSum += result.ReciprocalRank
+		}
 		latencies = append(latencies, time.Duration(result.RetrievalLatencyMs)*time.Millisecond)
 	}
 	report.Failed = report.Total - report.Passed
 	if report.Total > 0 {
 		report.PassRate = float64(report.Passed) / float64(report.Total)
 		report.AverageKeywordCoverage = coverageSum / float64(report.Total)
-		report.AverageRecallAtK = recallSum / float64(report.Total)
-		report.MRRAtK = mrrSum / float64(report.Total)
 		report.RetrievalP50Ms = percentileMs(latencies, 0.50)
 		report.RetrievalP95Ms = percentileMs(latencies, 0.95)
+	}
+	report.RetrievalEvaluatedCases = retrievalEvaluated
+	if retrievalEvaluated > 0 {
+		report.AverageRecallAtK = recallSum / float64(retrievalEvaluated)
+		report.MRRAtK = mrrSum / float64(retrievalEvaluated)
 	}
 	report.GroupStats = service.SummarizeEvaluationGroups(results)
 	report.FailureStats = service.SummarizeEvaluationFailures(results)

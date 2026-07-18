@@ -28,8 +28,16 @@ type RAGEvaluationCase struct {
 type EvaluationOptions struct {
 	TopK             int
 	RetrievalOnly    bool
+	GenerationMode   EvaluationGenerationMode
 	RetrievalOptions RetrievalOptions
 }
+
+type EvaluationGenerationMode string
+
+const (
+	EvaluationGenerationModeLocal      EvaluationGenerationMode = "local"
+	EvaluationGenerationModeConfigured EvaluationGenerationMode = "configured"
+)
 
 type RAGEvaluationResult struct {
 	Question           string   `json:"question"`
@@ -40,6 +48,7 @@ type RAGEvaluationResult struct {
 	FailureReason      string   `json:"failure_reason,omitempty"`
 	KeywordCoverage    float64  `json:"keyword_coverage"`
 	RecallAtK          float64  `json:"recall_at_k"`
+	RetrievalEvaluated bool     `json:"retrieval_evaluated"`
 	ReciprocalRank     float64  `json:"reciprocal_rank"`
 	FirstRelevantRank  int      `json:"first_relevant_rank"`
 	MatchedKeywords    []string `json:"matched_keywords"`
@@ -52,16 +61,17 @@ type RAGEvaluationResult struct {
 }
 
 type RAGEvaluationGroupStats struct {
-	GroupBy                string   `json:"group_by"`
-	Name                   string   `json:"name"`
-	Total                  int      `json:"total"`
-	Passed                 int      `json:"passed"`
-	Failed                 int      `json:"failed"`
-	PassRate               float64  `json:"pass_rate"`
-	AverageKeywordCoverage float64  `json:"average_keyword_coverage"`
-	AverageRecallAtK       float64  `json:"average_recall_at_k"`
-	MRRAtK                 float64  `json:"mrr_at_k"`
-	Failures               []string `json:"failures,omitempty"`
+	GroupBy                 string   `json:"group_by"`
+	Name                    string   `json:"name"`
+	Total                   int      `json:"total"`
+	Passed                  int      `json:"passed"`
+	Failed                  int      `json:"failed"`
+	PassRate                float64  `json:"pass_rate"`
+	AverageKeywordCoverage  float64  `json:"average_keyword_coverage"`
+	AverageRecallAtK        float64  `json:"average_recall_at_k"`
+	MRRAtK                  float64  `json:"mrr_at_k"`
+	RetrievalEvaluatedCases int      `json:"retrieval_evaluated_cases"`
+	Failures                []string `json:"failures,omitempty"`
 }
 
 type RAGEvaluationFailureStat struct {
@@ -91,23 +101,24 @@ type RAGEvaluationRunInfo struct {
 }
 
 type RAGEvaluationReport struct {
-	Total                  int                        `json:"total"`
-	Passed                 int                        `json:"passed"`
-	Failed                 int                        `json:"failed"`
-	TopK                   int                        `json:"top_k"`
-	PassRate               float64                    `json:"pass_rate"`
-	AverageKeywordCoverage float64                    `json:"average_keyword_coverage"`
-	AverageRecallAtK       float64                    `json:"average_recall_at_k"`
-	MRRAtK                 float64                    `json:"mrr_at_k"`
-	RetrievalP50Ms         int64                      `json:"retrieval_p50_ms"`
-	RetrievalP95Ms         int64                      `json:"retrieval_p95_ms"`
-	RetrievalOnly          bool                       `json:"retrieval_only"`
-	StartedAt              time.Time                  `json:"started_at"`
-	FinishedAt             time.Time                  `json:"finished_at"`
-	RunInfo                RAGEvaluationRunInfo       `json:"run_info,omitempty"`
-	GroupStats             []RAGEvaluationGroupStats  `json:"group_stats,omitempty"`
-	FailureStats           []RAGEvaluationFailureStat `json:"failure_stats,omitempty"`
-	Results                []RAGEvaluationResult      `json:"results"`
+	Total                   int                        `json:"total"`
+	Passed                  int                        `json:"passed"`
+	Failed                  int                        `json:"failed"`
+	TopK                    int                        `json:"top_k"`
+	PassRate                float64                    `json:"pass_rate"`
+	AverageKeywordCoverage  float64                    `json:"average_keyword_coverage"`
+	AverageRecallAtK        float64                    `json:"average_recall_at_k"`
+	MRRAtK                  float64                    `json:"mrr_at_k"`
+	RetrievalEvaluatedCases int                        `json:"retrieval_evaluated_cases"`
+	RetrievalP50Ms          int64                      `json:"retrieval_p50_ms"`
+	RetrievalP95Ms          int64                      `json:"retrieval_p95_ms"`
+	RetrievalOnly           bool                       `json:"retrieval_only"`
+	StartedAt               time.Time                  `json:"started_at"`
+	FinishedAt              time.Time                  `json:"finished_at"`
+	RunInfo                 RAGEvaluationRunInfo       `json:"run_info,omitempty"`
+	GroupStats              []RAGEvaluationGroupStats  `json:"group_stats,omitempty"`
+	FailureStats            []RAGEvaluationFailureStat `json:"failure_stats,omitempty"`
+	Results                 []RAGEvaluationResult      `json:"results"`
 }
 
 func (r RAGEvaluationReport) IsPassing() bool {
@@ -150,6 +161,12 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 	if options.TopK <= 0 {
 		options.TopK = TopK
 	}
+	if options.GenerationMode == "" {
+		options.GenerationMode = EvaluationGenerationModeLocal
+	}
+	if options.GenerationMode != EvaluationGenerationModeLocal && options.GenerationMode != EvaluationGenerationModeConfigured {
+		return nil, fmt.Errorf("unsupported evaluation generation mode: %q", options.GenerationMode)
+	}
 
 	report := &RAGEvaluationReport{
 		Total:         len(cases),
@@ -172,6 +189,7 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 			SourceType:       item.SourceType,
 			ExpectedChunkIDs: compactKeywords(item.ExpectedChunkIDs),
 		}
+		result.RetrievalEvaluated = len(result.ExpectedChunkIDs) > 0
 
 		start := time.Now()
 		retrievalOptions := options.RetrievalOptions
@@ -197,6 +215,8 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 		response := ""
 		if options.RetrievalOnly {
 			response = joinChunkContent(chunks)
+		} else if options.GenerationMode == EvaluationGenerationModeLocal {
+			response = s.generateAnswerFromChunksWithContext(item.Question, chunks, "")
 		} else {
 			// 评测为离线工具,无 HTTP request 上下文,使用 background context。
 			response, err = s.QueryWithRAG(context.Background(), item.Question)
@@ -220,8 +240,11 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 			report.Passed++
 		}
 		coverageSum += result.KeywordCoverage
-		recallSum += result.RecallAtK
-		reciprocalRankSum += result.ReciprocalRank
+		if result.RetrievalEvaluated {
+			report.RetrievalEvaluatedCases++
+			recallSum += result.RecallAtK
+			reciprocalRankSum += result.ReciprocalRank
+		}
 		report.Results = append(report.Results, result)
 	}
 
@@ -229,10 +252,12 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 	if report.Total > 0 {
 		report.PassRate = float64(report.Passed) / float64(report.Total)
 		report.AverageKeywordCoverage = coverageSum / float64(report.Total)
-		report.AverageRecallAtK = recallSum / float64(report.Total)
-		report.MRRAtK = reciprocalRankSum / float64(report.Total)
 		report.RetrievalP50Ms = durationMillisCeil(percentileDuration(latencies, 0.50))
 		report.RetrievalP95Ms = durationMillisCeil(percentileDuration(latencies, 0.95))
+	}
+	if report.RetrievalEvaluatedCases > 0 {
+		report.AverageRecallAtK = recallSum / float64(report.RetrievalEvaluatedCases)
+		report.MRRAtK = reciprocalRankSum / float64(report.RetrievalEvaluatedCases)
 	}
 	report.GroupStats = summarizeEvaluationGroups(report.Results)
 	report.FailureStats = summarizeEvaluationFailures(report.Results)
@@ -320,10 +345,11 @@ func summarizeEvaluationFailures(results []RAGEvaluationResult) []RAGEvaluationF
 
 func summarizeEvaluationGroup(results []RAGEvaluationResult, groupBy string, nameOf func(RAGEvaluationResult) string) []RAGEvaluationGroupStats {
 	type aggregate struct {
-		stat        RAGEvaluationGroupStats
-		coverageSum float64
-		recallSum   float64
-		mrrSum      float64
+		stat               RAGEvaluationGroupStats
+		coverageSum        float64
+		recallSum          float64
+		mrrSum             float64
+		retrievalEvaluated int
 	}
 
 	groups := make(map[string]*aggregate)
@@ -346,8 +372,11 @@ func summarizeEvaluationGroup(results []RAGEvaluationResult, groupBy string, nam
 			}
 		}
 		group.coverageSum += result.KeywordCoverage
-		group.recallSum += result.RecallAtK
-		group.mrrSum += result.ReciprocalRank
+		if result.RetrievalEvaluated {
+			group.retrievalEvaluated++
+			group.recallSum += result.RecallAtK
+			group.mrrSum += result.ReciprocalRank
+		}
 	}
 
 	names := make([]string, 0, len(groups))
@@ -362,8 +391,11 @@ func summarizeEvaluationGroup(results []RAGEvaluationResult, groupBy string, nam
 		if group.stat.Total > 0 {
 			group.stat.PassRate = float64(group.stat.Passed) / float64(group.stat.Total)
 			group.stat.AverageKeywordCoverage = group.coverageSum / float64(group.stat.Total)
-			group.stat.AverageRecallAtK = group.recallSum / float64(group.stat.Total)
-			group.stat.MRRAtK = group.mrrSum / float64(group.stat.Total)
+		}
+		group.stat.RetrievalEvaluatedCases = group.retrievalEvaluated
+		if group.retrievalEvaluated > 0 {
+			group.stat.AverageRecallAtK = group.recallSum / float64(group.retrievalEvaluated)
+			group.stat.MRRAtK = group.mrrSum / float64(group.retrievalEvaluated)
 		}
 		stats = append(stats, group.stat)
 	}
@@ -461,7 +493,7 @@ func chunkIDs(chunks []model.KnowledgeChunk) []string {
 
 func retrievalMetrics(expectedIDs, retrievedIDs []string) (float64, float64, int) {
 	if len(expectedIDs) == 0 {
-		return 1, 1, 1
+		return 0, 0, 0
 	}
 
 	expected := make(map[string]struct{}, len(expectedIDs))
@@ -472,7 +504,7 @@ func retrievalMetrics(expectedIDs, retrievedIDs []string) (float64, float64, int
 		}
 	}
 	if len(expected) == 0 {
-		return 1, 1, 1
+		return 0, 0, 0
 	}
 
 	matched := 0

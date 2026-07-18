@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -105,6 +106,72 @@ func TestComparisonReportIsNotPassingWhenAnyModeFails(t *testing.T) {
 
 	if report.IsPassing() {
 		t.Fatalf("comparison report should fail when any mode fails")
+	}
+}
+
+func TestBuildEvaluationProvidersDefaultsToLocalWithoutConfig(t *testing.T) {
+	missingConfigDir := filepath.Join(t.TempDir(), "missing")
+	options := evaluationRunOptions{
+		generationMode: service.EvaluationGenerationModeLocal,
+		configDir:      missingConfigDir,
+	}
+
+	cfg, provider, err := buildEvaluationProviders(options)
+	if err != nil {
+		t.Fatalf("buildEvaluationProviders returned error for local mode: %v", err)
+	}
+	if cfg != nil || provider != nil {
+		t.Fatalf("local mode should not load providers: cfg=%v provider=%v", cfg, provider)
+	}
+	if got := generationProviderName(cfg, options); got != string(service.EvaluationGenerationModeLocal) {
+		t.Fatalf("generation provider = %q, want %q", got, service.EvaluationGenerationModeLocal)
+	}
+}
+
+func TestRunEvaluationDefaultsToLocalWithoutConfigOrEnvironment(t *testing.T) {
+	clearScenicGuideEnvironment(t)
+
+	workspace := t.TempDir()
+	knowledgeFile := filepath.Join(workspace, "knowledge.jsonl")
+	evalFile := filepath.Join(workspace, "eval.json")
+	if err := os.WriteFile(knowledgeFile, []byte(`{"id":"local-only","title":"本地评测","source":"test","content":"本地 BM25 评测无需外部生成服务。"}`+"\n"), 0o600); err != nil {
+		t.Fatalf("write knowledge file: %v", err)
+	}
+	if err := os.WriteFile(evalFile, []byte(`[{"question":"本地评测需要什么？","expected_keywords":["无需外部生成服务"],"expected_chunk_ids":["local-only"]}]`), 0o600); err != nil {
+		t.Fatalf("write evaluation file: %v", err)
+	}
+
+	report, err := runEvaluation(knowledgeFile, evalFile, evaluationRunOptions{
+		topK:      1,
+		configDir: filepath.Join(workspace, "missing-config"),
+	})
+	if err != nil {
+		t.Fatalf("runEvaluation returned error in default local mode: %v", err)
+	}
+	if got := report.RunInfo.GenerationProvider; got != string(service.EvaluationGenerationModeLocal) {
+		t.Fatalf("generation provider = %q, want local", got)
+	}
+	if report.RunInfo.EmbeddingProvider != "bm25-local" {
+		t.Fatalf("embedding provider = %q, want bm25-local", report.RunInfo.EmbeddingProvider)
+	}
+}
+
+func clearScenicGuideEnvironment(t *testing.T) {
+	t.Helper()
+	for _, entry := range os.Environ() {
+		key, _, found := strings.Cut(entry, "=")
+		if !found || !strings.HasPrefix(key, "SCENIC_GUIDE_") {
+			continue
+		}
+		value := os.Getenv(key)
+		if err := os.Unsetenv(key); err != nil {
+			t.Fatalf("unset %s: %v", key, err)
+		}
+		t.Cleanup(func() {
+			if err := os.Setenv(key, value); err != nil {
+				t.Errorf("restore %s: %v", key, err)
+			}
+		})
 	}
 }
 

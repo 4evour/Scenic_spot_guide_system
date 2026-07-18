@@ -1366,3 +1366,16 @@ Open-LLM-VTuber 已连上 WebSocket 后，调用 Go 后端 `/v1/chat/completions
 
 ### 影响范围
 - 影响数字人页文本问答播报、本地一键启动行为和数字人运行文档；不改变二维码讲解、地理围栏讲解、Go TTS 兜底接口、登录账号和 WebSocket 代理路由。
+
+## 2026-07-18 21:47 - 固定离线评测生成模式与召回断言
+
+### 变更内容
+- `cmd/rag-eval/main.go`、`cmd/rag-eval/main_test.go`：将生成模式提升为 service 公共接口，默认完整评测在无配置、无环境变量时固定使用本地 BM25 与本地生成。
+- `internal/service/rag_evaluation.go`、`internal/service/rag_service_test.go`、`internal/service/rag_evaluation_options_test.go`：评测选项明确区分 local/configured 并拒绝未知模式；补充错误 expected_chunk_id 时用例失败、MRR 为零的回归断言。
+- `knowledge/lingshan_eval_qa.json`：为 5 个基础用例绑定知识库中的稳定切片 ID，使 Recall/MRR 基于真实召回真值计算。
+
+### 原因
+- 防止生成模式仅停留在 CLI 私有选项，导致 service 评测路径可能绕过离线默认约束；同时固定错误召回真值不会被通过状态掩盖。
+
+### 影响范围
+- 影响 RAG 评测工具及其离线生成路径；不读取外部模型、真实配置或凭据，不改变线上问答接口。

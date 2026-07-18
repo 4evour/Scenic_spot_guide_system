@@ -510,6 +510,7 @@ func TestRAGServiceEvaluateQuestionsReportsKeywordCoverage(t *testing.T) {
 		{
 			Question:         "灵山大佛有多高？",
 			ExpectedKeywords: []string{"88米", "79米"},
+			ExpectedChunkIDs: []string{"buddha-height"},
 		},
 	})
 	if err != nil {
@@ -526,6 +527,9 @@ func TestRAGServiceEvaluateQuestionsReportsKeywordCoverage(t *testing.T) {
 	}
 	if report.MRRAtK != 1 {
 		t.Fatalf("mrr@k = %.2f, want 1.00", report.MRRAtK)
+	}
+	if report.RetrievalEvaluatedCases != 1 {
+		t.Fatalf("retrieval evaluated cases = %d, want 1", report.RetrievalEvaluatedCases)
 	}
 	if report.RetrievalP95Ms <= 0 {
 		t.Fatalf("retrieval p95 should be recorded")
@@ -592,8 +596,47 @@ func TestRAGServiceEvaluateQuestionsReportsRetrievalMiss(t *testing.T) {
 	if report.Results[0].FirstRelevantRank != 0 {
 		t.Fatalf("first relevant rank = %d, want 0", report.Results[0].FirstRelevantRank)
 	}
+	if report.Results[0].ReciprocalRank != 0 {
+		t.Fatalf("reciprocal rank = %.2f, want 0", report.Results[0].ReciprocalRank)
+	}
+	if report.Results[0].Passed {
+		t.Fatalf("case with an incorrect expected chunk id must not pass: %+v", report.Results[0])
+	}
+	if report.Results[0].FailureReason != "retrieval_miss" {
+		t.Fatalf("failure reason = %q, want retrieval_miss", report.Results[0].FailureReason)
+	}
 	if report.Results[0].Category != "文化" || report.Results[0].Difficulty != "medium" {
 		t.Fatalf("category/difficulty not propagated: %+v", report.Results[0])
+	}
+}
+
+func TestRAGServiceEvaluateQuestionsDoesNotInventRetrievalMetricsWithoutGroundTruth(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"palace","title":"灵山梵宫","source":"test","content":"灵山梵宫汇集东阳木雕和琉璃等传统工艺。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	report, err := rag.EvaluateQuestionsWithOptions([]RAGEvaluationCase{
+		{
+			Question:         "灵山梵宫有什么工艺？",
+			ExpectedKeywords: []string{"东阳木雕"},
+		},
+	}, EvaluationOptions{TopK: 1, RetrievalOnly: true})
+	if err != nil {
+		t.Fatalf("EvaluateQuestionsWithOptions returned error: %v", err)
+	}
+
+	result := report.Results[0]
+	if result.RetrievalEvaluated {
+		t.Fatalf("retrieval should be unevaluated without expected chunk ids: %+v", result)
+	}
+	if result.RecallAtK != 0 || result.ReciprocalRank != 0 || result.FirstRelevantRank != 0 {
+		t.Fatalf("unexpected invented retrieval metrics: %+v", result)
+	}
+	if report.RetrievalEvaluatedCases != 0 || report.AverageRecallAtK != 0 || report.MRRAtK != 0 {
+		t.Fatalf("unexpected aggregate retrieval metrics: %+v", report)
 	}
 }
 
