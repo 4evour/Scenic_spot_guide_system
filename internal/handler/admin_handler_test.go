@@ -262,6 +262,51 @@ func TestGetVisitorReportDoesNotFabricateDataWhenEmpty(t *testing.T) {
 	}
 }
 
+func TestGetVisitorExperienceSummary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	admin, db := newAdminHandler(t, "")
+	visitorExperience := service.NewVisitorExperienceService(repository.NewVisitorExperienceRepository(db))
+	admin.SetVisitorExperienceService(visitorExperience)
+
+	spot := model.ScenicSpot{Name: "梵宫", Category: "文化"}
+	if err := db.Create(&spot).Error; err != nil {
+		t.Fatalf("seed spot: %v", err)
+	}
+	if _, err := visitorExperience.SubmitSpotRating(service.SpotRatingInput{SessionID: "session-summary", SpotID: spot.ID, OverallRating: 2, Tags: []string{"排队"}}); err != nil {
+		t.Fatalf("submit rating: %v", err)
+	}
+	if err := visitorExperience.RecordRouteRecommendation(service.RouteRecommendationLogInput{SessionID: "session-summary", RouteName: "亲子文化线", InterestTags: []string{"亲子", "文化"}, TotalDuration: 120}); err != nil {
+		t.Fatalf("record route: %v", err)
+	}
+
+	router := gin.New()
+	router.GET("/admin/dashboard/visitor-experience", admin.GetVisitorExperienceSummary)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/dashboard/visitor-experience?period=7d", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+
+	var body struct {
+		Code int                              `json:"code"`
+		Data service.VisitorExperienceSummary `json:"data"`
+	}
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body.Data.TotalRatings != 1 || body.Data.NegativeRatings != 1 {
+		t.Fatalf("summary = %+v, want one negative rating", body.Data)
+	}
+	if len(body.Data.RoutePreferences) != 1 || body.Data.RoutePreferences[0].RouteName != "亲子文化线" {
+		t.Fatalf("route preferences = %+v", body.Data.RoutePreferences)
+	}
+	if len(body.Data.InterestTags) != 2 {
+		t.Fatalf("interest tags = %+v, want 2 items", body.Data.InterestTags)
+	}
+}
+
 func TestGetDigitalHumanConfig(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler, _ := newAdminHandler(t, "")
@@ -311,7 +356,7 @@ func TestUpdateDigitalHumanConfig(t *testing.T) {
 		Costume:           "现代装",
 		Speed:             1.0,
 		Volume:            90,
-		DefaultAvatarID:   "shizuku",
+		DefaultAvatarID:   "mao_pro",
 		AllowAvatarSwitch: false,
 	}
 	body, _ := json.Marshal(payload)
@@ -353,8 +398,8 @@ func TestUpdateDigitalHumanConfig(t *testing.T) {
 	if getBody.Data.Appearance != "科技型" {
 		t.Fatalf("appearance = %q, want %q", getBody.Data.Appearance, "科技型")
 	}
-	if getBody.Data.DefaultAvatarID != "shizuku" {
-		t.Fatalf("default_avatar_id = %q, want %q", getBody.Data.DefaultAvatarID, "shizuku")
+	if getBody.Data.DefaultAvatarID != "mao_pro" {
+		t.Fatalf("default_avatar_id = %q, want %q", getBody.Data.DefaultAvatarID, "mao_pro")
 	}
 	if getBody.Data.AllowAvatarSwitch {
 		t.Fatal("allow_avatar_switch = true, want false")

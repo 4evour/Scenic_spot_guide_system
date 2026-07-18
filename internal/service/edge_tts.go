@@ -1,15 +1,22 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -55,9 +62,17 @@ func NewEdgeTTSService(timeout time.Duration) *EdgeTTSService {
 }
 
 const (
-	edgeWSSURL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491C6F4"
-	edgeOrigin = "chrome-extension://jdkknkkbebbapilgoeccciglkfbmbnfm"
+	edgeWSSBaseURL         = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
+	edgeTrustedClientToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
+	edgeChromiumVersion    = "143.0.3650.75"
+	edgeOrigin             = "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
+	edgeUserAgent          = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+	edgeWindowsEpoch       = int64(11644473600)
+	edgeMaxTextBytes       = 4096
 )
+
+// ErrEdgeTTSNoAudio indicates that Edge completed a synthesis session without an audio frame.
+var ErrEdgeTTSNoAudio = errors.New("edge tts: no audio received")
 
 // edgeVoices maps friendly names to Microsoft Speech Service voice names.
 var edgeVoices = map[string]string{
@@ -99,22 +114,30 @@ func (s *EdgeTTSService) Synthesize(ctx context.Context, text, voice, rate strin
 	chunks, errCh := s.SynthesizeStream(ctx, text, voice, rate)
 
 	var result []byte
-	for {
+	for chunks != nil || errCh != nil {
 		select {
 		case chunk, ok := <-chunks:
 			if !ok {
-				return result, nil
+				chunks = nil
+				continue
 			}
 			result = append(result, chunk...)
-		case err := <-errCh:
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+				continue
+			}
 			if err != nil {
 				return nil, err
 			}
-			return result, nil
 		case <-ctx.Done():
-			return result, ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
+	if len(result) == 0 {
+		return nil, ErrEdgeTTSNoAudio
+	}
+	return result, nil
 }
 
 // SynthesizeStream streams audio chunks from Edge TTS.
@@ -137,9 +160,6 @@ func (s *EdgeTTSService) SynthesizeStream(ctx context.Context, text, voice, rate
 }
 
 func (s *EdgeTTSService) streamInternal(ctx context.Context, text, voice, rate string, chunkCh chan<- []byte) error {
-	ctx, cancel := context.WithTimeout(ctx, s.timeout)
-	defer cancel()
-
 	voice = ResolveVoice(voice)
 	if rate == "" {
 		rate = "+0%"
@@ -147,115 +167,241 @@ func (s *EdgeTTSService) streamInternal(ctx context.Context, text, voice, rate s
 	// 严格校验 rate 格式,防止 SSML 注入(rate 会直接拼入 <prosody rate='%s'>)。
 	rate = validateRate(rate)
 
-	// Build SSML
+	segments := splitEdgeTTSText(text, edgeMaxTextBytes)
+	for i, segment := range segments {
+		segmentCtx, cancel := context.WithTimeout(ctx, s.timeout)
+		err := s.streamSegment(segmentCtx, segment, voice, rate, chunkCh)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("edge tts: segment %d/%d: %w", i+1, len(segments), err)
+		}
+	}
+	return nil
+}
+
+func (s *EdgeTTSService) streamSegment(ctx context.Context, text, voice, rate string, chunkCh chan<- []byte) error {
 	ssml := buildSSML(text, voice, rate)
 
 	// Connect
 	header := http.Header{}
+	header.Set("Pragma", "no-cache")
+	header.Set("Cache-Control", "no-cache")
 	header.Set("Origin", edgeOrigin)
-	header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	header.Set("User-Agent", edgeUserAgent)
+	header.Set("Accept-Encoding", "gzip, deflate, br, zstd")
+	header.Set("Accept-Language", "en-US,en;q=0.9")
+	header.Set("Cookie", "muid="+newEdgeMUID()+";")
 
-	conn, _, err := s.dialer.DialContext(ctx, edgeWSSURL, header)
+	connectionID := strings.ReplaceAll(uuid.NewString(), "-", "")
+	conn, _, err := s.dialer.DialContext(ctx, buildEdgeWSSURL(time.Now().UTC(), connectionID), header)
 	if err != nil {
 		return fmt.Errorf("edge tts: dial failed: %w", err)
 	}
 	defer conn.Close()
 
-	done := make(chan struct{})
-	errChan := make(chan error, 1)
-
-	// Read goroutine
+	readResult := make(chan error, 1)
 	go func() {
-		defer close(done)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
-			msgType, reader, err := conn.NextReader()
-			if err != nil {
-				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					errChan <- fmt.Errorf("edge tts: read error: %w", err)
-				}
-				return
-			}
-
-			switch msgType {
-			case websocket.BinaryMessage:
-				data, readErr := io.ReadAll(reader)
-				if readErr != nil && readErr != io.EOF {
-					errChan <- fmt.Errorf("edge tts: read binary: %w", readErr)
-					return
-				}
-				// Each binary frame contains header prefix + audio data.
-				// Headers end with \r\n\r\n; audio follows.
-				audio := extractAudioPayload(data)
-				if len(audio) > 0 {
-					select {
-					case chunkCh <- audio:
-					case <-ctx.Done():
-						return
-					}
-				}
-
-			case websocket.TextMessage:
-				textData, readErr := io.ReadAll(reader)
-				if readErr != nil && readErr != io.EOF {
-					slog.Debug("edge tts: text message read error", "error", readErr)
-				}
-				// Check for error in turn.finish
-				if strings.Contains(string(textData), "Path:turn.finish") {
-					return
-				}
-			}
-		}
+		readResult <- readEdgeTTSMessages(ctx, conn, chunkCh)
 	}()
 
 	// Send config message
-	requestID := uuid.New().String()
-	configMsg := buildConfigMessage(requestID)
+	configMsg := buildConfigMessage()
 	if err := conn.WriteMessage(websocket.TextMessage, []byte(configMsg)); err != nil {
 		return fmt.Errorf("edge tts: send config: %w", err)
 	}
 
 	// Send SSML message
-	ssmlMsg := buildSSMLMessage(requestID, ssml)
+	ssmlMsg := buildSSMLMessage(uuid.NewString(), ssml)
 	if err := conn.WriteMessage(websocket.TextMessage, []byte(ssmlMsg)); err != nil {
 		return fmt.Errorf("edge tts: send ssml: %w", err)
 	}
 
 	// Wait for completion or error
 	select {
-	case <-done:
-		return nil
-	case err := <-errChan:
+	case err := <-readResult:
 		return err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
-// extractAudioPayload strips the HTTP-style headers from a binary WebSocket frame,
-// returning just the raw audio data. Edge TTS prepends headers like:
-//
-//	X-RequestId:...\r\nContent-Type:audio/mpeg\r\nPath:audio\r\n\r\n<binary audio>
-func extractAudioPayload(frame []byte) []byte {
-	// Header section ends at \r\n\r\n
-	const delim = "\r\n\r\n"
-	idx := 0
-	// Search for the delimiter in the binary data
-	for i := 0; i <= len(frame)-len(delim); i++ {
-		if string(frame[i:i+len(delim)]) == delim {
-			idx = i + len(delim)
-			break
+func readEdgeTTSMessages(ctx context.Context, conn *websocket.Conn, chunkCh chan<- []byte) error {
+	audioReceived := false
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		msgType, reader, err := conn.NextReader()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) && audioReceived {
+				return nil
+			}
+			return fmt.Errorf("edge tts: read error: %w", err)
+		}
+
+		switch msgType {
+		case websocket.BinaryMessage:
+			data, readErr := io.ReadAll(reader)
+			if readErr != nil && readErr != io.EOF {
+				return fmt.Errorf("edge tts: read binary: %w", readErr)
+			}
+			audio, extractErr := extractAudioPayload(data)
+			if extractErr != nil {
+				return extractErr
+			}
+			if len(audio) == 0 {
+				continue
+			}
+			audioReceived = true
+			select {
+			case chunkCh <- audio:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+		case websocket.TextMessage:
+			textData, readErr := io.ReadAll(reader)
+			if readErr != nil && readErr != io.EOF {
+				return fmt.Errorf("edge tts: read text: %w", readErr)
+			}
+			if strings.Contains(string(textData), "Path:turn.end") || strings.Contains(string(textData), "Path:turn.finish") {
+				if !audioReceived {
+					return ErrEdgeTTSNoAudio
+				}
+				return nil
+			}
 		}
 	}
-	if idx >= len(frame) {
-		return frame
+}
+
+func buildEdgeWSSURL(now time.Time, connectionID string) string {
+	query := url.Values{}
+	query.Set("TrustedClientToken", edgeTrustedClientToken)
+	query.Set("ConnectionId", connectionID)
+	query.Set("Sec-MS-GEC", generateEdgeGECToken(now))
+	query.Set("Sec-MS-GEC-Version", "1-"+edgeChromiumVersion)
+	return edgeWSSBaseURL + "?" + query.Encode()
+}
+
+func generateEdgeGECToken(now time.Time) string {
+	seconds := now.UTC().Unix()
+	seconds -= seconds % 300
+	ticks := (seconds + edgeWindowsEpoch) * 10_000_000
+	digest := sha256.Sum256([]byte(fmt.Sprintf("%d%s", ticks, edgeTrustedClientToken)))
+	return strings.ToUpper(hex.EncodeToString(digest[:]))
+}
+
+func newEdgeMUID() string {
+	return strings.ToUpper(strings.ReplaceAll(uuid.NewString(), "-", ""))
+}
+
+func edgeTimestamp(now time.Time) string {
+	return now.UTC().Format("Mon Jan 02 2006 15:04:05 GMT+0000 (Coordinated Universal Time)")
+}
+
+// extractAudioPayload validates and strips the length-prefixed headers from a
+// binary WebSocket frame. Edge TTS prepends headers like:
+//
+//	<2-byte header length>X-RequestId:...\r\nContent-Type:audio/mpeg\r\nPath:audio\r\n<audio>
+func extractAudioPayload(frame []byte) ([]byte, error) {
+	if len(frame) < 2 {
+		return nil, errors.New("edge tts: invalid audio frame: missing header length")
 	}
-	return frame[idx:]
+
+	headerLength := int(binary.BigEndian.Uint16(frame[:2]))
+	if headerLength <= 0 || headerLength > len(frame)-2 {
+		return nil, errors.New("edge tts: invalid audio frame: invalid header length")
+	}
+
+	header := frame[2 : 2+headerLength]
+	if !bytes.HasSuffix(header, []byte("\r\n")) {
+		return nil, errors.New("edge tts: invalid audio frame: missing header delimiter")
+	}
+
+	pathAudio := false
+	for _, line := range bytes.Split(header[:len(header)-2], []byte("\r\n")) {
+		key, value, ok := bytes.Cut(line, []byte(":"))
+		if !ok || len(key) == 0 {
+			return nil, errors.New("edge tts: invalid audio frame: malformed header")
+		}
+		if bytes.EqualFold(key, []byte("Path")) && bytes.Equal(bytes.TrimSpace(value), []byte("audio")) {
+			pathAudio = true
+		}
+	}
+	if !pathAudio {
+		return nil, errors.New("edge tts: invalid audio frame: Path is not audio")
+	}
+
+	return frame[2+headerLength:], nil
+}
+
+func splitEdgeTTSText(text string, maxEscapedBytes int) []string {
+	if text == "" || maxEscapedBytes <= 0 {
+		return []string{text}
+	}
+
+	chunks := make([]string, 0, len(text)/maxEscapedBytes+1)
+	for start := 0; start < len(text); {
+		cut := len(text)
+		lastBoundary := -1
+		escapedBytes := 0
+
+		for pos := start; pos < len(text); {
+			r, size := utf8.DecodeRuneInString(text[pos:])
+			if escapedBytes+escapedRuneBytes(r) > maxEscapedBytes {
+				cut = pos
+				if lastBoundary > start {
+					cut = lastBoundary
+				}
+				if cut == start {
+					cut = pos + size
+				}
+				break
+			}
+
+			escapedBytes += escapedRuneBytes(r)
+			pos += size
+			if isEdgeTextBoundary(r) {
+				lastBoundary = pos
+			}
+		}
+
+		chunks = append(chunks, text[start:cut])
+		start = cut
+	}
+	return chunks
+}
+
+func escapedRuneBytes(r rune) int {
+	switch r {
+	case '&':
+		return len("&amp;")
+	case '<':
+		return len("&lt;")
+	case '>':
+		return len("&gt;")
+	case '"':
+		return len("&quot;")
+	case '\'':
+		return len("&apos;")
+	default:
+		return utf8.RuneLen(r)
+	}
+}
+
+func isEdgeTextBoundary(r rune) bool {
+	if unicode.IsSpace(r) {
+		return true
+	}
+	switch r {
+	case '。', '！', '？', '；', '.', '!', '?', ';':
+		return true
+	default:
+		return false
+	}
 }
 
 func buildSSML(text, voice, rate string) string {
@@ -276,19 +422,19 @@ func xmlEscape(s string) string {
 	return s
 }
 
-func buildConfigMessage(requestID string) string {
-	timestamp := time.Now().UTC().Format(time.RFC3339)
+func buildConfigMessage() string {
+	timestamp := edgeTimestamp(time.Now())
 	return fmt.Sprintf(
-		"X-RequestId:%s\r\nContent-Type:application/json; charset=utf-8\r\nX-Timestamp:%s\r\nPath:speech.config\r\n\r\n"+
+		"X-Timestamp:%s\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n"+
 			`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":false,"wordBoundaryEnabled":false},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`,
-		requestID, timestamp,
+		timestamp,
 	)
 }
 
 func buildSSMLMessage(requestID, ssml string) string {
-	timestamp := time.Now().UTC().Format(time.RFC3339)
+	timestamp := edgeTimestamp(time.Now())
 	return fmt.Sprintf(
-		"X-RequestId:%s\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:%s\r\nPath:ssml\r\n\r\n%s",
+		"X-RequestId:%s\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:%sZ\r\nPath:ssml\r\n\r\n%s",
 		requestID, timestamp, ssml,
 	)
 }

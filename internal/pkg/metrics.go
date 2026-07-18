@@ -41,10 +41,43 @@ var (
 			Help: "Total number of RAG cache hits",
 		},
 	)
+
+	modelCallsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "model_calls_total",
+			Help: "Total calls to external model providers",
+		},
+		[]string{"provider", "result"},
+	)
+
+	modelCallDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "model_call_duration_seconds",
+			Help:    "External model call duration in seconds",
+			Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120},
+		},
+		[]string{"provider"},
+	)
+
+	modelRetriesTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "model_retries_total",
+			Help: "Total retries for external model providers",
+		},
+		[]string{"provider"},
+	)
+
+	modelCircuitOpenTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "model_circuit_open_total",
+			Help: "Total calls rejected by an open model circuit",
+		},
+		[]string{"provider"},
+	)
 )
 
 func init() {
-	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration, ragQueryDuration, ragCacheHits)
+	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration, ragQueryDuration, ragCacheHits, modelCallsTotal, modelCallDuration, modelRetriesTotal, modelCircuitOpenTotal)
 }
 
 // MetricsMiddleware records HTTP request metrics
@@ -73,6 +106,21 @@ func RecordRAGQueryDuration(seconds float64) {
 // RecordRAGCacheHit increments RAG cache hit counter
 func RecordRAGCacheHit() {
 	ragCacheHits.Inc()
+}
+
+func RecordModelCall(provider, result string, duration time.Duration) {
+	modelCallsTotal.WithLabelValues(provider, result).Inc()
+	if duration > 0 {
+		modelCallDuration.WithLabelValues(provider).Observe(duration.Seconds())
+	}
+}
+
+func RecordModelRetry(provider string) {
+	modelRetriesTotal.WithLabelValues(provider).Inc()
+}
+
+func RecordModelCircuitOpen(provider string) {
+	modelCircuitOpenTotal.WithLabelValues(provider).Inc()
 }
 
 // PrometheusHandler returns the Prometheus metrics HTTP handler

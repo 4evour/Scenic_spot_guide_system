@@ -54,7 +54,7 @@ func TestVisitorQueryRoutesRegisterUnansweredList(t *testing.T) {
 
 func TestVisitorQueryUnansweredRouteUsesAdminListHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: handlerTestJWTSecret}); err != nil {
 		t.Fatalf("InitJWT: %v", err)
 	}
 

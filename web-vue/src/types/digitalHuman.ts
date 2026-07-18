@@ -71,6 +71,9 @@ export interface ChatMessage {
   text: string;
   time: string;
   sources?: RAGSource[];
+  confidence?: number;
+  shouldAbstain?: boolean;
+  emotion?: string;
 }
 
 export interface RAGSource {

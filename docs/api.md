@@ -187,6 +187,6 @@ All `/admin/*` endpoints require admin authentication.
 | Method | Path | Description |
 | --- | --- | --- |
 | POST | `/v1/chat/completions` | OpenAI-compatible chat completions endpoint for Open-LLM-VTuber. |
-| ANY | `/vtuber-ws/*path` | WebSocket reverse proxy to Open-LLM-VTuber on `127.0.0.1:12393`; authenticates via `auth_token` Cookie, `auth.token.*` subprotocol, or legacy `?token=`. |
+| ANY | `/vtuber-ws/*path` | WebSocket reverse proxy to Open-LLM-VTuber on `127.0.0.1:12393`; authenticates via the HttpOnly `auth_token` Cookie or the `auth.token.<JWT>` subprotocol. URL query parameters are not accepted as a JWT authentication source. |
 | POST | `/api/v1/track` | Lightweight page visit and user action tracking endpoint. Invalid payloads are ignored with a success-shaped response. |
 | GET | `/health` | Service health check. |

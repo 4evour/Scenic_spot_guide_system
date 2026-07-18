@@ -99,7 +99,7 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 	// Use LLM query rewrite when API key is available, fallback to config-based expansion
 	var retrievalText string
 	var addedTerms []string
-	if s.chatAPIKey != "" && s.profile != nil {
+	if !options.SkipModelEnhancement && s.chatAPIKey != "" && s.profile != nil {
 		retrievalText, addedTerms = s.LLMQueryRewrite(s.profile, query)
 	} else {
 		retrievalText, addedTerms = s.configBasedQueryExpansion(s.profile, query)
@@ -153,7 +153,7 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 	}
 
 	// Apply LLM reranking when API key is available (enhances retrieval quality)
-	if s.chatAPIKey != "" && len(result) > 1 {
+	if !options.SkipModelEnhancement && s.chatAPIKey != "" && len(result) > 1 {
 		result = s.LLMRerank(query, result, options.TopK)
 	}
 

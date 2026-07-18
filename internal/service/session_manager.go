@@ -109,11 +109,6 @@ func (s *RAGService) AppendSessionTurnWithUser(sessionID string, userID uint, qu
 	if sessionID == "" {
 		return
 	}
-	s.cacheMutex.Lock()
-	s.appendTurnLocked(sessionID, query, answer)
-	s.cacheMutex.Unlock()
-
-	// 异步持久化到数据库
 	if s.chatSessionService != nil {
 		pkg.SafeGo("AppendSessionTurnWithUser", func() {
 			if err := s.chatSessionService.AddMessages(sessionID, userID, query, answer, "", 0); err != nil {
@@ -308,7 +303,7 @@ func (s *RAGService) detectTopicEntity(text string) string {
 }
 
 func isBoundaryIntent(query string) bool {
-	return containsAny(query, []string{"今天", "现在", "现场", "开不开", "开放", "几点", "门票", "票价", "演出", "场次", "人多", "排队", "无人机", "宠物", "公告", "实时", "不能替代", "不能编造"})
+	return containsAny(query, []string{"今天", "现在", "现场", "开不开", "开放", "几点", "门票", "票价", "演出", "场次", "人多", "排队", "无人机", "宠物", "公告", "实时", "不能替代", "不能编造", "酒店空房", "还有多少间", "房态", "剩余房间", "客房库存"})
 }
 
 // buildFollowUpRewrite 构建追问改写查询（配置化，支持任意景区）

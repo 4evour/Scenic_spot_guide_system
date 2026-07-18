@@ -33,6 +33,7 @@ let frame = 0;
 let raf = 0;
 let pixiApp: PixiAppLike | null = null;
 let live2dModel: Live2DModelLike | null = null;
+let hitAreaCleanup: (() => void) | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let appliedExpression = '';
 let expressionSeq = 0;
@@ -118,9 +119,9 @@ function drawFallback() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  const t = frame / 60;
+  const elapsedSeconds = frame / 60;
   const cx = rect.width / 2;
-  const cy = rect.height * 0.5 + Math.sin(t * 1.8) * 7;
+  const cy = rect.height * 0.5 + Math.sin(elapsedSeconds * 1.8) * 7;
   const glow = ctx.createRadialGradient(cx, cy, 50, cx, cy, 260);
   glow.addColorStop(0, 'rgba(82,240,238,.24)');
   glow.addColorStop(1, 'rgba(82,240,238,0)');
@@ -129,7 +130,7 @@ function drawFallback() {
 
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(Math.sin(t * 0.8) * 0.035);
+  ctx.rotate(Math.sin(elapsedSeconds * 0.8) * 0.035);
 
   ctx.fillStyle = '#f2ffff';
   ctx.beginPath();
@@ -137,8 +138,8 @@ function drawFallback() {
   ctx.fill();
 
   ctx.fillStyle = fallbackEyeColor();
-  const eyeY = -88 + Math.sin(t * 2) * 1.5;
-  const blink = Math.sin(t * 0.65) > 0.97 ? 2 : 13;
+  const eyeY = -88 + Math.sin(elapsedSeconds * 2) * 1.5;
+  const blink = Math.sin(elapsedSeconds * 0.65) > 0.97 ? 2 : 13;
   // Angry expression: angled eyebrows
   if (props.expression === 'angry') {
     ctx.fillRect(-40, eyeY - 3, 20, blink);
@@ -330,14 +331,14 @@ function onResize() {
 
 // --- Expression mapping (8 expressions) ---
 const expressionMap: Record<Live2DExpression, string> = {
-  happy: 'exp_01',
-  neutral: 'exp_02',
-  angry: 'exp_03',
-  thinking: 'exp_04',
-  surprised: 'exp_05',
-  sad: 'exp_06',
-  interrupted: 'exp_07',
-  blush: 'exp_08',
+  neutral: 'exp_01',
+  happy: 'exp_02',
+  sad: 'exp_03',
+  surprised: 'exp_04',
+  angry: 'exp_05',
+  thinking: 'exp_06',
+  blush: 'exp_07',
+  interrupted: 'exp_08',
   idle: '', // No expression
 };
 
@@ -477,12 +478,19 @@ function registerHitAreas() {
   view.addEventListener('click', clickHandler);
 
   // Store for cleanup
-  const cleanup = () => view.removeEventListener('click', clickHandler);
-  if (live2dModel) (live2dModel as Record<string, unknown>)._cleanupHitArea = cleanup;
+  hitAreaCleanup?.();
+  hitAreaCleanup = () => view.removeEventListener('click', clickHandler);
 }
 
 // --- Touch gestures (pinch-to-zoom + single-finger drag) ---
 let touchCleanup: (() => void) | null = null;
+
+function getTouchDist(touches: TouchList): number {
+  if (touches.length < 2) return 0;
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
 
 function registerTouchGestures() {
   if (!pixiApp || !live2dModel) return;
@@ -502,13 +510,6 @@ function registerTouchGestures() {
   const SCALE_MIN = 0.05;
   const SCALE_MAX = 0.25;
 
-  function getTouchDist(touches: TouchList): number {
-    if (touches.length < 2) return 0;
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
   function animateBounceBack() {
     if (!live2dModel) return;
     const startX = live2dModel.x;
@@ -521,12 +522,12 @@ function registerTouchGestures() {
     function step(now: number) {
       if (!live2dModel) return;
       const elapsed = now - start;
-      const t = Math.min(elapsed / duration, 1);
+      const progress = Math.min(elapsed / duration, 1);
       // ease-out cubic
-      const ease = 1 - Math.pow(1 - t, 3);
+      const ease = 1 - Math.pow(1 - progress, 3);
       live2dModel.x = startX + (targetX - startX) * ease;
       live2dModel.y = startY + (targetY - startY) * ease;
-      if (t < 1) {
+      if (progress < 1) {
         bounceTimer = window.requestAnimationFrame(step);
       }
     }
@@ -650,8 +651,8 @@ function destroyLive2DModel(invalidate = true) {
   touchCleanup?.();
   touchCleanup = null;
   // Cleanup hit area handler
-  const model = live2dModel as Record<string, unknown> | null;
-  if (model?._cleanupHitArea) (model._cleanupHitArea as () => void)();
+  hitAreaCleanup?.();
+  hitAreaCleanup = null;
   pixiApp?.ticker?.remove?.(syncLive2DFrame);
   live2dModel?.internalModel?.off?.('beforeModelUpdate', applyLipSyncParameters);
   pixiApp?.destroy?.(true);

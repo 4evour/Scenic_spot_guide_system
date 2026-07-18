@@ -464,11 +464,11 @@ func (s *StatsService) GetVisitorReport(days int) VisitorReport {
 	}
 	for emotion, count := range dist {
 		switch emotion {
-		case "joy", "surprise":
+		case "joy", "surprise", "satisfaction", "excitement":
 			merged["positive"].Count += count
-		case "neutral":
+		case "neutral", "question":
 			merged["neutral"].Count += count
-		case "sadness", "fear":
+		case "sadness", "fear", "anger", "disgust", "complaint", "anxiety":
 			merged["negative"].Count += count
 		default:
 			merged["neutral"].Count += count
@@ -631,6 +631,8 @@ type DigitalHumanSettings struct {
 	CultureTheme      string  `json:"culture_theme"`
 	VoiceType         string  `json:"voice_type"`
 	VoiceTone         string  `json:"voice_tone"`
+	VoiceID           string  `json:"voice_id"`
+	TTSRate           string  `json:"tts_rate"`
 	Speed             float64 `json:"speed"`
 	Volume            int     `json:"volume"`
 	Greeting          string  `json:"greeting"`
@@ -638,15 +640,27 @@ type DigitalHumanSettings struct {
 	EmotionLevel      int     `json:"emotion_level"`
 	DefaultAvatarID   string  `json:"default_avatar_id"`
 	AllowAvatarSwitch bool    `json:"allow_avatar_switch"`
+	RuntimeVersion    string  `json:"runtime_version"`
+}
+
+type DigitalHumanRuntimeSettings struct {
+	VoiceID           string `json:"voice_id"`
+	TTSRate           string `json:"tts_rate"`
+	Volume            int    `json:"volume"`
+	DefaultEmotion    string `json:"default_emotion"`
+	EmotionLevel      int    `json:"emotion_level"`
+	DefaultAvatarID   string `json:"default_avatar_id"`
+	AllowAvatarSwitch bool   `json:"allow_avatar_switch"`
+	RuntimeVersion    string `json:"runtime_version"`
 }
 
 func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
 	config, err := s.dhConfigRepo.Get()
 	if err != nil {
 		return DigitalHumanSettings{
-			Name: "小灵", Appearance: "亲和型国风讲解员", Costume: "古典汉服",
-			Style: "古典汉服", Color: "#D4AF37", CultureTheme: "灵山佛教文化与江南山水意境",
-			VoiceType: "温柔女声", VoiceTone: "温暖、端庄、亲切", Speed: 0.8, Volume: 80,
+			Name: "小灵", Appearance: "Live2D 官方示例形象（临时）", Costume: "现代幻想服装",
+			Style: "Live2D 示例模型", Color: "#D4AF37", CultureTheme: "灵山佛教文化与江南山水意境",
+			VoiceType: "温柔女声", VoiceTone: "温暖、端庄、亲切", VoiceID: DefaultDigitalHumanVoiceID, TTSRate: "-20%", Speed: 0.8, Volume: 80,
 			Greeting:       "欢迎来到灵山胜境，我是您的数字导览员小灵。",
 			DefaultEmotion: "joy", EmotionLevel: 3,
 			DefaultAvatarID:   DefaultDigitalHumanAvatarID,
@@ -656,25 +670,74 @@ func (s *StatsService) GetDigitalHumanConfig() DigitalHumanSettings {
 	return DigitalHumanSettings{
 		Name: config.Name, Appearance: config.Appearance, Costume: config.Costume,
 		Style: config.Style, Color: config.Color, CultureTheme: config.CultureTheme,
-		VoiceType: config.VoiceType, VoiceTone: config.VoiceTone, Speed: config.Speed, Volume: config.Volume,
+		VoiceType: config.VoiceType, VoiceTone: config.VoiceTone,
+		VoiceID: NormalizeDigitalHumanVoiceID(config.VoiceID, config.VoiceType),
+		TTSRate: NormalizeDigitalHumanTTSRate(config.TTSRate, config.Speed),
+		Speed:   NormalizeDigitalHumanSpeed(config.Speed), Volume: clampDigitalHumanVolume(config.Volume),
 		Greeting:       config.Greeting,
 		DefaultEmotion: config.DefaultEmotion, EmotionLevel: config.EmotionLevel,
 		DefaultAvatarID:   NormalizeDigitalHumanAvatarID(config.DefaultAvatarID),
 		AllowAvatarSwitch: config.AllowAvatarSwitch,
+		RuntimeVersion:    config.UpdatedAt.UTC().Format(time.RFC3339Nano),
+	}
+}
+
+func (s *StatsService) GetDigitalHumanRuntimeConfig() DigitalHumanRuntimeSettings {
+	settings := s.GetDigitalHumanConfig()
+	return DigitalHumanRuntimeSettings{
+		VoiceID:           settings.VoiceID,
+		TTSRate:           settings.TTSRate,
+		Volume:            settings.Volume,
+		DefaultEmotion:    settings.DefaultEmotion,
+		EmotionLevel:      settings.EmotionLevel,
+		DefaultAvatarID:   settings.DefaultAvatarID,
+		AllowAvatarSwitch: settings.AllowAvatarSwitch,
+		RuntimeVersion:    settings.RuntimeVersion,
 	}
 }
 
 func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) error {
-	if err := ValidateDigitalHumanAvatarID(settings.DefaultAvatarID); err != nil {
-		return err
-	}
 	config, err := s.dhConfigRepo.Get()
 	if err != nil {
 		// 获取失败时构造默认记录并创建
 		config = &model.DigitalHumanConfig{
-			Name: "小灵", Appearance: "亲和型国风讲解员", Costume: "古典汉服",
+			Name: "小灵", Appearance: "Live2D 官方示例形象（临时）", Costume: "现代幻想服装",
 		}
 	}
+	if settings.DefaultAvatarID == "" {
+		settings.DefaultAvatarID = config.DefaultAvatarID
+	}
+	if settings.VoiceType == "" {
+		settings.VoiceType = config.VoiceType
+	}
+	if settings.VoiceTone == "" {
+		settings.VoiceTone = config.VoiceTone
+	}
+	if settings.Speed <= 0 {
+		settings.Speed = config.Speed
+		if settings.Speed <= 0 {
+			settings.Speed = 0.8
+		}
+	}
+	if settings.EmotionLevel <= 0 {
+		settings.EmotionLevel = config.EmotionLevel
+		if settings.EmotionLevel <= 0 {
+			settings.EmotionLevel = 3
+		}
+	}
+	if settings.DefaultEmotion == "" {
+		settings.DefaultEmotion = config.DefaultEmotion
+		if settings.DefaultEmotion == "" {
+			settings.DefaultEmotion = "joy"
+		}
+	}
+	if err := ValidateDigitalHumanAvatarID(settings.DefaultAvatarID); err != nil {
+		return err
+	}
+	if err := ValidateDigitalHumanSettings(settings.Speed, settings.Volume, settings.EmotionLevel, settings.DefaultEmotion, settings.VoiceID); err != nil {
+		return err
+	}
+	settings.VoiceID = NormalizeDigitalHumanVoiceID(settings.VoiceID, settings.VoiceType)
 	config.Name = settings.Name
 	config.Appearance = settings.Appearance
 	config.Costume = settings.Costume
@@ -683,6 +746,8 @@ func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) e
 	config.CultureTheme = settings.CultureTheme
 	config.VoiceType = settings.VoiceType
 	config.VoiceTone = settings.VoiceTone
+	config.VoiceID = settings.VoiceID
+	config.TTSRate = NormalizeDigitalHumanTTSRate(settings.TTSRate, settings.Speed)
 	config.Speed = settings.Speed
 	config.Volume = settings.Volume
 	config.Greeting = settings.Greeting
@@ -691,6 +756,16 @@ func (s *StatsService) UpdateDigitalHumanConfig(settings DigitalHumanSettings) e
 	config.DefaultAvatarID = NormalizeDigitalHumanAvatarID(settings.DefaultAvatarID)
 	config.AllowAvatarSwitch = settings.AllowAvatarSwitch
 	return s.dhConfigRepo.Update(config)
+}
+
+func clampDigitalHumanVolume(volume int) int {
+	if volume < 0 {
+		return 0
+	}
+	if volume > 100 {
+		return 100
+	}
+	return volume
 }
 
 // ==================== 知识库统计 ====================

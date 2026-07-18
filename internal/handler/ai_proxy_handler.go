@@ -173,8 +173,9 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// 检测情绪并嵌入表情标签，让 Live2D 数字人展示表情
-	emotion := detectEmotion(response)
+	// 根据游客输入检测情绪，并嵌入兼容旧客户端的表情标签。
+	emotionResult := service.DetectVisitorEmotion(query)
+	emotion := emotionResult.LegacyToken
 	responseWithEmotion := fmt.Sprintf("[%s] %s", emotion, response)
 
 	// 记录交互日志
@@ -183,7 +184,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 			SessionID:      req.SessionID,
 			Query:          query,
 			Response:       response,
-			Emotion:        emotion,
+			Emotion:        string(emotionResult.Category),
 			ResponseTimeMs: elapsed,
 			Category:       service.DetectCategory(query),
 			Source:         "digital_human",
@@ -193,6 +194,7 @@ func (h *OpenAIProxyHandler) ChatCompletions(c *gin.Context) {
 	slog.Info("OpenAI 兼容请求回答完成",
 		"trace_id", trace.TraceID,
 		"emotion", emotion,
+		"emotion_category", emotionResult.Category,
 		"response_len", len([]rune(response)),
 		"retrieval_ms", trace.RetrievalMs,
 		"generation_ms", trace.GenerationMs,
@@ -377,13 +379,14 @@ func (h *OpenAIProxyHandler) writeRAGStreamResponse(c *gin.Context, model, sessi
 	fmt.Fprintf(writer, "data: [DONE]\n\n")
 	flusher.Flush()
 
-	emotion := detectEmotion(response)
+	emotionResult := service.DetectVisitorEmotion(query)
+	emotion := emotionResult.LegacyToken
 	if h.statsService != nil {
 		h.statsService.RecordInteraction(service.InteractionRecord{
 			SessionID:      sessionID,
 			Query:          query,
 			Response:       response,
-			Emotion:        emotion,
+			Emotion:        string(emotionResult.Category),
 			ResponseTimeMs: elapsed,
 			Category:       service.DetectCategory(query),
 			Source:         "digital_human",
@@ -393,6 +396,7 @@ func (h *OpenAIProxyHandler) writeRAGStreamResponse(c *gin.Context, model, sessi
 	slog.Info("OpenAI 兼容 SSE 流式响应完成",
 		"trace_id", trace.TraceID,
 		"emotion", emotion,
+		"emotion_category", emotionResult.Category,
 		"response_len", len([]rune(response)),
 		"retrieval_ms", trace.RetrievalMs,
 		"generation_ms", trace.GenerationMs,

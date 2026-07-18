@@ -1,0 +1,148 @@
+[
+  {
+    "id": "accuracy-fact-height-001",
+    "category": "景区事实题",
+    "expected_answer_type": "fact",
+    "question": "灵山大佛有多高？",
+    "required_keywords": ["灵山大佛"],
+    "expected_facts": [{"type": "number", "label": "通高", "value": "88", "unit": "米"}],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-fact-location-001",
+    "category": "时间价格地址题",
+    "expected_answer_type": "fact",
+    "question": "灵山胜境大致位于哪里？",
+    "required_keywords": ["无锡", "太湖"],
+    "expected_facts": [{"type": "text", "label": "位置", "value": "江苏无锡太湖之滨"}],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-fact-culture-001",
+    "category": "景区事实题",
+    "expected_answer_type": "fact",
+    "question": "五印坛城主要展示什么文化？",
+    "required_keywords": ["五印坛城", "藏传佛教"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-confusion-001",
+    "category": "易混淆景点题",
+    "expected_answer_type": "fact",
+    "question": "哪个项目通过音乐、喷泉和群雕演绎花开见佛？",
+    "required_keywords": ["九龙灌浴"],
+    "forbidden_keywords": ["吉祥颂"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-confusion-002",
+    "category": "易混淆景点题",
+    "expected_answer_type": "fact",
+    "question": "想看木雕、壁画和琉璃等工艺，优先了解哪个景点？",
+    "required_keywords": ["梵宫"],
+    "forbidden_keywords": ["五印坛城"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-route-half-day-001",
+    "category": "路线推荐题",
+    "expected_answer_type": "route",
+    "question": "只有半天时间，灵山优先怎么游览？",
+    "required_keywords": ["九龙灌浴", "灵山大佛"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-route-family-001",
+    "category": "路线推荐题",
+    "expected_answer_type": "route",
+    "question": "带孩子来灵山，哪些点位比较适合？",
+    "required_keywords": ["亲子", "百子戏弥勒"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-time-boundary-001",
+    "category": "时间价格地址题",
+    "expected_answer_type": "abstention",
+    "question": "今天景区几点开门？",
+    "required_keywords": ["官方", "为准"],
+    "should_abstain": true,
+    "abstention_keywords": ["不能直接", "以官方最新公告", "无法确认"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-price-boundary-001",
+    "category": "时间价格地址题",
+    "expected_answer_type": "abstention",
+    "question": "今天灵山门票多少钱？",
+    "required_keywords": ["官方", "票价"],
+    "should_abstain": true,
+    "abstention_keywords": ["不能直接", "以官方最新公告", "无法确认"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-address-001",
+    "category": "时间价格地址题",
+    "expected_answer_type": "fact",
+    "question": "自驾导航到灵山大佛可以参考哪个地址？",
+    "required_keywords": ["灵山路1号"],
+    "expected_facts": [{"type": "address", "label": "导航地址", "value": "马山街道灵山路1号"}],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-insufficient-parking-001",
+    "category": "不能回答和信息不足题",
+    "expected_answer_type": "abstention",
+    "question": "现在景区停车还剩多少空位？",
+    "should_abstain": true,
+    "abstention_keywords": ["资料不足", "无法确认", "以官方最新公告"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-insufficient-hotel-001",
+    "category": "不能回答和信息不足题",
+    "expected_answer_type": "abstention",
+    "question": "景区附近今晚还有多少间酒店空房？",
+    "should_abstain": true,
+    "abstention_keywords": ["没有找到足够依据", "资料不足", "无法确认"]
+  },
+  {
+    "id": "accuracy-operations-show-001",
+    "category": "消费和运营分析题",
+    "expected_answer_type": "abstention",
+    "question": "今天九龙灌浴具体有几场演出？",
+    "should_abstain": true,
+    "abstention_keywords": ["不能直接", "以官方最新公告", "无法确认"],
+    "must_have_sources": true
+  },
+  {
+    "id": "accuracy-consumption-001",
+    "category": "消费和运营分析题",
+    "expected_answer_type": "fact",
+    "question": "根据游客消费样本，灵山消费结构中占比最高的类别是什么？",
+    "required_keywords": ["购物"],
+    "expected_facts": [
+      {"type": "text", "label": "类别", "value": "购物", "aliases": ["shopping"]},
+      {"type": "number", "label": "占比", "value": "29.27", "unit": "%"}
+    ],
+    "must_have_sources": true,
+    "expected_source_ids": ["real-consumption-001"]
+  },
+  {
+    "id": "accuracy-context-001",
+    "category": "多轮上下文题",
+    "expected_answer_type": "context",
+    "turns": [
+      {
+        "question": "我带孩子来，想轻松游览",
+        "required_keywords": ["亲子"],
+        "must_have_sources": true
+      },
+      {
+        "question": "那路线需要多长时间？",
+        "required_keywords": ["路线"],
+        "context_required": ["亲子"],
+        "must_have_sources": true
+      }
+    ]
+  }
+]

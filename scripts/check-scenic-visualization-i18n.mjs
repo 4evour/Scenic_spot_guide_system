@@ -71,7 +71,9 @@ for (const pattern of forbiddenMapPatterns) {
   }
 }
 
-const spotTranslationCount = (scenicSource.match(/translations:\s*\{\s*'en-US':/g) || []).length;
+const literalTranslationCount = (scenicSource.match(/translations:\s*\{\s*'en-US':/g) || []).length;
+const generatedRouteSpotCount = (scenicSource.match(/^\s+routeOnlySpot\(/gm) || []).length;
+const spotTranslationCount = literalTranslationCount + generatedRouteSpotCount;
 if (spotTranslationCount < 14) {
   failures.push(`scenicVisualization.ts expected English translations for spots, routes, and reminders; found ${spotTranslationCount}`);
 }

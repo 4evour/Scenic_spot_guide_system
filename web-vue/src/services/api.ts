@@ -1,7 +1,24 @@
-﻿import router from '../router';
+import router from '../router';
 import { useAuthStore } from '../stores/auth';
 import { getCSRFToken } from '../utils/csrf';
 import i18n from '../i18n';
+
+function mergeAbortSignals(...signals: Array<AbortSignal | null | undefined>) {
+  const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
+  if (activeSignals.length <= 1) return activeSignals[0];
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any(activeSignals);
+
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  for (const signal of activeSignals) {
+    if (signal.aborted) {
+      abort();
+      break;
+    }
+    signal.addEventListener('abort', abort, { once: true });
+  }
+  return controller.signal;
+}
 
 export async function apiFetch<T = unknown>(
   path: string,
@@ -11,12 +28,12 @@ export async function apiFetch<T = unknown>(
   const headers: HeadersInit = {
     ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    ...(options?.headers || {}),
+    ...options?.headers,
   };
   const timeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
   const response = await fetch(`/api/v1${path}`, {
-    signal: AbortSignal.timeout(timeoutMs),
     ...options,
+    signal: mergeAbortSignals(options?.signal, AbortSignal.timeout(timeoutMs)),
     headers,
     credentials: 'include',
   });
@@ -97,5 +114,77 @@ export const sessionApi = {
     return apiFetch<{ list: unknown[]; total: number }>(
       `/sessions/search?keyword=${encodeURIComponent(keyword)}&page=${page}&page_size=${pageSize}`,
     );
+  },
+};
+
+// ============ 游客体验闭环 API ============
+
+export interface TourRoute {
+  id: number;
+  name: string;
+  description: string;
+  spots: string;
+  duration: number;
+  difficulty: string;
+  rating: number;
+}
+
+export interface RecommendedRoute {
+  route: TourRoute;
+  score: number;
+  reason: string;
+  matched_tags: string[];
+}
+
+export interface RouteRecommendationResult {
+  routes: RecommendedRoute[];
+}
+
+export interface RouteRecommendationInput {
+  session_id: string;
+  profile_type: string;
+  interest_tags: string[];
+  difficulty?: string;
+  limit?: number;
+}
+
+export interface SpotRatingInput {
+  session_id: string;
+  spot_id: number;
+  overall_rating: number;
+  culture_rating?: number;
+  photo_rating?: number;
+  facility_rating?: number;
+  comment?: string;
+  tags?: string[];
+}
+
+export interface SpotRatingStats {
+  spot_id: number;
+  count: number;
+  avg_overall: number;
+  avg_culture: number;
+  avg_photo: number;
+  avg_facility: number;
+  negative_ratings: number;
+}
+
+export const visitorExperienceApi = {
+  async recommendRoutes(input: RouteRecommendationInput) {
+    return apiFetch<RouteRecommendationResult>('/visitor/routes/recommend', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  async submitSpotRating(input: SpotRatingInput) {
+    return apiFetch('/visitor/ratings', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  async getSpotRatingStats(spotId: number) {
+    return apiFetch<SpotRatingStats>(`/visitor/spots/${spotId}/ratings/stats`);
   },
 };

@@ -181,7 +181,7 @@ func TestOpenAIProxyChatCompletionsStreamUsesRAGStreamingLLM(t *testing.T) {
 	}
 }
 
-func TestOpenAIProxyChatCompletionsStreamReturnsErrorWhenLLMFails(t *testing.T) {
+func TestOpenAIProxyChatCompletionsStreamFallsBackWhenLLMFails(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	llm := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,11 +203,14 @@ func TestOpenAIProxyChatCompletionsStreamReturnsErrorWhenLLMFails(t *testing.T) 
 		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
 	}
 	bodyText := resp.Body.String()
-	if !strings.Contains(bodyText, `"error"`) {
-		t.Fatalf("stream failure should return explicit SSE error: %s", bodyText)
+	if strings.Contains(bodyText, `"error"`) {
+		t.Fatalf("stream fallback should not return an SSE error: %s", bodyText)
 	}
 	if strings.Contains(bodyText, "游客常问") || strings.Contains(bodyText, "问答素材") {
-		t.Fatalf("stream failure should not expose knowledge meta as answer: %s", bodyText)
+		t.Fatalf("stream fallback should not expose knowledge meta as answer: %s", bodyText)
+	}
+	if !strings.Contains(bodyText, "灵山大佛高88米") || !strings.Contains(bodyText, "[DONE]") {
+		t.Fatalf("stream fallback should return local evidence and finish: %s", bodyText)
 	}
 }
 

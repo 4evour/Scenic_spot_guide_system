@@ -27,7 +27,11 @@ flowchart LR
 无 Key 启动：
 
 ```powershell
-$env:SCENIC_GUIDE_SECURITY_JWT_SECRET="至少32位随机字符串"
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 docker compose up --build
 ```
 

@@ -42,7 +42,7 @@ func (gs *GuestService) CreateGuestAccount(deviceFingerprint string) (*model.Use
 	existing, err := gs.userRepo.FindByGuestToken(deviceFingerprint)
 	if err == nil && existing != nil && existing.ID != 0 {
 		// 已有游客账号，签发 token
-		token, tokenErr := pkg.GenerateToken(existing.ID, existing.Username, existing.Role, gs.tokenExpireHours)
+		token, tokenErr := pkg.GenerateToken(existing.ID, existing.Username, existing.Role, existing.TokenVersion, gs.tokenExpireHours)
 		if tokenErr != nil {
 			return nil, "", fmt.Errorf("generate token failed: %w", tokenErr)
 		}
@@ -82,7 +82,7 @@ func (gs *GuestService) CreateGuestAccount(deviceFingerprint string) (*model.Use
 
 	slog.Info("创建游客账号", "user_id", user.ID, "username", username, "display_name", displayName)
 
-	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, gs.tokenExpireHours)
+	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, user.TokenVersion, gs.tokenExpireHours)
 	if err != nil {
 		return nil, "", fmt.Errorf("generate token failed: %w", err)
 	}
@@ -125,11 +125,12 @@ func (gs *GuestService) UpgradeGuest(userID uint, username, password, email stri
 	}
 
 	fields := map[string]interface{}{
-		"username":     username,
-		"password":     string(hashedPwd),
-		"role":         "visitor",
-		"email":        email,
-		"display_name": "",
+		"username":      username,
+		"password":      string(hashedPwd),
+		"role":          "visitor",
+		"email":         email,
+		"display_name":  "",
+		"token_version": gorm.Expr("token_version + ?", 1),
 	}
 
 	if err := gs.userRepo.UpgradeGuest(userID, fields); err != nil {

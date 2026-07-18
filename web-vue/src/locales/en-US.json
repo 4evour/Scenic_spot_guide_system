@@ -200,6 +200,30 @@
     "subtitle": "Text and voice input supported",
     "placeholder": "Type your question…",
     "send": "Send",
+    "multimodal": {
+      "open": "Add an image, audio, or video",
+      "title": "Multimodal question",
+      "subtitle": "Upload media and let the guide identify or explain it",
+      "chooseFile": "Choose an image, audio, or video",
+      "changeFile": "Change file",
+      "removeFile": "Remove file",
+      "promptPlaceholder": "Add a question, for example: What attraction is in this image?",
+      "formatHint": "JPG, PNG, WebP, WAV, MP3, OGG, WebM, and MP4 supported",
+      "analyze": "Analyze",
+      "analyzing": "Analyzing…",
+      "fileTooLarge": "The file is invalid or exceeds the {size} limit",
+      "emptyResponse": "The multimodal service returned no valid answer",
+      "requestFailed": "Multimodal analysis failed. Please try again.",
+      "userAttachment": "Uploaded media: {name}",
+      "userAttachmentWithPrompt": "Uploaded media: {name}\nQuestion: {prompt}",
+      "types": {
+        "image": "Image",
+        "audio": "Audio",
+        "video": "Video",
+        "file": "File"
+      },
+      "close": "Close multimodal input"
+    },
     "interrupt": "Stop",
     "reconnect": "Reconnect",
     "interruptCount": "Stopped {count} times",
@@ -236,12 +260,15 @@
     "noSessions": "No saved sessions",
     "sessionDefaultTitle": "Untitled Session",
     "sessionMessageCount": "{count} messages",
+    "traceExported": "Exported {count} voice latency traces.",
+    "traceExportEmpty": "No voice latency traces are available to export.",
     "user": "Visitor",
     "assistant": "🤖 Xiao Ling",
     "system": "⚙ System",
     "actions": {
       "search": "Search",
       "history": "History",
+      "exportVoiceTraces": "Export voice latency traces",
       "register": "Register account",
       "refresh": "Refresh"
     },
@@ -261,6 +288,43 @@
       "entityDetailLabel": "{name} details",
       "entityDetailQuery": "Can you introduce {name} in detail?",
       "buddhaStory": "What's special about the Buddha?"
+    },
+    "visitorLoop": {
+      "title": "Guide Loop",
+      "subtitle": "Recommend routes by visitor preference and send ratings back to operations",
+      "profileTitle": "Visitor profile",
+      "recommendRoutes": "Recommend routes",
+      "expand": "Expand guide loop",
+      "collapse": "Collapse guide loop",
+      "recommending": "Recommending...",
+      "recommendFailed": "Route recommendation failed",
+      "noRoutes": "No matching routes yet. Configure routes in admin first.",
+      "routeSpotsUnknown": "Attractions not configured",
+      "durationMinutes": "{count} min",
+      "score": "Match {score}",
+      "rateThisRoute": "Rate this route",
+      "ratingTitle": "Attraction rating",
+      "currentSpot": "Current attraction",
+      "spotSelect": "Select attraction to rate",
+      "ratingScore": "Rating",
+      "ratingCommentPlaceholder": "Add notes about queues, narration, family experience, etc.",
+      "ratingSubmit": "Submit rating",
+      "ratingSubmitting": "Submitting...",
+      "ratingSaved": "Rating saved for {name}",
+      "ratingFailed": "Failed to submit rating",
+      "ratingSpotRequired": "Select an attraction to rate first",
+      "profiles": {
+        "family": "Family",
+        "culture": "Culture",
+        "senior": "Senior-friendly",
+        "photo": "Photo spots"
+      },
+      "profileHints": {
+        "family": "Less walking, more stories",
+        "culture": "Stories, architecture, history",
+        "senior": "Slow pace, low intensity",
+        "photo": "Recognizable viewpoints"
+      }
     },
     "tabAvatar": "Avatar",
     "tabChat": "Chat",
@@ -296,6 +360,13 @@
       "autoGuideOff": "Proximity guide",
       "seniorMode": "Senior Mode",
       "exitSeniorMode": "Exit Senior Mode",
+      "location": {
+        "idle": "Waiting for GPS location",
+        "ready": "GPS accuracy about {accuracy}m",
+        "waitingAccuracy": "GPS accuracy is {accuracy}m; auto narration requires 10m or better",
+        "demoMode": "Demo location: arrived at the attraction coordinates",
+        "useGps": "Use real GPS"
+      },
       "chatResizeTitle": "Drag to adjust chat width"
     },
     "avatar": {
@@ -372,6 +443,8 @@
       "activityStatus": "Show / Activity Status",
       "terminalStatus": "Digital Guide Terminal Status",
       "knowledgeOps": "Knowledge Operations",
+      "visitorExperience": "Visitor Experience Loop",
+      "consumptionAnalysis": "Visitor Consumption Analysis",
       "hourlyTrend": "24-hour Traffic Trend",
       "categoryDistribution": "Topic Distribution",
       "satisfactionTrend": "7-day Satisfaction Trend",
@@ -390,6 +463,21 @@
       "topQuestions": "No top question data",
       "recentConversations": "No conversation records"
     },
+    "consumption": {
+      "totalAll": "All-scope total spend",
+      "lingshanAverage": "Lingshan average spend",
+      "lingshanSamples": "Lingshan samples",
+      "categoryTitle": "Lingshan spending mix",
+      "recommendationTitle": "Operational suggestions",
+      "empty": "No consumption analysis data",
+      "categories": {
+        "ticket": "Ticket",
+        "food": "Food",
+        "shopping": "Shopping",
+        "transport": "Transport",
+        "entertainment": "Entertainment"
+      }
+    },
     "labels": {
       "lastUpdated": "Last Updated",
       "avatarPreview": "Digital Guide Config Preview",
@@ -401,7 +489,12 @@
       "voiceType": "Voice Type",
       "avatarSwitch": "Visitor Switch",
       "trackedQuestions": "Tracked Questions",
-      "knowledgeCoverageHint": "Knowledge operations are summarized from today's frequent questions. Add candidate content in Knowledge Base as needed."
+      "knowledgeCoverageHint": "Knowledge operations are summarized from today's frequent questions. Add candidate content in Knowledge Base as needed.",
+      "totalRatings": "Total Ratings",
+      "negativeRatings": "Low Ratings",
+      "routePreference": "Route Preference",
+      "interestPreference": "Interest Preference",
+      "avgSpotRating": "Average Rating"
     },
     "columns": {
       "time": "Time",
@@ -564,6 +657,7 @@
       "cultureTheme": "Scenic Culture Theme",
       "greeting": "Greeting",
       "voice": "Narration Voice",
+      "voiceId": "TTS Voice ID",
       "tone": "Narration Tone",
       "speed": "Speed",
       "volume": "Volume",
@@ -600,6 +694,12 @@
         "professional": "Calm professional female voice",
         "energetic": "Energetic friendly female voice",
         "ceremonial": "Formal etiquette female voice"
+      },
+      "voiceId": {
+        "xiaoxiao": "Xiaoxiao (Gentle female)",
+        "xiaoyi": "Xiaoyi (Professional female)",
+        "yunxi": "Yunxi (Energetic female)",
+        "yunyang": "Yunyang (Calm male)"
       },
       "tone": {
         "warm": "Warm, formal, friendly",

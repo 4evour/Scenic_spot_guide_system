@@ -4,15 +4,18 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/golang-lru/v2"
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/pkg"
 	"github.com/scenic-guide/internal/repository"
+	"golang.org/x/sync/singleflight"
 
 	iconfig "github.com/scenic-guide/internal/config"
 )
@@ -52,11 +55,12 @@ const (
 )
 
 type RetrievalOptions struct {
-	TopK            int
-	Mode            RetrievalMode
-	EmbeddingWeight float64
-	BM25Weight      float64
-	RRFK            float64
+	TopK                 int
+	Mode                 RetrievalMode
+	EmbeddingWeight      float64
+	BM25Weight           float64
+	RRFK                 float64
+	SkipModelEnhancement bool
 }
 
 type retrievalScoredChunk struct {
@@ -71,18 +75,20 @@ type retrievalQueryExpansion struct {
 }
 
 type RAGTrace struct {
-	TraceID        string
-	Provider       string
-	CacheHit       bool
-	ChunkCount     int
-	Sources        []RAGSource
-	RetrievalMs    int64
-	EmbeddingMs    int64
-	GenerationMs   int64
-	TotalMs        int64
-	RetrievalMode  string
-	RewrittenQuery string
-	SlowRequest    bool
+	TraceID        string      `json:"trace_id"`
+	Provider       string      `json:"provider"`
+	CacheHit       bool        `json:"cache_hit"`
+	ChunkCount     int         `json:"chunk_count"`
+	Sources        []RAGSource `json:"sources"`
+	RetrievalMs    int64       `json:"retrieval_ms"`
+	EmbeddingMs    int64       `json:"embedding_ms"`
+	GenerationMs   int64       `json:"generation_ms"`
+	TotalMs        int64       `json:"total_ms"`
+	RetrievalMode  string      `json:"retrieval_mode"`
+	RewrittenQuery string      `json:"rewritten_query,omitempty"`
+	SlowRequest    bool        `json:"slow_request"`
+	Confidence     float64     `json:"confidence"`
+	ShouldAbstain  bool        `json:"should_abstain"`
 }
 
 type RAGSource struct {
@@ -95,10 +101,141 @@ type RAGSource struct {
 	Preview           string `json:"preview,omitempty"`
 }
 
+// calculateAnswerEvidence derives a conservative evidence signal from local retrieval.
+// It is intentionally independent from any model-reported confidence value.
+func calculateAnswerEvidence(query string, sources []RAGSource) (float64, bool) {
+	if len(sources) == 0 {
+		return 0, true
+	}
+
+	maxRelevance := 0.0
+	supportingSources := 0
+	for _, source := range sources {
+		relevance := sourceEvidenceRelevance(query, source)
+		if relevance > maxRelevance {
+			maxRelevance = relevance
+		}
+		if relevance >= 0.24 {
+			supportingSources++
+		}
+	}
+
+	if isBoundaryIntent(query) {
+		return minFloat(0.2+maxRelevance*0.35, 0.45), true
+	}
+	if maxRelevance < 0.24 {
+		return minFloat(0.15+maxRelevance, 0.45), true
+	}
+
+	confidence := 0.5 + maxRelevance*0.35 + float64(min(supportingSources-1, 2))*0.05
+	return minFloat(confidence, 0.9), false
+}
+
+func calculateChunkEvidence(query string, chunks []model.KnowledgeChunk) (float64, bool) {
+	if len(chunks) == 0 {
+		return 0, true
+	}
+
+	sources := make([]RAGSource, 0, len(chunks))
+	for _, chunk := range chunks {
+		sources = append(sources, RAGSource{
+			ID:                chunk.ID,
+			Title:             strings.TrimSpace(chunk.Title),
+			Source:            strings.TrimSpace(chunk.Source),
+			KnowledgeCategory: strings.TrimSpace(chunk.KnowledgeCategory),
+			SpotID:            chunk.SpotID,
+			SpotCategory:      strings.TrimSpace(chunk.SpotCategory),
+			Preview:           chunk.Content,
+		})
+	}
+	return calculateAnswerEvidence(query, sources)
+}
+
+func sourceEvidenceRelevance(query string, source RAGSource) float64 {
+	queryBigrams := meaningfulEvidenceBigrams(query)
+	if len(queryBigrams) == 0 {
+		return 0
+	}
+
+	evidenceText := strings.Join([]string{
+		source.Title,
+		source.Preview,
+		source.KnowledgeCategory,
+		source.SpotCategory,
+	}, " ")
+	evidenceBigrams := meaningfulEvidenceBigrams(evidenceText)
+	matched := 0
+	for term := range queryBigrams {
+		if _, ok := evidenceBigrams[term]; ok {
+			matched++
+		}
+	}
+	if matched == 0 {
+		return 0
+	}
+
+	relevance := float64(matched) / float64(len(queryBigrams))
+	if evidenceIntentMatches(query, evidenceText) {
+		relevance += 0.1
+	}
+	if containsAny(strings.ToLower(source.Source), []string{"official", "官方"}) {
+		relevance += 0.03
+	}
+	return minFloat(relevance, 1)
+}
+
+func meaningfulEvidenceBigrams(text string) map[string]struct{} {
+	normalized := []rune(strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			return unicode.ToLower(r)
+		}
+		return -1
+	}, text))
+	result := make(map[string]struct{})
+	ignored := map[string]struct{}{
+		"什么": {}, "怎么": {}, "多少": {}, "哪里": {}, "是否": {}, "可以": {},
+		"介绍": {}, "一下": {}, "这个": {}, "那个": {}, "有多": {}, "多高": {},
+		"景区": {}, "景点": {}, "请问": {}, "的是": {}, "哪类": {}, "哪个": {},
+		"如何": {},
+	}
+	for i := 0; i+1 < len(normalized); i++ {
+		term := string(normalized[i : i+2])
+		if _, skip := ignored[term]; !skip {
+			result[term] = struct{}{}
+		}
+	}
+	return result
+}
+
+func evidenceIntentMatches(query, evidence string) bool {
+	switch {
+	case containsAny(query, []string{"多高", "高度"}):
+		return containsAny(evidence, []string{"通高", "高度", "米"})
+	case containsAny(query, []string{"哪里", "在哪", "地址", "位置"}):
+		return containsAny(evidence, []string{"位于", "地址", "位置", "地处"})
+	case containsAny(query, []string{"路线", "怎么走", "怎么玩", "先看", "半天"}):
+		return containsAny(evidence, []string{"路线", "游览", "步行", "先后", "行程"})
+	case containsAny(query, []string{"消费", "占比", "客单价", "购物", "餐饮"}):
+		return containsAny(evidence, []string{"消费", "占比", "客单价", "购物", "餐饮"})
+	default:
+		return false
+	}
+}
+
+func minFloat(left, right float64) float64 {
+	if left < right {
+		return left
+	}
+	return right
+}
+
 type CacheEntry struct {
-	Response   string
-	Sources    []RAGSource
-	ExpireTime time.Time
+	Response          string
+	Sources           []RAGSource
+	Confidence        float64
+	ShouldAbstain     bool
+	EvidenceEvaluated bool
+	ExpireTime        time.Time
 }
 
 type embeddingCacheEntry struct {
@@ -113,10 +250,15 @@ type TourRouteStep struct {
 }
 
 type TourRoute struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Steps       []TourRouteStep `json:"steps"`
-	Duration    string          `json:"duration"`
+	Name             string          `json:"name"`
+	Description      string          `json:"description"`
+	Steps            []TourRouteStep `json:"steps"`
+	Duration         string          `json:"duration"`
+	RouteType        string          `json:"route_type,omitempty"`
+	Source           string          `json:"source,omitempty"`
+	SourceURL        string          `json:"source_url,omitempty"`
+	Confidence       float64         `json:"confidence,omitempty"`
+	OfficialVerified bool            `json:"official_verified"`
 }
 
 func buildRAGSources(chunks []model.KnowledgeChunk, limit int) []RAGSource {
@@ -185,6 +327,8 @@ type RAGService struct {
 	useBM25            bool
 	uploadDir          string
 	httpClient         *http.Client
+	chatGuard          *modelGuard
+	modelRequests      singleflight.Group
 	queryCache         *lru.Cache[string, CacheEntry]
 	embeddingCache     *lru.Cache[string, embeddingCacheEntry]
 	knowledgeCache     []model.KnowledgeChunk
@@ -231,6 +375,7 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		useBM25:        useBM25,
 		uploadDir:      "./knowledge",
 		httpClient:     createHTTPClient(),
+		chatGuard:      newModelGuard("chat"),
 		queryCache:     newLRUWithOnError[CacheEntry]("queryCache", MaxCacheSize),
 		embeddingCache: newLRUWithOnError[embeddingCacheEntry]("embeddingCache", MaxCacheSize),
 		knowledgeCache: nil,
@@ -241,6 +386,26 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 		sessionHistory: make(map[string][]sessionTurn),
 		lastCacheTime:  time.Now(),
 	}
+}
+
+func (s *RAGService) ModelHealth() []ModelProviderHealth {
+	if s == nil {
+		return nil
+	}
+	providers := make([]ModelProviderHealth, 0, 2)
+	if !s.HasConfiguredLLM() {
+		providers = append(providers, ModelProviderHealth{Provider: "chat", State: "disabled"})
+	} else if s.chatGuard != nil {
+		providers = append(providers, s.chatGuard.health())
+	}
+	if reporter, ok := s.embedding.(modelHealthReporter); ok {
+		providers = append(providers, reporter.ModelHealth())
+	}
+	return providers
+}
+
+type modelHealthReporter interface {
+	ModelHealth() ModelProviderHealth
 }
 
 func createHTTPClient() *http.Client {
@@ -336,23 +501,23 @@ func (s *RAGService) getCachedEmbedding(text string) ([]float64, error) {
 	return vec, nil
 }
 
-func (s *RAGService) getCachedResponse(query string) (string, []RAGSource, bool) {
+func (s *RAGService) getCachedResponse(query string) (CacheEntry, bool) {
 	s.cacheMutex.RLock()
 	entry, ok := s.queryCache.Get(query)
 	s.cacheMutex.RUnlock()
 
 	if !ok {
-		return "", nil, false
+		return CacheEntry{}, false
 	}
 
 	if time.Now().After(entry.ExpireTime) {
 		s.cacheMutex.Lock()
 		s.queryCache.Remove(query)
 		s.cacheMutex.Unlock()
-		return "", nil, false
+		return CacheEntry{}, false
 	}
 
-	return entry.Response, entry.Sources, true
+	return entry, true
 }
 
 func (s *RAGService) setCachedResponse(query, response string, sources []RAGSource) {
@@ -364,6 +529,20 @@ func (s *RAGService) setCachedResponse(query, response string, sources []RAGSour
 		Response:   response,
 		Sources:    sources,
 		ExpireTime: time.Now().Add(CacheTTL),
+	})
+}
+
+func (s *RAGService) setCachedRAGResponse(query, response string, sources []RAGSource, confidence float64, shouldAbstain bool) {
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+
+	s.queryCache.Add(query, CacheEntry{
+		Response:          response,
+		Sources:           sources,
+		Confidence:        confidence,
+		ShouldAbstain:     shouldAbstain,
+		EvidenceEvaluated: true,
+		ExpireTime:        time.Now().Add(CacheTTL),
 	})
 }
 
@@ -536,7 +715,25 @@ func (s *RAGService) GenerateTourRoute(query string) *TourRoute {
 
 	queryLower := strings.ToLower(query)
 
-	if strings.Contains(queryLower, "亲子") || strings.Contains(queryLower, "儿童") || strings.Contains(queryLower, "家庭") {
+	if strings.Contains(queryLower, "观光车") || strings.Contains(queryLower, "摆渡车") {
+		for _, r := range routes {
+			if r.RouteType == "sightseeing_bus" {
+				return &r
+			}
+		}
+	} else if strings.Contains(queryLower, "错峰") || strings.Contains(queryLower, "避开人流") || strings.Contains(queryLower, "人多") {
+		for _, r := range routes {
+			if r.RouteType == "off_peak_walking" {
+				return &r
+			}
+		}
+	} else if strings.Contains(queryLower, "官方") || strings.Contains(queryLower, "完整路线") || strings.Contains(queryLower, "第一次") {
+		for _, r := range routes {
+			if r.RouteType == "reference_walking" {
+				return &r
+			}
+		}
+	} else if strings.Contains(queryLower, "亲子") || strings.Contains(queryLower, "儿童") || strings.Contains(queryLower, "家庭") {
 		for _, r := range routes {
 			if strings.Contains(r.Name, "亲子") {
 				return &r
@@ -601,10 +798,15 @@ func routeConfigToTourRoute(rc iconfig.RouteConfig) TourRoute {
 	}
 
 	return TourRoute{
-		Name:        rc.Name,
-		Description: rc.Description,
-		Steps:       steps,
-		Duration:    duration,
+		Name:             rc.Name,
+		Description:      rc.Description,
+		Steps:            steps,
+		Duration:         duration,
+		RouteType:        rc.RouteType,
+		Source:           rc.Source,
+		SourceURL:        rc.SourceURL,
+		Confidence:       rc.Confidence,
+		OfficialVerified: rc.OfficialVerified,
 	}
 }
 
@@ -650,6 +852,12 @@ func (s *RAGService) QueryWithRAGStreaming(ctx context.Context, sessionID, query
 	// 1. 追问改写
 	retrievalQuery := query
 	if sessionID != "" {
+		s.cacheMutex.RLock()
+		_, hasHistory := s.sessionHistory[sessionID]
+		s.cacheMutex.RUnlock()
+		if !hasHistory {
+			s.LoadSessionHistoryFromDB(sessionID)
+		}
 		retrievalQuery = s.RewriteFollowUpQuery(sessionID, query)
 	}
 
@@ -664,11 +872,30 @@ func (s *RAGService) QueryWithRAGStreaming(ctx context.Context, sessionID, query
 		Provider:      map[bool]string{true: "bm25-local", false: "embedding"}[s.useBM25],
 		RetrievalMode: string(normalizeRetrievalMode(RetrievalModeDefault, s.embedding != nil && s.embedding.IsAvailable(), s.useBM25)),
 	}
+	if retrievalQuery != query {
+		trace.RewrittenQuery = retrievalQuery
+	}
+	if casualAnswer, ok := s.buildCasualAnswer(query, lang); ok {
+		trace.Provider = "local-conversation"
+		trace.RetrievalMode = "conversation"
+		trace.Confidence = 0.95
+		trace.ShouldAbstain = false
+		generationStart := time.Now()
+		answer := casualAnswer
+		trace.GenerationMs = time.Since(generationStart).Milliseconds()
+		trace.TotalMs = time.Since(totalStart).Milliseconds()
+		trace.SlowRequest = trace.TotalMs > SlowRequestThresholdMs
+		if onToken != nil {
+			onToken(answer)
+		}
+		return answer, nil, trace, nil
+	}
 	retrievalStart := time.Now()
 	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
 	trace.ChunkCount = len(chunks)
 	trace.Sources = buildRAGSources(chunks, 3)
+	trace.Confidence, trace.ShouldAbstain = calculateChunkEvidence(retrievalQuery+" "+query, chunks)
 	if err != nil {
 		trace.TotalMs = time.Since(totalStart).Milliseconds()
 		return "", nil, trace, fmt.Errorf("检索相关知识失败: %v", err)
@@ -676,11 +903,13 @@ func (s *RAGService) QueryWithRAGStreaming(ctx context.Context, sessionID, query
 
 	var answer string
 
-	if len(chunks) == 0 {
-		// 无知识命中，使用通用 Chat 流式
+	if len(chunks) == 0 || (trace.ShouldAbstain && !isBoundaryIntent(query)) {
+		// 无知识命中时拒绝无依据生成，避免通用模型编造景区事实。
 		genStart := time.Now()
-		systemPrompt := s.getSystemPromptOrDefault(lang)
-		answer, err = s.CallLLMStreaming(ctx, systemPrompt, query, onToken)
+		answer = addEmotionCare(query, s.buildNoEvidenceAnswer(lang))
+		if onToken != nil {
+			onToken(answer)
+		}
 		trace.GenerationMs = time.Since(genStart).Milliseconds()
 	} else if s.chatAPIKey == "" {
 		// 无 API key，使用本地生成
@@ -695,6 +924,17 @@ func (s *RAGService) QueryWithRAGStreaming(ctx context.Context, sessionID, query
 		genStart := time.Now()
 		answer, err = s.CallLLMStreaming(ctx, systemPrompt, prompt, onToken)
 		trace.GenerationMs = time.Since(genStart).Milliseconds()
+		if err != nil && strings.TrimSpace(answer) == "" {
+			slog.Warn("流式 Chat 调用失败，使用本地知识库降级", "error", err, "query_len", len([]rune(query)))
+			fallbackStart := time.Now()
+			answer = s.generateAnswerFromChunksWithContext(query, chunks, sessionContext)
+			trace.GenerationMs += time.Since(fallbackStart).Milliseconds()
+			trace.Provider = "local-rag-fallback"
+			if onToken != nil {
+				onToken(answer)
+			}
+			err = nil
+		}
 	}
 
 	if err != nil {

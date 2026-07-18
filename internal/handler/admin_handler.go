@@ -2,10 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,9 +17,11 @@ import (
 
 // AdminHandler 管理后台 API
 type AdminHandler struct {
-	statsService   *service.StatsService
-	insightService *service.VisitorInsightService
-	evalDir        string
+	statsService             *service.StatsService
+	insightService           *service.VisitorInsightService
+	visitorExperienceService *service.VisitorExperienceService
+	consumptionService       *service.ConsumptionAnalysisService
+	evalDir                  string
 }
 
 func NewAdminHandler(statsService *service.StatsService, evalDir string, insightService ...*service.VisitorInsightService) *AdminHandler {
@@ -29,6 +33,14 @@ func NewAdminHandler(statsService *service.StatsService, evalDir string, insight
 		insights = insightService[0]
 	}
 	return &AdminHandler{statsService: statsService, insightService: insights, evalDir: evalDir}
+}
+
+func (h *AdminHandler) SetVisitorExperienceService(visitorExperienceService *service.VisitorExperienceService) {
+	h.visitorExperienceService = visitorExperienceService
+}
+
+func (h *AdminHandler) SetConsumptionAnalysisService(consumptionService *service.ConsumptionAnalysisService) {
+	h.consumptionService = consumptionService
 }
 
 func (h *AdminHandler) Routes(api *gin.RouterGroup) {
@@ -44,6 +56,8 @@ func (h *AdminHandler) Routes(api *gin.RouterGroup) {
 		admin.GET("/dashboard/response-time-distribution", h.GetResponseTimeDistribution)
 		admin.GET("/dashboard/satisfaction-trend", h.GetSatisfactionTrend)
 		admin.GET("/dashboard/recent-conversations", h.GetRecentConversations)
+		admin.GET("/dashboard/visitor-experience", h.GetVisitorExperienceSummary)
+		admin.GET("/dashboard/consumption-analysis", h.GetConsumptionAnalysis)
 
 		// 游客感受度报告
 		admin.GET("/reports/visitor", h.GetVisitorReport)
@@ -131,12 +145,49 @@ func (h *AdminHandler) GetRecentConversations(c *gin.Context) {
 	pkg.Success(c, conversations)
 }
 
+// GetVisitorExperienceSummary 获取游客评分与路线推荐闭环统计
+func (h *AdminHandler) GetVisitorExperienceSummary(c *gin.Context) {
+	if h.visitorExperienceService == nil {
+		pkg.InternalError(c, "游客体验服务未初始化")
+		return
+	}
+	summary, err := h.visitorExperienceService.GetVisitorExperienceSummary(parseReportPeriodDays(c.Query("period")))
+	if err != nil {
+		slog.Error("获取游客体验闭环统计失败", "error", err)
+		pkg.InternalError(c, "获取游客体验闭环统计失败")
+		return
+	}
+	pkg.Success(c, summary)
+}
+
 // ==================== 游客感受度报告 API ====================
 
 // GetVisitorReport 获取游客感受度报告
 func (h *AdminHandler) GetVisitorReport(c *gin.Context) {
 	report := h.statsService.GetVisitorReport(parseReportPeriodDays(c.Query("period")))
 	pkg.Success(c, report)
+}
+
+func (h *AdminHandler) GetConsumptionAnalysis(c *gin.Context) {
+	if h.consumptionService == nil {
+		pkg.Success(c, service.ConsumptionAnalysisResponse{
+			Scope:   firstNonEmpty(c.Query("scope"), "all"),
+			Period:  firstNonEmpty(c.Query("period"), "2025"),
+			Message: "暂无消费分析数据",
+		})
+		return
+	}
+	result, err := h.consumptionService.Get(c.Query("scope"), c.Query("period"))
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidConsumptionScope) || strings.Contains(err.Error(), "unsupported consumption analysis period") {
+			pkg.BadRequest(c, err.Error())
+			return
+		}
+		slog.Error("读取消费分析失败", "error", err)
+		pkg.InternalError(c, "消费分析数据读取失败")
+		return
+	}
+	pkg.Success(c, result)
 }
 
 // ==================== 数字人形象配置 API ====================
@@ -156,6 +207,22 @@ func (h *AdminHandler) UpdateDigitalHumanConfig(c *gin.Context) {
 	}
 	if settings.DefaultAvatarID != "" && !service.IsValidDigitalHumanAvatarID(settings.DefaultAvatarID) {
 		pkg.BadRequest(c, "unknown digital human avatar: "+settings.DefaultAvatarID)
+		return
+	}
+	if settings.VoiceID != "" && !service.IsValidDigitalHumanVoiceID(settings.VoiceID) {
+		pkg.BadRequest(c, "unknown digital human voice: "+settings.VoiceID)
+		return
+	}
+	if settings.Speed != 0 && (settings.Speed < 0.5 || settings.Speed > 2.0) {
+		pkg.BadRequest(c, "digital human speed must be between 0.5 and 2.0")
+		return
+	}
+	if settings.Volume < 0 || settings.Volume > 100 {
+		pkg.BadRequest(c, "digital human volume must be between 0 and 100")
+		return
+	}
+	if settings.EmotionLevel != 0 && (settings.EmotionLevel < 1 || settings.EmotionLevel > 5) {
+		pkg.BadRequest(c, "digital human emotion level must be between 1 and 5")
 		return
 	}
 	if err := h.statsService.UpdateDigitalHumanConfig(settings); err != nil {

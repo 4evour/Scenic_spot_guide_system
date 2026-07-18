@@ -216,7 +216,7 @@ func CSRFProtection() gin.HandlerFunc {
 }
 
 func SetCSRFCookie(c *gin.Context) {
-	token, err := GenerateToken(0, "csrf", "csrf", 12)
+	token, err := GenerateToken(0, "csrf", "csrf", 0, 12)
 	if err != nil {
 		return
 	}
@@ -279,7 +279,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		claims, err := ParseToken(token)
-		if err != nil {
+		if err != nil || !validateCurrentClaims(claims) {
 			c.AbortWithStatusJSON(401, Response{
 				Code:    401,
 				Message: T(c, "err_token_expired"),
@@ -290,6 +290,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
+		c.Set("token_version", claims.TokenVersion)
 		c.Next()
 	}
 }
@@ -334,7 +335,7 @@ func WSTokenAuth() gin.HandlerFunc {
 			return
 		}
 		claims, err := ParseToken(token)
-		if err != nil {
+		if err != nil || !validateCurrentClaims(claims) {
 			c.AbortWithStatusJSON(401, Response{
 				Code:    401,
 				Message: "invalid token",
@@ -344,6 +345,7 @@ func WSTokenAuth() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
+		c.Set("token_version", claims.TokenVersion)
 		c.Next()
 	}
 }
@@ -373,7 +375,7 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		}
 
 		claims, err := ParseToken(token)
-		if err != nil {
+		if err != nil || !validateCurrentClaims(claims) {
 			c.Next()
 			return
 		}
@@ -381,6 +383,7 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
+		c.Set("token_version", claims.TokenVersion)
 		c.Next()
 	}
 }

@@ -33,9 +33,10 @@ var allowedKnowledgeUploadExts = map[string]struct{}{
 }
 
 type AIHandler struct {
-	ragService     *service.RAGService
-	statsService   *service.StatsService
-	insightService *service.VisitorInsightService
+	ragService       *service.RAGService
+	statsService     *service.StatsService
+	insightService   *service.VisitorInsightService
+	multimodalClient *service.MultimodalClient
 }
 
 func NewAIHandler(ragService *service.RAGService, statsService *service.StatsService, insightService ...*service.VisitorInsightService) *AIHandler {
@@ -46,11 +47,42 @@ func NewAIHandler(ragService *service.RAGService, statsService *service.StatsSer
 	return &AIHandler{ragService: ragService, statsService: statsService, insightService: insights}
 }
 
+func (h *AIHandler) SetMultimodalClient(client *service.MultimodalClient) {
+	h.multimodalClient = client
+}
+
+func (h *AIHandler) ModelHealth(c *gin.Context) {
+	providers := make([]service.ModelProviderHealth, 0, 3)
+	if h.ragService != nil {
+		providers = append(providers, h.ragService.ModelHealth()...)
+	}
+	if h.multimodalClient != nil {
+		providers = append(providers, h.multimodalClient.ModelHealth())
+	}
+
+	status := "disabled"
+	for _, provider := range providers {
+		if provider.State == "open" || provider.State == "half_open" {
+			status = "degraded"
+			break
+		}
+		if provider.State != "disabled" {
+			status = "healthy"
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":    status,
+		"providers": providers,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
 type ChatRequest struct {
-	Message   string `json:"message"`
-	SessionID string `json:"session_id,omitempty"`
-	Stream    bool   `json:"stream,omitempty"`
-	Lang      string `json:"lang,omitempty"` // 可选语言偏好: zh-CN / en-US
+	Message       string                         `json:"message"`
+	SessionID     string                         `json:"session_id,omitempty"`
+	Stream        bool                           `json:"stream,omitempty"`
+	Lang          string                         `json:"lang,omitempty"` // 可选语言偏好: zh-CN / en-US
+	VoiceFeatures *service.VoiceAcousticFeatures `json:"voice_features,omitempty"`
 }
 
 type KnowledgeRequest struct {
@@ -125,6 +157,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	if lang == "" {
 		lang = c.GetString("lang")
 	}
+	emotion := service.DetectVisitorEmotionWithVoice(req.Message, req.VoiceFeatures)
 
 	// 从认证上下文获取用户 ID（可选，由 OptionalAuth + EnsureGuest 注入）
 	var userID uint
@@ -224,7 +257,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 					SessionID:      req.SessionID,
 					Query:          req.Message,
 					Response:       response,
-					Emotion:        detectEmotion(response),
+					Emotion:        string(emotion.Category),
 					ResponseTimeMs: elapsed,
 					Category:       service.DetectCategory(req.Message),
 					Source:         "web",
@@ -232,7 +265,22 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			}
 
 			// 发送完成标记（含路由、trace_id 和来源引用）
-			doneData, _ := json.Marshal(gin.H{"token": "", "done": true, "trace_id": trace.TraceID, "route": route, "sources": trace.Sources})
+			doneData, _ := json.Marshal(gin.H{
+				"token":                   "",
+				"done":                    true,
+				"trace_id":                trace.TraceID,
+				"route":                   route,
+				"sources":                 trace.Sources,
+				"confidence":              trace.Confidence,
+				"should_abstain":          trace.ShouldAbstain,
+				"emotion":                 string(emotion.Category),
+				"emotion_token":           emotion.LegacyToken,
+				"emotion_confidence":      emotion.Confidence,
+				"recommend_human_service": emotion.RecommendHumanService,
+				"emotion_modality":        emotion.Modality,
+				"acoustic_confidence":     emotion.AcousticConfidence,
+				"emotion_evidence":        emotion.Evidence,
+			})
 			writeMu.Lock()
 			fmt.Fprintf(writer, "data: %s\n\n", string(doneData))
 			fmt.Fprintf(writer, "data: [DONE]\n\n")
@@ -249,6 +297,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			pkg.InternalError(c, pkg.T(c, "msg_ai_failed"))
 			return
 		}
+		response = service.ApplyVisitorEmotionCare(emotion, response)
 		slog.Info("AI Chat RAG 查询完成",
 			"trace_id", trace.TraceID,
 			"response_len", len([]rune(response)),
@@ -268,16 +317,26 @@ func (h *AIHandler) Chat(c *gin.Context) {
 				SessionID:      req.SessionID,
 				Query:          req.Message,
 				Response:       response,
-				Emotion:        detectEmotion(response),
+				Emotion:        string(emotion.Category),
 				ResponseTimeMs: elapsed,
 				Category:       service.DetectCategory(req.Message),
 				Source:         "web",
 			})
 		}
 		responseData := gin.H{
-			"response": response,
-			"trace_id": trace.TraceID,
-			"sources":  trace.Sources,
+			"response":                response,
+			"answer":                  response,
+			"trace_id":                trace.TraceID,
+			"sources":                 trace.Sources,
+			"confidence":              trace.Confidence,
+			"should_abstain":          trace.ShouldAbstain,
+			"emotion":                 string(emotion.Category),
+			"emotion_token":           emotion.LegacyToken,
+			"emotion_confidence":      emotion.Confidence,
+			"recommend_human_service": emotion.RecommendHumanService,
+			"emotion_modality":        emotion.Modality,
+			"acoustic_confidence":     emotion.AcousticConfidence,
+			"emotion_evidence":        emotion.Evidence,
 		}
 		if route != nil {
 			responseData["route"] = route

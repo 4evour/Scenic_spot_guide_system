@@ -11,12 +11,12 @@ import (
 
 // ScenicProfile 景区配置文件结构
 type ScenicProfile struct {
-	ID           string         `yaml:"id"`
-	Name         string         `yaml:"name"`
-	ShortName    string         `yaml:"short_name"`
-	Description  string         `yaml:"description"`
-	Hotline      string         `yaml:"hotline"`
-	Slogan       string         `yaml:"slogan"`
+	ID          string `yaml:"id"`
+	Name        string `yaml:"name"`
+	ShortName   string `yaml:"short_name"`
+	Description string `yaml:"description"`
+	Hotline     string `yaml:"hotline"`
+	Slogan      string `yaml:"slogan"`
 
 	DigitalHuman DHProfile      `yaml:"digital_human"`
 	Knowledge    KnowledgePaths `yaml:"knowledge"`
@@ -38,10 +38,10 @@ type DHProfile struct {
 }
 
 type KnowledgePaths struct {
-	ChunksFile    string `yaml:"chunks_file"`
-	EvalQAFile    string `yaml:"eval_qa_file"`
+	ChunksFile     string `yaml:"chunks_file"`
+	EvalQAFile     string `yaml:"eval_qa_file"`
 	RealChunksFile string `yaml:"real_chunks_file"`
-	RealEvalFile  string `yaml:"real_eval_file"`
+	RealEvalFile   string `yaml:"real_eval_file"`
 }
 
 type KeywordConfig struct {
@@ -85,20 +85,25 @@ type PromptConfig struct {
 }
 
 type RouteConfig struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
-	Spots       string `yaml:"spots"`
-	Duration    int    `yaml:"duration"`
-	Difficulty  string `yaml:"difficulty"`
-	Rating      float64 `yaml:"rating"`
+	Name             string  `yaml:"name"`
+	Description      string  `yaml:"description"`
+	Spots            string  `yaml:"spots"`
+	Duration         int     `yaml:"duration"`
+	Difficulty       string  `yaml:"difficulty"`
+	Rating           float64 `yaml:"rating"`
+	RouteType        string  `yaml:"route_type"`
+	Source           string  `yaml:"source"`
+	SourceURL        string  `yaml:"source_url"`
+	Confidence       float64 `yaml:"confidence"`
+	OfficialVerified bool    `yaml:"official_verified"`
 }
 
 type MapConfig struct {
-	Provider string      `yaml:"provider"`
-	APIKey   string      `yaml:"api_key"`
-	Center   [2]float64  `yaml:"center"`
-	Zoom     int         `yaml:"zoom"`
-	Style    string      `yaml:"style"`
+	Provider string     `yaml:"provider"`
+	APIKey   string     `yaml:"api_key"`
+	Center   [2]float64 `yaml:"center"`
+	Zoom     int        `yaml:"zoom"`
+	Style    string     `yaml:"style"`
 }
 
 // LoadScenicProfile 从 configs/scenic_profiles/ 加载景区配置

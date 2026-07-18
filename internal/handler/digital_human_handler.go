@@ -83,10 +83,13 @@ type ChatTextRequest struct {
 }
 
 type ChatTextResponse struct {
-	AnswerText   string        `json:"answer_text"`
-	Emotion      string        `json:"emotion"`
-	RoutePayload *RoutePayload `json:"route_payload,omitempty"`
-	TraceID      string        `json:"trace_id"`
+	AnswerText            string        `json:"answer_text"`
+	Emotion               string        `json:"emotion"`
+	EmotionCategory       string        `json:"emotion_category"`
+	EmotionConfidence     float64       `json:"emotion_confidence"`
+	RecommendHumanService bool          `json:"recommend_human_service"`
+	RoutePayload          *RoutePayload `json:"route_payload,omitempty"`
+	TraceID               string        `json:"trace_id"`
 }
 
 type RoutePayload struct {
@@ -116,7 +119,8 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 	startTime := time.Now()
 
 	var answer string
-	var emotion string
+	emotionResult := service.DetectVisitorEmotion(req.InputText)
+	emotion := emotionResult.LegacyToken
 
 	if h.ragService != nil {
 		lang := c.GetString("lang")
@@ -125,10 +129,13 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 		if err != nil {
 			slog.Error("数字人文本聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
 			answer = pkg.T(c, "msg_fallback_answer")
-			emotion = "sadness"
 		} else {
 			answer = response
-			emotion = detectEmotion(answer)
+			if userID, ok := c.Get("user_id"); ok {
+				if id, valid := userID.(uint); valid {
+					go h.ragService.AppendSessionTurnWithUser(req.SessionID, id, req.InputText, answer)
+				}
+			}
 
 			// 记录交互日志
 			if h.statsService != nil {
@@ -136,7 +143,7 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 					SessionID:      req.SessionID,
 					Query:          req.InputText,
 					Response:       answer,
-					Emotion:        emotion,
+					Emotion:        string(emotionResult.Category),
 					ResponseTimeMs: elapsed,
 					Category:       service.DetectCategory(req.InputText),
 					Source:         "digital_human",
@@ -145,16 +152,18 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 		}
 	} else {
 		answer = pkg.T(c, "msg_service_unavailable")
-		emotion = "sadness"
 	}
 
 	// 将表情标签嵌入到文本开头，让Live2D能够识别
 	answerWithEmotion := fmt.Sprintf("[%s] %s", emotion, answer)
 
 	responseData := ChatTextResponse{
-		AnswerText: answerWithEmotion,
-		Emotion:    emotion,
-		TraceID:    traceID,
+		AnswerText:            answerWithEmotion,
+		Emotion:               emotion,
+		EmotionCategory:       string(emotionResult.Category),
+		EmotionConfidence:     emotionResult.Confidence,
+		RecommendHumanService: emotionResult.RecommendHumanService,
+		TraceID:               traceID,
 	}
 
 	matchedRoute := h.matchRoute(req.InputText)
@@ -169,19 +178,26 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 }
 
 type VoiceTranscriptRequest struct {
-	SessionID  string  `json:"session_id"`
-	UserID     string  `json:"user_id,omitempty"`
-	Transcript string  `json:"transcript"`
-	Scene      string  `json:"scene,omitempty"`
-	Location   string  `json:"location,omitempty"`
-	Confidence float64 `json:"confidence,omitempty"`
+	SessionID     string                         `json:"session_id"`
+	UserID        string                         `json:"user_id,omitempty"`
+	Transcript    string                         `json:"transcript"`
+	Scene         string                         `json:"scene,omitempty"`
+	Location      string                         `json:"location,omitempty"`
+	Confidence    float64                        `json:"confidence,omitempty"`
+	VoiceFeatures *service.VoiceAcousticFeatures `json:"voice_features,omitempty"`
 }
 
 type VoiceTranscriptResponse struct {
-	AnswerText   string        `json:"answer_text"`
-	Emotion      string        `json:"emotion"`
-	RoutePayload *RoutePayload `json:"route_payload,omitempty"`
-	TraceID      string        `json:"trace_id"`
+	AnswerText            string        `json:"answer_text"`
+	Emotion               string        `json:"emotion"`
+	EmotionCategory       string        `json:"emotion_category"`
+	EmotionConfidence     float64       `json:"emotion_confidence"`
+	RecommendHumanService bool          `json:"recommend_human_service"`
+	RoutePayload          *RoutePayload `json:"route_payload,omitempty"`
+	TraceID               string        `json:"trace_id"`
+	EmotionModality       string        `json:"emotion_modality"`
+	AcousticConfidence    float64       `json:"acoustic_confidence,omitempty"`
+	EmotionEvidence       []string      `json:"emotion_evidence,omitempty"`
 }
 
 func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
@@ -207,7 +223,8 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 	startTime := time.Now()
 
 	var answer string
-	var emotion string
+	emotionResult := service.DetectVisitorEmotionWithVoice(req.Transcript, req.VoiceFeatures)
+	emotion := emotionResult.LegacyToken
 
 	if h.ragService != nil {
 		lang := c.GetString("lang")
@@ -216,10 +233,13 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 		if err != nil {
 			slog.Error("数字人语音聊天 RAG 查询失败", "error", err, "trace_id", traceID, "rag_trace_id", ragTrace.TraceID, "elapsed_ms", elapsed)
 			answer = pkg.T(c, "msg_fallback_answer")
-			emotion = "sadness"
 		} else {
-			answer = response
-			emotion = detectEmotion(answer)
+			answer = service.ApplyVisitorEmotionCare(emotionResult, response)
+			if userID, ok := c.Get("user_id"); ok {
+				if id, valid := userID.(uint); valid {
+					go h.ragService.AppendSessionTurnWithUser(req.SessionID, id, req.Transcript, answer)
+				}
+			}
 
 			// 记录交互日志
 			if h.statsService != nil {
@@ -227,7 +247,7 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 					SessionID:      req.SessionID,
 					Query:          req.Transcript,
 					Response:       answer,
-					Emotion:        emotion,
+					Emotion:        string(emotionResult.Category),
 					ResponseTimeMs: elapsed,
 					Category:       service.DetectCategory(req.Transcript),
 					Source:         "voice",
@@ -236,16 +256,21 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 		}
 	} else {
 		answer = pkg.T(c, "msg_service_unavailable")
-		emotion = "sadness"
 	}
 
 	// 将表情标签嵌入到文本开头，让Live2D能够识别
 	answerWithEmotion := fmt.Sprintf("[%s] %s", emotion, answer)
 
 	responseData := VoiceTranscriptResponse{
-		AnswerText: answerWithEmotion,
-		Emotion:    emotion,
-		TraceID:    traceID,
+		AnswerText:            answerWithEmotion,
+		Emotion:               emotion,
+		EmotionCategory:       string(emotionResult.Category),
+		EmotionConfidence:     emotionResult.Confidence,
+		RecommendHumanService: emotionResult.RecommendHumanService,
+		TraceID:               traceID,
+		EmotionModality:       emotionResult.Modality,
+		AcousticConfidence:    emotionResult.AcousticConfidence,
+		EmotionEvidence:       emotionResult.Evidence,
 	}
 
 	matchedRoute := h.matchRoute(req.Transcript)
@@ -338,6 +363,22 @@ func (h *DigitalHumanHandler) AvatarOptions(c *gin.Context) {
 	pkg.Success(c, service.DigitalHumanAvatarOptionsForConfig(settings.DefaultAvatarID, settings.AllowAvatarSwitch))
 }
 
+func (h *DigitalHumanHandler) RuntimeConfig(c *gin.Context) {
+	if h.statsService == nil {
+		pkg.Success(c, service.DigitalHumanRuntimeSettings{
+			VoiceID:           service.DefaultDigitalHumanVoiceID,
+			TTSRate:           "-20%",
+			Volume:            80,
+			DefaultEmotion:    "joy",
+			EmotionLevel:      3,
+			DefaultAvatarID:   service.DefaultDigitalHumanAvatarID,
+			AllowAvatarSwitch: true,
+		})
+		return
+	}
+	pkg.Success(c, h.statsService.GetDigitalHumanRuntimeConfig())
+}
+
 func (h *DigitalHumanHandler) matchRoute(text string) *model.TourRoute {
 	if h.routeService == nil {
 		return nil
@@ -381,6 +422,7 @@ func (h *DigitalHumanHandler) extractStops(route *model.TourRoute) []string {
 
 func (h *DigitalHumanHandler) Routes(r *gin.RouterGroup) {
 	r.GET("/digital-human/avatar-options", h.AvatarOptions)
+	r.GET("/digital-human/runtime-config", h.RuntimeConfig)
 
 	dh := r.Group("/dh")
 	dh.Use(pkg.RateLimitMiddleware(60, time.Minute))

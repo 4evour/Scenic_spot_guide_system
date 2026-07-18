@@ -2,15 +2,33 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/scenic-guide/internal/pkg"
 )
+
+type fakeTTSSynthesizer struct {
+	data    []byte
+	err     error
+	chunks  <-chan []byte
+	errChan <-chan error
+}
+
+func (s fakeTTSSynthesizer) Synthesize(context.Context, string, string, string) ([]byte, error) {
+	return s.data, s.err
+}
+
+func (s fakeTTSSynthesizer) SynthesizeStream(context.Context, string, string, string) (<-chan []byte, <-chan error) {
+	return s.chunks, s.errChan
+}
 
 // testTTSHandler mirrors TTSHandler but with a configurable external URL,
 // allowing tests to mock the external TTS API without modifying the production code.
@@ -253,9 +271,9 @@ func TestTTSInvalidJSON(t *testing.T) {
 
 func TestTTSVoiceTypes(t *testing.T) {
 	tests := []struct {
-		name     string
-		voice    string
-		wantPer  string
+		name    string
+		voice   string
+		wantPer string
 	}{
 		{name: "female_tianmei", voice: "female_tianmei", wantPer: "0"},
 		{name: "female_zhiling", voice: "female_zhiling", wantPer: "1"},
@@ -441,5 +459,52 @@ func TestTTSServerReturnsSuccessJSON(t *testing.T) {
 	}
 	if result.Code != 0 {
 		t.Fatalf("code = %d, want 0", result.Code)
+	}
+}
+
+func TestTTSStreamReturnsErrorWhenSynthesisHasNoAudio(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	chunks := make(chan []byte)
+	errs := make(chan error, 1)
+	errs <- errors.New("upstream unavailable")
+	close(chunks)
+	close(errs)
+
+	handler := &TTSHandler{edgeTTS: fakeTTSSynthesizer{chunks: chunks, errChan: errs}, timeout: time.Second}
+	router := gin.New()
+	router.POST("/api/ai/tts/stream", handler.TTSStream)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/ai/tts/stream", bytes.NewBufferString(`{"text":"测试"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusInternalServerError, resp.Body.String())
+	}
+}
+
+func TestTTSStreamWritesFirstAudioBeforeSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	chunks := make(chan []byte, 1)
+	chunks <- []byte("audio")
+	close(chunks)
+	errs := make(chan error)
+	close(errs)
+
+	handler := &TTSHandler{edgeTTS: fakeTTSSynthesizer{chunks: chunks, errChan: errs}, timeout: time.Second}
+	router := gin.New()
+	router.POST("/api/ai/tts/stream", handler.TTSStream)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/ai/tts/stream", bytes.NewBufferString(`{"text":"测试"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+	if resp.Body.String() != "audio" {
+		t.Fatalf("stream body = %q, want audio", resp.Body.String())
 	}
 }

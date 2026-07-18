@@ -55,7 +55,7 @@
 
 1. 读取 `configs/config.yaml`，并支持 `SCENIC_GUIDE_` 前缀环境变量覆盖配置。
 2. 初始化日志。
-3. 初始化 JWT，校验密钥不能为空、不能是默认弱密钥、长度至少 32 位。
+3. 初始化 JWT，校验密钥不能为空、不能是默认弱密钥，并且只能使用 64 个 hex 字符或 base64 解码后不少于 32 bytes 的密钥材料。
 4. 初始化数据库连接。
 5. 通过 GORM AutoMigrate 自动迁移模型。
 6. 初始化 RAG 服务；如果知识库为空，会从 `knowledge/lingshan_chunks.jsonl` 导入默认知识。
@@ -159,7 +159,7 @@ Go 服务把 `/vtuber-ws/*path` 反向代理到本地 Open-LLM-VTuber 默认端�
 
 ### 19. JWT 安全上做了哪些处理？
 
-JWT 初始化时会拒绝空密钥、常见默认密钥和小于 32 字符的短密钥。Token 有过期时间，过期时间来自配置。接口层通过 AuthMiddleware 校验 HttpOnly Cookie，并兼容 Bearer token；通过 AdminMiddleware 控制管理员权限。测试里覆盖了过期 token、伪造签名、异常签名算法、普通用户访问管理员接口、知识库高风险删除接口鉴权，以及限流窗口和并发行为。
+JWT 初始化时会拒绝空密钥、常见默认密钥和占位值，只接受 64 个 hex 字符或 base64 解码后不少于 32 bytes 的密钥材料；普通长字符串也会被拒绝。Token 有过期时间，过期时间来自配置。接口层通过 AuthMiddleware 校验 HttpOnly Cookie，并兼容 Bearer token；通过 AdminMiddleware 控制管理员权限。测试里覆盖了过期 token、伪造签名、异常签名算法、普通用户访问管理员接口、知识库高风险删除接口鉴权，以及限流窗口和并发行为。
 
 如果继续强化，可以加刷新 token、退出登录黑名单、密码复杂度策略，以及生产环境强制 HTTPS。
 

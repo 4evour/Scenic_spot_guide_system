@@ -17,21 +17,12 @@ type DigitalHumanAvatarOption struct {
 var digitalHumanAvatarOptions = []DigitalHumanAvatarOption{
 	{
 		ID:            "mao_pro",
-		Name:          "小灵",
-		Description:   "古典汉服数字导览员",
+		Name:          "Niziiro Mao（临时示例）",
+		Description:   "Live2D 官方 PRO 示例模型",
 		ModelURL:      "/static/live2d-models/mao_pro/runtime/mao_pro.model3.json",
 		ConfigFile:    "conf.yaml",
 		PreviewColor:  "#D4AF37",
-		FallbackLabel: "灵",
-	},
-	{
-		ID:            "shizuku",
-		Name:          "小澄",
-		Description:   "亲和型数字导览员",
-		ModelURL:      "/static/live2d-models/shizuku/runtime/shizuku.model3.json",
-		ConfigFile:    "zh_lingshan_shizuku.yaml",
-		PreviewColor:  "#52A7F9",
-		FallbackLabel: "澄",
+		FallbackLabel: "M",
 	},
 }
 

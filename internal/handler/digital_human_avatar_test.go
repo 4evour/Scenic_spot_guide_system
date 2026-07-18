@@ -72,41 +72,67 @@ func TestDigitalHumanAvatarOptions(t *testing.T) {
 	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if len(body.Data) != 2 {
-		t.Fatalf("avatar option count = %d, want 2", len(body.Data))
+	if len(body.Data) != 1 {
+		t.Fatalf("avatar option count = %d, want 1", len(body.Data))
 	}
-	if body.Data[0].ID != "mao_pro" || body.Data[1].ID != "shizuku" {
-		t.Fatalf("avatar ids = %q/%q, want mao_pro/shizuku", body.Data[0].ID, body.Data[1].ID)
-	}
-	if body.Data[1].ModelURL != "/static/live2d-models/shizuku/runtime/shizuku.model3.json" {
-		t.Fatalf("shizuku model_url = %q", body.Data[1].ModelURL)
+	if body.Data[0].ID != "mao_pro" || body.Data[0].ModelURL != "/static/live2d-models/mao_pro/runtime/mao_pro.model3.json" {
+		t.Fatalf("unexpected avatar option: %+v", body.Data[0])
 	}
 }
 
-func TestDigitalHumanAvatarOptionsForConfigCanRestrictToDefault(t *testing.T) {
+func TestDigitalHumanRuntimeConfigDefaults(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	NewDigitalHumanHandler(nil, nil, nil, nil).Routes(router.Group("/api/v1"))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/digital-human/runtime-config", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", resp.Code, http.StatusOK, resp.Body.String())
+	}
+
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			VoiceID         string `json:"voice_id"`
+			TTSRate         string `json:"tts_rate"`
+			Volume          int    `json:"volume"`
+			DefaultAvatarID string `json:"default_avatar_id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body.Code != 0 || body.Data.VoiceID != service.DefaultDigitalHumanVoiceID || body.Data.TTSRate != "-20%" || body.Data.Volume != 80 || body.Data.DefaultAvatarID != service.DefaultDigitalHumanAvatarID {
+		t.Fatalf("unexpected runtime config: %+v", body)
+	}
+}
+
+func TestDigitalHumanAvatarOptionsForConfigNormalizesRemovedAvatar(t *testing.T) {
 	options := service.DigitalHumanAvatarOptionsForConfig("shizuku", false)
 	if len(options) != 1 {
 		t.Fatalf("restricted option count = %d, want 1", len(options))
 	}
-	if options[0].ID != "shizuku" {
-		t.Fatalf("restricted avatar id = %q, want shizuku", options[0].ID)
+	if options[0].ID != "mao_pro" {
+		t.Fatalf("restricted avatar id = %q, want mao_pro", options[0].ID)
 	}
 }
 
 func TestUserAvatarPreferenceCanBeSavedAndRead(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: handlerTestJWTSecret}); err != nil {
 		t.Fatalf("InitJWT: %v", err)
 	}
 	handler, _, user := newAvatarTestUserHandler(t)
 	router := gin.New()
 	handler.Routes(router.Group("/api/v1"))
 
-	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, 1)
+	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, user.TokenVersion, 1)
 	if err != nil {
 		t.Fatalf("GenerateToken: %v", err)
 	}
-	body := []byte(`{"avatar_id":"shizuku"}`)
+	body := []byte(`{"avatar_id":"mao_pro"}`)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/user/avatar-preference", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "auth_token", Value: token})
@@ -133,21 +159,21 @@ func TestUserAvatarPreferenceCanBeSavedAndRead(t *testing.T) {
 	if err := json.Unmarshal(getResp.Body.Bytes(), &getBody); err != nil {
 		t.Fatalf("unmarshal get: %v", err)
 	}
-	if getBody.Data.AvatarID != "shizuku" {
-		t.Fatalf("avatar_id = %q, want shizuku", getBody.Data.AvatarID)
+	if getBody.Data.AvatarID != "mao_pro" {
+		t.Fatalf("avatar_id = %q, want mao_pro", getBody.Data.AvatarID)
 	}
 }
 
 func TestUserAvatarPreferenceRejectsUnknownAvatar(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := pkg.InitJWT(&config.SecurityConfig{JWTSecret: handlerTestJWTSecret}); err != nil {
 		t.Fatalf("InitJWT: %v", err)
 	}
 	handler, _, user := newAvatarTestUserHandler(t)
 	router := gin.New()
 	handler.Routes(router.Group("/api/v1"))
 
-	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, 1)
+	token, err := pkg.GenerateToken(user.ID, user.Username, user.Role, user.TokenVersion, 1)
 	if err != nil {
 		t.Fatalf("GenerateToken: %v", err)
 	}
@@ -168,7 +194,7 @@ func TestGuestUpgradePreservesAvatarPreference(t *testing.T) {
 		Password:          "unused",
 		Role:              "guest",
 		GuestToken:        "guest-avatar-token",
-		PreferredAvatarID: "shizuku",
+		PreferredAvatarID: "mao_pro",
 	}
 	if err := db.Create(guest).Error; err != nil {
 		t.Fatalf("seed guest: %v", err)
@@ -184,8 +210,11 @@ func TestGuestUpgradePreservesAvatarPreference(t *testing.T) {
 	if upgraded.Role != "visitor" {
 		t.Fatalf("role = %q, want visitor", upgraded.Role)
 	}
-	if upgraded.PreferredAvatarID != "shizuku" {
-		t.Fatalf("preferred_avatar_id = %q, want shizuku", upgraded.PreferredAvatarID)
+	if upgraded.TokenVersion != guest.TokenVersion+1 {
+		t.Fatalf("token_version = %d, want %d after guest upgrade", upgraded.TokenVersion, guest.TokenVersion+1)
+	}
+	if upgraded.PreferredAvatarID != "mao_pro" {
+		t.Fatalf("preferred_avatar_id = %q, want mao_pro", upgraded.PreferredAvatarID)
 	}
 }
 

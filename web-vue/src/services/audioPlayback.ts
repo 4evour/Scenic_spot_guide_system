@@ -4,6 +4,8 @@ import i18n from '../i18n';
 export type PlaybackHooks = {
   onStart?: (text?: string, cue?: PlaybackCue) => void;
   onEnd?: () => void;
+  onComplete?: () => void;
+  onFirstByte?: () => void;
   onVolume?: (volume: number) => void;
   onError?: (message: string) => void;
 };
@@ -18,6 +20,7 @@ export type PlaybackCue = {
 type QueueItem = {
   url: string;
   text?: string;
+  revokeAfterUse?: boolean;
 } & PlaybackCue;
 
 export class AudioPlaybackController {
@@ -33,15 +36,31 @@ export class AudioPlaybackController {
   private volumeRaf = 0;
   private speechPulseTimer = 0;
   private smoothedVolume = 0;
+  private masterVolume = 1;
 
   constructor(hooks: PlaybackHooks = {}) {
     this.hooks = hooks;
   }
 
+  setVolume(volume: number) {
+    this.masterVolume = this.clampVolume(volume);
+    if (this.audio) {
+      this.audio.volume = this.masterVolume;
+    }
+  }
+
   enqueueBase64Wav(audioBase64: string, text?: string, cue: PlaybackCue = {}) {
     if (this.interrupted) return false;
-    const url = `data:audio/wav;base64,${audioBase64}`;
-    this.queue.push({ url, text, ...cue });
+    let url: string;
+    try {
+      const binary = window.atob(audioBase64);
+      const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+      url = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+    } catch {
+      return false;
+    }
+    this.queue.push({ url, text, revokeAfterUse: true, ...cue });
+    this.hooks.onFirstByte?.();
     if (!this.audio) void this.playNext();
     return true;
   }
@@ -49,6 +68,7 @@ export class AudioPlaybackController {
   enqueueUrl(url: string, text?: string, cue: PlaybackCue = {}) {
     if (this.interrupted) return false;
     this.queue.push({ url, text, ...cue });
+    this.hooks.onFirstByte?.();
     if (!this.audio) void this.playNext();
     return true;
   }
@@ -71,7 +91,7 @@ export class AudioPlaybackController {
       const url = URL.createObjectURL(mediaSource);
       let appendedBytes = 0;
 
-      const queueItem: QueueItem = { url, text, ...cue };
+      const queueItem: QueueItem = { url, text, revokeAfterUse: true, ...cue };
       // Push to queue — the standard playNext will handle it when it's this item's turn.
       this.queue.push(queueItem);
 
@@ -100,6 +120,7 @@ export class AudioPlaybackController {
 
             const { done, value } = await reader.read();
             if (done) break;
+            if (value.byteLength > 0 && appendedBytes === 0) this.hooks.onFirstByte?.();
             appendedBytes += value.byteLength;
 
             // Wait for any pending append to finish
@@ -132,33 +153,39 @@ export class AudioPlaybackController {
     }
   }
 
-  async playTextFallback(text: string, cue: PlaybackCue = {}) {
-    if (!('speechSynthesis' in window)) return;
-    if (this.interrupted) return;
-    if (!text.trim()) return;
+  async playTextFallback(text: string, cue: PlaybackCue = {}): Promise<boolean> {
+    const SpeechSynthesisUtteranceCtor = (window as Window & {
+      SpeechSynthesisUtterance?: typeof SpeechSynthesisUtterance;
+    }).SpeechSynthesisUtterance;
+    if (!('speechSynthesis' in window) || !SpeechSynthesisUtteranceCtor) return false;
+    if (this.interrupted) return false;
+    if (!text.trim()) return false;
     const token = this.playbackToken;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtteranceCtor(text);
     utterance.lang = i18n.global.locale.value;
     utterance.rate = getBrowserSpeechRate();
     utterance.pitch = 1.05;
-    utterance.onstart = () => {
+    utterance.volume = this.masterVolume;
+    utterance.addEventListener('start', () => {
       if (this.interrupted || token !== this.playbackToken) return;
       this.hooks.onStart?.(text, cue);
       this.startSpeechPulse(token);
-    };
-    utterance.onend = () => {
+    });
+    utterance.addEventListener('end', () => {
       if (token !== this.playbackToken) return;
       this.stopVolumeTracking();
       this.hooks.onEnd?.();
-    };
-    utterance.onerror = () => {
+      this.hooks.onComplete?.();
+    });
+    utterance.addEventListener('error', () => {
       if (token !== this.playbackToken) return;
       this.stopVolumeTracking();
       this.hooks.onEnd?.();
       this.hooks.onError?.(i18n.global.t('dh.audio.browserSpeechBlocked'));
-    };
+    });
     window.speechSynthesis.speak(utterance);
+    return true;
   }
 
   resume() {
@@ -177,9 +204,12 @@ export class AudioPlaybackController {
         this.audioContext ??= new AudioContextCtor();
         if (this.audioContext.state === 'suspended') await this.audioContext.resume();
       }
-      if ('speechSynthesis' in window) {
+      const SpeechSynthesisUtteranceCtor = (window as Window & {
+        SpeechSynthesisUtterance?: typeof SpeechSynthesisUtterance;
+      }).SpeechSynthesisUtterance;
+      if ('speechSynthesis' in window && SpeechSynthesisUtteranceCtor) {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(' ');
+        const utterance = new SpeechSynthesisUtteranceCtor(' ');
         utterance.volume = 0;
         window.speechSynthesis.speak(utterance);
         window.speechSynthesis.cancel();
@@ -194,10 +224,12 @@ export class AudioPlaybackController {
   interrupt() {
     this.interrupted = true;
     this.playbackToken += 1;
+    for (const item of this.queue) this.revokeItemUrl(item);
     this.queue = [];
     this.stopVolumeTracking();
     if (this.audio) {
       this.audio.pause();
+      if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
       this.audio.src = '';
       this.audio.load();
       this.audio = null;
@@ -206,44 +238,54 @@ export class AudioPlaybackController {
     this.hooks.onEnd?.();
   }
 
-  private async playNext() {
+  private async playNext(completeWhenEmpty = true) {
     if (this.interrupted) return;
     const token = this.playbackToken;
     const item = this.queue.shift();
     if (!item) {
       this.audio = null;
       this.hooks.onEnd?.();
+      if (completeWhenEmpty) this.hooks.onComplete?.();
       return;
     }
 
-    this.audio = new Audio(item.url);
-    this.audio.onplay = () => {
+    const audio = new Audio(item.url);
+    this.audio = audio;
+    audio.volume = this.masterVolume;
+    audio.addEventListener('play', () => {
       if (this.interrupted || token !== this.playbackToken) return;
       this.hooks.onStart?.(item.text, item);
-      this.startVolumeTracking(this.audio!, item, token);
-    };
-    this.audio.onended = () => {
+      this.startVolumeTracking(audio, item, token);
+    });
+    audio.addEventListener('ended', () => {
       if (this.interrupted || token !== this.playbackToken) return;
       this.stopVolumeTracking();
+      this.revokeItemUrl(item);
       this.audio = null;
       void this.playNext();
-    };
-    this.audio.onerror = () => {
+    });
+    audio.addEventListener('error', () => {
       if (this.interrupted || token !== this.playbackToken) return;
       this.stopVolumeTracking();
+      this.revokeItemUrl(item);
       this.audio = null;
-      void this.playNext();
-    };
+      void this.playNext(false);
+    });
 
     try {
-      await this.audio.play();
+      await audio.play();
     } catch (err) {
       if (this.interrupted || token !== this.playbackToken) return;
       this.stopVolumeTracking();
       this.hooks.onError?.(isAutoplayError(err) ? i18n.global.t('dh.audio.autoplayBlocked') : i18n.global.t('dh.audio.playbackFailedNext'));
+      this.revokeItemUrl(item);
       this.audio = null;
-      void this.playNext();
+      void this.playNext(false);
     }
+  }
+
+  private revokeItemUrl(item: QueueItem) {
+    if (item.revokeAfterUse) URL.revokeObjectURL(item.url);
   }
 
   private startVolumeTracking(audio: HTMLAudioElement, item: QueueItem, token: number) {

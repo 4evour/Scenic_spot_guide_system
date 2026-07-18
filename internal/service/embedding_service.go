@@ -1,7 +1,8 @@
-﻿package service
+package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -25,6 +26,7 @@ type QwenEmbeddingProvider struct {
 	baseURL   string
 	available bool
 	client    *http.Client
+	guard     *modelGuard
 }
 
 func NewQwenEmbeddingProvider(cfg *config.EmbeddingConfig) *QwenEmbeddingProvider {
@@ -41,6 +43,7 @@ func NewQwenEmbeddingProvider(cfg *config.EmbeddingConfig) *QwenEmbeddingProvide
 				MaxIdleConnsPerHost: 10,
 			},
 		},
+		guard: newModelGuard("embedding"),
 	}
 }
 
@@ -53,6 +56,13 @@ func (p *QwenEmbeddingProvider) Name() string {
 
 func (p *QwenEmbeddingProvider) IsAvailable() bool {
 	return p.available
+}
+
+func (p *QwenEmbeddingProvider) ModelHealth() ModelProviderHealth {
+	if p == nil || !p.available {
+		return ModelProviderHealth{Provider: "embedding", State: "disabled"}
+	}
+	return p.guard.health()
 }
 
 func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error) {
@@ -84,25 +94,29 @@ func (p *QwenEmbeddingProvider) GenerateEmbedding(text string) ([]float64, error
 		return nil, fmt.Errorf("序列化请求失败: %v", err)
 	}
 
-	apiURL := p.baseURL + "/embeddings"
-
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqJSON))
+	apiURL := strings.TrimRight(p.baseURL, "/") + "/embeddings"
+	var bodyBytes []byte
+	err = p.guard.run(context.Background(), func(ctx context.Context) error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(reqJSON))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+p.apiKey)
+		resp, err := p.client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			_, _ = readLimitedBody(resp.Body)
+			return &modelHTTPError{status: resp.StatusCode}
+		}
+		bodyBytes, err = readLimitedBody(resp.Body)
+		return err
+	})
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %v", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+p.apiKey)
-
-	resp, err := p.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("调用embedding API失败: %v", err)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, readErr := readLimitedBody(resp.Body)
-	if readErr != nil {
-		return nil, fmt.Errorf("读取响应体失败: %v", readErr)
+		return nil, fmt.Errorf("调用 embedding API 失败: %w", err)
 	}
 
 	var embResp Response
@@ -125,12 +139,12 @@ type BM25FallbackProvider struct {
 	available bool
 
 	// Corpus-level statistics for proper BM25 scoring
-	docFreq    map[string]int     // token -> number of documents containing it
-	docLen     map[string]float64 // docID -> document length (token count)
-	avgDocLen  float64            // average document length across corpus
-	totalDocs  int                // total number of documents
-	bm25K1     float64            // term frequency saturation parameter (default 1.5)
-	bm25B      float64            // length normalization parameter (default 0.75)
+	docFreq   map[string]int     // token -> number of documents containing it
+	docLen    map[string]float64 // docID -> document length (token count)
+	avgDocLen float64            // average document length across corpus
+	totalDocs int                // total number of documents
+	bm25K1    float64            // term frequency saturation parameter (default 1.5)
+	bm25B     float64            // length normalization parameter (default 0.75)
 }
 
 func NewBM25FallbackProvider() *BM25FallbackProvider {
@@ -251,7 +265,6 @@ func (p *BM25FallbackProvider) CalculateScore(queryTokens, docTokens []string) f
 	}
 	return score
 }
-
 
 // UpdateCorpusStats recomputes corpus-level statistics (IDF, avg doc length)
 // from the token index and chunk data. Must be called after the knowledge cache changes.

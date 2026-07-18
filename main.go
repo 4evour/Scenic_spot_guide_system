@@ -95,6 +95,15 @@ func run() error {
 	} else {
 		slog.Warn("RAG 知识库初始化失败，将使用基础 AI 服务")
 	}
+	multimodalClient, err := service.NewMultimodalClient(&cfg.Multimodal)
+	if err != nil {
+		return fmt.Errorf("初始化多模态客户端失败: %w", err)
+	}
+	if multimodalClient.Enabled() {
+		slog.Info("多模态客户端已启用", "provider", cfg.Multimodal.Provider, "model", cfg.Multimodal.Model)
+	} else {
+		slog.Info("多模态客户端未启用")
+	}
 
 	slog.Info("设置路由")
 	r := gin.Default()
@@ -119,7 +128,7 @@ func run() error {
 		slog.Info("未配置可信代理,已关闭 X-Forwarded-For 信任(基于 IP 的限流将以 RemoteAddr 为准)")
 	}
 
-	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours, cfg.Security.AllowedOrigins, scenicProfile)
+	setupHandlers := setupDI(ragService, cfg.Security.TokenExpireHours, cfg.Security.AllowedOrigins, scenicProfile, multimodalClient)
 	handler.SetupRoutes(r, setupHandlers)
 	slog.Info("路由设置成功")
 
@@ -253,7 +262,7 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 	return ragService
 }
 
-func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigins []string, scenicProfile *config.ScenicProfile) *handler.Handlers {
+func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigins []string, scenicProfile *config.ScenicProfile, multimodalClient *service.MultimodalClient) *handler.Handlers {
 	db := pkg.GetDB()
 
 	// 初始化统计服务（先于 handler 创建，以便注入）
@@ -288,12 +297,19 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	tourRouteRepo := repository.NewTourRouteRepository(db)
 	tourRouteService := service.NewTourRouteService(tourRouteRepo)
 	tourRouteHandler := handler.NewTourRouteHandler(tourRouteService)
+	visitorExperienceRepo := repository.NewVisitorExperienceRepository(db)
+	visitorExperienceService := service.NewVisitorExperienceService(visitorExperienceRepo)
+	visitorExperienceHandler := handler.NewVisitorExperienceHandler(visitorExperienceService)
 
 	visitorQueryRepo := repository.NewVisitorQueryRepository(db)
 	visitorQueryService := service.NewVisitorQueryService(visitorQueryRepo)
 	visitorQueryHandler := handler.NewVisitorQueryHandler(visitorQueryService)
 
 	userRepo := repository.NewUserRepository(db)
+	pkg.SetClaimsValidator(func(claims *pkg.Claims) bool {
+		user, err := userRepo.FindByID(claims.UserID)
+		return err == nil && user.Role == claims.Role && user.TokenVersion == claims.TokenVersion
+	})
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService, tokenExpireHours)
 
@@ -308,10 +324,17 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	qrHandler := handler.NewQRHandler(scenicSpotService, ragService, statsService)
 
 	aiHandler := handler.NewAIHandler(ragService, statsService, insightService)
+	aiHandler.SetMultimodalClient(multimodalClient)
 	ttsHandler := handler.NewTTSHandler()
 	digitalHumanHandler := handler.NewDigitalHumanHandler(ragService, tourRouteService, statsService, insightService)
 	openAIProxyHandler := handler.NewOpenAIProxyHandler(ragService, statsService)
 	adminHandler := handler.NewAdminHandler(statsService, "docs/eval-results", insightService)
+	adminHandler.SetVisitorExperienceService(visitorExperienceService)
+	consumptionPath := os.Getenv("SCENIC_GUIDE_CONSUMPTION_ANALYSIS_FILE")
+	if consumptionPath == "" {
+		consumptionPath = "knowledge/analytics/lingshan_consumption_summary.json"
+	}
+	adminHandler.SetConsumptionAnalysisService(service.NewConsumptionAnalysisService(consumptionPath))
 	scenicProfileHandler := handler.NewScenicProfileHandler(scenicProfile)
 
 	// Default allowed origins for local development
@@ -326,20 +349,21 @@ func setupDI(ragService *service.RAGService, tokenExpireHours int, allowedOrigin
 	}
 
 	return &handler.Handlers{
-		ScenicSpot:     scenicSpotHandler,
-		GuideContent:   guideContentHandler,
-		TourRoute:      tourRouteHandler,
-		VisitorQuery:   visitorQueryHandler,
-		User:           userHandler,
-		AI:             aiHandler,
-		TTS:            ttsHandler,
-		DigitalHuman:   digitalHumanHandler,
-		OpenAIProxy:    openAIProxyHandler,
-		Admin:          adminHandler,
-		ScenicProfile:  scenicProfileHandler,
-		Guest:          guestHandler,
-		Session:        sessionHandler,
-		QR:             qrHandler,
-		AllowedOrigins: origins,
+		ScenicSpot:        scenicSpotHandler,
+		GuideContent:      guideContentHandler,
+		TourRoute:         tourRouteHandler,
+		VisitorExperience: visitorExperienceHandler,
+		VisitorQuery:      visitorQueryHandler,
+		User:              userHandler,
+		AI:                aiHandler,
+		TTS:               ttsHandler,
+		DigitalHuman:      digitalHumanHandler,
+		OpenAIProxy:       openAIProxyHandler,
+		Admin:             adminHandler,
+		ScenicProfile:     scenicProfileHandler,
+		Guest:             guestHandler,
+		Session:           sessionHandler,
+		QR:                qrHandler,
+		AllowedOrigins:    origins,
 	}
 }

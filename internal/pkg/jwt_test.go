@@ -1,12 +1,16 @@
 package pkg
 
 import (
+	"encoding/base64"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/scenic-guide/internal/config"
 )
+
+const testJWTSecret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 func TestInitJWTRejectsInsecureSecrets(t *testing.T) {
 	tests := []string{
@@ -31,16 +35,60 @@ func TestInitJWTRejectsInsecureSecrets(t *testing.T) {
 }
 
 func TestInitJWTAcceptsStrongSecret(t *testing.T) {
-	err := InitJWT(&config.SecurityConfig{
-		JWTSecret: "0123456789abcdef0123456789abcdef",
-	})
-	if err != nil {
+	tests := []struct {
+		name   string
+		secret string
+	}{
+		{name: "64 hex", secret: strings.Repeat("0123456789abcdef", 4)},
+		{name: "base64 32 bytes", secret: base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef"))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := InitJWT(&config.SecurityConfig{JWTSecret: tt.secret}); err != nil {
+				t.Fatalf("InitJWT returned error: %v", err)
+			}
+		})
+	}
+}
+
+func TestInitJWTRejectsInvalidKeyMaterialWithoutEchoingSecret(t *testing.T) {
+	tests := []string{
+		"0123456789abcdef0123456789abcdef",
+		strings.Repeat("a", 63),
+		base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcde")),
+		strings.Repeat(":", 64),
+	}
+	for _, secret := range tests {
+		err := InitJWT(&config.SecurityConfig{JWTSecret: secret})
+		if err == nil {
+			t.Fatalf("InitJWT expected an error for invalid key material")
+		}
+		if strings.Contains(err.Error(), secret) {
+			t.Fatalf("error echoed JWT secret: %q", err)
+		}
+	}
+}
+
+func TestGenerateTokenCarriesTokenVersion(t *testing.T) {
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: testJWTSecret}); err != nil {
 		t.Fatalf("InitJWT returned error: %v", err)
+	}
+
+	token, err := GenerateToken(7, "visitor", "visitor", 3, 1)
+	if err != nil {
+		t.Fatalf("GenerateToken returned error: %v", err)
+	}
+	claims, err := ParseToken(token)
+	if err != nil {
+		t.Fatalf("ParseToken returned error: %v", err)
+	}
+	if claims.TokenVersion != 3 {
+		t.Fatalf("token_version = %d, want 3", claims.TokenVersion)
 	}
 }
 
 func TestParseTokenRejectsExpiredToken(t *testing.T) {
-	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: testJWTSecret}); err != nil {
 		t.Fatalf("InitJWT returned error: %v", err)
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
@@ -64,7 +112,7 @@ func TestParseTokenRejectsExpiredToken(t *testing.T) {
 }
 
 func TestParseTokenRejectsForgedToken(t *testing.T) {
-	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: testJWTSecret}); err != nil {
 		t.Fatalf("InitJWT returned error: %v", err)
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
@@ -88,7 +136,7 @@ func TestParseTokenRejectsForgedToken(t *testing.T) {
 }
 
 func TestParseTokenRejectsUnexpectedSigningMethod(t *testing.T) {
-	if err := InitJWT(&config.SecurityConfig{JWTSecret: "0123456789abcdef0123456789abcdef"}); err != nil {
+	if err := InitJWT(&config.SecurityConfig{JWTSecret: testJWTSecret}); err != nil {
 		t.Fatalf("InitJWT returned error: %v", err)
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodNone, Claims{

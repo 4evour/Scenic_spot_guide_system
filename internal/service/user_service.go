@@ -121,7 +121,10 @@ func (s *userService) ChangePassword(id uint, currentPassword, newPassword strin
 	if err != nil {
 		return err
 	}
-	return s.repo.UpdateFields(id, map[string]interface{}{"password": string(hashedPassword)})
+	return s.repo.UpdateFields(id, map[string]interface{}{
+		"password":      string(hashedPassword),
+		"token_version": gorm.Expr("token_version + ?", 1),
+	})
 }
 
 func (s *userService) GetUserByID(id uint) (*model.User, error) {
@@ -143,6 +146,7 @@ func (s *userService) UpdateAdminUser(id uint, username, email, role, password *
 	}
 
 	fields := map[string]interface{}{}
+	securityChanged := false
 	if username != nil {
 		fields["username"] = *username
 		user.Username = *username
@@ -153,6 +157,7 @@ func (s *userService) UpdateAdminUser(id uint, username, email, role, password *
 	}
 	if role != nil {
 		fields["role"] = *role
+		securityChanged = securityChanged || *role != user.Role
 		user.Role = *role
 	}
 	if password != nil && *password != "" {
@@ -164,6 +169,10 @@ func (s *userService) UpdateAdminUser(id uint, username, email, role, password *
 			return nil, err
 		}
 		fields["password"] = string(hashedPassword)
+		securityChanged = true
+	}
+	if securityChanged {
+		fields["token_version"] = gorm.Expr("token_version + ?", 1)
 	}
 	if len(fields) == 0 {
 		return user, nil
@@ -171,7 +180,7 @@ func (s *userService) UpdateAdminUser(id uint, username, email, role, password *
 	if err := s.repo.UpdateFields(id, fields); err != nil {
 		return nil, err
 	}
-	return user, nil
+	return s.repo.FindByID(id)
 }
 
 func (s *userService) UpdateProfile(id uint, username, email string) error {
