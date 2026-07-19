@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860">
+  <rect width="1400" height="860" fill="#F7FAFC"/>
+  <text x="70" y="70" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">主系统启动与依赖注入链路</text>
+  <text x="70" y="106" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">main.run 从配置、安全护栏到 Repository / Service / Handler 装配，最后注册路由并启动受控 HTTP Server</text>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L10,3 z" fill="#55788B"/></marker></defs>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <g fill="#FFFFFF" stroke-width="2">
+      <rect x="70" y="160" width="245" height="105" rx="12" stroke="#4B9D8C"/><rect x="380" y="160" width="245" height="105" rx="12" stroke="#6E8DB1"/>
+      <rect x="690" y="160" width="245" height="105" rx="12" stroke="#D7A35B"/><rect x="1000" y="160" width="300" height="105" rx="12" stroke="#9B78AD"/>
+      <rect x="70" y="350" width="245" height="115" rx="12" stroke="#4B9D8C"/><rect x="380" y="350" width="245" height="115" rx="12" stroke="#6E8DB1"/>
+      <rect x="690" y="350" width="245" height="115" rx="12" stroke="#D7A35B"/><rect x="1000" y="350" width="300" height="115" rx="12" stroke="#9B78AD"/>
+    </g>
+    <g text-anchor="middle" fill="#23404B">
+      <text x="192" y="200" font-size="21" font-weight="700">配置加载</text><text x="192" y="232" font-size="15">config.LoadConfig</text><text x="192" y="252" font-size="15">环境变量覆盖</text>
+      <text x="502" y="200" font-size="21" font-weight="700">安全初始化</text><text x="502" y="232" font-size="15">InitJWT / dev 护栏</text><text x="502" y="252" font-size="15">可信代理策略</text>
+      <text x="812" y="200" font-size="21" font-weight="700">基础设施</text><text x="812" y="232" font-size="15">Redis 可选降级</text><text x="812" y="252" font-size="15">Database + AutoMigrate</text>
+      <text x="1150" y="200" font-size="21" font-weight="700">景区知识装载</text><text x="1150" y="232" font-size="15">ScenicProfile + RAGService</text><text x="1150" y="252" font-size="15">JSONL 幂等 Upsert</text>
+      <text x="192" y="392" font-size="21" font-weight="700">Repository 层</text><text x="192" y="424" font-size="15">GORM 数据访问</text><text x="192" y="447" font-size="15">用户 / 景点 / 路线 / 知识</text>
+      <text x="502" y="392" font-size="21" font-weight="700">Service 层</text><text x="502" y="424" font-size="15">业务规则与 RAG</text><text x="502" y="447" font-size="15">会话 / 推荐 / 统计</text>
+      <text x="812" y="392" font-size="21" font-weight="700">Handler 层</text><text x="812" y="424" font-size="15">输入校验与响应</text><text x="812" y="447" font-size="15">鉴权角色边界</text>
+      <text x="1150" y="392" font-size="21" font-weight="700">Router / Middleware</text><text x="1150" y="424" font-size="15">CSRF · CORS · CSP · 限流</text><text x="1150" y="447" font-size="15">/api/v1 · /vtuber-ws</text>
+    </g>
+    <g stroke="#55788B" stroke-width="3" fill="none" marker-end="url(#a)"><path d="M315 212 H380"/><path d="M625 212 H690"/><path d="M935 212 H1000"/><path d="M1150 265 V315 H192 V350"/><path d="M315 407 H380"/><path d="M625 407 H690"/><path d="M935 407 H1000"/></g>
+    <rect x="70" y="560" width="1230" height="205" rx="14" fill="#EAF0F8" stroke="#6E8DB1" stroke-width="2"/>
+    <text x="105" y="605" font-size="22" font-weight="700" fill="#24456A">HTTP Server 运行约束（main.go）</text>
+    <text x="105" y="646" font-size="17" fill="#334E68">ReadHeaderTimeout 5s · ReadTimeout 30s · WriteTimeout 60s · IdleTimeout 120s · MaxHeaderBytes 1 MiB</text>
+    <text x="105" y="682" font-size="17" fill="#334E68">SIGINT / SIGTERM → 10s Shutdown context → 优雅关闭连接 → StopRateLimiters 清理后台任务</text>
+    <text x="105" y="718" font-size="16" fill="#5A6B78">源码证据：main.go::run、main.go::setupDI、internal/handler/routes.go::SetupRoutes</text>
+  </g>
+</svg>

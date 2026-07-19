@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="880" viewBox="0 0 1400 880">
+  <rect width="1400" height="880" fill="#F8FAFC"/>
+  <text x="70" y="70" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">性能、可靠性与降级设计</text>
+  <text x="70" y="106" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">优化围绕真实瓶颈：检索热路径、外部模型不稳定、语音链路等待、凭据与会话安全</text>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <rect x="70" y="155" width="390" height="285" rx="14" fill="#E5F4F1" stroke="#4B9D8C" stroke-width="2"/>
+    <text x="105" y="200" font-size="23" font-weight="700" fill="#174C48">检索热路径</text>
+    <text x="105" y="242" font-size="17" fill="#334E68">• 5 分钟知识缓存，写入后统一失效</text>
+    <text x="105" y="278" font-size="17" fill="#334E68">• tokenCache + tokenIndex + chunkByID</text>
+    <text x="105" y="314" font-size="17" fill="#334E68">• 1000 项 LRU 查询 / Embedding 缓存</text>
+    <text x="105" y="350" font-size="17" fill="#334E68">• 超过 2000 块时按 1000 分页装载</text>
+    <text x="105" y="386" font-size="17" fill="#334E68">• singleflight 合并同一模型请求</text>
+    <rect x="505" y="155" width="390" height="285" rx="14" fill="#EAF0F8" stroke="#6E8DB1" stroke-width="2"/>
+    <text x="540" y="200" font-size="23" font-weight="700" fill="#24456A">外部模型保护</text>
+    <text x="540" y="242" font-size="17" fill="#334E68">• 每次尝试独立 Timeout</text>
+    <text x="540" y="278" font-size="17" fill="#334E68">• 仅对网络 / 429 / 5xx 重试</text>
+    <text x="540" y="314" font-size="17" fill="#334E68">• 连续失败触发熔断与半开探测</text>
+    <text x="540" y="350" font-size="17" fill="#334E68">• 流式首 Token 后不重试，避免重复文本</text>
+    <text x="540" y="386" font-size="17" fill="#334E68">• 失败自动回退本地证据生成</text>
+    <rect x="940" y="155" width="390" height="285" rx="14" fill="#FFF4E5" stroke="#D7A35B" stroke-width="2"/>
+    <text x="975" y="200" font-size="23" font-weight="700" fill="#754A1F">实时交互</text>
+    <text x="975" y="242" font-size="17" fill="#334E68">• 前端路由与页面组件懒加载</text>
+    <text x="975" y="278" font-size="17" fill="#334E68">• Agent 输出按句流式处理</text>
+    <text x="975" y="314" font-size="17" fill="#334E68">• TTS 任务并发，序号保证播放顺序</text>
+    <text x="975" y="350" font-size="17" fill="#334E68">• 音频可中断，回传播放完成信号</text>
+    <text x="975" y="386" font-size="17" fill="#334E68">• WebSocket 超时后切换 Go /ai/chat</text>
+    <rect x="70" y="505" width="1260" height="235" rx="14" fill="#FFFFFF" stroke="#9B78AD" stroke-width="2"/>
+    <text x="105" y="550" font-size="23" font-weight="700" fill="#5B3C6E">分层降级决策</text>
+    <text x="105" y="594" font-size="17" fill="#334E68">Embedding 不可用 → BM25 本地检索；外部 LLM 未配置 / 超时 / 熔断 → 本地证据句生成；无可靠证据 → 明确拒答。</text>
+    <text x="105" y="632" font-size="17" fill="#334E68">数字人 WebSocket 异常 → 前端调用主系统 /api/v1/ai/chat；TTS 异常 → 浏览器可用语音能力或纯文字继续。</text>
+    <text x="105" y="670" font-size="17" fill="#334E68">Redis 不可用 → 内存限流；地图 Key 缺失 → 不影响登录、后台、RAG 与数字人基础对话。</text>
+    <text x="105" y="708" font-size="15" fill="#5A6B78">降级目标是保持可用并暴露能力边界，不把缺失的实时数据或模型能力伪装为成功。</text>
+    <text x="70" y="808" font-size="15" fill="#5A6B78">源码证据：rag_service.go、retrieval_engine.go、model_resilience.go、DigitalHumanView.vue、conversations/tts_manager.py</text>
+  </g>
+</svg>

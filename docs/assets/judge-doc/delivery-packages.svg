@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+  <rect width="1400" height="760" fill="#F8FAFC"/>
+  <text x="70" y="72" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">交付包组成与体积</text>
+  <text x="70" y="108" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">核心功能随包提供，可再生依赖与大模型文件按首次启动流程补齐</text>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <rect x="70" y="170" width="390" height="390" rx="20" fill="#E5F4F1" stroke="#4B9D8C" stroke-width="2"/>
+    <circle cx="125" cy="225" r="28" fill="#4B9D8C"/>
+    <text x="125" y="235" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF">01</text>
+    <text x="175" y="225" font-size="24" font-weight="700" fill="#174C48">Windows 可执行演示包</text>
+    <text x="105" y="290" font-size="20" font-weight="700" fill="#23404B">49014999</text>
+    <text x="105" y="322" font-size="20" font-weight="700" fill="#23404B">作品.zip</text>
+    <text x="105" y="382" font-size="32" font-weight="700" fill="#174C48">约 90.23 MB</text>
+    <text x="105" y="430" font-size="17" fill="#4F666D">主程序、前端、知识库、真实 Live2D</text>
+    <text x="105" y="460" font-size="17" fill="#4F666D">数字人入口与一键启动脚本</text>
+    <text x="105" y="500" font-size="17" fill="#4F666D">首次启动补齐 Python / ASR</text>
+
+    <rect x="505" y="170" width="390" height="390" rx="20" fill="#EAF0F8" stroke="#6E8DB1" stroke-width="2"/>
+    <circle cx="560" cy="225" r="28" fill="#6E8DB1"/>
+    <text x="560" y="235" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF">02</text>
+    <text x="610" y="225" font-size="24" font-weight="700" fill="#24456A">精简作品源码包</text>
+    <text x="540" y="290" font-size="20" font-weight="700" fill="#23404B">49014999</text>
+    <text x="540" y="322" font-size="20" font-weight="700" fill="#23404B">源码.zip</text>
+    <text x="540" y="382" font-size="32" font-weight="700" fill="#24456A">约 49.26 MB</text>
+    <text x="540" y="430" font-size="17" fill="#4F666D">保留双项目源码、配置模板和许可证</text>
+    <text x="540" y="460" font-size="17" fill="#4F666D">排除 Git、虚拟环境、模型、缓存</text>
+    <text x="540" y="490" font-size="17" fill="#4F666D">日志、数据库与开发过程目录</text>
+
+    <rect x="940" y="170" width="390" height="390" rx="20" fill="#FFF4E5" stroke="#D7A35B" stroke-width="2"/>
+    <circle cx="995" cy="225" r="28" fill="#D7A35B"/>
+    <text x="995" y="235" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF">03</text>
+    <text x="1045" y="225" font-size="24" font-weight="700" fill="#754A1F">完整性校验</text>
+    <text x="975" y="300" font-size="24" font-weight="700" fill="#754A1F">SHA-256</text>
+    <text x="975" y="350" font-size="19" fill="#4F666D">每个压缩包附带校验文件</text>
+    <text x="975" y="390" font-size="19" fill="#4F666D">交付前核对文件是否完整</text>
+    <text x="975" y="450" font-size="17" fill="#4F666D">体积小的原因：</text>
+    <text x="975" y="480" font-size="17" fill="#4F666D">可再生依赖和模型不重复打包</text>
+    <text x="975" y="510" font-size="17" fill="#4F666D">核心业务功能并未删减</text>
+
+    <rect x="170" y="630" width="1060" height="58" rx="14" fill="#EAF5EA" stroke="#78A978" stroke-width="1.5"/>
+    <text x="700" y="667" text-anchor="middle" font-size="18" fill="#35663A">评委解压后运行 START-DEMO.bat，即可按首次启动流程补齐缺失的运行环境</text>
+  </g>
+</svg>

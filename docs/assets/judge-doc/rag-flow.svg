@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
+  <rect width="1400" height="980" fill="#F8FAFC"/>
+  <text x="70" y="70" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">RAG 源码级处理流水线</text>
+  <text x="70" y="106" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">同一条链路同时支持完全本地、Embedding 混合检索和外部 LLM 增强；生成模型不拥有事实来源权</text>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L10,3 z" fill="#55788B"/></marker></defs>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <g fill="#FFFFFF" stroke-width="2">
+      <rect x="55" y="160" width="190" height="100" rx="12" stroke="#4B9D8C"/><rect x="300" y="160" width="215" height="100" rx="12" stroke="#6E8DB1"/><rect x="570" y="160" width="230" height="100" rx="12" stroke="#D7A35B"/><rect x="855" y="160" width="230" height="100" rx="12" stroke="#9B78AD"/><rect x="1140" y="160" width="205" height="100" rx="12" stroke="#4B9D8C"/>
+    </g>
+    <g text-anchor="middle" fill="#23404B">
+      <text x="150" y="202" font-size="20" font-weight="700">原始问题</text><text x="150" y="232" font-size="14">query + session_id</text>
+      <text x="407" y="195" font-size="20" font-weight="700">追问改写</text><text x="407" y="225" font-size="14">主题 / 意图 / 边界继承</text><text x="407" y="246" font-size="13">仅改 retrievalQuery</text>
+      <text x="685" y="195" font-size="20" font-weight="700">查询扩展</text><text x="685" y="225" font-size="14">Profile 规则或 LLM Rewrite</text><text x="685" y="246" font-size="13">保留用户原始 Prompt</text>
+      <text x="970" y="195" font-size="20" font-weight="700">候选召回</text><text x="970" y="225" font-size="14">倒排候选 / 全量兜底</text><text x="970" y="246" font-size="13">TopK 默认 8</text>
+      <text x="1242" y="195" font-size="20" font-weight="700">证据评价</text><text x="1242" y="225" font-size="14">confidence</text><text x="1242" y="246" font-size="13">should_abstain</text>
+    </g>
+    <g stroke="#55788B" stroke-width="3" fill="none" marker-end="url(#a)"><path d="M245 210 H300"/><path d="M515 210 H570"/><path d="M800 210 H855"/><path d="M1085 210 H1140"/></g>
+    <rect x="55" y="340" width="1290" height="275" rx="14" fill="#FFFFFF" stroke="#C5D1D8" stroke-width="2"/>
+    <text x="90" y="386" font-size="23" font-weight="700" fill="#123047">五种检索模式（RetrieveRelevantKnowledgeWithOptions）</text>
+    <g>
+      <rect x="90" y="425" width="220" height="130" rx="10" fill="#E5F4F1" stroke="#4B9D8C"/><rect x="335" y="425" width="220" height="130" rx="10" fill="#EAF0F8" stroke="#6E8DB1"/><rect x="580" y="425" width="220" height="130" rx="10" fill="#FFF4E5" stroke="#D7A35B"/><rect x="825" y="425" width="220" height="130" rx="10" fill="#F2EAF7" stroke="#9B78AD"/><rect x="1070" y="425" width="220" height="130" rx="10" fill="#E9F3F5" stroke="#55788B"/>
+      <g text-anchor="middle" fill="#23404B"><text x="200" y="463" font-size="18" font-weight="700">bm25-local</text><text x="200" y="494" font-size="14">词面分数 + 标题</text><text x="200" y="519" font-size="14">条件 Boost / 意图 Boost</text>
+      <text x="445" y="463" font-size="18" font-weight="700">embedding</text><text x="445" y="494" font-size="14">Query 向量</text><text x="445" y="519" font-size="14">Cosine Similarity</text>
+      <text x="690" y="463" font-size="18" font-weight="700">hybrid-weighted</text><text x="690" y="494" font-size="14">0.6 × Embedding</text><text x="690" y="519" font-size="14">+ 0.4 × BM25</text>
+      <text x="935" y="463" font-size="18" font-weight="700">rrf-fusion</text><text x="935" y="494" font-size="14">融合两套排名</text><text x="935" y="519" font-size="14">默认 RRF K = 60</text>
+      <text x="1180" y="463" font-size="18" font-weight="700">light-rerank</text><text x="1180" y="494" font-size="14">BM25 + 可解释规则</text><text x="1180" y="519" font-size="14">标题 / 覆盖 / 实体 / 来源</text></g>
+    </g>
+    <rect x="55" y="680" width="380" height="190" rx="14" fill="#E5F4F1" stroke="#4B9D8C" stroke-width="2"/>
+    <text x="90" y="723" font-size="21" font-weight="700" fill="#174C48">无证据 / 低置信度</text><text x="90" y="762" font-size="16" fill="#334E68">buildNoEvidenceAnswer</text><text x="90" y="796" font-size="16" fill="#334E68">实时信息由边界模板回答</text><text x="90" y="830" font-size="15" fill="#5A6B78">不调用通用模型编造景区事实</text>
+    <rect x="510" y="680" width="380" height="190" rx="14" fill="#EAF0F8" stroke="#6E8DB1" stroke-width="2"/>
+    <text x="545" y="723" font-size="21" font-weight="700" fill="#24456A">无外部 Key</text><text x="545" y="762" font-size="16" fill="#334E68">证据句二次 BM25 排序</text><text x="545" y="796" font-size="16" fill="#334E68">按事实 / 路线 / 边界模板组织</text><text x="545" y="830" font-size="15" fill="#5A6B78">generateAnswerFromChunksWithContext</text>
+    <rect x="965" y="680" width="380" height="190" rx="14" fill="#FFF4E5" stroke="#D7A35B" stroke-width="2"/>
+    <text x="1000" y="723" font-size="21" font-weight="700" fill="#754A1F">配置外部 Key</text><text x="1000" y="762" font-size="16" fill="#334E68">证据 + 会话上下文构造 Prompt</text><text x="1000" y="796" font-size="16" fill="#334E68">OpenAI 兼容流式生成</text><text x="1000" y="830" font-size="15" fill="#5A6B78">失败 / 熔断后回退本地生成</text>
+    <g stroke="#55788B" stroke-width="3" fill="none" marker-end="url(#a)"><path d="M1242 260 V310 H245 V340"/><path d="M700 615 V650 H245 V680"/><path d="M700 615 V680"/><path d="M700 650 H1155 V680"/></g>
+    <text x="70" y="930" font-size="15" fill="#5A6B78">源码证据：session_manager.go · rag_llm_enhance.go · retrieval_engine.go · generation_service.go · rag_evaluation.go</text>
+  </g>
+</svg>

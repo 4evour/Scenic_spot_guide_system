@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000">
+  <rect width="1400" height="1000" fill="#F7FAFC"/>
+  <text x="70" y="70" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">数字人文字 / 语音 WebSocket 时序</text>
+  <text x="70" y="106" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">前端负责 Live2D 渲染与播放；Python 服务按连接创建 ServiceContext 并编排 ASR、Agent、TTS</text>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L10,3 z" fill="#55788B"/></marker></defs>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <g text-anchor="middle"><rect x="50" y="150" width="220" height="72" rx="10" fill="#E5F4F1" stroke="#4B9D8C" stroke-width="2"/><text x="160" y="194" font-size="20" font-weight="700" fill="#174C48">DigitalHumanView</text>
+    <rect x="340" y="150" width="220" height="72" rx="10" fill="#EAF0F8" stroke="#6E8DB1" stroke-width="2"/><text x="450" y="194" font-size="20" font-weight="700" fill="#24456A">Go WS Proxy</text>
+    <rect x="630" y="150" width="220" height="72" rx="10" fill="#FFF4E5" stroke="#D7A35B" stroke-width="2"/><text x="740" y="194" font-size="20" font-weight="700" fill="#754A1F">WebSocketHandler</text>
+    <rect x="920" y="150" width="220" height="72" rx="10" fill="#F2EAF7" stroke="#9B78AD" stroke-width="2"/><text x="1030" y="194" font-size="20" font-weight="700" fill="#5B3C6E">ServiceContext</text>
+    <rect x="1190" y="150" width="170" height="72" rx="10" fill="#E9F3F5" stroke="#55788B" stroke-width="2"/><text x="1275" y="184" font-size="19" font-weight="700" fill="#23404B">ASR / Agent</text><text x="1275" y="207" font-size="15" fill="#4F666D">TTS / Live2D</text></g>
+    <g stroke="#B8C6CE" stroke-width="2" stroke-dasharray="7 7"><path d="M160 222 V900"/><path d="M450 222 V900"/><path d="M740 222 V900"/><path d="M1030 222 V900"/><path d="M1275 222 V900"/></g>
+    <g fill="#334E68" font-size="15">
+      <path d="M160 270 H450" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="180" y="260">WS /vtuber-ws/client-ws（Cookie / 子协议鉴权）</text>
+      <path d="M450 310 H740" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="478" y="300">代理至 127.0.0.1:12393</text>
+      <path d="M740 350 H1030" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="765" y="340">复制默认上下文，装载角色配置</text>
+      <path d="M1030 390 H1275" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="1052" y="380">Factory 初始化 ASR / TTS / VAD / Agent</text>
+      <path d="M160 455 H740" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="182" y="445">text-input 或 audio-data + metadata</text>
+      <path d="M740 500 H1275" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="765" y="490">process_single_conversation</text>
+      <path d="M1275 545 H740" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="895" y="535">语音输入：SenseVoice 转写</text>
+      <path d="M740 585 H160" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="475" y="575">user-input-transcription / conversation-chain-start</text>
+      <path d="M740 635 H1275" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="790" y="625">Agent.chat 流式输出 SentenceOutput</text>
+      <path d="M1275 680 H740" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="915" y="670">表达式动作 + TTS 音频负载</text>
+      <path d="M740 725 H160" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="430" y="715">full-text / audio / control / actions</text>
+      <path d="M160 770 H160" stroke="#55788B" stroke-width="3"/><text x="185" y="760">Live2DStage 表情、口型、动作；AudioPlayback 排队播放</text>
+      <path d="M160 815 H740" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="325" y="805">frontend-playback-complete</text>
+      <path d="M740 855 H160" stroke="#55788B" stroke-width="3" marker-end="url(#a)"/><text x="390" y="845">force-new-message / conversation-chain-end</text>
+    </g>
+    <rect x="70" y="910" width="1260" height="58" rx="10" fill="#FFFFFF" stroke="#C5D1D8"/>
+    <text x="95" y="945" font-size="14" fill="#5A6B78">异常分支：WebSocket 超时或生成错误 → DigitalHumanView.fallbackToBackend → Go /api/v1/ai/chat → TTS 流或纯文字继续</text>
+  </g>
+</svg>

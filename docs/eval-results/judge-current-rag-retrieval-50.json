@@ -1,0 +1,1912 @@
+{
+  "total": 50,
+  "passed": 50,
+  "failed": 0,
+  "top_k": 8,
+  "pass_rate": 1,
+  "average_keyword_coverage": 1,
+  "average_recall_at_k": 1,
+  "mrr_at_k": 0.9533333333333335,
+  "retrieval_evaluated_cases": 50,
+  "retrieval_p50_ms": 22,
+  "retrieval_p95_ms": 30,
+  "retrieval_only": true,
+  "started_at": "2026-07-20T00:58:02.6476781+08:00",
+  "finished_at": "2026-07-20T00:58:02.7861835+08:00",
+  "run_info": {
+    "knowledge_file": "knowledge/real/lingshan_real_chunks.jsonl",
+    "evaluation_file": "knowledge/real/lingshan_eval_50.json",
+    "knowledge_chunks": 162,
+    "evaluation_cases": 50,
+    "top_k": 8,
+    "concurrency": 8,
+    "repeat": 1,
+    "retrieval_only": true,
+    "embedding_provider": "bm25-local",
+    "generation_provider": "disabled",
+    "embedding_weight": 0.6,
+    "bm25_weight": 0.4,
+    "rrf_k": 60
+  },
+  "group_stats": [
+    {
+      "group_by": "category",
+      "name": "文史资料",
+      "total": 25,
+      "passed": 25,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 0.9333333333333335,
+      "retrieval_evaluated_cases": 25
+    },
+    {
+      "group_by": "category",
+      "name": "服务设施",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 6
+    },
+    {
+      "group_by": "category",
+      "name": "消费和运营分析",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 1
+    },
+    {
+      "group_by": "category",
+      "name": "游客 FAQ",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 2
+    },
+    {
+      "group_by": "category",
+      "name": "票务交通",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 8
+    },
+    {
+      "group_by": "category",
+      "name": "路线推荐",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 0.9166666666666666,
+      "retrieval_evaluated_cases": 8
+    },
+    {
+      "group_by": "difficulty",
+      "name": "easy",
+      "total": 15,
+      "passed": 15,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 0.9222222222222223,
+      "retrieval_evaluated_cases": 15
+    },
+    {
+      "group_by": "difficulty",
+      "name": "hard",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 8
+    },
+    {
+      "group_by": "difficulty",
+      "name": "medium",
+      "total": 27,
+      "passed": 27,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 0.9567901234567903,
+      "retrieval_evaluated_cases": 27
+    },
+    {
+      "group_by": "source_type",
+      "name": "analytics_sample",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 1
+    },
+    {
+      "group_by": "source_type",
+      "name": "boundary_real",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 2
+    },
+    {
+      "group_by": "source_type",
+      "name": "negative_boundary",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 3
+    },
+    {
+      "group_by": "source_type",
+      "name": "official_real",
+      "total": 36,
+      "passed": 36,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 0.9537037037037037,
+      "retrieval_evaluated_cases": 36
+    },
+    {
+      "group_by": "source_type",
+      "name": "reference_boundary",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 1,
+      "retrieval_evaluated_cases": 1
+    },
+    {
+      "group_by": "source_type",
+      "name": "route_config",
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "pass_rate": 1,
+      "average_keyword_coverage": 1,
+      "average_recall_at_k": 1,
+      "mrr_at_k": 0.9047619047619048,
+      "retrieval_evaluated_cases": 7
+    }
+  ],
+  "results": [
+    {
+      "question": "灵山胜境有哪些核心景点，为什么不能只说是看大佛？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "1997年开园",
+        "灵山大佛",
+        "九龙灌浴",
+        "灵山梵宫",
+        "五印坛城"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-overview-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-overview-001",
+        "real-dafo-001",
+        "real-culture-008",
+        "real-manfeilong-001",
+        "real-overview-003",
+        "real-culture-001",
+        "real-struct-ls-004",
+        "real-route-002"
+      ],
+      "retrieval_latency_ms": 24,
+      "response_preview": "灵山胜境景区概况\n灵山胜境位于江苏无锡太湖之滨，是集湖光山色、园林广场、佛教文化和历史知识于一体的景区。景区于1997年开园，核心景观包括灵山大佛、祥符禅寺、灵山佛手、百子戏弥勒、佛教文化博览馆、万佛殿、九龙灌浴、灵山梵宫、五印坛城、曼飞龙..."
+    },
+    {
+      "question": "灵山小灵山这个名字和玄奘有什么历史渊源？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "唐贞观年间",
+        "玄奘法师",
+        "小灵山",
+        "灵鹫山"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-guide-history-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-guide-history-001",
+        "real-fozutan-002",
+        "real-culture-008",
+        "real-fangong-005",
+        "real-guide-history-002",
+        "real-boundary-show-002",
+        "real-show-001",
+        "real-struct-ls-001"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "灵山胜境历史沿革 - 唐代起源与小灵山命名\n灵山胜境坐落于江苏省无锡市太湖西北部的马山镇，地处秦履峰、青龙山、白虎山三山环抱之间，占地面积约30万平方米，是国家5A级旅游景区、世界佛教论坛永久会址。景区的历史可追溯至1300多年前的唐代贞观..."
+    },
+    {
+      "question": "现代灵山胜境从奠基到梵宫开放经历了哪些关键年份？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "1997年11月15日",
+        "2003年",
+        "灵山梵宫",
+        "2009年1月1日"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-guide-history-003"
+      ],
+      "retrieved_chunk_ids": [
+        "real-guide-history-003",
+        "real-manfeilong-001",
+        "real-fangong-001",
+        "real-overview-001",
+        "real-honor-001",
+        "real-overview-003",
+        "real-nearby-002",
+        "real-transport-001"
+      ],
+      "retrieval_latency_ms": 23,
+      "response_preview": "灵山胜境历史沿革 - 现代灵山建设时间线\n现代灵山胜境建设时间线：1994年，“修复祥符禅寺、建造灵山大佛”工程奠基，中国佛教协会会长赵朴初提出“五方五佛”之论，认为东方空缺正待填补；1997年11月15日，灵山大佛落成开光，成为景区标志性..."
+    },
+    {
+      "question": "灵山大佛有多高，为什么是景区的标志性景观？",
+      "category": "文史资料",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 0.5,
+      "first_relevant_rank": 2,
+      "matched_keywords": [
+        "通高88米",
+        "太湖之滨",
+        "标志性景观"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-dafo-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-dafo-004",
+        "real-dafo-001",
+        "real-dafo-002",
+        "real-dafo-005",
+        "real-struct-ls-004",
+        "real-dafo-007",
+        "real-dafo-006",
+        "real-struct-ls-011"
+      ],
+      "retrieval_latency_ms": 30,
+      "response_preview": "灵山大佛游客常见问法\n游客常问灵山大佛多高、是不是景区最代表性的景点、适合什么时候看、能不能拍照、和祥符禅寺是否在同一条线。回答时应优先给出88米、标志性景观、太湖之滨和主线游览这些稳定信息。\n灵山大佛高度与定位\n灵山大佛是灵山胜境标志性景..."
+    },
+    {
+      "question": "灵山大佛左右手分别是什么手印，寓意是什么？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "施无畏印",
+        "与愿印",
+        "痛苦",
+        "欢乐"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-dafo-006"
+      ],
+      "retrieved_chunk_ids": [
+        "real-dafo-006",
+        "real-foshou-003",
+        "real-dafo-007",
+        "real-dafo-004",
+        "real-route-007",
+        "real-guide-engineering-001",
+        "real-struct-ls-003",
+        "real-dafo-002"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "灵山大佛手印含义\n灵山大佛右手为施无畏印，左手为与愿印，寓意除却众生痛苦、给予众生欢乐。游客问大佛手势、佛像为什么这样摆手时，应优先召回这一文化解释。\n天下第一掌和佛手谐音\n天下第一掌为灵山大佛右手的复制件。官方资料说明佛手与福寿谐音，因此..."
+    },
+    {
+      "question": "灵山大佛的佛体、莲花瓣、用铜量和登云道有哪些工程参数？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "佛体79米",
+        "莲花瓣9米",
+        "725吨",
+        "216级登云道"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-guide-engineering-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-guide-engineering-001",
+        "real-guide-engineering-002",
+        "real-dafo-005",
+        "real-manfeilong-001",
+        "real-struct-ls-011",
+        "real-wuyin-002",
+        "real-route-002",
+        "real-guide-culture-001"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "灵山大佛工程参数\n灵山大佛是世界最高露天青铜释迦牟尼立像。工程参数：通高88米（佛体79米，莲花瓣9米），总高101.5米；总用铜量725吨；佛体由1560块6-8毫米厚的铜壁板构成；焊缝总长度逾35公里；铜壁板面积相当于一个半足球场大小。..."
+    },
+    {
+      "question": "九龙灌浴演绎的是哪一段故事，为什么又叫花开见佛？",
+      "category": "文史资料",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "音乐",
+        "喷泉",
+        "花开见佛",
+        "九龙灌浴"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-jiulong-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-jiulong-001",
+        "real-jiulong-002",
+        "real-jiulong-003",
+        "real-jiulong-006",
+        "real-struct-ls-006",
+        "real-route-007",
+        "real-mile-001",
+        "real-jiulong-004"
+      ],
+      "retrieval_latency_ms": 16,
+      "response_preview": "九龙灌浴花开见佛\n九龙灌浴是大型动态音乐群雕景观，通过音乐、喷泉和群雕动态演绎佛陀诞生时花开见佛的故事。游客常把它称为会喷水的莲花、九龙灌浴表演或花开见佛演出。\n九龙灌浴游客问法\n如果游客问九龙灌浴讲什么、哪里看花开见佛、灵山哪个项目会喷水..."
+    },
+    {
+      "question": "九龙灌浴的动态景观由哪些主要元素组成？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "太子佛",
+        "莲花",
+        "九条龙",
+        "四大天王"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-jiulong-005"
+      ],
+      "retrieved_chunk_ids": [
+        "real-jiulong-005",
+        "real-jiulong-003",
+        "real-struct-ls-006",
+        "real-show-001",
+        "real-jiulong-001",
+        "real-jiulong-004",
+        "real-jiulong-002",
+        "real-jiulong-006"
+      ],
+      "retrieval_latency_ms": 17,
+      "response_preview": "九龙灌浴组成元素\n九龙灌浴由太子佛塑像、莲花、九龙喷泉、四大天王和八供养等组成。音乐响起后，莲花绽开，太子佛像升起，九条龙喷出水柱，形成佛诞故事的动态景观。\n九龙灌浴观看提醒\n九龙灌浴属于游客容易错过时间点的动态景观。知识库可以说明它是花开..."
+    },
+    {
+      "question": "灵山梵宫适合什么游客参观，它的文化定位是什么？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "佛教艺术",
+        "文化交流",
+        "沉浸式演艺",
+        "文化建筑"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-fangong-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-fangong-001",
+        "real-fangong-004",
+        "real-wuyin-002",
+        "real-overview-003",
+        "real-struct-ls-012",
+        "real-culture-008",
+        "real-fangong-002",
+        "real-struct-ls-013"
+      ],
+      "retrieval_latency_ms": 30,
+      "response_preview": "灵山梵宫文化建筑\n灵山梵宫是灵山胜境重要文化建筑，也是世界佛教论坛相关会址之一。它以佛教艺术展示、文化交流和沉浸式演艺为特色，适合对建筑和佛教艺术感兴趣的游客，不应简单理解为普通拍照点。\n讲解关键词：文化讲解可突出灵山梵宫的佛教艺术、文化交..."
+    },
+    {
+      "question": "灵山梵宫里能看到哪些传统工艺，吉祥颂讲什么？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "木雕",
+        "壁画",
+        "琉璃",
+        "吉祥颂"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-fangong-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-fangong-002",
+        "real-struct-ls-013",
+        "real-fangong-001",
+        "real-fangong-005",
+        "real-fangong-007",
+        "real-fangong-004",
+        "real-fangong-003",
+        "real-wuyin-002"
+      ],
+      "retrieval_latency_ms": 20,
+      "response_preview": "灵山梵宫艺术工艺\n灵山梵宫空间中能看到木雕、壁画、琉璃、漆器等工艺表达，整体呈现佛教艺术的庄严和精美。大型音乐史诗情景剧吉祥颂演绎释迦牟尼成佛过程。\n灵山梵宫 - 景点结构化数据\n景点名称：灵山梵宫\n景区名称：灵山胜境\n景点ID：LS-01..."
+    },
+    {
+      "question": "五印坛城的名字来源是什么，主要展示哪种佛教文化？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 0.5,
+      "first_relevant_rank": 2,
+      "matched_keywords": [
+        "藏传佛教",
+        "五种手印",
+        "五种智慧",
+        "民俗艺术"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-wuyin-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-struct-ls-014",
+        "real-wuyin-001",
+        "real-wuyin-003",
+        "real-wuyin-004",
+        "real-wuyin-002",
+        "real-manfeilong-001",
+        "real-struct-ls-015",
+        "real-guide-culture-002"
+      ],
+      "retrieval_latency_ms": 20,
+      "response_preview": "五印坛城 - 景点结构化数据\n景点名称：五印坛城\n景区名称：灵山胜境\n景点ID：LS-014\n具体位置：香水海中央的独立圆岛上，灵山梵宫南侧，通过景观栈道与梵宫相连，四面环水，环境清幽，藏式建筑风格与周边江南景观形成鲜明对比。\n建筑/景观参..."
+    },
+    {
+      "question": "五印坛城内部有哪些藏族艺术装饰技艺？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "彩绘",
+        "木雕",
+        "唐卡",
+        "镀金"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-wuyin-005"
+      ],
+      "retrieved_chunk_ids": [
+        "real-wuyin-005",
+        "real-wuyin-002",
+        "real-manfeilong-001",
+        "real-wuyin-003",
+        "real-wuyin-001",
+        "real-struct-ls-014",
+        "real-guide-culture-001",
+        "real-wuyin-004"
+      ],
+      "retrieval_latency_ms": 10,
+      "response_preview": "五印坛城装饰技艺\n五印坛城荟萃藏族艺术装饰，融合彩绘、木雕、唐卡、壁饰、镀金等传统建筑装饰技艺。回答藏文化、坛城艺术、内饰特色时，应强调其文化艺术展示属性。\n五印坛城与文化艺术群落\n五印坛城与灵山大佛、灵山梵宫、曼飞龙塔共同组成展示佛教三大..."
+    },
+    {
+      "question": "祥符禅寺有怎样的历史出处，和唐贞观年间有什么关系？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "唐贞观年间",
+        "千年古刹",
+        "玄奘"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-xiangfu-004"
+      ],
+      "retrieved_chunk_ids": [
+        "real-xiangfu-004",
+        "real-guide-history-001",
+        "real-struct-ls-010",
+        "real-guide-history-002",
+        "real-xiangfu-001",
+        "real-xiangfu-002",
+        "real-route-config-007",
+        "real-culture-006"
+      ],
+      "retrieval_latency_ms": 9,
+      "response_preview": "祥符禅寺历史出处\n祥符禅寺始建于唐贞观年间，历史上香火旺盛，官方资料称其有山连鹫岭、法继慈恩之誉。回答千年古刹、玄奘相关问法时，应提示以官方介绍为依据，不扩展未经确认的传说细节。\n灵山胜境历史沿革 - 唐代起源与小灵山命名\n灵山胜境坐落于江..."
+    },
+    {
+      "question": "如果想安静礼佛，祥符禅寺适合怎么安排在游览顺序中？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "礼仪",
+        "安静空间",
+        "祥符禅寺",
+        "灵山大佛"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-xiangfu-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-xiangfu-002",
+        "real-route-004",
+        "real-route-third-party-001",
+        "real-guide-history-002",
+        "real-xiangfu-001",
+        "real-negative-002",
+        "real-xiangfu-003",
+        "real-route-config-007"
+      ],
+      "retrieval_latency_ms": 15,
+      "response_preview": "祥符禅寺和朝拜体验\n祥符禅寺适合安排在灵山大佛前后游览，用于感受寺院礼仪、安静空间和佛教文化氛围。回答礼佛、祈福、安静参观类问题时，可优先召回祥符禅寺。\n初次游客与老人核心路线问法\n当游客问第一次去灵山怎么安排、初次游客先看哪些点、老人游客..."
+    },
+    {
+      "question": "佛足坛的佛足印来源于什么，和玄奘有什么关系？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "佛足印",
+        "玄奘法师",
+        "古印度"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-fozutan-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-fozutan-002",
+        "real-struct-ls-003",
+        "real-culture-003",
+        "real-route-third-party-001",
+        "real-route-config-007",
+        "real-route-config-004",
+        "real-culture-002",
+        "real-fangong-005"
+      ],
+      "retrieval_latency_ms": 9,
+      "response_preview": "佛足坛佛足印来源\n佛足坛为正方形平台建筑，中央供奉佛足印。该佛足印以唐代玄奘法师到古印度取经时临摹图为原型，适合回答佛足印、礼佛象征和玄奘相关问法。\n佛足坛 - 景点结构化数据\n景点名称：佛足坛\n景区名称：灵山胜境\n景点ID：LS-003\n..."
+    },
+    {
+      "question": "阿育王柱顶部四面狮子象征什么？",
+      "category": "文史资料",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "花岗岩",
+        "狮子",
+        "四面八方"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-ashoka-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-ashoka-002",
+        "real-culture-006",
+        "real-struct-ls-008",
+        "real-culture-002",
+        "real-culture-004",
+        "real-food-003",
+        "real-route-config-003",
+        "real-route-config-002"
+      ],
+      "retrieval_latency_ms": 7,
+      "response_preview": "阿育王柱狮子象征\n阿育王柱由整根花岗岩雕刻，顶端面向东南西北四个方向的狮子，象征把佛教弘扬到四面八方。回答阿育王柱含义时应聚焦官方资料中的象征解释。\n阿育王柱文化节点\n阿育王柱属于灵山文化园的佛教文化景观，可用于解释佛教传播、历史象征和文化..."
+    },
+    {
+      "question": "百子戏弥勒表达了什么文化意象，适合亲子游客吗？",
+      "category": "文史资料",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "first_relevant_rank": 3,
+      "matched_keywords": [
+        "大肚能容",
+        "慈颜常笑",
+        "亲子"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-mile-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-002",
+        "real-foshou-mile-001",
+        "real-mile-002",
+        "real-mile-001",
+        "real-route-config-006",
+        "real-route-009",
+        "real-foshou-mile-002",
+        "real-overview-001"
+      ],
+      "retrieval_latency_ms": 31,
+      "response_preview": "亲子游客推荐路线\n亲子游客可增加百子戏弥勒、佛手广场、九龙灌浴等停留点，再安排灵山大佛和灵山梵宫。路线表达应避免承诺精确耗时，因为停留时间和当天客流会变化。\n常见问法：带孩子去灵山有哪些点比较合适？亲子游客、小朋友路线可推荐百子戏弥勒、佛手..."
+    },
+    {
+      "question": "降魔浮雕讲述释迦牟尼从凡人到成佛的哪条故事线？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "降伏心魔",
+        "彻悟成佛",
+        "凡人"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-jiangmo-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-jiangmo-002",
+        "real-culture-005",
+        "real-struct-ls-007",
+        "real-dafo-002",
+        "real-fangong-002",
+        "real-culture-002",
+        "real-culture-004",
+        "real-fangong-003"
+      ],
+      "retrieval_latency_ms": 8,
+      "response_preview": "降魔浮雕故事线\n降魔浮雕讲述释迦牟尼佛从凡人历经考验、降伏心魔并最终彻悟成佛的过程。游客问佛教故事、降魔、成佛过程时，可以与九龙灌浴和吉祥颂一起串联。\n降魔浮雕文化节点\n降魔浮雕是灵山文化园内体现佛教故事和象征意义的景观之一。游客问佛教故事..."
+    },
+    {
+      "question": "曼飞龙塔属于哪一类佛教建筑，空间中的风铃有什么寓意？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "南传佛教",
+        "金刚宝座式",
+        "风铃"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-manfeilong-003"
+      ],
+      "retrieved_chunk_ids": [
+        "real-manfeilong-003",
+        "real-manfeilong-001",
+        "real-struct-ls-015",
+        "real-wuyin-002",
+        "real-manfeilong-002",
+        "real-guide-culture-002",
+        "real-overview-001",
+        "real-wuyin-004"
+      ],
+      "retrieval_latency_ms": 21,
+      "response_preview": "曼飞龙塔南传佛教建筑\n曼飞龙塔是南传佛教中的代表建筑，为金刚宝座式群塔，塔尖风铃形成平安喜乐的空间意象。它适合补足灵山对不同佛教文化体系的展示。\n曼飞龙塔文化群落\n曼飞龙塔位于灵山胜境的佛教文化景观群中，和五印坛城、灵山梵宫共同增强景区对不..."
+    },
+    {
+      "question": "佛教文化博览馆和万佛殿主要适合了解哪些内容？",
+      "category": "文史资料",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "佛教文化",
+        "历史知识",
+        "艺术内容"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-museum-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-museum-001",
+        "real-museum-002",
+        "real-museum-003",
+        "real-route-003",
+        "real-route-006",
+        "real-overview-001",
+        "real-struct-ls-012",
+        "real-route-007"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "佛教文化博览馆与万佛殿\n佛教文化博览馆和万佛殿用于展示佛教文化、历史知识和相关艺术内容，适合想系统了解佛教文化背景的游客。\n佛教文化博览馆问法\n如果游客问想系统了解佛教文化、历史背景、艺术内容，而不是只看大佛拍照，可以推荐佛教文化博览馆和万..."
+    },
+    {
+      "question": "灵山如何展示汉传、藏传和巴利语系三大佛教文化？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "汉传佛教",
+        "藏传佛教",
+        "巴利语系",
+        "五印坛城",
+        "曼飞龙塔"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-guide-culture-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-guide-culture-002",
+        "real-wuyin-004",
+        "real-wuyin-001",
+        "real-struct-ls-014",
+        "real-wuyin-003",
+        "real-struct-ls-015",
+        "real-wuyin-002",
+        "real-manfeilong-001"
+      ],
+      "retrieval_latency_ms": 28,
+      "response_preview": "佛教三大语系文化展示\n灵山胜境融合了汉传佛教与藏传佛教文化精髓，形成了独特的佛教文化体系，展现了佛教三大语系（汉语系、藏语系、巴利语系）的文化特色。汉传佛教文化以祥符禅寺和灵山大佛为核心，千年古刹保留了古井、银杏等历史遗存，见证了佛教在此地..."
+    },
+    {
+      "question": "灵山大佛和五方五佛理念有什么关系？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "赵朴初",
+        "五方五佛",
+        "香港天坛大佛",
+        "灵山梵宫"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-guide-culture-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-guide-culture-001",
+        "real-dafo-008",
+        "real-route-002",
+        "real-route-003",
+        "real-struct-ls-012",
+        "real-guide-history-003",
+        "real-dafo-006",
+        "real-dafo-007"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "五方五佛文化格局\n灵山大佛的建造体现了赵朴初“五方五佛”的理念。1994年工程奠基时，中国佛教协会会长赵朴初提出“五方五佛”之论，认为东方空缺正待填补。灵山大佛建成后，与香港天坛大佛（南方）、四川乐山大佛（西方）、山西云冈大佛（北方）、河南..."
+    },
+    {
+      "question": "灵山胜境为什么强调太湖山水和佛教文化结合？",
+      "category": "文史资料",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "太湖山水",
+        "佛教文化",
+        "文化建筑",
+        "礼佛空间"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-culture-008"
+      ],
+      "retrieved_chunk_ids": [
+        "real-culture-008",
+        "real-overview-002",
+        "real-dafo-002",
+        "real-overview-001",
+        "real-overview-003",
+        "real-fangong-001",
+        "real-wuyin-004",
+        "real-manfeilong-001"
+      ],
+      "retrieval_latency_ms": 25,
+      "response_preview": "太湖山水和佛教文化结合\n灵山胜境的特色在于太湖山水环境与佛教文化景观结合。回答“为什么叫胜境”“和普通景区有什么不同”“是不是商业化游乐项目”时，可从自然环境、佛教文化、文化建筑、演艺体验和礼佛空间等角度说明。\n灵山胜境 AAAAA 景区定..."
+    },
+    {
+      "question": "五智门在灵山文化游览线中起什么作用？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "五智门",
+        "降魔浮雕",
+        "阿育王柱",
+        "文化游览"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-culture-004"
+      ],
+      "retrieved_chunk_ids": [
+        "real-culture-004",
+        "real-culture-007",
+        "real-culture-002",
+        "real-culture-005",
+        "real-culture-006",
+        "real-xiangfu-002",
+        "real-struct-ls-004",
+        "real-show-003"
+      ],
+      "retrieval_latency_ms": 21,
+      "response_preview": "五智门文化节点\n五智门可作为进入灵山佛教文化景观序列的节点之一，与降魔浮雕、阿育王柱等共同构成文化游览线索。它适合在深度讲解中补充，不一定是初次游客必看重点。\n香水海和空间意象\n香水海可作为灵山文化园空间和佛教意象的一部分，适合在深度文化游..."
+    },
+    {
+      "question": "香水海在灵山文化空间中表达什么意象，路径能否直接保证？",
+      "category": "文史资料",
+      "difficulty": "hard",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "香水海",
+        "佛教意象",
+        "现场导览"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-culture-007"
+      ],
+      "retrieved_chunk_ids": [
+        "real-culture-007",
+        "real-fangong-002",
+        "real-dafo-001",
+        "real-xiangfu-002",
+        "real-culture-005",
+        "real-culture-006",
+        "real-culture-002",
+        "real-struct-ls-002"
+      ],
+      "retrieval_latency_ms": 25,
+      "response_preview": "香水海和空间意象\n香水海可作为灵山文化园空间和佛教意象的一部分，适合在深度文化游览或景观串联中提及。具体游览路径仍应结合现场导览和开放情况。\n灵山梵宫艺术工艺\n灵山梵宫空间中能看到木雕、壁画、琉璃、漆器等工艺表达，整体呈现佛教艺术的庄严和精..."
+    },
+    {
+      "question": "第一次到访且体力充足，完整参考步行路线怎么走？",
+      "category": "路线推荐",
+      "difficulty": "medium",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "南门",
+        "灵山大佛",
+        "五印坛城",
+        "出口",
+        "5小时"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-config-001",
+        "real-route-config-002",
+        "real-season-001",
+        "real-route-007",
+        "real-route-third-party-001",
+        "real-route-004",
+        "real-route-008",
+        "real-route-001"
+      ],
+      "retrieval_latency_ms": 14,
+      "response_preview": "完整参考步行路线（配置路线）\n完整参考步行路线覆盖南门、佛足坛、九龙灌浴、降魔浮雕、三圣殿、阿育王柱、天下第一掌、百子戏弥勒、祥符禅寺、杏坛广场、灵山大佛、灵山梵宫、曼飞龙塔、五印坛城和出口，配置时长约5小时，适合首次到访且体力充足的游客。..."
+    },
+    {
+      "question": "人多时想错峰步行，应该优先经过哪些点？",
+      "category": "路线推荐",
+      "difficulty": "medium",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "first_relevant_rank": 3,
+      "matched_keywords": [
+        "五印坛城",
+        "曼飞龙塔",
+        "灵山梵宫",
+        "错峰"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-boundary-weather-001",
+        "real-route-001",
+        "real-route-config-002",
+        "real-negative-001",
+        "real-boundary-ticket-001",
+        "real-risk-003",
+        "real-foshou-mile-001",
+        "real-route-004"
+      ],
+      "retrieval_latency_ms": 44,
+      "response_preview": "天气和客流实时边界\n天气、实时客流、排队时间、拥堵程度、今日游客多不多都不属于离线知识库稳定事实。系统应说明无法确认实时情况，并建议查看天气应用、地图热力、官方公告或现场信息。\n初次到访推荐主线与中轴线\n初次到访、半天游或询问中轴线时，可优..."
+    },
+    {
+      "question": "不想走太多路，观光车参考路线有哪些主要站点？",
+      "category": "路线推荐",
+      "difficulty": "medium",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "观光车",
+        "灵山大照壁",
+        "灵山蔬食馆",
+        "出口",
+        "4小时"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-003"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-config-003",
+        "real-route-third-party-001",
+        "real-season-001",
+        "real-route-007",
+        "real-route-config-001",
+        "real-guide-ticket-002",
+        "real-service-008",
+        "real-route-008"
+      ],
+      "retrieval_latency_ms": 9,
+      "response_preview": "观光车参考路线（配置路线）\n观光车参考路线串联灵山大照壁、佛足坛、杏坛广场、灵山大佛、祥符禅寺、天下第一掌、百子戏弥勒、阿育王柱、灵山蔬食馆、灵山梵宫、九龙灌浴、降魔浮雕、曼飞龙塔、五印坛城和出口，配置时长约4小时，适合希望减少步行的游客。..."
+    },
+    {
+      "question": "想集中体验核心景观，经典文化路线怎么安排？",
+      "category": "路线推荐",
+      "difficulty": "easy",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "五明桥",
+        "九龙灌浴",
+        "灵山梵宫",
+        "灵山大佛",
+        "经典文化"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-004"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-config-004",
+        "real-route-004",
+        "real-season-001",
+        "real-route-007",
+        "real-route-008",
+        "real-route-005",
+        "real-dafo-001",
+        "real-struct-ls-005"
+      ],
+      "retrieval_latency_ms": 21,
+      "response_preview": "经典文化路线（配置路线）\n经典文化路线依次安排灵山大照壁、五明桥、佛足坛、九龙灌浴、灵山梵宫和灵山大佛，配置时长约4小时，适合首次来访、希望集中体验核心景观的游客。路线为景区配置建议，具体开放和表演信息以现场为准。\n初次游客与老人核心路线问..."
+    },
+    {
+      "question": "想体验佛教建筑、艺术和寺院文化，禅意路线怎么走？",
+      "category": "路线推荐",
+      "difficulty": "medium",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "五印坛城",
+        "灵山梵宫",
+        "祥符禅寺",
+        "3小时",
+        "禅意"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-005"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-config-005",
+        "real-season-001",
+        "real-route-007",
+        "real-fangong-006",
+        "real-fangong-005",
+        "real-route-008",
+        "real-route-005",
+        "real-manfeilong-003"
+      ],
+      "retrieval_latency_ms": 19,
+      "response_preview": "禅意体验路线（配置路线）\n禅意体验路线重点安排五印坛城、灵山梵宫和祥符禅寺，配置时长约3小时，适合文化爱好者进行佛教建筑、艺术和寺院文化体验。路线为景区配置建议，参访礼仪、开放时间和演艺场次以现场公告为准。\n季节和天气游览建议边界\n季节、气..."
+    },
+    {
+      "question": "带孩子轻松游览，亲子欢乐路线包含哪些点？",
+      "category": "路线推荐",
+      "difficulty": "easy",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "百子戏弥勒",
+        "佛手广场",
+        "九龙灌浴",
+        "文创驿站",
+        "2小时30分钟"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-006"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-config-006",
+        "real-route-002",
+        "real-mile-001",
+        "real-foshou-mile-001",
+        "real-foshou-mile-002",
+        "real-route-009",
+        "real-route-008",
+        "real-route-004"
+      ],
+      "retrieval_latency_ms": 27,
+      "response_preview": "亲子欢乐路线（配置路线）\n亲子欢乐路线安排百子戏弥勒、佛手广场、九龙灌浴和文创驿站，配置时长约2小时30分钟，适合带孩子的家庭轻松游览。应根据儿童体力、天气和现场客流灵活增减点位，不承诺固定耗时。\n亲子游客推荐路线\n亲子游客可增加百子戏弥勒..."
+    },
+    {
+      "question": "想深入了解灵山历史、建筑和艺术，深度历史路线如何安排？",
+      "category": "路线推荐",
+      "difficulty": "medium",
+      "source_type": "route_config",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "五明桥",
+        "祥符禅寺",
+        "五印坛城",
+        "深度历史"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-config-007"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-config-007",
+        "real-season-001",
+        "real-route-007",
+        "real-fangong-001",
+        "real-route-008",
+        "real-struct-ls-010",
+        "real-struct-ls-008",
+        "real-overview-003"
+      ],
+      "retrieval_latency_ms": 29,
+      "response_preview": "深度历史路线（配置路线）\n深度历史路线安排灵山大照壁、五明桥、佛足坛、祥符禅寺、灵山梵宫、五印坛城和灵山大佛，配置时长约5小时，适合希望深入了解灵山佛教历史、建筑和艺术的游客。实际讲解深度和开放状态以现场安排为准。\n季节和天气游览建议边界\n..."
+    },
+    {
+      "question": "下雨或高温时，路线为什么要增加室内文化点？",
+      "category": "路线推荐",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "灵山梵宫",
+        "佛教文化博览馆",
+        "万佛殿",
+        "室内"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-route-007"
+      ],
+      "retrieved_chunk_ids": [
+        "real-route-007",
+        "real-season-001",
+        "real-fangong-004",
+        "real-route-004",
+        "real-route-008",
+        "real-route-config-005",
+        "real-route-config-004",
+        "real-route-005"
+      ],
+      "retrieval_latency_ms": 23,
+      "response_preview": "雨天或高温路线\n雨天或高温时，游客可减少室外停留，优先选择灵山梵宫、佛教文化博览馆、万佛殿、五印坛城等室内或半室内文化点，再根据天气补充灵山大佛、九龙灌浴等室外节点。\n路线问法：路线里为什么要考虑天气？降雨或高温时建议增加室内点、半室内文化..."
+    },
+    {
+      "question": "景区里想吃素食、团餐或灵山素面，应该去哪里？",
+      "category": "服务设施",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "阿育王柱广场",
+        "灵山素面",
+        "团餐"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-food-003"
+      ],
+      "retrieved_chunk_ids": [
+        "real-food-003",
+        "real-food-002",
+        "real-service-004",
+        "real-food-rest-001",
+        "real-transport-007",
+        "real-overview-001",
+        "real-food-004",
+        "real-overview-002"
+      ],
+      "retrieval_latency_ms": 27,
+      "response_preview": "灵山蔬食馆\n灵山蔬食馆位于景区阿育王柱广场东侧，提供点菜、套餐和团餐等选择，官方特别推荐灵山素面。游客问素食、团餐或在哪里吃面时可召回，但菜单价格需要现场确认。\n灵山特色美食总览\n灵山美食包括五观堂灵山斋素食、蔬食馆灵山蔬食系列、灵山三品素..."
+    },
+    {
+      "question": "想找茶、禅意和安静休息空间，佛前半亩茶在哪里？",
+      "category": "服务设施",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "灵山大佛脚下",
+        "祥符禅寺",
+        "佛前半亩茶",
+        "休憩"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-halfmu-tea-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-halfmu-tea-001",
+        "real-transport-001",
+        "real-food-003",
+        "real-guide-history-001",
+        "real-transport-004",
+        "real-overview-001",
+        "real-nearby-001",
+        "real-xiangfu-002"
+      ],
+      "retrieval_latency_ms": 17,
+      "response_preview": "佛前半亩茶\n佛前半亩茶位于灵山大佛脚下、祥符禅寺大殿之后，是景区中与茶、禅意和休憩体验相关的空间。游客问安静休息、茶园或禅意体验时可作为补充，但具体营业需现场确认。\n灵山胜境位置与到达\n灵山胜境位于江苏无锡太湖之滨，游客通常从无锡市区或太湖..."
+    },
+    {
+      "question": "现场有没有导览服务，找不到设施时应该咨询哪里？",
+      "category": "服务设施",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "服务中心",
+        "官方页面",
+        "咨询电话",
+        "现场指引"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-service-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-service-002",
+        "real-food-rest-001",
+        "real-negative-001",
+        "real-boundary-ticket-001",
+        "real-service-003",
+        "real-risk-002",
+        "real-negative-002",
+        "real-service-004"
+      ],
+      "retrieval_latency_ms": 29,
+      "response_preview": "导览服务与现场咨询\n游客问有没有导览服务、哪里问工作人员、现场设施怎么找时，离线知识库可提示查看景区现场指引、服务中心、官方页面或咨询电话。具体导览服务、休息点、洗手间和设施开放情况以景区当日安排及官方最新公告为准。\n餐饮休息与导览服务边界..."
+    },
+    {
+      "question": "老人、儿童和轮椅游客的无障碍服务能否直接保证？",
+      "category": "服务设施",
+      "difficulty": "medium",
+      "source_type": "boundary_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "轮椅",
+        "母婴室",
+        "洗手间",
+        "现场咨询"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-service-003"
+      ],
+      "retrieved_chunk_ids": [
+        "real-service-003",
+        "real-guide-ticket-001",
+        "real-service-009",
+        "real-service-008",
+        "real-route-004",
+        "real-route-008",
+        "real-ticket-003",
+        "real-boundary-ticket-002"
+      ],
+      "retrieval_latency_ms": 21,
+      "response_preview": "无障碍和老人服务边界\n老人、儿童、无障碍设施、轮椅租借、母婴室、休息点、洗手间等服务信息可能随现场安排变化。系统可以提示游客提前查看官方信息或现场咨询，不能编造具体位置、数量或费用。\n灵山胜境门票价格与优惠政策\n【数据来源为比赛官方资料包，..."
+    },
+    {
+      "question": "景区有哪些免费游客服务？",
+      "category": "服务设施",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "免费寄存",
+        "医疗服务",
+        "免费饮水",
+        "游客服务中心"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-service-009"
+      ],
+      "retrieved_chunk_ids": [
+        "real-service-009",
+        "real-service-010",
+        "real-manfeilong-001",
+        "real-wuyin-002",
+        "real-route-002",
+        "real-culture-008",
+        "real-service-004",
+        "real-service-001"
+      ],
+      "retrieval_latency_ms": 20,
+      "response_preview": "免费游客服务\n官方首页列出免费寄存、轮椅儿童车拐杖出租、广播寻人寻物、游客咨询、医疗服务、免费饮水和游客服务中心等服务。导览可以提示这些服务类型，但可用性和位置仍应按现场服务中心确认。\n游客服务中心电话\n官方首页列出游客服务中心服务电话05..."
+    },
+    {
+      "question": "游客服务中心电话是多少，可以咨询哪些现场问题？",
+      "category": "服务设施",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "0510-85688631",
+        "游客服务中心",
+        "失物"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-service-010"
+      ],
+      "retrieved_chunk_ids": [
+        "real-service-010",
+        "real-negative-001",
+        "real-boundary-ticket-001",
+        "real-risk-002",
+        "real-service-002",
+        "real-service-009",
+        "real-show-001",
+        "real-boundary-parking-001"
+      ],
+      "retrieval_latency_ms": 29,
+      "response_preview": "游客服务中心电话\n官方首页列出游客服务中心服务电话0510-85688631。该号码适合引导游客咨询园内服务、失物、医疗、饮水、租借等现场问题；如果官方页面更新，应以最新官方信息为准。\n票务开放时间实时信息边界\n门票价格、优惠政策、开放时间..."
+    },
+    {
+      "question": "灵山胜境的地址和官方咨询投诉电话是什么？",
+      "category": "票务交通",
+      "difficulty": "easy",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "无锡市滨湖区",
+        "马山灵山路1号",
+        "400-168-0303"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-address-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-address-001",
+        "real-food-004",
+        "real-nearby-001",
+        "real-culture-008",
+        "real-food-rest-001",
+        "real-official-service-boundary-001",
+        "real-overview-003",
+        "real-dafo-002"
+      ],
+      "retrieval_latency_ms": 23,
+      "response_preview": "灵山胜境地址和客服\n灵山胜境景点地址为无锡市滨湖区马山灵山路1号。官方页面提供咨询投诉电话400-168-0303，服务时间以页面和最新公告为准。地址、客服和地图入口适合作为到达前确认信息，不应替代地图导航。\n灵山五观堂素食\n灵山五观堂位于..."
+    },
+    {
+      "question": "从无锡火车站去灵山有哪些公共交通换乘方式？",
+      "category": "票务交通",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "88路",
+        "无锡火车站",
+        "三阳广场",
+        "梅园开原寺"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-transport-005"
+      ],
+      "retrieved_chunk_ids": [
+        "real-transport-005",
+        "real-transport-003",
+        "real-route-002",
+        "real-transport-006",
+        "real-transport-001",
+        "real-route-004",
+        "real-manfeilong-001",
+        "real-wuyin-002"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "无锡火车站到灵山\n官方交通指南列出从无锡火车站出发可乘88路往返无锡中央车站及灵山胜境，也可地铁1号线到三阳广场换2号线至梅园开原寺，再步行到梅园公交总站换乘88路。班次和末班需按当日运营确认。\n公共交通问法边界\n游客常问从无锡市区、高铁站..."
+    },
+    {
+      "question": "从无锡东站到灵山，地铁和公交怎么换乘？",
+      "category": "票务交通",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "无锡东站",
+        "地铁2号线",
+        "88路",
+        "梅园公交总站"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-transport-006"
+      ],
+      "retrieved_chunk_ids": [
+        "real-transport-006",
+        "real-transport-005",
+        "real-transport-003",
+        "real-transport-001",
+        "real-axis-001",
+        "real-struct-ls-001",
+        "real-transport-004",
+        "real-overview-002"
+      ],
+      "retrieval_latency_ms": 20,
+      "response_preview": "无锡东站到灵山\n官方交通指南列出从无锡东站可乘地铁2号线到梅园开原寺二号口，步行至梅园公交总站后换乘88路公交到灵山胜境。实际班次、换乘耗时和运营调整应以当日交通信息为准。\n无锡火车站到灵山\n官方交通指南列出从无锡火车站出发可乘88路往返无..."
+    },
+    {
+      "question": "自驾导航应该输入什么地址，节假日停车紧张怎么办？",
+      "category": "票务交通",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "灵山路1号",
+        "古竹路18号",
+        "2号停车场",
+        "1.4公里"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-transport-007"
+      ],
+      "retrieved_chunk_ids": [
+        "real-transport-007",
+        "real-transport-002",
+        "real-boundary-parking-001",
+        "real-season-001",
+        "real-transport-001",
+        "real-address-001",
+        "real-transport-003",
+        "real-struct-nh-001"
+      ],
+      "retrieval_latency_ms": 4,
+      "response_preview": "自驾导航和停车场\n自驾可导航至灵山胜境-灵山大佛（马山街道灵山路1号）或灵山胜境（马山街道古竹路18号）。景区停车场位于入口东侧；节假日车位紧张时可按交警指挥或导航至入口南侧约1.4公里的2号停车场。\n自驾停车问法边界\n自驾游客常问停车场入..."
+    },
+    {
+      "question": "灵山门票成人、半价和免票政策资料如何说明？",
+      "category": "票务交通",
+      "difficulty": "medium",
+      "source_type": "reference_boundary",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "成人票210元",
+        "半价票105元",
+        "70周岁以上",
+        "免票"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-guide-ticket-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-guide-ticket-001",
+        "real-boundary-ticket-001",
+        "real-boundary-ticket-002",
+        "real-negative-001",
+        "real-dafo-007",
+        "real-risk-001",
+        "real-service-005",
+        "real-negative-002"
+      ],
+      "retrieval_latency_ms": 20,
+      "response_preview": "灵山胜境门票价格与优惠政策\n【数据来源为比赛官方资料包，仅供参考，实际票价以官方购票页为准】灵山胜境门票价格：成人票210元（18周岁以上成年人）；半价票105元（适用人群：6-18周岁未成年人、全日制本科及以下学生、60-69周岁老人）；..."
+    },
+    {
+      "question": "夏令时灵山大佛、梵宫和五印坛城分别几点开放？",
+      "category": "票务交通",
+      "difficulty": "medium",
+      "source_type": "official_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "5月1日至10月31日",
+        "7:00-17:30",
+        "梵宫9:00-18:00",
+        "五印坛城9:00-18:00"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-open-time-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-open-time-001",
+        "real-wuyin-002",
+        "real-manfeilong-001",
+        "real-wuyin-004",
+        "real-axis-001",
+        "real-culture-001",
+        "real-route-006",
+        "real-overview-001"
+      ],
+      "retrieval_latency_ms": 21,
+      "response_preview": "夏令时开放时间资料\n官方页面列出夏令时为每年5月1日至10月31日，景区售票时间7:00-17:30，梵宫9:00-18:00，梵宫珍宝馆9:30-16:30，五印坛城9:00-18:00，佛博馆8:30-17:30，万佛殿8:30-16:..."
+    },
+    {
+      "question": "今天灵山停车还有多少空位，当前是否拥堵？",
+      "category": "票务交通",
+      "difficulty": "easy",
+      "source_type": "negative_boundary",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "不能确认",
+        "实时运营",
+        "官方最新页面",
+        "现场公告"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-boundary-parking-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-boundary-parking-001",
+        "real-boundary-ticket-001",
+        "real-negative-001",
+        "real-boundary-show-002",
+        "real-risk-002",
+        "real-negative-002",
+        "real-show-001",
+        "real-fangong-003"
+      ],
+      "retrieval_latency_ms": 22,
+      "response_preview": "停车空位与拥堵实时信息边界\n游客问灵山停车还有多少空位、今日停车余位、当前拥堵情况、临时接驳安排时，属于实时运营信息。离线知识库不能确认，应提示资料不足，并建议查看官方最新页面、地图导航或现场公告。\n今日门票价格与开放时间边界\n游客问今天灵..."
+    },
+    {
+      "question": "九龙灌浴今天是否开放，吉祥颂是否可能因检修取消？",
+      "category": "票务交通",
+      "difficulty": "medium",
+      "source_type": "negative_boundary",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "实时性",
+        "九龙灌浴",
+        "吉祥颂",
+        "现场屏幕"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-boundary-show-002"
+      ],
+      "retrieved_chunk_ids": [
+        "real-boundary-show-002",
+        "real-negative-001",
+        "real-boundary-ticket-001",
+        "real-show-001",
+        "real-fangong-003",
+        "real-jiulong-006",
+        "real-jiulong-003",
+        "real-schedule-001"
+      ],
+      "retrieval_latency_ms": 23,
+      "response_preview": "演出检修和取消边界\n如果游客问九龙灌浴今天是否开放、吉祥颂是否取消、某个项目是否检修，应回答该信息具有实时性，当前知识库不能确认，建议查看官方最新公告、现场屏幕或咨询工作人员。\n边界问法：游客问灵山有什么剧场演艺或项目是否检修时，不能直接确..."
+    },
+    {
+      "question": "灵山能不能带宠物或放无人机拍摄，系统能直接承诺吗？",
+      "category": "游客 FAQ",
+      "difficulty": "medium",
+      "source_type": "negative_boundary",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "宗教礼仪",
+        "宠物",
+        "无人机",
+        "现场管理"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-boundary-safety-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-boundary-safety-001",
+        "real-negative-001",
+        "real-boundary-ticket-001",
+        "real-risk-002",
+        "real-service-004",
+        "real-negative-002",
+        "real-risk-001",
+        "real-boundary-show-002"
+      ],
+      "retrieval_latency_ms": 25,
+      "response_preview": "宠物无人机安全和禁忌边界\n宗教场所参观、拍照、携带物品、宠物入园、无人机拍摄等问题可能受现场规定影响。导览可以提示尊重宗教礼仪和现场管理，但不能直接承诺，不能替代景区正式规定。\n票务开放时间实时信息边界\n门票价格、优惠政策、开放时间、演出场..."
+    },
+    {
+      "question": "在灵山大佛、佛手广场和梵宫拍照需要注意什么礼仪？",
+      "category": "游客 FAQ",
+      "difficulty": "easy",
+      "source_type": "boundary_real",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "宗教场所",
+        "室内展陈",
+        "拍照提示",
+        "工作人员"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-photo-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-photo-001",
+        "real-route-009",
+        "real-foshou-mile-001",
+        "real-route-002",
+        "real-route-config-006",
+        "real-overview-001",
+        "real-route-008",
+        "real-route-001"
+      ],
+      "retrieval_latency_ms": 23,
+      "response_preview": "拍照礼仪边界\n灵山大佛、佛手广场、九龙灌浴和灵山梵宫都是游客常问的拍照点。涉及宗教场所、室内展陈、演出和人流秩序时，应以现场拍照提示和工作人员要求为准。\n拍照打卡路线\n拍照打卡型游客可关注灵山大佛、佛手广场、百子戏弥勒、九龙灌浴和灵山梵宫外..."
+    },
+    {
+      "question": "公开样本中的灵山游客消费结构是什么，能否代表当前实时营收？",
+      "category": "消费和运营分析",
+      "difficulty": "hard",
+      "source_type": "analytics_sample",
+      "passed": true,
+      "keyword_coverage": 1,
+      "recall_at_k": 1,
+      "retrieval_evaluated": true,
+      "reciprocal_rank": 1,
+      "first_relevant_rank": 1,
+      "matched_keywords": [
+        "1316 条",
+        "购物",
+        "29.27%",
+        "餐饮",
+        "27.04%",
+        "不代表景区当前实时营收"
+      ],
+      "missing_keywords": [],
+      "expected_chunk_ids": [
+        "real-consumption-001"
+      ],
+      "retrieved_chunk_ids": [
+        "real-consumption-001",
+        "real-service-004",
+        "real-eval-002",
+        "real-boundary-show-002",
+        "real-dafo-004",
+        "real-boundary-parking-001",
+        "real-service-001",
+        "real-risk-003"
+      ],
+      "retrieval_latency_ms": 19,
+      "response_preview": "灵山游客消费样本结构\n基于示范景区公开资料包《景点景区旅游数据行为分析数据.xlsx》中过滤出的 2025 年灵山相关样本，纳入 1316 条记录。样本消费结构中占比最高的是购物（shopping），金额占比为 29.27%；其次是餐饮（f..."
+    }
+  ]
+}

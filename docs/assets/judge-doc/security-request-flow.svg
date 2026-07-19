@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860">
+  <rect width="1400" height="860" fill="#F8FAFC"/>
+  <text x="70" y="70" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">HTTP、认证与 WebSocket 安全链路</text>
+  <text x="70" y="106" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">浏览器凭据不写入 URL；REST 与 WebSocket 共享 TokenVersion 撤销校验，写请求额外经过双重提交 CSRF</text>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L10,3 z" fill="#55788B"/></marker></defs>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <rect x="70" y="160" width="230" height="100" rx="12" fill="#E5F4F1" stroke="#4B9D8C" stroke-width="2"/>
+    <text x="185" y="202" text-anchor="middle" font-size="21" font-weight="700" fill="#174C48">Vue apiFetch</text><text x="185" y="232" text-anchor="middle" font-size="15" fill="#4F666D">credentials=include</text>
+    <g fill="#FFFFFF" stroke="#6E8DB1" stroke-width="2">
+      <rect x="375" y="145" width="240" height="74" rx="10"/><rect x="375" y="235" width="240" height="74" rx="10"/><rect x="690" y="145" width="250" height="74" rx="10"/><rect x="690" y="235" width="250" height="74" rx="10"/>
+    </g>
+    <text x="495" y="178" text-anchor="middle" font-size="18" font-weight="700" fill="#24456A">Body Size</text><text x="495" y="201" text-anchor="middle" font-size="14" fill="#4F666D">12 MiB / 多模态 64 MiB</text>
+    <text x="495" y="268" text-anchor="middle" font-size="18" font-weight="700" fill="#24456A">CORS + Security Headers</text><text x="495" y="291" text-anchor="middle" font-size="14" fill="#4F666D">白名单 Origin / CSP / HSTS</text>
+    <text x="815" y="178" text-anchor="middle" font-size="18" font-weight="700" fill="#24456A">CSRF Protection</text><text x="815" y="201" text-anchor="middle" font-size="14" fill="#4F666D">Cookie 与 X-CSRF-Token 相等</text>
+    <text x="815" y="268" text-anchor="middle" font-size="18" font-weight="700" fill="#24456A">Rate Limit</text><text x="815" y="291" text-anchor="middle" font-size="14" fill="#4F666D">Chat 30/min · 多模态 10/min</text>
+    <rect x="1015" y="160" width="285" height="100" rx="12" fill="#FFF4E5" stroke="#D7A35B" stroke-width="2"/>
+    <text x="1157" y="202" text-anchor="middle" font-size="21" font-weight="700" fill="#754A1F">Handler → Service</text><text x="1157" y="232" text-anchor="middle" font-size="15" fill="#4F666D">角色校验后执行业务</text>
+    <g stroke="#55788B" stroke-width="3" fill="none" marker-end="url(#a)"><path d="M300 210 H350 V182 H375"/><path d="M615 182 H690"/><path d="M940 182 H990 V210 H1015"/><path d="M300 210 H350 V272 H375"/><path d="M615 272 H690"/><path d="M940 272 H990 V210 H1015"/></g>
+    <rect x="70" y="385" width="585" height="265" rx="14" fill="#FFFFFF" stroke="#4B9D8C" stroke-width="2"/>
+    <text x="105" y="428" font-size="22" font-weight="700" fill="#174C48">REST / 管理端认证</text>
+    <text x="105" y="468" font-size="17" fill="#334E68">1. Authorization Bearer，缺失时读取 HttpOnly auth_token Cookie</text>
+    <text x="105" y="505" font-size="17" fill="#334E68">2. ParseToken 验签与过期校验</text>
+    <text x="105" y="542" font-size="17" fill="#334E68">3. ClaimsValidator 查询用户当前 role 与 TokenVersion</text>
+    <text x="105" y="579" font-size="17" fill="#334E68">4. AdminMiddleware 在服务端拒绝非管理员，不依赖前端隐藏</text>
+    <text x="105" y="616" font-size="15" fill="#5A6B78">密码使用 bcrypt；角色或密码变更后 TokenVersion 递增使旧会话失效</text>
+    <rect x="715" y="385" width="585" height="265" rx="14" fill="#FFFFFF" stroke="#9B78AD" stroke-width="2"/>
+    <text x="750" y="428" font-size="22" font-weight="700" fill="#5B3C6E">WebSocket 认证与代理</text>
+    <text x="750" y="468" font-size="17" fill="#334E68">1. /vtuber-ws/* 先执行 WSTokenAuth</text>
+    <text x="750" y="505" font-size="17" fill="#334E68">2. 优先 Sec-WebSocket-Protocol: auth.token.*，其次 HttpOnly Cookie</text>
+    <text x="750" y="542" font-size="17" fill="#334E68">3. 明确移除 ?token= 查询参数，避免凭据进入日志和历史记录</text>
+    <text x="750" y="579" font-size="17" fill="#334E68">4. 校验通过后 WSProxyHandler 转发至 127.0.0.1:12393</text>
+    <text x="750" y="616" font-size="15" fill="#5A6B78">数字人服务不直接暴露给浏览器外网入口</text>
+    <rect x="70" y="705" width="1230" height="82" rx="10" fill="#EAF0F8" stroke="#C5D1D8"/>
+    <text x="95" y="739" font-size="15" fill="#334E68">源码证据：internal/pkg/middleware.go::CSRFProtection / AuthMiddleware / AdminMiddleware / WSTokenAuth；</text>
+    <text x="95" y="765" font-size="15" fill="#334E68">internal/handler/routes.go::SetupRoutes；web-vue/src/services/api.ts::apiFetch</text>
+  </g>
+</svg>

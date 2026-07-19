@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#F7FAFC"/>
+  <text x="70" y="70" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">领域数据模型与数据闭环</text>
+  <text x="70" y="106" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">GORM 模型围绕“用户会话—导览内容—交互反馈—运营分析”组织，知识块独立服务于 RAG</text>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L10,3 z" fill="#55788B"/></marker></defs>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <g fill="#FFFFFF" stroke-width="2">
+      <rect x="70" y="165" width="245" height="140" rx="12" stroke="#4B9D8C"/><rect x="390" y="165" width="245" height="140" rx="12" stroke="#6E8DB1"/><rect x="710" y="165" width="245" height="140" rx="12" stroke="#D7A35B"/><rect x="1030" y="165" width="270" height="140" rx="12" stroke="#9B78AD"/>
+      <rect x="70" y="420" width="245" height="140" rx="12" stroke="#4B9D8C"/><rect x="390" y="420" width="245" height="140" rx="12" stroke="#6E8DB1"/><rect x="710" y="420" width="245" height="140" rx="12" stroke="#D7A35B"/><rect x="1030" y="420" width="270" height="140" rx="12" stroke="#9B78AD"/>
+    </g>
+    <g text-anchor="middle" fill="#23404B">
+      <text x="192" y="205" font-size="21" font-weight="700">User</text><text x="192" y="237" font-size="15">role · token_version</text><text x="192" y="263" font-size="15">preferred_avatar_id</text><text x="192" y="286" font-size="14">正式用户 / 游客 / 管理员</text>
+      <text x="512" y="205" font-size="21" font-weight="700">ChatSession</text><text x="512" y="237" font-size="15">user_id · session_id</text><text x="512" y="263" font-size="15">title · last_active_at</text><text x="512" y="286" font-size="14">一名用户拥有多个会话</text>
+      <text x="832" y="205" font-size="21" font-weight="700">ChatMessage</text><text x="832" y="237" font-size="15">session_id · role</text><text x="832" y="263" font-size="15">content · created_at</text><text x="832" y="286" font-size="14">支持历史恢复与追问改写</text>
+      <text x="1165" y="205" font-size="21" font-weight="700">InteractionLog</text><text x="1165" y="237" font-size="15">query · response · source</text><text x="1165" y="263" font-size="15">latency · satisfaction</text><text x="1165" y="286" font-size="14">驱动看板与运营统计</text>
+      <text x="192" y="460" font-size="21" font-weight="700">ScenicSpot</text><text x="192" y="492" font-size="15">坐标 · 围栏 · QR · 排序</text><text x="192" y="518" font-size="15">图像 · 介绍 · 分类</text><text x="192" y="541" font-size="14">地图与自动导览基础实体</text>
+      <text x="512" y="460" font-size="21" font-weight="700">TourRoute</text><text x="512" y="492" font-size="15">spots · duration</text><text x="512" y="518" font-size="15">difficulty · rating</text><text x="512" y="541" font-size="14">静态路线与个性化推荐</text>
+      <text x="832" y="460" font-size="21" font-weight="700">KnowledgeChunk</text><text x="832" y="492" font-size="15">content · source · title</text><text x="832" y="518" font-size="15">category · spot_id · vector</text><text x="832" y="541" font-size="14">JSONL 导入与 RAG 检索单元</text>
+      <text x="1165" y="460" font-size="21" font-weight="700">Feedback / Rating</text><text x="1165" y="492" font-size="15">UserFeedback · SpotRating</text><text x="1165" y="518" font-size="15">RouteRecommendationLog</text><text x="1165" y="541" font-size="14">形成体验评价闭环</text>
+    </g>
+    <g stroke="#55788B" stroke-width="3" fill="none" marker-end="url(#a)"><path d="M315 235 H390"/><path d="M635 235 H710"/><path d="M955 235 H1030"/><path d="M192 305 V420"/><path d="M512 305 V420"/><path d="M832 305 V420"/><path d="M1165 305 V420"/></g>
+    <rect x="70" y="650" width="1230" height="150" rx="14" fill="#EAF0F8" stroke="#6E8DB1" stroke-width="2"/>
+    <text x="105" y="694" font-size="22" font-weight="700" fill="#24456A">数据策略</text>
+    <text x="105" y="732" font-size="17" fill="#334E68">生产配置：PostgreSQL 为主；本地演示：SQLite 单文件，启动时 AutoMigrate + demo-seed 幂等初始化。</text>
+    <text x="105" y="766" font-size="17" fill="#334E68">知识内容按稳定 ID Upsert；演示交互按专用标记重建，不覆盖评委新增的非演示记录。</text>
+    <text x="105" y="832" font-size="15" fill="#5A6B78">源码证据：internal/model/models.go、internal/model/rag_models.go、model.AutoMigrate、cmd/demo-seed</text>
+  </g>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820">
+  <rect width="1400" height="820" fill="#F7FAFC"/>
+  <text x="70" y="72" font-family="Microsoft YaHei, sans-serif" font-size="34" font-weight="700" fill="#123047">源码结构与职责边界</text>
+  <text x="70" y="108" font-family="Microsoft YaHei, sans-serif" font-size="18" fill="#5A6B78">源码包保留可复现开发所需内容，排除缓存、模型、日志、数据库和开发过程记录</text>
+  <g font-family="Consolas, Microsoft YaHei, sans-serif" font-size="20" fill="#23404B">
+    <rect x="80" y="160" width="1240" height="570" rx="18" fill="#FFFFFF" stroke="#C5D1D8" stroke-width="2"/>
+    <text x="125" y="215" font-weight="700" fill="#174C48">scenic-guide/</text>
+    <text x="150" y="255">├─ cmd/                         命令行工具与 RAG 评测</text>
+    <text x="150" y="290">├─ internal/                    Go 后端分层</text>
+    <text x="190" y="325">├─ config · handler · service</text>
+    <text x="190" y="360">├─ repository · model · pkg</text>
+    <text x="150" y="395">├─ web-vue/                     Vue 3 + TypeScript 前端源码</text>
+    <text x="150" y="430">├─ knowledge/                   JSONL 知识库与评测集</text>
+    <text x="150" y="465">├─ static/                      生产静态资源与 Live2D</text>
+    <text x="150" y="500">├─ scripts/                     启动、检查、构建和打包脚本</text>
+    <text x="150" y="535">├─ docs/                        API、架构、评测与运行说明</text>
+    <text x="150" y="570">└─ configs/                     脱敏配置模板</text>
+    <text x="780" y="255" font-weight="700" fill="#5B3C6E">Open-LLM-VTuber/</text>
+    <text x="805" y="295">├─ src/open_llm_vtuber/</text>
+    <text x="805" y="330">│  ├─ ASR · TTS · VAD · Agent</text>
+    <text x="805" y="365">│  ├─ FastAPI / WebSocket</text>
+    <text x="805" y="400">│  └─ Live2D 会话状态</text>
+    <text x="805" y="455">├─ run_server.py              数字人服务入口</text>
+    <text x="805" y="490">├─ pyproject.toml / uv.lock   依赖锁定</text>
+    <text x="805" y="525">└─ LICENSE-Live2D.md          资产授权边界</text>
+    <text x="125" y="670" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#5A6B78">交付包排除：.git、node_modules、.venv、模型缓存、运行日志、SQLite 数据库、临时截图、密钥与开发过程目录。</text>
+  </g>
+</svg>
