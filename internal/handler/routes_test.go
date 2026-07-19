@@ -31,6 +31,24 @@ func TestIsAllowedTrackingPageAllowsAdminSubroutes(t *testing.T) {
 	}
 }
 
+func TestRootRedirectsToDigitalHumanLogin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.GET("/", redirectToDigitalHumanLogin)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", resp.Code, http.StatusFound)
+	}
+	if location := resp.Header().Get("Location"); location != "/digital-human#/login" {
+		t.Fatalf("Location = %q, want %q", location, "/digital-human#/login")
+	}
+}
+
 func TestSecurityHeadersAllowLive2DEvalRuntime(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

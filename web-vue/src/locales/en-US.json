@@ -115,7 +115,13 @@
     "passwordPolicyInvalid": "Password must be 8-128 characters and include uppercase, lowercase, and a number",
     "guestContinue": "Continue as visitor",
     "guestSuccess": "Signed in as visitor",
-    "guestFailed": "Visitor sign-in failed. Please retry later."
+    "guestFailed": "Visitor sign-in failed. Please retry later.",
+    "demoTitle": "Reviewer test accounts",
+    "demoHint": "Shown in local demo mode only. Select an account to fill it in.",
+    "demoVisitor": "User",
+    "demoAdmin": "Administrator",
+    "demoFill": "Fill",
+    "demoFillAria": "Fill the {role} demo account"
   },
   "map": {
     "title": "Real-time Tourist Map",

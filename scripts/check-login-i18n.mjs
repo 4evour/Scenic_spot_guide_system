@@ -32,6 +32,12 @@ const requiredKeys = [
   'login.guestContinue',
   'login.guestSuccess',
   'login.guestFailed',
+  'login.demoTitle',
+  'login.demoHint',
+  'login.demoVisitor',
+  'login.demoAdmin',
+  'login.demoFill',
+  'login.demoFillAria',
 ];
 
 function hasKey(locale, key) {
@@ -49,6 +55,16 @@ for (const pattern of hardcodedPatterns) {
   if (pattern.test(source)) {
     failures.push(`LoginView.vue still has hardcoded visitor login text matching ${pattern}`);
   }
+}
+
+if (!source.includes("fetch('/api/v1/demo-info'")) {
+  failures.push('LoginView.vue does not load local demo account information');
+}
+if (!source.includes("$t('login.demoTitle')")) {
+  failures.push('LoginView.vue does not render the demo account heading through i18n');
+}
+if (!source.includes('function isDemoAccount')) {
+  failures.push('LoginView.vue does not validate demo account fields at runtime');
 }
 
 for (const key of requiredKeys) {

@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/scenic-guide/internal/model"
 	"github.com/scenic-guide/internal/repository"
@@ -17,6 +19,105 @@ import (
 )
 
 var registerDemoSeedTestDriver sync.Once
+
+func TestBuildDemoInteractionsProducesRichDeterministicHistory(t *testing.T) {
+	now := time.Date(2026, 7, 19, 15, 0, 0, 0, time.Local)
+	first := buildDemoInteractions(now)
+	second := buildDemoInteractions(now)
+
+	if !reflect.DeepEqual(first, second) {
+		t.Fatal("demo interactions are not deterministic")
+	}
+	if len(first) < 450 || len(first) > 600 {
+		t.Fatalf("interaction count = %d, want 450..600", len(first))
+	}
+
+	categories := map[string]bool{}
+	sources := map[string]bool{}
+	emotions := map[string]bool{}
+	oldestAllowed := now.Add(-14 * 24 * time.Hour)
+	for _, item := range first {
+		if !strings.HasPrefix(item.SessionID, demoJudgePrefix) {
+			t.Fatalf("session_id = %q, want prefix %q", item.SessionID, demoJudgePrefix)
+		}
+		if item.CreatedAt.After(now) || item.CreatedAt.Before(oldestAllowed) {
+			t.Fatalf("created_at = %s, outside demo window", item.CreatedAt)
+		}
+		categories[item.Category] = true
+		sources[item.Source] = true
+		emotions[item.Emotion] = true
+	}
+	if len(categories) < 5 || len(sources) != 3 || len(emotions) < 4 {
+		t.Fatalf("insufficient variety: categories=%d sources=%d emotions=%d", len(categories), len(sources), len(emotions))
+	}
+}
+
+func TestSeedOperationalDemoDataIsIdempotent(t *testing.T) {
+	const driverName = "modernc-demo-seed-test"
+	registerDemoSeedTestDriver.Do(func() {
+		sql.Register(driverName, &sqlite3.Driver{})
+	})
+
+	db, err := gorm.Open(sqlite.New(sqlite.Config{
+		DriverName: driverName,
+		DSN:        "file:" + strings.NewReplacer("/", "-", " ", "-", "\\", "-").Replace(t.Name()) + "?mode=memory&cache=shared",
+	}), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open test database: %v", err)
+	}
+	if err := model.AutoMigrate(db); err != nil {
+		t.Fatalf("migrate test database: %v", err)
+	}
+
+	visitor := model.User{Username: "visitor", Password: "test-hash", Email: "visitor@example.com", Role: "visitor"}
+	if err := db.Create(&visitor).Error; err != nil {
+		t.Fatalf("create visitor: %v", err)
+	}
+	for _, name := range []string{"灵山大佛", "九龙灌浴", "灵山梵宫", "五印坛城", "百子戏弥勒", "文创驿站"} {
+		if err := db.Create(&model.ScenicSpot{Name: name, Description: name, Category: "演示"}).Error; err != nil {
+			t.Fatalf("create scenic spot: %v", err)
+		}
+	}
+	for _, name := range []string{"经典半日路线", "文化深度路线", "观光车参考路线"} {
+		if err := db.Create(&model.TourRoute{Name: name, Description: name, Spots: "灵山大佛,灵山梵宫", Duration: 180}).Error; err != nil {
+			t.Fatalf("create tour route: %v", err)
+		}
+	}
+
+	now := time.Date(2026, 7, 19, 15, 0, 0, 0, time.Local)
+	customLog := model.InteractionLog{SessionID: "demo-user-custom", Query: "保留记录", CreatedAt: now}
+	if err := db.Create(&customLog).Error; err != nil {
+		t.Fatalf("create non-seed interaction: %v", err)
+	}
+	for run := 1; run <= 2; run++ {
+		if err := seedOperationalDemoData(db, now); err != nil {
+			t.Fatalf("seed operational demo data run %d: %v", run, err)
+		}
+	}
+
+	assertCount := func(name string, value any, want int64) {
+		t.Helper()
+		var got int64
+		if err := db.Model(value).Count(&got).Error; err != nil {
+			t.Fatalf("count %s: %v", name, err)
+		}
+		if got != want {
+			t.Fatalf("%s count = %d, want %d", name, got, want)
+		}
+	}
+	assertCount("interactions", &model.InteractionLog{}, int64(len(buildDemoInteractions(now))+1))
+	assertCount("chat sessions", &model.ChatSession{}, 8)
+	assertCount("chat messages", &model.ChatMessage{}, 48)
+	assertCount("spot ratings", &model.VisitorSpotRating{}, 12)
+	assertCount("route recommendations", &model.RouteRecommendationLog{}, 16)
+	var preserved int64
+	if err := db.Model(&model.InteractionLog{}).Where("session_id = ?", customLog.SessionID).Count(&preserved).Error; err != nil {
+		t.Fatalf("count preserved interaction: %v", err)
+	}
+	if preserved != 1 {
+		t.Fatalf("preserved interaction count = %d, want 1", preserved)
+	}
+}
 
 func TestDemoScenicSpotsUseVerifiedAMapCoordinates(t *testing.T) {
 	spots, err := loadDemoScenicSpots(filepath.Join("..", "..", "configs", "scenic_spot_coordinates.json"))

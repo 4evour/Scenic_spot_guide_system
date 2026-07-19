@@ -21,9 +21,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	r.Static("/static", "./static")
 	r.Any("/vtuber-ws/*path", pkg.WSTokenAuth(), pkg.WSProxyHandler("http://127.0.0.1:12393"))
 
-	r.GET("/", func(c *gin.Context) {
-		c.File("./static/index.html")
-	})
+	r.GET("/", redirectToDigitalHumanLogin)
 
 	vueApp := func(c *gin.Context) {
 		c.File("./static/vue-app/index.html")
@@ -39,6 +37,7 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 	api := r.Group("/api/v1")
 	api.Use(pkg.LanguageMiddleware())
 	api.Use(pkg.CSRFProtection())
+	api.GET("/demo-info", demoInfo)
 
 	handlers.ScenicSpot.Routes(api)
 	handlers.GuideContent.Routes(api)
@@ -138,6 +137,10 @@ func SetupRoutes(r *gin.Engine, handlers *Handlers) {
 			"message": "scenic guide service is running",
 		})
 	})
+}
+
+func redirectToDigitalHumanLogin(c *gin.Context) {
+	c.Redirect(http.StatusFound, "/digital-human#/login")
 }
 
 func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {

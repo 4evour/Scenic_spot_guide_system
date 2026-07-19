@@ -38,6 +38,7 @@ Public JSON fields use `snake_case`. For example, guide content exposes
 | DELETE | `/users/:id` | User | Delete an owned user profile; admins can delete any profile. |
 | POST | `/auth/guest-login` | Public, rate limited | Create or restore a guest session from a device fingerprint and set cookies. |
 | POST | `/auth/upgrade-guest` | User | Upgrade a guest account to a registered visitor account. |
+| GET | `/demo-info` | Public, local demo only | Return reviewer accounts only when local demo mode is explicitly enabled and the direct client is a loopback address. Otherwise returns `enabled: false`. Responses are `no-store`. |
 | GET | `/user/avatar-preference` | User | Read the current user's preferred Live2D avatar ID. |
 | PUT | `/user/avatar-preference` | User | Update the preferred avatar ID. Supported values are validated server-side. |
 

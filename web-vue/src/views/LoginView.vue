@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NCard, NForm, NFormItem, NInput, NButton, NButtonGroup, NSpace, useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
@@ -16,6 +16,55 @@ const registerForm = ref({ username: '', password: '', email: '' });
 const loading = ref(false);
 const registerLoading = ref(false);
 const guestLoading = ref(false);
+
+interface DemoAccount {
+  role: 'visitor' | 'admin';
+  username: string;
+  password: string;
+}
+
+interface DemoInfo {
+  enabled: boolean;
+  accounts: DemoAccount[];
+}
+
+const demoInfo = ref<DemoInfo | null>(null);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isDemoAccount(value: unknown): value is DemoAccount {
+  if (!isRecord(value)) return false;
+  return (value.role === 'visitor' || value.role === 'admin')
+    && typeof value.username === 'string'
+    && value.username.length > 0
+    && typeof value.password === 'string'
+    && value.password.length > 0;
+}
+
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/v1/demo-info', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return;
+    const payload: unknown = await response.json();
+    if (!isRecord(payload) || payload.code !== 0 || !isRecord(payload.data)) return;
+    const data = payload.data;
+    if (data.enabled !== true || !Array.isArray(data.accounts) || !data.accounts.every(isDemoAccount)) return;
+    demoInfo.value = { enabled: true, accounts: data.accounts };
+  } catch {
+    demoInfo.value = null;
+  }
+});
+
+function fillDemoAccount(account: DemoAccount) {
+  mode.value = 'login';
+  form.value = { username: account.username, password: account.password };
+}
 
 function isPasswordPolicyValid(password: string) {
   return password.length >= 8
@@ -137,6 +186,28 @@ async function handleRegister() {
           {{ $t('login.modeRegister') }}
         </NButton>
       </NButtonGroup>
+
+      <section v-if="mode === 'login' && demoInfo?.enabled" class="demo-credentials" role="region" :aria-label="$t('login.demoTitle')">
+        <div class="demo-credentials-heading">
+          <strong>{{ $t('login.demoTitle') }}</strong>
+          <span>{{ $t('login.demoHint') }}</span>
+        </div>
+        <button
+          v-for="account in demoInfo.accounts"
+          :key="account.role"
+          type="button"
+          class="demo-account-row"
+          :aria-label="$t('login.demoFillAria', { role: $t(account.role === 'admin' ? 'login.demoAdmin' : 'login.demoVisitor') })"
+          @click="fillDemoAccount(account)"
+        >
+          <span class="demo-account-role">{{ $t(account.role === 'admin' ? 'login.demoAdmin' : 'login.demoVisitor') }}</span>
+          <span class="demo-account-values">
+            <span>{{ $t('login.username') }}：<code>{{ account.username }}</code></span>
+            <span>{{ $t('login.password') }}：<code>{{ account.password }}</code></span>
+          </span>
+          <span class="demo-account-action">{{ $t('login.demoFill') }}</span>
+        </button>
+      </section>
 
       <NForm v-if="mode === 'login'" @submit.prevent="handleLogin">
         <NFormItem :label="$t('login.username')">
@@ -288,6 +359,81 @@ async function handleRegister() {
   width: 100%;
 }
 
+.demo-credentials {
+  margin: 0 0 18px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(96, 108, 56, 0.2);
+  border-bottom: 1px solid rgba(96, 108, 56, 0.2);
+}
+
+.demo-credentials-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 4px 8px;
+  color: var(--visitor-ink, #26331f);
+}
+
+.demo-credentials-heading strong {
+  font-size: 13px;
+}
+
+.demo-credentials-heading span {
+  font-size: 11px;
+  color: rgba(38, 51, 31, 0.58);
+  text-align: right;
+}
+
+.demo-account-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 4px;
+  color: var(--visitor-ink, #26331f);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(96, 108, 56, 0.12);
+  cursor: pointer;
+  text-align: left;
+}
+
+.demo-account-row:hover {
+  background: rgba(96, 108, 56, 0.08);
+}
+
+.demo-account-row:focus-visible {
+  background: rgba(96, 108, 56, 0.08);
+  outline: 2px solid var(--visitor-moss, #606c38);
+  outline-offset: 2px;
+}
+
+.demo-account-role,
+.demo-account-action {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.demo-account-values {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 11px;
+  color: rgba(38, 51, 31, 0.72);
+}
+
+.demo-account-values code {
+  color: var(--visitor-ink, #26331f);
+  font-family: Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.demo-account-action {
+  color: var(--visitor-moss, #606c38);
+}
+
 .password-policy {
   margin: -8px 0 10px;
   font-size: 12px;
@@ -348,5 +494,9 @@ async function handleRegister() {
 @media (max-width: 480px) {
   .login-wrapper { padding: 16px; }
   .login-card { width: 100%; }
+  .demo-credentials-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .demo-credentials-heading span { text-align: left; }
+  .demo-account-row { grid-template-columns: 56px minmax(0, 1fr); }
+  .demo-account-action { grid-column: 2; }
 }
 </style>

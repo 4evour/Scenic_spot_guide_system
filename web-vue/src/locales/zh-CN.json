@@ -115,7 +115,13 @@
     "passwordPolicyInvalid": "密码需 8-128 位，并包含大写字母、小写字母和数字",
     "guestContinue": "以游客身份继续",
     "guestSuccess": "已以游客身份登录",
-    "guestFailed": "游客登录失败，请稍后重试"
+    "guestFailed": "游客登录失败，请稍后重试",
+    "demoTitle": "评委测试账号",
+    "demoHint": "仅本地演示模式显示，点击账号自动填入",
+    "demoVisitor": "普通用户",
+    "demoAdmin": "管理员",
+    "demoFill": "填入",
+    "demoFillAria": "填入{role}演示账号"
   },
   "map": {
     "title": "游客实时导览地图",

@@ -56,7 +56,7 @@ func seedDemoData(configDir, adminPassword string) error {
 	if err := seedTourRoutes(); err != nil {
 		return err
 	}
-	if err := seedInteractions(); err != nil {
+	if err := seedOperationalDemoData(pkg.GetDB(), time.Now()); err != nil {
 		return err
 	}
 
@@ -260,24 +260,6 @@ func seedTourRoutes() error {
 		if err := pkg.GetDB().Where("name = ?", route.Name).Assign(route).FirstOrCreate(&route).Error; err != nil {
 			return fmt.Errorf("写入演示路线失败: %w", err)
 		}
-	}
-	return nil
-}
-
-func seedInteractions() error {
-	if err := pkg.GetDB().Where("session_id LIKE ?", "demo-%").Delete(&model.InteractionLog{}).Error; err != nil {
-		return fmt.Errorf("清理旧演示交互失败: %w", err)
-	}
-
-	now := time.Now()
-	logs := []model.InteractionLog{
-		{SessionID: "demo-001", Query: "灵山大佛有多高？", Response: "灵山大佛高88米。", Emotion: "joy", ResponseTimeMs: 980, Category: "景点", Source: "web", CreatedAt: now.Add(-50 * time.Minute)},
-		{SessionID: "demo-002", Query: "亲子游怎么安排？", Response: "建议选择九龙灌浴、梵宫和文创驿站。", Emotion: "joy", ResponseTimeMs: 1350, Category: "路线", Source: "digital_human", CreatedAt: now.Add(-40 * time.Minute)},
-		{SessionID: "demo-003", Query: "梵宫有什么特色？", Response: "梵宫汇集东阳木雕、琉璃和油画等艺术。", Emotion: "surprise", ResponseTimeMs: 1680, Category: "历史", Source: "voice", CreatedAt: now.Add(-25 * time.Minute)},
-		{SessionID: "demo-004", Query: "五印坛城讲什么文化？", Response: "五印坛城主要体现藏传佛教文化。", Emotion: "joy", ResponseTimeMs: 1120, Category: "历史", Source: "web", CreatedAt: now.Add(-10 * time.Minute)},
-	}
-	if err := pkg.GetDB().Create(&logs).Error; err != nil {
-		return fmt.Errorf("写入演示交互失败: %w", err)
 	}
 	return nil
 }
