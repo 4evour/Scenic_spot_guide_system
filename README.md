@@ -181,10 +181,10 @@ node scripts/check-secrets.mjs
 5. 可选：初始化演示账号与演示数据：
 
 ```powershell
-go run ./cmd/demo-seed
+go run ./cmd/demo-seed --admin-password "ScenicDemo123456"
 ```
 
-默认演示账号为 `admin / DemoAdmin123456`。该命令会写入管理员、游客、景点、路线、交互日志，并在知识库为空时导入默认知识片段。
+本地演示账号为 `visitor / ScenicDemo123456` 和 `admin / ScenicDemo123456`。该命令会写入管理员、游客、20 个景点、5 条路线、243 条知识切片，并生成约两周的合成交互趋势、聊天会话、景点评分和路线推荐数据。该密码只适用于本地答辩演示，公开部署时必须替换。
 
 6. 本地直启服务：
 
@@ -207,7 +207,7 @@ $env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("
 docker compose up --build
 ```
 
-启动后可访问 `http://127.0.0.1:8080/`、`/app`、`/admin`、`/dashboard` 等页面。无 Key 情况下，RAG 评估和基础问答使用本地 BM25/词面检索；DeepSeek、DashScope Embedding 和语音服务只作为可选增强。
+启动后访问 `http://127.0.0.1:8080/` 会统一跳转到数字人登录入口 `/digital-human#/login`。管理后台和数据看板继续保留独立路由。无 Key 情况下，RAG 评估和基础问答使用本地 BM25/词面检索；DeepSeek、DashScope Embedding 和语音服务只作为可选增强。
 
 复现 RAG smoke test：
 
@@ -223,11 +223,11 @@ go run ./cmd/rag-eval -knowledge knowledge/lingshan_scale_3000.jsonl -eval knowl
 
 ## 访问入口
 
-- 首页：`http://127.0.0.1:8080/`
+- 统一入口：`http://127.0.0.1:8080/`（跳转到数字人登录页）
 - Vue 应用：`http://127.0.0.1:8080/app`
 - 数据看板：`http://127.0.0.1:8080/dashboard`
 - 管理后台：`http://127.0.0.1:8080/admin`
-- 数字人导览：`http://127.0.0.1:8080/digital-human`
+- 数字人登录：`http://127.0.0.1:8080/digital-human#/login`
 - 健康检查：`http://127.0.0.1:8080/health`
 
 ## 数字人服务
@@ -317,11 +317,14 @@ go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval
 `cmd/demo-seed` 会写入当前配置指向的数据库，适合本地演示或答辩录制前准备数据，不属于只读检查命令：
 
 ```powershell
-go run ./cmd/demo-seed
 go run ./cmd/demo-seed -admin-password "替换成本地演示密码"
 ```
 
-默认账号 `admin / DemoAdmin123456` 仅用于本地演示，公开部署或生产环境不要使用默认演示密码。
+推荐通过 `scripts/start-local.ps1 -Restart` 启动答辩环境。脚本会显式启用仅限回环地址的演示模式，在登录页显示 `visitor` 与 `admin` 两组评委账号，并用同一密码初始化 SQLite。普通启动不会返回或显示演示凭据。
+
+演示种子使用 `demo-judge-` 前缀清理和重建自身数据，重复启动不会叠加合成记录，也不会删除不带该标识的普通用户历史。SQLite 文件、`.env.local` 和 `configs/config.yaml` 不随源码分发；评委在干净机器上运行脚本会得到相同结构和规模的基础数据，但不会继承当前电脑上的手工修改、历史对话或外部服务密钥。
+
+数字人是本地答辩包的强制组成部分。源码包必须同时保留同级的 `scenic-guide/` 和 `Open-LLM-VTuber/` 目录；启动脚本会从后者部署 Cubism Core 与 Live2D 模型到主系统静态目录。Core、模型配置或 `.moc3` 缺失时脚本会直接终止，不再把备用头像视为启动成功。打包前可运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-live2d-local-package.ps1` 检查该契约，打包方需确认 Cubism Core 与模型具备演示和分发授权。
 
 景点坐标存放在 `configs/scenic_spot_coordinates.json`。重新查询高德 Web 服务时，只通过环境变量提供密钥：
 

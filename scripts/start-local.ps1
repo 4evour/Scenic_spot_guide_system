@@ -8,7 +8,9 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $WorkspaceRoot = Split-Path $ProjectRoot -Parent
 $LogRoot = Join-Path $WorkspaceRoot "tmp\scenic-guide-start"
-$AdminPassword = "ScenicDemo123456"
+$DemoPassword = "ScenicDemo123456"
+
+. (Join-Path $PSScriptRoot "live2d-assets.ps1")
 
 New-Item -ItemType Directory -Force -Path $LogRoot | Out-Null
 
@@ -155,6 +157,8 @@ function Set-ScenicGuideEnv {
     $env:SCENIC_GUIDE_API_KEY = "not-needed"
     $env:SCENIC_GUIDE_DATABASE_DRIVER = "sqlite"
     $env:SCENIC_GUIDE_DATABASE_PATH = "./data/scenic_guide.db"
+    $env:SCENIC_GUIDE_DEMO_MODE = "true"
+    $env:SCENIC_GUIDE_DEMO_PASSWORD = $DemoPassword
 
     if ($aiSource -eq "placeholder") {
         Write-Warning "SCENIC_GUIDE_AI_API_KEY is not set. Using local placeholder; RAG retrieval works, LLM generation falls back locally."
@@ -167,7 +171,7 @@ function Initialize-ScenicGuide {
     Push-Location $ProjectRoot
     try {
         Set-ScenicGuideEnv
-        go run ./cmd/demo-seed --admin-password $AdminPassword
+        go run ./cmd/demo-seed --admin-password $DemoPassword
     } finally {
         Pop-Location
     }
@@ -182,7 +186,7 @@ function Start-ScenicGuide {
     Push-Location $ProjectRoot
     try {
         Set-ScenicGuideEnv
-        $env:SCENIC_GUIDE_ADMIN_PASSWORD = $AdminPassword
+        $env:SCENIC_GUIDE_ADMIN_PASSWORD = $DemoPassword
 
         Write-Host "[START] scenic-guide: go run ."
         Start-Process -FilePath "go" `
@@ -239,6 +243,8 @@ if ($Restart) {
     Stop-PortListener -Port 12393
 }
 
+Sync-ScenicGuideLive2DAssets -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot
+
 if (-not (Get-ListenerProcessId -Port 8080)) {
     Initialize-ScenicGuide
 }
@@ -255,8 +261,8 @@ Write-Host "  Admin knowledge: http://127.0.0.1:8080/digital-human#/admin/knowle
 Write-Host "  Health: http://127.0.0.1:8080/health"
 Write-Host ""
 Write-Host "Login accounts:"
-Write-Host "  Admin: admin / $AdminPassword"
-Write-Host "  Visitor: visitor / $AdminPassword"
+Write-Host "  Admin: admin / $DemoPassword"
+Write-Host "  Visitor: visitor / $DemoPassword"
 Write-Host ""
 Write-Host "Log directory: $LogRoot"
 

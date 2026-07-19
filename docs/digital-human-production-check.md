@@ -37,7 +37,7 @@ Open-LLM-VTuber 自带页面 `http://127.0.0.1:12393/` 只用于确认外部数�
 - [x] 2026-07-18 使用 Chromium/Playwright 打开 `/map`：文档响应的 `script-src` 不含 `'unsafe-eval'`，Vue 与 Naive UI 资源均返回 200，控制台无 error 或 CSP 违规。
 - [x] 2026-07-19 使用同一浏览器会话打开 `/digital-human`：文档响应的 `script-src` 包含 Live2D 所需的 `'unsafe-eval'`，控制台无 CSP 违规；Go RAG 兜底和移动端无横向溢出均已实际复测。
 - [x] 2026-07-19 Open-LLM-VTuber 已启动并建立连接；外部生成错误和连接失速均能切换到 Go 后端 RAG，实测“灵山大佛有多高？”返回包含“通高 88 米”。
-- [ ] Live2D Cubism Core 未随仓库部署：`/static/digital-human/libs/live2dcubismcore.min.js` 缺失时页面明确启用备用动效。生产发布前必须按 Live2D 授权将 Core 文件部署到该路径，不能把备用动效当作正式 Live2D 模型通过。
+- [x] 2026-07-19 本地答辩脚本会从同级 Open-LLM-VTuber 部署已打包的 Cubism Core 与模型；Core、模型配置和 `.moc3` 均返回 200，浏览器已创建 Live2D Canvas、隐藏备用 Canvas，并实际显示 Niziiro Mao 模型。缺失任一核心资源时启动脚本直接失败。
 - [ ] ASR 和真实外部 TTS 尚未完成真实设备端到端测量；当前只确认文字链路、TTS 输入校验、Edge TTS 分段/异常帧拒绝及浏览器朗读降级测试通过。
 
 ## 检查项

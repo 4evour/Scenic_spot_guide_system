@@ -9,7 +9,23 @@ cd "D:\go web 01\scenic-guide"
 .\scripts\start-local.ps1 -Restart
 ```
 
-脚本会初始化本地 SQLite 演示数据，并启动 Go 服务与 `127.0.0.1:12393` 的 Open-LLM-VTuber 服务。日志写入 `..\tmp\scenic-guide-start`。
+脚本会先从同级 `Open-LLM-VTuber` 部署 Cubism Core 与 Live2D 模型，再启用仅限本机回环地址的演示模式、初始化本地 SQLite，并启动 Go 服务与 `127.0.0.1:12393` 的 Open-LLM-VTuber 服务。Core、模型配置或 `.moc3` 缺失时脚本会直接终止，不会把备用头像视为完整数字人。干净数据库会得到 `visitor`、`admin`、20 个景点、5 条路线、243 条知识切片、约 500 条两周交互趋势、8 个聊天会话、12 条景点评分和 16 条路线推荐；重复执行不会叠加带 `demo-judge-` 标识的合成记录。日志写入 `..\tmp\scenic-guide-start`。
+
+登录页只在该演示模式下向本机浏览器显示评委账号并支持一键填入。普通启动或非回环请求只返回 `enabled: false`，不会下发演示密码。
+
+答辩源码包必须保持以下同级目录结构，并由打包方确认 Cubism Core 与模型具备演示和分发授权：
+
+```text
+package-root/
+├── scenic-guide/
+└── Open-LLM-VTuber/
+```
+
+打包前运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-live2d-local-package.ps1
+```
 
 ### 1.2 验证服务
 

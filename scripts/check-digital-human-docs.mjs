@@ -80,6 +80,12 @@ assertPresent(
   'production check must include the current Go-hosted Vue digital-human URL.',
 );
 
+assertPresent(
+  'docs/digital-human-runbook.md',
+  /scenic-guide\/.*Open-LLM-VTuber\/.*check-live2d-local-package\.ps1/s,
+  'the runbook must document the two-directory Live2D package contract and its check command.',
+);
+
 if (failures.length > 0) {
   console.error('Digital human documentation check failed:');
   for (const failure of failures) {
