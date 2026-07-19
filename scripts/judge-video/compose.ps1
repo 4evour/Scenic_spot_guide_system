@@ -43,12 +43,19 @@ foreach ($scene in $manifest.scenes) {
     Join-Path $scenePath "$sceneId.webm"
   }
   $audioInput = Join-Path $voicePath "$($scene.voiceSegment).mp3"
+  $subtitleInput = Join-Path $voicePath "$($scene.voiceSegment).srt"
   if (-not (Test-Path -LiteralPath $videoInput)) { throw "Video asset missing: $videoInput" }
   if (-not (Test-Path -LiteralPath $audioInput)) { throw "Voice asset missing: $audioInput" }
+  if (-not (Test-Path -LiteralPath $subtitleInput)) { throw "Subtitle asset missing: $subtitleInput" }
 
   $segmentFile = Join-Path $segmentPath ("{0:D2}-{1}.mp4" -f $index, $sceneId)
-  $videoFilter = "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=2"
-  $audioFilter = "apad=pad_dur=$duration"
+  if (-not $subtitleInput.StartsWith($projectRoot, [StringComparison]::OrdinalIgnoreCase)) { throw "Subtitle must be inside project root: $subtitleInput" }
+  $subtitleFilterPath = $subtitleInput.Substring($projectRoot.Length + 1).Replace('\', '/')
+  $subtitleStyle = "FontName=Microsoft YaHei,FontSize=12,PrimaryColour=&H00FFFFFF,OutlineColour=&H00101820,BackColour=&H90170F04,BorderStyle=3,Outline=1,Shadow=0,Alignment=2,MarginL=72,MarginR=72,MarginV=82"
+  $videoFilter = "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=2,subtitles='$subtitleFilterPath':force_style='$subtitleStyle'"
+  $voiceDuration = [double]((& ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $audioInput).Trim())
+  $voiceDelayMs = [int][Math]::Round([Math]::Max(0, ($duration - $voiceDuration) / 2) * 1000)
+  $audioFilter = "adelay=$voiceDelayMs|$voiceDelayMs,apad=pad_dur=$duration"
   $args = @("-y", "-loglevel", "error")
   if ($scene.kind -eq "card") {
     $args += @("-loop", "1", "-framerate", "30", "-i", $videoInput)

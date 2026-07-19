@@ -9,6 +9,7 @@ export function validateManifest(manifest, { rootDir = process.cwd() } = {}) {
   if (manifest?.canvas?.width !== 1280 || manifest?.canvas?.height !== 720) errors.push('canvas must be 1280x720');
   if (!Array.isArray(manifest?.scenes) || manifest.scenes.length === 0) errors.push('scenes are required');
   const ids = new Set();
+  const voiceSegments = new Set();
   let total = 0;
   for (const scene of manifest.scenes || []) {
     if (!scene.id || ids.has(scene.id)) errors.push(`duplicate or missing scene id: ${scene.id || '<empty>'}`);
@@ -16,6 +17,10 @@ export function validateManifest(manifest, { rootDir = process.cwd() } = {}) {
     if (!['card', 'page'].includes(scene.kind)) errors.push(`invalid kind for ${scene.id}`);
     if (!Number.isFinite(scene.durationSec) || scene.durationSec <= 0) errors.push(`invalid duration for ${scene.id}`);
     if (!scene.narration || !scene.subtitle || !scene.claimBoundary || !scene.voiceSegment) errors.push(`copy fields missing for ${scene.id}`);
+    if (scene.voiceSegment && voiceSegments.has(scene.voiceSegment)) errors.push(`voice segment reused: ${scene.voiceSegment}`);
+    voiceSegments.add(scene.voiceSegment);
+    const minimumNarrationChars = Math.ceil((Number(scene.durationSec) || 0) * (scene.kind === 'page' ? 2.8 : 2.2));
+    if (String(scene.narration || '').replace(/\s/g, '').length < minimumNarrationChars) errors.push(`narration coverage too short for ${scene.id}`);
     if (scene.kind === 'page' && !scene.route) errors.push(`route missing for ${scene.id}`);
     if (scene.kind === 'card' && !scene.asset) errors.push(`asset missing for ${scene.id}`);
     total += Number(scene.durationSec) || 0;
