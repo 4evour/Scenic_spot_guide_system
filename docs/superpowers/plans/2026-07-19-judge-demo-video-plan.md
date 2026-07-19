@@ -4,7 +4,7 @@
 
 **Goal:** 生成一条 285-315 秒、1280x720 的评委版景区导览系统演示视频，以真实页面操作为主体，插入统一科技感解释卡，使用沉稳男声配音并输出带/不带背景音乐两个版本。
 
-**Architecture:** 用一个结构化场景清单描述页面路径、解释卡、旁白和目标时长；Playwright 按清单录制独立真实页面片段，AI 只生成无文字的解释卡背景，Playwright/HTML 统一叠加中文文字，Edge TTS 生成分段 MP3，FFmpeg 按清单合成最终视频。业务页面、API 和数据库不为视频改动。
+**Architecture:** 用一个结构化场景清单描述页面路径、解释卡、旁白和目标时长；Playwright 按清单录制独立真实页面片段，HTML/CSS 生成统一的无文字解释卡背景并叠加中文文字，Edge TTS 生成分段 MP3，FFmpeg 按清单合成最终视频。业务页面、API 和数据库不为视频改动。
 
 **Tech Stack:** Node.js 20+、Playwright（复用 `web-vue` 依赖）、Microsoft Edge TTS CLI（`Open-LLM-VTuber/.venv/Scripts/edge-tts.exe`）、FFmpeg 8.x（libx264/aac/drawtext/loudnorm）、PowerShell、PNG/MP3/MP4。
 
@@ -13,7 +13,7 @@
 - 受众是项目评委，叙事顺序必须是问题 -> 真实产品 -> 技术证据 -> 闭环收束。
 - 真实页面录屏占主体，解释卡每段 8-12 秒；不使用假接口或预置截图冒充运行结果。
 - 最终画面 1280x720，时长 285-315 秒；中文标题、正文和字幕必须由统一模板生成。
-- AI 图片只生成无文字背景；所有中文文字在后期 HTML/Playwright 中叠加。
+- 静态卡优先使用代码原生背景；若 AI 生图可用，也只生成无文字背景，所有中文文字在后期 HTML/Playwright 中叠加。
 - 配音使用 Edge TTS 白名单中的沉稳男声 `male_yunjian` 或 `male_yunyang`，不可沿用默认女声。
 - 不把 Open-LLM-VTuber、Live2D、Edge TTS 或其他外部框架描述为从零自研。
 - 不读取、打印、提交 `.env`、Cookie、数据库、API Key 或完整运行日志。
@@ -29,7 +29,7 @@
 - Create: `scenic-guide/scripts/judge-video/record-scenes.mjs` — 登录本地演示服务并输出独立真实页面片段。
 - Create: `scenic-guide/scripts/judge-video/generate-voice.ps1` — 用 Edge TTS 生成六段男声 MP3，并做响度预处理。
 - Create: `scenic-guide/scripts/judge-video/compose.ps1` — 按 manifest 拼接卡片、录屏、配音、字幕和可选 BGM。
-- Create: `scenic-guide/docs/assets/judge-video/backgrounds/` — 五张无文字 AI 背景位图；若资源已在本地则不覆盖。
+- Create: `scenic-guide/docs/assets/judge-video/backgrounds/` — 可选的无文字背景位图；本次按用户选择使用代码原生卡，不生成 AI 位图。
 - Create: `scenic-guide/tmp/video-work/` — 录屏、音频和中间片段，受 `.gitignore` 保护。
 - Create: `scenic-guide/output/video/judge-demo-*.mp4` — 最终成片和无 BGM 版本，受 `.gitignore` 保护。
 - Modify: `D:\go web 01\CHANGELOG.md` — 记录每次视频制作文件变更。
@@ -152,45 +152,30 @@ git add docs/video/judge-demo-script.md scripts/judge-video/manifest.json script
 git commit -m "docs: define judge demo video scenes"
 ```
 
-### Task 2: 生成并渲染无文字解释卡
+### Task 2: 生成并渲染代码原生解释卡
 
 **Files:**
-- Create: `docs/assets/judge-video/backgrounds/01-problem.png` through `05-proof.png` using the built-in image generation tool.
 - Create: `scripts/judge-video/render-cards.mjs`
 - Create: `tmp/video-work/cards/01-problem.png` through `05-proof.png`
 
 **Interfaces:**
-- `renderCards({ manifestPath, backgroundDir, outputDir })` returns an array of rendered PNG paths.
-- The renderer reads `scene.asset`, applies the same font stack (`Microsoft YaHei`, `Noto Sans CJK SC`, `Arial`), and renders `scene.subtitle` plus a short section label; it never trusts text embedded in the bitmap.
+- `renderCards({ manifestPath, outputDir })` returns an array of rendered PNG paths.
+- The renderer reads `scene.asset`, applies the same font stack (`Microsoft YaHei`, `Noto Sans CJK SC`, `Arial`), and renders `scene.subtitle` plus a short section label from HTML/CSS; it never trusts text embedded in a bitmap.
 
-- [ ] **Step 1: Generate five backgrounds with `image_gen`**
+- [ ] **Step 1: Write the card renderer**
 
-Use one built-in call per asset. Prompts must request 1920x1080 landscape, no words, no logos, no watermark, clean negative space on the left, and the dark data-cockpit palette. Use these subjects:
+Create a Playwright-based renderer that loads a local HTML template at 1920x1080, builds a solid dark data-cockpit background with CSS grid, contour lines and right-side evidence nodes, overlays the scene number/title/subtitle from the manifest, and saves a PNG screenshot. The title area must reserve 42% width and use fixed line-height so text cannot overlap the background or viewport edges.
 
-```text
-01 problem: abstract scenic information fragments converging into one calm illuminated path, dark navy data cockpit, restrained cyan grid, amber signal, clean left negative space, no text.
-02 visitor: elegant topographic route lines over a misty mountain silhouette, dark navy and teal, one highlighted route, clean left negative space, no text.
-03 ai: abstract retrieval pipeline with three connected nodes and a bright answer beam, dark navy, cyan and amber accents, clean left negative space, no text.
-04 operations: calm operations dashboard atmosphere with linked data points and a scenic contour line, dark navy with mint and amber evidence markers, clean left negative space, no text.
-05 proof: minimal convergence of visitor map, knowledge nodes and operations signal into one bright center, dark navy, mint and blue evidence accents, clean left negative space, no text.
-```
-
-Inspect every generated image with `view_image`; reject any image containing accidental letters, watermarks, clutter behind the title area, or a dominant decorative orb.
-
-- [ ] **Step 2: Write the card renderer**
-
-Create a Playwright-based renderer that loads a local HTML template at 1920x1080, sets the background image, overlays the scene number/title/subtitle from the manifest, and saves a PNG screenshot. The title area must reserve 42% width and use fixed line-height so text cannot overlap the background or viewport edges.
-
-- [ ] **Step 3: Render and inspect cards**
+- [ ] **Step 2: Render and inspect cards**
 
 Run: `node scripts/judge-video/render-cards.mjs scripts/judge-video/manifest.json`
 
 Expected: five PNGs in `tmp/video-work/cards/`; inspect a contact sheet and confirm consistent font, margins, contrast and no clipping.
 
-- [ ] **Step 4: Commit reusable backgrounds and renderer**
+- [ ] **Step 3: Commit the renderer**
 
 ```powershell
-git add docs/assets/judge-video/backgrounds scripts/judge-video/render-cards.mjs
+git add scripts/judge-video/render-cards.mjs
 git commit -m "feat: add judge demo transition cards"
 ```
 
