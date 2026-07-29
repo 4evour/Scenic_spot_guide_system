@@ -96,6 +96,26 @@ func TestParseCompareModesTrimsAndDefaults(t *testing.T) {
 	}
 }
 
+func TestRetrievalOptionsMatchProductionFastPath(t *testing.T) {
+	options := evaluationRunOptions{
+		topK:          8,
+		retrievalMode: service.RetrievalModeEmbedding,
+	}
+
+	got := options.retrievalOptions()
+	if !got.SkipModelEnhancement {
+		t.Fatal("evaluation should skip model query rewriting and reranking like production")
+	}
+}
+
+func TestEvaluationOptionsCanRequestFullResponses(t *testing.T) {
+	options := evaluationRunOptions{includeResponses: true}
+	got := options.serviceEvaluationOptions()
+	if !got.IncludeResponse {
+		t.Fatal("full response option should be forwarded to the evaluator")
+	}
+}
+
 func TestComparisonReportIsNotPassingWhenAnyModeFails(t *testing.T) {
 	report := comparisonReport{
 		Modes: []comparisonModeReport{
