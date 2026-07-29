@@ -1,5 +1,5 @@
-// 端到端延迟基准：文本输入 → 检索 → LLM 流式首字(TTFT) → TTS 流式首音
-// 绕过 HTTP 服务里 BM25 长驻索引的拒答 bug，直接复用已验证正常的检索路径。
+// 核心回答链路延迟基准：检索 → LLM 流式首字(TTFT) → TTS 流式首音。
+// 本命令直接调用 RAG 与 TTS 服务，用于隔离核心阶段耗时；不包含 HTTP、浏览器和 ASR。
 //
 // 用法:
 //
@@ -209,7 +209,7 @@ func printStats(results []sample) {
 			ok = append(ok, s)
 		}
 	}
-	fmt.Println("\n================ 端到端延迟统计 ================")
+	fmt.Println("\n================ 核心回答链路延迟统计 ================")
 	fmt.Printf("样本: 总 %d, 成功 %d, 失败 %d\n", len(results), len(ok), len(results)-len(ok))
 	if len(ok) == 0 {
 		fmt.Println("无成功样本")
@@ -243,7 +243,7 @@ func printStats(results []sample) {
 	p("TTS 首音(首字节)", func(s sample) int64 { return s.TTSFirstByteMs })
 	p("TTS 合成总耗时", func(s sample) int64 { return s.TTSTotalMs })
 
-	// 端到端 = 检索 + TTFT(到首字) 或 检索+生成(到拿到完整回答)
+	// 核心链路 = 检索 + TTFT(到模型首字) 或检索 + 完整生成。
 	e2eFirst := []int64{}
 	e2eFull := []int64{}
 	for _, s := range ok {
@@ -267,6 +267,6 @@ func printStats(results []sample) {
 	fmt.Println("  -------- 复合指标 --------")
 	sumLine("输入→首字(检索+TTFT)", e2eFirst)
 	sumLine("输入→完整回答(检索+生成)", e2eFull)
-	fmt.Println("  注: 输入→首音 = 输入→完整回答 + TTS首音(因当前非流式, 需等回答全部生成完才发起TTS)")
-	fmt.Println("  注: ASR(语音转文字)在浏览器侧, 用 webkitSpeechRecognition, 本程序无法测量, 见报告说明")
+	fmt.Println("  注: 本命令采用完整生成后再请求 TTS 的串行基准；产品前端的模型 SSE + 分句 TTS 需以浏览器遥测评估")
+	fmt.Println("  注: 本命令不包含 HTTP、浏览器和 ASR(语音转文字)耗时")
 }
