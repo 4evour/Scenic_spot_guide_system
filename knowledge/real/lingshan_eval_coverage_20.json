@@ -1,0 +1,162 @@
+[
+  {
+    "question": "拈花湾禅意小镇有哪些代表性的自然和禅意景点？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["梵天花海", "香月花街", "拈花堂", "五灯湖", "鹿鸣谷"],
+    "expected_chunk_ids": ["real-struct-nh-002", "real-struct-nh-003", "real-struct-nh-004", "real-struct-nh-005", "real-struct-nh-006"]
+  },
+  {
+    "question": "拈花湾看大面积花海和拍花卉照片应该去哪里？",
+    "category": "文史资料",
+    "difficulty": "easy",
+    "source_type": "official_real",
+    "expected_keywords": ["梵天花海", "格桑花", "波斯菊", "步道"],
+    "expected_chunk_ids": ["real-struct-nh-002"]
+  },
+  {
+    "question": "拈花湾最繁华的禅意商业街是哪条，有什么特点？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["香月花街", "禅意商铺", "青石板", "白墙黛瓦"],
+    "expected_chunk_ids": ["real-struct-nh-003"]
+  },
+  {
+    "question": "在拈花湾想找一处安静的禅坐、抄经空间，去哪里比较合适？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["拈花堂", "禅坐", "抄经", "静心"],
+    "expected_chunk_ids": ["real-struct-nh-004"]
+  },
+  {
+    "question": "拈花湾夜间灯光秀和大型水景表演在哪个场地举办？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["五灯湖", "灯光秀", "湖心", "夜间"],
+    "expected_chunk_ids": ["real-struct-nh-005"]
+  },
+  {
+    "question": "拈花湾哪一处山林景观最适合远离人群、感受自然静谧？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["鹿鸣谷", "山林", "植被", "静谧"],
+    "expected_chunk_ids": ["real-struct-nh-006"]
+  },
+  {
+    "question": "灵山博物馆是什么时候揭牌开馆的？文博展示空间包括哪些？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["2022年11月15日", "灵山梵宫", "无尽意斋", "佛教文化博览馆"],
+    "expected_chunk_ids": ["real-museum-004"]
+  },
+  {
+    "question": "灵山博物馆的藏品涵盖哪些门类？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["佛教造像", "唐卡", "瓷器", "掐丝珐琅"],
+    "expected_chunk_ids": ["real-museum-005"]
+  },
+  {
+    "question": "祥符禅寺三圣殿和世界佛教论坛有什么关系？",
+    "category": "文史资料",
+    "difficulty": "hard",
+    "source_type": "official_real",
+    "expected_keywords": ["第四届世界佛教论坛", "三圣殿", "落成", "开光"],
+    "expected_chunk_ids": ["real-xiangfu-005"]
+  },
+  {
+    "question": "灵山大照壁在景区里是什么定位，适合讲什么内容？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["灵山大照壁", "京派建筑", "中轴线", "入口"],
+    "expected_chunk_ids": ["real-dazhaobi-001"]
+  },
+  {
+    "question": "无尽意斋是一处什么样的建筑，复刻了谁的故居风格？",
+    "category": "文史资料",
+    "difficulty": "hard",
+    "source_type": "official_real",
+    "expected_keywords": ["无尽意斋", "四合院", "赵朴初", "禅意"],
+    "expected_chunk_ids": ["real-struct-ls-016"]
+  },
+  {
+    "question": "百子戏弥勒这座青铜群雕有多大，在景区什么位置？",
+    "category": "文史资料",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["百子戏弥勒", "9吨", "青铜", "阿育王柱"],
+    "expected_chunk_ids": ["real-struct-ls-009"]
+  },
+  {
+    "question": "在灵山想喝咖啡，哪一处能看到大佛、坛城、梵宫和九龙灌浴？",
+    "category": "服务设施",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["如一味咖啡", "九龙灌浴广场", "大佛", "梵宫"],
+    "expected_chunk_ids": ["real-food-005"]
+  },
+  {
+    "question": "冬令时灵山景区的售票时间和梵宫、万佛殿分别开放到几点？",
+    "category": "票务交通",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["冬令时", "7:00-17:00", "梵宫9:00-17:30", "万佛殿8:30-16:30"],
+    "expected_chunk_ids": ["real-open-time-002"]
+  },
+  {
+    "question": "灵山有没有导游讲解、梵宫深度游或外语讲解等付费服务？",
+    "category": "服务设施",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["导游服务", "梵宫深度游", "外语讲解", "预约", "官方确认"],
+    "expected_chunk_ids": ["real-service-007"]
+  },
+  {
+    "question": "灵山精舍提到的过堂文化体验，系统能不能直接保证每天都开放？",
+    "category": "服务设施",
+    "difficulty": "medium",
+    "source_type": "boundary_real",
+    "expected_keywords": ["过堂", "文化体验", "官方预订", "现场安排"],
+    "expected_chunk_ids": ["real-service-006"]
+  },
+  {
+    "question": "灵山景区能买到哪些文创纪念品和法物，价格和库存怎么查？",
+    "category": "服务设施",
+    "difficulty": "easy",
+    "source_type": "boundary_real",
+    "expected_keywords": ["文创", "法物流通", "现场咨询", "官方渠道"],
+    "expected_chunk_ids": ["real-shopping-001"]
+  },
+  {
+    "question": "灵山大佛适合远观还是近距离朝拜，现场要注意什么？",
+    "category": "文史资料",
+    "difficulty": "easy",
+    "source_type": "official_real",
+    "expected_keywords": ["远观", "朝拜", "现场秩序", "拍照"],
+    "expected_chunk_ids": ["real-dafo-003"]
+  },
+  {
+    "question": "数字人小灵在景区导览里能做什么，不能回答哪些问题？",
+    "category": "游客 FAQ",
+    "difficulty": "easy",
+    "source_type": "official_real",
+    "expected_keywords": ["导览助手", "路线建议", "不应冒充官方客服", "实时票价"],
+    "expected_chunk_ids": ["real-digital-human-001"]
+  },
+  {
+    "question": "当知识库里没有相关资料时，小灵应该怎么回答游客？",
+    "category": "游客 FAQ",
+    "difficulty": "medium",
+    "source_type": "official_real",
+    "expected_keywords": ["知识库不足", "官方最新公告", "现场公示", "礼貌"],
+    "expected_chunk_ids": ["real-digital-human-002"]
+  }
+]

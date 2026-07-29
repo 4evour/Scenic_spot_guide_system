@@ -30,6 +30,7 @@ type EvaluationOptions struct {
 	RetrievalOnly    bool
 	GenerationMode   EvaluationGenerationMode
 	RetrievalOptions RetrievalOptions
+	IncludeResponse  bool
 }
 
 type EvaluationGenerationMode string
@@ -56,7 +57,8 @@ type RAGEvaluationResult struct {
 	ExpectedChunkIDs   []string `json:"expected_chunk_ids,omitempty"`
 	RetrievedChunkIDs  []string `json:"retrieved_chunk_ids"`
 	RetrievalLatencyMs int64    `json:"retrieval_latency_ms"`
-	ResponsePreview    string   `json:"response_preview"`
+	ResponsePreview    string   `json:"response_preview,omitempty"`
+	Response           string   `json:"response,omitempty"`
 	Error              string   `json:"error,omitempty"`
 }
 
@@ -229,7 +231,11 @@ func (s *RAGService) EvaluateQuestionsWithOptions(cases []RAGEvaluationCase, opt
 			}
 		}
 
-		result.ResponsePreview = previewRunes(response, 120)
+		if options.IncludeResponse {
+			result.Response = response
+		} else {
+			result.ResponsePreview = previewRunes(response, 120)
+		}
 		result.MatchedKeywords, result.MissingKeywords = matchKeywords(response, keywords)
 		result.KeywordCoverage = keywordCoverage(len(result.MatchedKeywords), len(keywords))
 		result.Passed = len(keywords) > 0 && len(result.MissingKeywords) == 0 && retrievalPassed(result)
