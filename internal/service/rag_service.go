@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
+	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -41,6 +43,13 @@ const (
 	SessionHistoryTTL      = 30 * time.Minute
 	SlowRequestThresholdMs = 5000
 	EmbeddingCacheTTL      = 10 * time.Minute
+
+	defaultChatRequestTimeout      = 8 * time.Second
+	defaultStreamFirstTokenTimeout = 4 * time.Second
+	defaultChatWarmupTimeout       = 3 * time.Second
+	defaultChatDialTimeout         = 2 * time.Second
+	defaultChatTLSHandshakeTimeout = 3 * time.Second
+	defaultChatIdleConnTimeout     = 10 * time.Minute
 )
 
 type RetrievalMode string
@@ -75,20 +84,23 @@ type retrievalQueryExpansion struct {
 }
 
 type RAGTrace struct {
-	TraceID        string      `json:"trace_id"`
-	Provider       string      `json:"provider"`
-	CacheHit       bool        `json:"cache_hit"`
-	ChunkCount     int         `json:"chunk_count"`
-	Sources        []RAGSource `json:"sources"`
-	RetrievalMs    int64       `json:"retrieval_ms"`
-	EmbeddingMs    int64       `json:"embedding_ms"`
-	GenerationMs   int64       `json:"generation_ms"`
-	TotalMs        int64       `json:"total_ms"`
-	RetrievalMode  string      `json:"retrieval_mode"`
-	RewrittenQuery string      `json:"rewritten_query,omitempty"`
-	SlowRequest    bool        `json:"slow_request"`
-	Confidence     float64     `json:"confidence"`
-	ShouldAbstain  bool        `json:"should_abstain"`
+	TraceID            string      `json:"trace_id"`
+	Provider           string      `json:"provider"`
+	CacheHit           bool        `json:"cache_hit"`
+	ChunkCount         int         `json:"chunk_count"`
+	Sources            []RAGSource `json:"sources"`
+	RetrievalMs        int64       `json:"retrieval_ms"`
+	QueryEnhancementMs int64       `json:"query_enhancement_ms"`
+	EmbeddingMs        int64       `json:"embedding_ms"`
+	ScoringMs          int64       `json:"scoring_ms"`
+	RerankMs           int64       `json:"rerank_ms"`
+	GenerationMs       int64       `json:"generation_ms"`
+	TotalMs            int64       `json:"total_ms"`
+	RetrievalMode      string      `json:"retrieval_mode"`
+	RewrittenQuery     string      `json:"rewritten_query,omitempty"`
+	SlowRequest        bool        `json:"slow_request"`
+	Confidence         float64     `json:"confidence"`
+	ShouldAbstain      bool        `json:"should_abstain"`
 }
 
 type RAGSource struct {
@@ -129,6 +141,12 @@ func calculateAnswerEvidence(query string, sources []RAGSource) (float64, bool) 
 
 	confidence := 0.5 + maxRelevance*0.35 + float64(min(supportingSources-1, 2))*0.05
 	return minFloat(confidence, 0.9), false
+}
+
+// CalculateChunkEvidencePublic 是 calculateChunkEvidence 的导出包装，
+// 供离线审核工具（cmd/rag-audit）在不改动内部检索流程的前提下复用同一套证据评估口径。
+func CalculateChunkEvidencePublic(query string, chunks []model.KnowledgeChunk) (float64, bool) {
+	return calculateChunkEvidence(query, chunks)
 }
 
 func calculateChunkEvidence(query string, chunks []model.KnowledgeChunk) (float64, bool) {
@@ -318,28 +336,30 @@ func (s *RAGService) isScenicRelatedQuestion(query string) bool {
 }
 
 type RAGService struct {
-	repo               *repository.KnowledgeRepository
-	chatAPIKey         string
-	chatModel          string
-	chatBaseURL        string
-	embedding          EmbeddingProvider
-	bm25               *BM25FallbackProvider
-	useBM25            bool
-	uploadDir          string
-	httpClient         *http.Client
-	chatGuard          *modelGuard
-	modelRequests      singleflight.Group
-	queryCache         *lru.Cache[string, CacheEntry]
-	embeddingCache     *lru.Cache[string, embeddingCacheEntry]
-	knowledgeCache     []model.KnowledgeChunk
-	tokenCache         map[string][]string
-	tokenIndex         map[string][]string
-	chunkByID          map[string]model.KnowledgeChunk
-	sessionHistory     map[string][]sessionTurn
-	cacheMutex         sync.RWMutex
-	lastCacheTime      time.Time
-	profile            *iconfig.ScenicProfile // 景区配置
-	chatSessionService *ChatSessionService    // 会话持久化服务
+	repo                    *repository.KnowledgeRepository
+	chatAPIKey              string
+	chatModel               string
+	chatBaseURL             string
+	embedding               EmbeddingProvider
+	bm25                    *BM25FallbackProvider
+	useBM25                 bool
+	uploadDir               string
+	httpClient              *http.Client
+	chatGuard               *modelGuard
+	chatRequestTimeout      time.Duration
+	streamFirstTokenTimeout time.Duration
+	modelRequests           singleflight.Group
+	queryCache              *lru.Cache[string, CacheEntry]
+	embeddingCache          *lru.Cache[string, embeddingCacheEntry]
+	knowledgeCache          []model.KnowledgeChunk
+	tokenCache              map[string][]string
+	tokenIndex              map[string][]string
+	chunkByID               map[string]model.KnowledgeChunk
+	sessionHistory          map[string][]sessionTurn
+	cacheMutex              sync.RWMutex
+	lastCacheTime           time.Time
+	profile                 *iconfig.ScenicProfile // 景区配置
+	chatSessionService      *ChatSessionService    // 会话持久化服务
 }
 
 type sessionTurn struct {
@@ -366,25 +386,27 @@ func NewRAGService(repo *repository.KnowledgeRepository, chatAPIKey, chatModel, 
 	}
 
 	return &RAGService{
-		repo:           repo,
-		chatAPIKey:     chatAPIKey,
-		chatModel:      chatModel,
-		chatBaseURL:    chatBaseURL,
-		embedding:      embeddingProvider,
-		bm25:           bm25,
-		useBM25:        useBM25,
-		uploadDir:      "./knowledge",
-		httpClient:     createHTTPClient(),
-		chatGuard:      newModelGuard("chat"),
-		queryCache:     newLRUWithOnError[CacheEntry]("queryCache", MaxCacheSize),
-		embeddingCache: newLRUWithOnError[embeddingCacheEntry]("embeddingCache", MaxCacheSize),
-		knowledgeCache: nil,
-		tokenCache:     make(map[string][]string),
-		tokenIndex:     make(map[string][]string),
-		chunkByID:      make(map[string]model.KnowledgeChunk),
-		profile:        profile,
-		sessionHistory: make(map[string][]sessionTurn),
-		lastCacheTime:  time.Now(),
+		repo:                    repo,
+		chatAPIKey:              chatAPIKey,
+		chatModel:               chatModel,
+		chatBaseURL:             chatBaseURL,
+		embedding:               embeddingProvider,
+		bm25:                    bm25,
+		useBM25:                 useBM25,
+		uploadDir:               "./knowledge",
+		httpClient:              createHTTPClient(),
+		chatGuard:               newModelGuard("chat"),
+		chatRequestTimeout:      defaultChatRequestTimeout,
+		streamFirstTokenTimeout: defaultStreamFirstTokenTimeout,
+		queryCache:              newLRUWithOnError[CacheEntry]("queryCache", MaxCacheSize),
+		embeddingCache:          newLRUWithOnError[embeddingCacheEntry]("embeddingCache", MaxCacheSize),
+		knowledgeCache:          nil,
+		tokenCache:              make(map[string][]string),
+		tokenIndex:              make(map[string][]string),
+		chunkByID:               make(map[string]model.KnowledgeChunk),
+		profile:                 profile,
+		sessionHistory:          make(map[string][]sessionTurn),
+		lastCacheTime:           time.Now(),
 	}
 }
 
@@ -412,13 +434,69 @@ func createHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 60 * time.Second,
 		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   defaultChatDialTimeout,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
 			MaxIdleConns:        200,
-			IdleConnTimeout:     60 * time.Second,
+			IdleConnTimeout:     defaultChatIdleConnTimeout,
 			MaxIdleConnsPerHost: 20,
+			TLSHandshakeTimeout: defaultChatTLSHandshakeTimeout,
 			DisableCompression:  false,
 			ForceAttemptHTTP2:   true,
 		},
 	}
+}
+
+func (s *RAGService) chatRequestContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	timeout := s.chatRequestTimeout
+	if timeout <= 0 {
+		timeout = defaultChatRequestTimeout
+	}
+	return context.WithTimeout(ctx, timeout)
+}
+
+func (s *RAGService) firstTokenTimeout() time.Duration {
+	timeout := s.streamFirstTokenTimeout
+	if timeout <= 0 {
+		return defaultStreamFirstTokenTimeout
+	}
+	return timeout
+}
+
+// WarmChatConnection establishes and retains a reusable connection to the chat API.
+// It is best-effort: callers should log failures and keep serving through the normal
+// timeout/fallback path.
+func (s *RAGService) WarmChatConnection(ctx context.Context) error {
+	if !s.HasConfiguredLLM() {
+		return nil
+	}
+	if s.httpClient == nil {
+		return fmt.Errorf("Chat HTTP 客户端未初始化")
+	}
+
+	warmCtx, cancel := context.WithTimeout(ctx, defaultChatWarmupTimeout)
+	defer cancel()
+
+	endpoint := strings.TrimRight(s.chatBaseURL, "/") + "/models"
+	req, err := http.NewRequestWithContext(warmCtx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("创建 Chat 连接预热请求失败: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+s.chatAPIKey)
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("Chat 连接预热失败: %w", err)
+	}
+	defer resp.Body.Close()
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("读取 Chat 连接预热响应失败: %w", err)
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("Chat 连接预热返回 HTTP %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (s *RAGService) getCachedKnowledge() ([]model.KnowledgeChunk, error) {
@@ -707,6 +785,12 @@ func (s *RAGService) getSystemPromptOrDefault(lang string) string {
 	return base
 }
 
+// GetSystemPromptOrDefaultPublic 是 getSystemPromptOrDefault 的导出包装，
+// 供离线审核工具（cmd/rag-audit）复用与生产一致的 system prompt。
+func (s *RAGService) GetSystemPromptOrDefaultPublic(lang string) string {
+	return s.getSystemPromptOrDefault(lang)
+}
+
 func (s *RAGService) GenerateTourRoute(query string) *TourRoute {
 	routes := s.getTourRoutes()
 	if len(routes) == 0 {
@@ -891,8 +975,16 @@ func (s *RAGService) QueryWithRAGStreaming(ctx context.Context, sessionID, query
 		return answer, nil, trace, nil
 	}
 	retrievalStart := time.Now()
-	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
+	retrievalTiming := retrievalPhaseTiming{}
+	chunks, err := s.retrieveRelevantKnowledgeWithOptions(retrievalQuery, RetrievalOptions{
+		TopK:                 TopK,
+		SkipModelEnhancement: true,
+	}, &retrievalTiming)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
+	trace.QueryEnhancementMs = retrievalTiming.queryEnhancementMs
+	trace.EmbeddingMs = retrievalTiming.embeddingMs
+	trace.ScoringMs = retrievalTiming.scoringMs
+	trace.RerankMs = retrievalTiming.rerankMs
 	trace.ChunkCount = len(chunks)
 	trace.Sources = buildRAGSources(chunks, 3)
 	trace.Confidence, trace.ShouldAbstain = calculateChunkEvidence(retrievalQuery+" "+query, chunks)

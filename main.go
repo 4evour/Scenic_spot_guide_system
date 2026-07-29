@@ -259,6 +259,18 @@ func initRAG(cfg *config.Config, profile *config.ScenicProfile) *service.RAGServ
 	count, _ = knowledgeRepo.Count()
 	slog.Info("知识库补齐完成", "count", count)
 
+	if ragService.HasConfiguredLLM() {
+		warmupStart := time.Now()
+		if err := ragService.WarmChatConnection(context.Background()); err != nil {
+			slog.Warn("Chat 模型连接预热失败，将由请求超时和本地知识库降级保护",
+				"elapsed_ms", time.Since(warmupStart).Milliseconds(),
+				"error", err,
+			)
+		} else {
+			slog.Info("Chat 模型连接预热完成", "elapsed_ms", time.Since(warmupStart).Milliseconds())
+		}
+	}
+
 	return ragService
 }
 

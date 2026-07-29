@@ -6,6 +6,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/scenic-guide/internal/model"
 )
@@ -75,6 +76,17 @@ func (s *RAGService) RetrieveRelevantKnowledge(query string, topK int) ([]model.
 }
 
 func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options RetrievalOptions) ([]model.KnowledgeChunk, error) {
+	return s.retrieveRelevantKnowledgeWithOptions(query, options, nil)
+}
+
+type retrievalPhaseTiming struct {
+	queryEnhancementMs int64
+	embeddingMs        int64
+	scoringMs          int64
+	rerankMs           int64
+}
+
+func (s *RAGService) retrieveRelevantKnowledgeWithOptions(query string, options RetrievalOptions, timing *retrievalPhaseTiming) ([]model.KnowledgeChunk, error) {
 	if options.TopK <= 0 {
 		options.TopK = TopK
 	}
@@ -99,16 +111,24 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 	// Use LLM query rewrite when API key is available, fallback to config-based expansion
 	var retrievalText string
 	var addedTerms []string
+	queryEnhancementStart := time.Now()
 	if !options.SkipModelEnhancement && s.chatAPIKey != "" && s.profile != nil {
 		retrievalText, addedTerms = s.LLMQueryRewrite(s.profile, query)
 	} else {
 		retrievalText, addedTerms = s.configBasedQueryExpansion(s.profile, query)
 	}
+	if timing != nil {
+		timing.queryEnhancementMs = time.Since(queryEnhancementStart).Milliseconds()
+	}
 	expandedQuery := retrievalQueryExpansion{Original: query, RetrievalText: retrievalText, AddedTerms: addedTerms}
 	queryTokens := s.bm25.Tokenize(expandedQuery.RetrievalText)
 	var queryVec []float64
 	if modeUsesEmbedding(mode) {
+		embeddingStart := time.Now()
 		vec, err := s.getCachedEmbedding(query)
+		if timing != nil {
+			timing.embeddingMs = time.Since(embeddingStart).Milliseconds()
+		}
 		if err == nil {
 			queryVec = vec
 		}
@@ -118,6 +138,7 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 		mode = RetrievalModeBM25Local
 	}
 
+	scoringStart := time.Now()
 	candidateChunks := allChunks
 	if mode == RetrievalModeBM25Local || mode == RetrievalModeLightRerank {
 		candidateChunks = s.getBM25CandidateChunks(queryTokens, allChunks)
@@ -151,10 +172,17 @@ func (s *RAGService) RetrieveRelevantKnowledgeWithOptions(query string, options 
 	for i := 0; i < min(options.TopK, len(scoredChunks)); i++ {
 		result = append(result, scoredChunks[i].chunk)
 	}
+	if timing != nil {
+		timing.scoringMs = time.Since(scoringStart).Milliseconds()
+	}
 
 	// Apply LLM reranking when API key is available (enhances retrieval quality)
 	if !options.SkipModelEnhancement && s.chatAPIKey != "" && len(result) > 1 {
+		rerankStart := time.Now()
 		result = s.LLMRerank(query, result, options.TopK)
+		if timing != nil {
+			timing.rerankMs = time.Since(rerankStart).Milliseconds()
+		}
 	}
 
 	return result, nil

@@ -220,6 +220,7 @@ func (s *RAGService) callLLMForTask(prompt string, maxTokens int) (string, error
 		"max_tokens":  maxTokens,
 		"temperature": 0.1,
 	}
+	applyNonThinkingMapOptions(body, s.chatBaseURL, s.chatModel)
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {

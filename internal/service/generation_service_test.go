@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -220,6 +221,129 @@ func TestQueryWithRAGFallsBackWhenConfiguredLLMFails(t *testing.T) {
 	}
 }
 
+func TestQueryWithRAGUsesSingleModelCallForFinalAnswer(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"official","content":"灵山大佛通高88米。"},
+		{"id":"buddha-location","title":"灵山大佛位置","source":"official","content":"灵山大佛位于无锡太湖之滨。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	var calls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if enabled, ok := body["enable_thinking"].(bool); !ok || enabled {
+			t.Errorf("enable_thinking = %#v, want false", body["enable_thinking"])
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"灵山大佛通高88米，位于无锡太湖之滨。"}}]}`))
+	}))
+	defer server.Close()
+
+	rag.chatAPIKey = "configured-key"
+	rag.chatModel = "test-model"
+	rag.chatBaseURL = server.URL
+
+	answer, trace, err := rag.QueryWithRAGTrace(context.Background(), "灵山大佛有多高，在哪里？", "zh-CN")
+	if err != nil {
+		t.Fatalf("QueryWithRAGTrace returned error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("model calls = %d, want 1 final-answer call", calls)
+	}
+	if trace.RerankMs != 0 {
+		t.Fatalf("model-based rerank should be disabled: %+v", trace)
+	}
+	if !strings.Contains(answer, "88米") {
+		t.Fatalf("unexpected answer: %q", answer)
+	}
+}
+
+func TestQueryWithRAGUsesDeepSeekNonThinkingFormat(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"official","content":"灵山大佛通高88米。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if _, ok := body["enable_thinking"]; ok {
+			t.Errorf("DeepSeek request should not contain enable_thinking: %#v", body["enable_thinking"])
+		}
+		thinking, ok := body["thinking"].(map[string]interface{})
+		if !ok || thinking["type"] != "disabled" {
+			t.Errorf("thinking = %#v, want type=disabled", body["thinking"])
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"灵山大佛通高88米。"}}]}`))
+	}))
+	defer server.Close()
+
+	rag.chatAPIKey = "configured-key"
+	rag.chatModel = "deepseek-v4-flash"
+	rag.chatBaseURL = server.URL
+
+	answer, _, err := rag.QueryWithRAGTrace(context.Background(), "灵山大佛有多高？", "zh-CN")
+	if err != nil {
+		t.Fatalf("QueryWithRAGTrace returned error: %v", err)
+	}
+	if !strings.Contains(answer, "88米") {
+		t.Fatalf("unexpected answer: %q", answer)
+	}
+}
+
+func TestQueryWithRAGStreamingUsesSingleModelCall(t *testing.T) {
+	rag := newTestRAGService(t)
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"official","content":"灵山大佛通高88米。"},
+		{"id":"buddha-location","title":"灵山大佛位置","source":"official","content":"灵山大佛位于无锡太湖之滨。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	var calls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if enabled, ok := body["enable_thinking"].(bool); !ok || enabled {
+			t.Errorf("enable_thinking = %#v, want false", body["enable_thinking"])
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"灵山大佛通高88米。\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	rag.chatAPIKey = "configured-key"
+	rag.chatModel = "test-model"
+	rag.chatBaseURL = server.URL
+
+	answer, _, trace, err := rag.QueryWithRAGStreaming(context.Background(), "", "灵山大佛有多高，在哪里？", "zh-CN", nil)
+	if err != nil {
+		t.Fatalf("QueryWithRAGStreaming returned error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("model calls = %d, want 1 streaming final-answer call", calls)
+	}
+	if trace.RerankMs != 0 {
+		t.Fatalf("model-based rerank should be disabled: %+v", trace)
+	}
+	if !strings.Contains(answer, "88米") {
+		t.Fatalf("unexpected answer: %q", answer)
+	}
+}
+
 func TestQueryWithRAGDeduplicatesConcurrentModelCalls(t *testing.T) {
 	rag := newTestRAGService(t)
 	rag.profile = nil
@@ -358,6 +482,47 @@ func TestQueryWithRAGTraceReturnsSources(t *testing.T) {
 	}
 	if source.Preview == "" || strings.Contains(source.Preview, "\n") {
 		t.Fatalf("unexpected source preview: %q", source.Preview)
+	}
+}
+
+type delayedEmbeddingProvider struct {
+	delay time.Duration
+}
+
+func (p delayedEmbeddingProvider) GenerateEmbedding(string) ([]float64, error) {
+	time.Sleep(p.delay)
+	return []float64{1, 0}, nil
+}
+
+func (delayedEmbeddingProvider) Name() string {
+	return "delayed-test"
+}
+
+func (delayedEmbeddingProvider) IsAvailable() bool {
+	return true
+}
+
+func TestQueryWithRAGTraceReportsRetrievalPhases(t *testing.T) {
+	const delay = 20 * time.Millisecond
+	rag := newTestRAGServiceWithEmbedding(t, delayedEmbeddingProvider{delay: delay})
+	if _, err := rag.LoadKnowledgeJSON([]byte(`[
+		{"id":"buddha-height","title":"灵山大佛高度","source":"official-guide","content":"灵山大佛通高88米。"}
+	]`)); err != nil {
+		t.Fatalf("seed knowledge: %v", err)
+	}
+
+	_, trace, err := rag.QueryWithRAGTrace(context.Background(), "灵山大佛有多高？", "zh-CN")
+	if err != nil {
+		t.Fatalf("QueryWithRAGTrace returned error: %v", err)
+	}
+	if trace.EmbeddingMs < delay.Milliseconds() {
+		t.Fatalf("embedding_ms = %d, want at least %d", trace.EmbeddingMs, delay.Milliseconds())
+	}
+	if trace.QueryEnhancementMs < 0 || trace.ScoringMs < 0 || trace.RerankMs < 0 {
+		t.Fatalf("retrieval phase timings must not be negative: %+v", trace)
+	}
+	if trace.RetrievalMs < trace.EmbeddingMs {
+		t.Fatalf("retrieval_ms = %d, want >= embedding_ms %d", trace.RetrievalMs, trace.EmbeddingMs)
 	}
 }
 

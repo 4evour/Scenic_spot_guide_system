@@ -30,13 +30,13 @@ logging:
 
 ai:
   api_key: ""          # 通过 SCENIC_GUIDE_AI_API_KEY 环境变量注入
-  model: "qwen-vl-max"
+  model: "qwen3.7-flash"
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 embedding:
   api_key: ""          # 通过 SCENIC_GUIDE_EMBEDDING_API_KEY 环境变量注入
   model: "text-embedding-v2"
-  base_url: "https://dashscope.aliyuncs.com/api/v1"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 multimodal:
   enabled: false
