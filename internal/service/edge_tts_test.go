@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"net"
 	"net/url"
 	"strings"
@@ -82,6 +83,46 @@ func TestNewEdgeTTSServiceUsesIPv4Dialer(t *testing.T) {
 		t.Fatalf("accept: %v", err)
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for IPv4 connection")
+	}
+}
+
+func TestNewEdgeTTSServiceBoundsHandshakeSilence(t *testing.T) {
+	service := NewEdgeTTSService(30 * time.Second)
+	if service.dialer.HandshakeTimeout > 4*time.Second {
+		t.Fatalf("HandshakeTimeout = %v, want <= 4s", service.dialer.HandshakeTimeout)
+	}
+}
+
+func TestRaceEdgeIPv4DialUsesFirstHealthyAddress(t *testing.T) {
+	ips := []net.IP{net.ParseIP("192.0.2.10"), net.ParseIP("192.0.2.20")}
+	started := time.Now()
+	conn, err := raceEdgeIPv4Dial(
+		context.Background(),
+		ips,
+		"443",
+		func(ctx context.Context, _, address string) (net.Conn, error) {
+			if strings.Contains(address, "192.0.2.10") {
+				select {
+				case <-time.After(200 * time.Millisecond):
+					return nil, errors.New("blackholed address")
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				}
+			}
+			client, peer := net.Pipe()
+			go func() {
+				<-ctx.Done()
+				peer.Close()
+			}()
+			return client, nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("raceEdgeIPv4Dial() error = %v", err)
+	}
+	defer conn.Close()
+	if elapsed := time.Since(started); elapsed > 100*time.Millisecond {
+		t.Fatalf("raceEdgeIPv4Dial() took %v, want healthy address without waiting for blackhole", elapsed)
 	}
 }
 

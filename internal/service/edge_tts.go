@@ -15,6 +15,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -26,8 +28,13 @@ import (
 // EdgeTTSService provides TTS via Microsoft Edge's free public TTS API.
 // It connects to the Edge speech service over WebSocket and streams audio back.
 type EdgeTTSService struct {
-	dialer  websocket.Dialer
-	timeout time.Duration
+	dialer        websocket.Dialer
+	timeout       time.Duration
+	resolver      *net.Resolver
+	ipCacheMu     sync.RWMutex
+	cachedHost    string
+	cachedIPv4    []net.IP
+	cacheExpireAt time.Time
 }
 
 // EdgeTTSConfig holds configuration for the Edge TTS service.
@@ -51,32 +58,35 @@ func NewEdgeTTSService(timeout time.Duration) *EdgeTTSService {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
+	service := &EdgeTTSService{
+		timeout:  timeout,
+		resolver: net.DefaultResolver,
+	}
 	dialer := websocket.Dialer{
-		HandshakeTimeout: 10 * time.Second,
+		HandshakeTimeout: edgeTTSHandshakeTimeout,
 		TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
+			MinVersion:         tls.VersionTLS12,
+			ClientSessionCache: tls.NewLRUClientSessionCache(32),
 		},
 	}
-	// Edge TTS intermittently closes IPv6 handshakes in environments where the
-	// host resolves to both address families. Keep the external connection on
-	// IPv4 so a transient IPv6 route cannot turn into a synthetic 500 response.
-	dialer.NetDialContext = func(ctx context.Context, _ string, address string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "tcp4", address)
-	}
-	return &EdgeTTSService{
-		dialer:  dialer,
-		timeout: timeout,
-	}
+	dialer.NetDialContext = service.dialIPv4
+	service.dialer = dialer
+	return service
 }
 
 const (
-	edgeWSSBaseURL         = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
-	edgeTrustedClientToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
-	edgeChromiumVersion    = "143.0.3650.75"
-	edgeOrigin             = "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
-	edgeUserAgent          = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
-	edgeWindowsEpoch       = int64(11644473600)
-	edgeMaxTextBytes       = 4096
+	edgeWSSBaseURL          = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
+	edgeTrustedClientToken  = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
+	edgeChromiumVersion     = "143.0.3650.75"
+	edgeOrigin              = "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
+	edgeUserAgent           = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+	edgeWindowsEpoch        = int64(11644473600)
+	edgeMaxTextBytes        = 4096
+	edgeTTSHandshakeTimeout = 4 * time.Second
+	edgeTTSConnectBudget    = 4 * time.Second
+	edgeTTSTCPTimeout       = 1600 * time.Millisecond
+	edgeTTSDNSLookupTimeout = 800 * time.Millisecond
+	edgeTTSDNSCacheTTL      = 10 * time.Minute
 )
 
 // ErrEdgeTTSNoAudio indicates that Edge completed a synthesis session without an audio frame.
@@ -201,7 +211,7 @@ func (s *EdgeTTSService) streamSegment(ctx context.Context, text, voice, rate st
 	header.Set("Cookie", "muid="+newEdgeMUID()+";")
 
 	connectionID := strings.ReplaceAll(uuid.NewString(), "-", "")
-	conn, _, err := s.dialer.DialContext(ctx, buildEdgeWSSURL(time.Now().UTC(), connectionID), header)
+	conn, err := s.dialWebSocket(ctx, buildEdgeWSSURL(time.Now().UTC(), connectionID), header)
 	if err != nil {
 		return fmt.Errorf("edge tts: dial failed: %w", err)
 	}
@@ -231,6 +241,159 @@ func (s *EdgeTTSService) streamSegment(ctx context.Context, text, voice, rate st
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+func (s *EdgeTTSService) dialWebSocket(ctx context.Context, endpoint string, header http.Header) (*websocket.Conn, error) {
+	connectCtx, cancel := context.WithTimeout(ctx, edgeTTSConnectBudget)
+	defer cancel()
+
+	var lastErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		conn, response, err := s.dialer.DialContext(connectCtx, endpoint, header)
+		if err == nil {
+			return conn, nil
+		}
+		if response != nil && response.Body != nil {
+			response.Body.Close()
+		}
+		lastErr = err
+		if attempt == 1 {
+			break
+		}
+		timer := time.NewTimer(80 * time.Millisecond)
+		select {
+		case <-timer.C:
+		case <-connectCtx.Done():
+			timer.Stop()
+			return nil, connectCtx.Err()
+		}
+	}
+	return nil, lastErr
+}
+
+func (s *EdgeTTSService) dialIPv4(ctx context.Context, _ string, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	ips, resolveErr := s.resolveIPv4(ctx, host)
+	tcpDialer := &net.Dialer{
+		Timeout:   edgeTTSTCPTimeout,
+		KeepAlive: 30 * time.Second,
+	}
+	if resolveErr != nil || len(ips) == 0 {
+		return tcpDialer.DialContext(ctx, "tcp4", address)
+	}
+	return raceEdgeIPv4Dial(ctx, ips, port, tcpDialer.DialContext)
+}
+
+func (s *EdgeTTSService) resolveIPv4(ctx context.Context, host string) ([]net.IP, error) {
+	if parsed := net.ParseIP(host); parsed != nil && parsed.To4() != nil {
+		return []net.IP{parsed.To4()}, nil
+	}
+
+	s.ipCacheMu.RLock()
+	cachedHost := s.cachedHost
+	cached := cloneIPs(s.cachedIPv4)
+	cacheExpireAt := s.cacheExpireAt
+	s.ipCacheMu.RUnlock()
+	if cachedHost == host && len(cached) > 0 && time.Now().Before(cacheExpireAt) {
+		return cached, nil
+	}
+
+	lookupCtx, cancel := context.WithTimeout(ctx, edgeTTSDNSLookupTimeout)
+	defer cancel()
+	resolved, err := s.resolver.LookupIP(lookupCtx, "ip4", host)
+	if err != nil || len(resolved) == 0 {
+		if cachedHost == host && len(cached) > 0 {
+			return cached, nil
+		}
+		if err == nil {
+			err = fmt.Errorf("no IPv4 address for %s", host)
+		}
+		return nil, err
+	}
+
+	unique := make([]net.IP, 0, len(resolved))
+	seen := make(map[string]struct{}, len(resolved))
+	for _, ip := range resolved {
+		ipv4 := ip.To4()
+		if ipv4 == nil {
+			continue
+		}
+		key := ipv4.String()
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		unique = append(unique, append(net.IP(nil), ipv4...))
+	}
+	if len(unique) == 0 {
+		return nil, fmt.Errorf("no IPv4 address for %s", host)
+	}
+
+	s.ipCacheMu.Lock()
+	s.cachedHost = host
+	s.cachedIPv4 = cloneIPs(unique)
+	s.cacheExpireAt = time.Now().Add(edgeTTSDNSCacheTTL)
+	s.ipCacheMu.Unlock()
+	return unique, nil
+}
+
+type edgeTCPDialFunc func(context.Context, string, string) (net.Conn, error)
+
+func raceEdgeIPv4Dial(
+	ctx context.Context,
+	ips []net.IP,
+	port string,
+	dial edgeTCPDialFunc,
+) (net.Conn, error) {
+	if len(ips) == 0 {
+		return nil, errors.New("edge tts: no IPv4 address to dial")
+	}
+	raceCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	winner := make(chan net.Conn, 1)
+	failures := make(chan error, len(ips))
+	var won atomic.Bool
+	for _, ip := range ips {
+		address := net.JoinHostPort(ip.String(), port)
+		go func() {
+			conn, err := dial(raceCtx, "tcp4", address)
+			if err != nil {
+				failures <- err
+				return
+			}
+			if won.CompareAndSwap(false, true) {
+				winner <- conn
+				cancel()
+				return
+			}
+			conn.Close()
+		}()
+	}
+
+	var lastErr error
+	for range ips {
+		select {
+		case conn := <-winner:
+			return conn, nil
+		case err := <-failures:
+			lastErr = err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return nil, lastErr
+}
+
+func cloneIPs(ips []net.IP) []net.IP {
+	result := make([]net.IP, 0, len(ips))
+	for _, ip := range ips {
+		result = append(result, append(net.IP(nil), ip...))
+	}
+	return result
 }
 
 func readEdgeTTSMessages(ctx context.Context, conn *websocket.Conn, chunkCh chan<- []byte) error {
