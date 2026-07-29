@@ -21,6 +21,7 @@ export interface TTSOptions {
   voice?: string;
   rate?: string;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 /**
@@ -29,22 +30,29 @@ export interface TTSOptions {
  */
 export async function streamTTS(options: TTSOptions): Promise<Response> {
   const csrfToken = getCSRFToken();
-  const timeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000;
+  const timeoutMs = options.timeoutMs ?? (Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000);
+  const timeoutController = new AbortController();
+  const timeout = window.setTimeout(() => timeoutController.abort(), timeoutMs);
 
-  const response = await fetch('/api/v1/ai/tts/stream', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    },
-    body: JSON.stringify({
-      text: options.text,
-      voice: options.voice || 'female_xiaoxiao',
-      rate: options.rate || '+0%',
-    }),
-    signal: mergeAbortSignals(options.signal, AbortSignal.timeout(timeoutMs)),
-    credentials: 'include',
-  });
+  let response: Response;
+  try {
+    response = await fetch('/api/v1/ai/tts/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify({
+        text: options.text,
+        voice: options.voice || 'female_xiaoxiao',
+        rate: options.rate || '+0%',
+      }),
+      signal: mergeAbortSignals(options.signal, timeoutController.signal),
+      credentials: 'include',
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const errText = await response.text().catch(() => '');
@@ -59,20 +67,29 @@ export async function streamTTS(options: TTSOptions): Promise<Response> {
  */
 export async function synthesizeTTS(options: TTSOptions): Promise<string> {
   const csrfToken = getCSRFToken();
+  const timeoutMs = options.timeoutMs ?? (Number(import.meta.env.VITE_API_TIMEOUT_MS) || 15000);
+  const timeoutController = new AbortController();
+  const timeout = window.setTimeout(() => timeoutController.abort(), timeoutMs);
 
-  const response = await fetch('/api/v1/ai/tts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    },
-    body: JSON.stringify({
-      text: options.text,
-      voice: options.voice || 'female_xiaoxiao',
-      rate: options.rate || '+0%',
-    }),
-    credentials: 'include',
-  });
+  let response: Response;
+  try {
+    response = await fetch('/api/v1/ai/tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify({
+        text: options.text,
+        voice: options.voice || 'female_xiaoxiao',
+        rate: options.rate || '+0%',
+      }),
+      signal: mergeAbortSignals(options.signal, timeoutController.signal),
+      credentials: 'include',
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const errText = await response.text().catch(() => '');

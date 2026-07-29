@@ -5,7 +5,7 @@ export type PlaybackHooks = {
   onStart?: (text?: string, cue?: PlaybackCue) => void;
   onEnd?: () => void;
   onComplete?: () => void;
-  onFirstByte?: () => void;
+  onFirstByte?: (text?: string, cue?: PlaybackCue) => void;
   onVolume?: (volume: number) => void;
   onError?: (message: string) => void;
 };
@@ -15,10 +15,13 @@ export type PlaybackCue = {
   sliceLengthMs?: number;
   expression?: string;
   showText?: boolean;
+  speechKind?: 'opening' | 'model';
+  sequence?: number;
 };
 
 type QueueItem = {
-  url: string;
+  kind: 'audio' | 'speech';
+  url?: string;
   text?: string;
   revokeAfterUse?: boolean;
 } & PlaybackCue;
@@ -28,6 +31,8 @@ export class AudioPlaybackController {
   private queue: QueueItem[] = [];
   private interrupted = false;
   private playbackToken = 0;
+  private speechActive = false;
+  private turnOpen = false;
   private hooks: PlaybackHooks;
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
@@ -59,17 +64,17 @@ export class AudioPlaybackController {
     } catch {
       return false;
     }
-    this.queue.push({ url, text, revokeAfterUse: true, ...cue });
-    this.hooks.onFirstByte?.();
-    if (!this.audio) void this.playNext();
+    this.queue.push({ kind: 'audio', url, text, revokeAfterUse: true, ...cue });
+    this.hooks.onFirstByte?.(text, cue);
+    if (!this.isPlaybackActive()) void this.playNext();
     return true;
   }
 
-  enqueueUrl(url: string, text?: string, cue: PlaybackCue = {}) {
+  enqueueUrl(url: string, text?: string, cue: PlaybackCue = {}, revokeAfterUse = false) {
     if (this.interrupted) return false;
-    this.queue.push({ url, text, ...cue });
-    this.hooks.onFirstByte?.();
-    if (!this.audio) void this.playNext();
+    this.queue.push({ kind: 'audio', url, text, revokeAfterUse, ...cue });
+    this.hooks.onFirstByte?.(text, cue);
+    if (!this.isPlaybackActive()) void this.playNext();
     return true;
   }
 
@@ -91,12 +96,12 @@ export class AudioPlaybackController {
       const url = URL.createObjectURL(mediaSource);
       let appendedBytes = 0;
 
-      const queueItem: QueueItem = { url, text, revokeAfterUse: true, ...cue };
+      const queueItem: QueueItem = { kind: 'audio', url, text, revokeAfterUse: true, ...cue };
       // Push to queue — the standard playNext will handle it when it's this item's turn.
       this.queue.push(queueItem);
 
       // If nothing is playing, kick off playback now.
-      const shouldStart = !this.audio;
+      const shouldStart = !this.isPlaybackActive();
       if (shouldStart) {
         void this.playNext();
       }
@@ -120,7 +125,7 @@ export class AudioPlaybackController {
 
             const { done, value } = await reader.read();
             if (done) break;
-            if (value.byteLength > 0 && appendedBytes === 0) this.hooks.onFirstByte?.();
+            if (value.byteLength > 0 && appendedBytes === 0) this.hooks.onFirstByte?.(text, cue);
             appendedBytes += value.byteLength;
 
             // Wait for any pending append to finish
@@ -160,37 +165,27 @@ export class AudioPlaybackController {
     if (!('speechSynthesis' in window) || !SpeechSynthesisUtteranceCtor) return false;
     if (this.interrupted) return false;
     if (!text.trim()) return false;
-    const token = this.playbackToken;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtteranceCtor(text);
-    utterance.lang = i18n.global.locale.value;
-    utterance.rate = getBrowserSpeechRate();
-    utterance.pitch = 1.05;
-    utterance.volume = this.masterVolume;
-    utterance.addEventListener('start', () => {
-      if (this.interrupted || token !== this.playbackToken) return;
-      this.hooks.onStart?.(text, cue);
-      this.startSpeechPulse(token);
-    });
-    utterance.addEventListener('end', () => {
-      if (token !== this.playbackToken) return;
-      this.stopVolumeTracking();
-      this.hooks.onEnd?.();
-      this.hooks.onComplete?.();
-    });
-    utterance.addEventListener('error', () => {
-      if (token !== this.playbackToken) return;
-      this.stopVolumeTracking();
-      this.hooks.onEnd?.();
-      this.hooks.onError?.(i18n.global.t('dh.audio.browserSpeechBlocked'));
-    });
-    window.speechSynthesis.speak(utterance);
+    this.queue.push({ kind: 'speech', text, ...cue });
+    this.hooks.onFirstByte?.(text, cue);
+    if (!this.isPlaybackActive()) void this.playNext();
     return true;
+  }
+
+  beginTurn() {
+    this.turnOpen = true;
+  }
+
+  endTurn() {
+    this.turnOpen = false;
+    if (!this.isPlaybackActive() && this.queue.length === 0) {
+      this.hooks.onComplete?.();
+    }
   }
 
   resume() {
     this.interrupted = false;
     this.playbackToken += 1;
+    this.turnOpen = false;
     if (this.audioContext?.state === 'suspended') {
       void this.audioContext.resume();
     }
@@ -224,6 +219,8 @@ export class AudioPlaybackController {
   interrupt() {
     this.interrupted = true;
     this.playbackToken += 1;
+    this.turnOpen = false;
+    this.speechActive = false;
     for (const item of this.queue) this.revokeItemUrl(item);
     this.queue = [];
     this.stopVolumeTracking();
@@ -244,8 +241,18 @@ export class AudioPlaybackController {
     const item = this.queue.shift();
     if (!item) {
       this.audio = null;
+      this.speechActive = false;
       this.hooks.onEnd?.();
-      if (completeWhenEmpty) this.hooks.onComplete?.();
+      if (completeWhenEmpty && !this.turnOpen) this.hooks.onComplete?.();
+      return;
+    }
+
+    if (item.kind === 'speech') {
+      this.playSpeechItem(item, token);
+      return;
+    }
+    if (!item.url) {
+      void this.playNext(false);
       return;
     }
 
@@ -285,7 +292,54 @@ export class AudioPlaybackController {
   }
 
   private revokeItemUrl(item: QueueItem) {
-    if (item.revokeAfterUse) URL.revokeObjectURL(item.url);
+    if (item.revokeAfterUse && item.url) URL.revokeObjectURL(item.url);
+  }
+
+  private playSpeechItem(item: QueueItem, token: number) {
+    const SpeechSynthesisUtteranceCtor = (window as Window & {
+      SpeechSynthesisUtterance?: typeof SpeechSynthesisUtterance;
+    }).SpeechSynthesisUtterance;
+    if (!('speechSynthesis' in window) || !SpeechSynthesisUtteranceCtor || !item.text) {
+      this.hooks.onError?.(i18n.global.t('dh.audio.browserSpeechBlocked'));
+      void this.playNext(false);
+      return;
+    }
+
+    this.speechActive = true;
+    const utterance = new SpeechSynthesisUtteranceCtor(item.text);
+    utterance.lang = i18n.global.locale.value;
+    utterance.rate = getBrowserSpeechRate();
+    utterance.pitch = 1.05;
+    utterance.volume = this.masterVolume;
+    utterance.addEventListener('start', () => {
+      if (this.interrupted || token !== this.playbackToken) return;
+      this.hooks.onStart?.(item.text, item);
+      this.startSpeechPulse(token);
+    });
+    utterance.addEventListener('end', () => {
+      if (this.interrupted || token !== this.playbackToken) return;
+      this.speechActive = false;
+      this.stopVolumeTracking();
+      void this.playNext();
+    });
+    utterance.addEventListener('error', () => {
+      if (this.interrupted || token !== this.playbackToken) return;
+      this.speechActive = false;
+      this.stopVolumeTracking();
+      this.hooks.onError?.(i18n.global.t('dh.audio.browserSpeechBlocked'));
+      void this.playNext(false);
+    });
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      this.speechActive = false;
+      this.hooks.onError?.(i18n.global.t('dh.audio.browserSpeechBlocked'));
+      void this.playNext(false);
+    }
+  }
+
+  private isPlaybackActive() {
+    return Boolean(this.audio) || this.speechActive;
   }
 
   private startVolumeTracking(audio: HTMLAudioElement, item: QueueItem, token: number) {

@@ -19,7 +19,13 @@ import {
 } from '../services/voiceEmotion'
 import { submitMultimodalChat } from '../services/multimodalApi'
 import { VtuberSocketClient } from '../services/vtuberSocket'
-import { streamTTS } from '../services/ttsApi'
+import { streamTTS, synthesizeTTS } from '../services/ttsApi'
+import {
+  STREAMING_VOICE_OPENINGS,
+  SerialTaskQueue,
+  SpeechSegmenter,
+  streamChat,
+} from '../services/streamingChat'
 import { apiFetch, visitorExperienceApi, type RecommendedRoute } from '../services/api'
 import type {
   ChatMessage,
@@ -285,7 +291,7 @@ let activeTTSAbortController: AbortController | null = null
 let conversationTurn = 0
 let interruptedTurn = -1
 let fallbackTimer = 0
-const SOCKET_RESPONSE_TIMEOUT_MS = 2500
+const STREAMING_TTS_TIMEOUT_MS = 3200
 let blockIncomingPlayback = false
 let waitingForFreshServerTurn = false
 let backendFallbackActive = false
@@ -299,6 +305,11 @@ let lastAudioNotice = ''
 const audio = new AudioPlaybackController({
   onStart: (text: string | undefined, cue: PlaybackCue | undefined) => {
     voiceLatencyTrace?.mark('audio_play_start')
+    if (cue?.speechKind === 'opening') {
+      voiceLatencyTrace?.mark('opening_audio_play_start')
+    } else {
+      voiceLatencyTrace?.mark('answer_audio_play_start')
+    }
     audioStatus.value = 'playing'
     audioNotice.value = t('dh.audio.playingNotice')
     isPlaybackActive.value = true
@@ -325,8 +336,8 @@ const audio = new AudioPlaybackController({
     voiceLatencyTrace?.mark('audio_complete')
     finishVoiceLatencyTrace()
   },
-  onFirstByte: () => {
-    voiceLatencyTrace?.mark('tts_first_byte')
+  onFirstByte: (_text: string | undefined, cue: PlaybackCue | undefined) => {
+    if (cue?.speechKind !== 'opening') voiceLatencyTrace?.mark('tts_first_byte')
   },
   onVolume: (volume: number) => {
     mouthOpen.value = volume
@@ -439,23 +450,6 @@ function showAudioNotice(status: typeof audioStatus.value, message: string) {
 }
 
 const ALL_EMOTION_TOKENS = ['neutral', 'joy', 'sadness', 'surprise', 'anger', 'fear', 'disgust']
-
-type BackendChatResponse = {
-  answer?: string
-  response?: string
-  trace_id?: string
-  sources?: RAGSource[]
-  confidence?: number
-  should_abstain?: boolean
-  emotion?: string
-  emotion_token?: string
-  emotion_category?: string
-  emotion_confidence?: number
-  recommend_human_service?: boolean
-  emotion_modality?: string
-  acoustic_confidence?: number
-  emotion_evidence?: string[]
-}
 
 type QRIntroPayload = {
   spot?: string
@@ -570,9 +564,13 @@ async function selectAvatar(id: string) {
   }
 }
 
-function stripEmotionTags(text: string) {
+function cleanEmotionTags(text: string) {
   const pattern = new RegExp(`\\[(${ALL_EMOTION_TOKENS.join('|')})\\]\\s*`, 'gi')
-  return text.replace(pattern, '').trim() || text
+  return text.replace(pattern, '').trim()
+}
+
+function stripEmotionTags(text: string) {
+  return cleanEmotionTags(text) || text
 }
 
 function formatRAGSource(source: RAGSource) {
@@ -774,6 +772,30 @@ function appendAssistantSpeechChunk(text: string) {
   }
 
   saveLocalMessagesSnapshot()
+}
+
+function setAssistantStreamText(text: string) {
+  const displayText = cleanEmotionTags(text)
+  if (!displayText) return
+
+  activeAssistantText = displayText
+  currentInsight.value = buildGuideInsight(displayText, locale.value)
+  lastAssistantSpeechText = displayText
+  state.subtitle = displayText
+  typewriterStreaming.value = true
+
+  if (!activeAssistantMessageId) {
+    activeAssistantMessageId = uid()
+    state.messages.push({
+      id: activeAssistantMessageId,
+      role: 'assistant',
+      text: displayText,
+      time: nowTime(),
+    })
+    return
+  }
+  const message = state.messages.find((item) => item.id === activeAssistantMessageId)
+  if (message) message.text = displayText
 }
 
 function connectSocket() {
@@ -1024,34 +1046,10 @@ function sendTextWithSource(source: 'text' | 'voice') {
   blockIncomingPlayback = true
   audio.resume()
   waitingForFreshServerTurn = true
-  if (source === 'voice' && voiceEmotion?.features) {
-    waitingForFreshServerTurn = false
-    const turn = conversationTurn
-    void answerWithBackendText(text, turn, voiceEmotion.features)
-    return
-  }
   const locationContext = currentLocationContextForQuestion(text)
-  if (locationContext) {
-    waitingForFreshServerTurn = false
-    const turn = conversationTurn
-    void answerWithBackendText(text, turn, voiceEmotion?.features, locationContext)
-    return
-  }
-  if (!backendFallbackActive && socket?.sendText(text)) {
-    pendingSocketQuestion = { text, turn: conversationTurn, voiceFeatures: voiceEmotion?.features }
-    const requestedTurn = conversationTurn
-    fallbackTimer = window.setTimeout(() => {
-      fallbackTimer = 0
-      if (requestedTurn !== conversationTurn || !waitingForFreshServerTurn) return
-      fallbackToBackend()
-    }, SOCKET_RESPONSE_TIMEOUT_MS)
-    return
-  }
-
-  pendingSocketQuestion = null
   waitingForFreshServerTurn = false
   const turn = conversationTurn
-  void answerWithBackendText(text, turn, voiceEmotion?.features)
+  void answerWithBackendText(text, turn, voiceEmotion?.features, locationContext)
 }
 
 function closeMultimodalInput() {
@@ -1120,38 +1118,136 @@ async function answerWithBackendText(
   voiceFeatures?: VoiceAcousticFeatures,
   locationContext = currentLocationContextForQuestion(text),
 ) {
-  const controller = new AbortController()
-  activeChatAbortController = controller
+  const chatController = new AbortController()
+  const ttsController = new AbortController()
+  activeChatAbortController = chatController
+  activeTTSAbortController = ttsController
+  const segmenter = new SpeechSegmenter()
+  const speechQueue = new SerialTaskQueue()
+  const canSpeak = audioStatus.value !== 'locked'
+  const opening = locale.value.startsWith('zh') ? STREAMING_VOICE_OPENINGS.zh : STREAMING_VOICE_OPENINGS.en
+  const configuredExpression = emotionTokenToExpression(runtimeConfig.default_emotion) || ('neutral' as const)
+  const rate = seniorModeEnabled.value ? ttsRate.value : runtimeConfig.tts_rate || ttsRate.value
+  let answer = ''
+  let sequence = 1
+  let browserSpeechOnly = false
+  let fallbackNotified = false
+  let csrfReady = Boolean(getCSRFToken())
+
+  if (canSpeak) {
+    audio.beginTurn()
+    void audio.playTextFallback(opening, {
+      expression: 'thinking',
+      showText: false,
+      speechKind: 'opening',
+      sequence: 0,
+    })
+  }
+
+  const queueModelSpeech = (rawSegment: string) => {
+    const segment = cleanEmotionTags(rawSegment)
+    if (!segment || !canSpeak) return
+    const segmentSequence = sequence
+    sequence += 1
+    void speechQueue.enqueue(async () => {
+      if (turn !== conversationTurn || interruptedTurn === turn || ttsController.signal.aborted) return
+      const cue: PlaybackCue = {
+        expression: expressionFromText(segment) || configuredExpression,
+        showText: false,
+        speechKind: 'model',
+        sequence: segmentSequence,
+      }
+
+      if (!browserSpeechOnly) {
+        try {
+          if (!csrfReady) csrfReady = await ensureCSRFToken()
+          if (!csrfReady) throw new Error('missing csrf token')
+          const audioURL = await synthesizeTTS({
+            text: segment,
+            voice: runtimeConfig.voice_id,
+            rate,
+            signal: ttsController.signal,
+            timeoutMs: STREAMING_TTS_TIMEOUT_MS,
+          })
+          if (turn !== conversationTurn || interruptedTurn === turn || ttsController.signal.aborted) {
+            URL.revokeObjectURL(audioURL)
+            return
+          }
+          if (audio.enqueueUrl(audioURL, segment, cue, true)) return
+          URL.revokeObjectURL(audioURL)
+          throw new Error('audio queue unavailable')
+        } catch (error) {
+          if (ttsController.signal.aborted) return
+          browserSpeechOnly = true
+          if (!fallbackNotified) {
+            fallbackNotified = true
+            const message =
+              !isAbortError(error) && error instanceof Error && error.message
+                ? t('dh.audio.ttsFallbackWithMessage', { message: error.message })
+                : t('dh.audio.ttsFallback')
+            showAudioNotice('error', message)
+          }
+        }
+      }
+
+      const fallbackQueued = await audio.playTextFallback(segment, cue)
+      if (!fallbackQueued) finishVoiceLatencyTrace('failed', 'audio_unavailable')
+    })
+  }
+
   try {
-    const data = await apiFetch<BackendChatResponse>('/ai/chat', {
-      method: 'POST',
-      signal: controller.signal,
-      body: JSON.stringify({
+    const data = await streamChat(
+      {
         session_id: getOrCreateSessionId(),
         message: text,
         ...(voiceFeatures ? { voice_features: voiceFeatures } : {}),
         ...(locationContext ? { location_context: locationContext } : {}),
-      }),
-    })
+      },
+      {
+        signal: chatController.signal,
+        onToken: (token) => {
+          if (turn !== conversationTurn || interruptedTurn === turn) return
+          if (!answer) voiceLatencyTrace?.mark('answer_start')
+          answer += token
+          setAssistantStreamText(answer)
+          for (const segment of segmenter.push(token)) queueModelSpeech(segment)
+        },
+      },
+    )
     if (turn !== conversationTurn || interruptedTurn === turn) return
-    voiceLatencyTrace?.mark('answer_start')
+    for (const segment of segmenter.flush()) queueModelSpeech(segment)
     voiceLatencyTrace?.mark('answer_complete')
-    const answer = data.answer?.trim() || data.response?.trim() || buildFallbackAnswer(text)
     const responseExpression = emotionTokenToExpression(
       data.emotion_category || data.emotion_token || data.emotion,
     )
     if (responseExpression) state.expression = responseExpression
-    showAssistantSpeech(answer, data.sources || [])
-    await playAnswerAudio(answer, responseExpression)
+    if (!answer.trim()) {
+      answer = buildFallbackAnswer(text)
+      setAssistantStreamText(answer)
+      queueModelSpeech(answer)
+    }
+    const assistantMessage = state.messages.find((message) => message.id === activeAssistantMessageId)
+    if (assistantMessage) assistantMessage.sources = data.sources || []
+    typewriterStreaming.value = false
+    saveLocalMessagesSnapshot()
+    await speechQueue.drain()
   } catch (error) {
     if (turn !== conversationTurn || interruptedTurn === turn || isAbortError(error)) return
     voiceLatencyTrace?.mark('answer_complete')
     voiceLatencyTrace?.fail('answer_request_error')
-    const fallback = buildFallbackAnswer(text)
-    showAssistantSpeech(fallback)
-    await playAnswerAudio(fallback)
+    for (const segment of segmenter.flush()) queueModelSpeech(segment)
+    if (!answer.trim()) {
+      answer = buildFallbackAnswer(text)
+      setAssistantStreamText(answer)
+      queueModelSpeech(answer)
+    } else {
+      addMessage('system', error instanceof Error ? error.message : t('dh.speechError'))
+    }
+    await speechQueue.drain()
   } finally {
-    if (activeChatAbortController === controller) activeChatAbortController = null
+    if (canSpeak && turn === conversationTurn && interruptedTurn !== turn) audio.endTurn()
+    if (activeChatAbortController === chatController) activeChatAbortController = null
+    if (activeTTSAbortController === ttsController) activeTTSAbortController = null
     if (!backendFallbackActive) blockIncomingPlayback = false
     if (interruptedTurn !== turn && !isPlaybackActive.value && state.conversation === 'thinking') {
       state.conversation = 'idle'

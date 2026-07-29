@@ -10,6 +10,7 @@
     "check": "vue-tsc -b --pretty false",
     "test:geolocation": "node --experimental-strip-types scripts/test-geolocation.mjs",
     "test:voice-emotion": "node --experimental-strip-types scripts/test-voice-emotion.mjs",
+    "test:streaming-chat": "node --experimental-strip-types scripts/test-streaming-chat.mjs",
     "check:app-shell-i18n": "node ../scripts/check-app-shell-i18n.mjs",
     "check:login-i18n": "node ../scripts/check-login-i18n.mjs",
     "check:qr-scan-i18n": "node ../scripts/check-qr-scan-i18n.mjs",
