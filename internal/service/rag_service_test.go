@@ -613,6 +613,33 @@ func TestFallbackAnswerFormatsRouteAndBoundary(t *testing.T) {
 	}
 }
 
+func TestLocalRouteAnswerDoesNotExposeKnowledgeAuthoringInstructions(t *testing.T) {
+	rag := newTestRAGService(t)
+	chunks := []model.KnowledgeChunk{
+		{
+			ID:     "route",
+			Title:  "初次游客与老人核心路线问法",
+			Source: "test",
+			Content: "当游客问第一次去灵山怎么安排、初次游客先看哪些点、老人游客想轻松看核心景观时，" +
+				"可推荐以九龙灌浴、佛手广场、祥符禅寺、灵山大佛为核心，再按体力和时间选择灵山梵宫、五印坛城等室内文化点。" +
+				"回答应避免承诺精确耗时。稳定回答应讲建筑艺术和文化体验。",
+		},
+	}
+
+	answer := rag.generateAnswerFromChunksWithContext("老人游客想轻松看核心景观怎么安排？", chunks, "")
+
+	for _, want := range []string{"九龙灌浴", "佛手广场", "祥符禅寺", "灵山大佛", "按体力和时间"} {
+		if !strings.Contains(answer, want) {
+			t.Fatalf("local route answer missing visitor-facing content %q: %s", want, answer)
+		}
+	}
+	for _, leaked := range []string{"当游客问", "可推荐", "回答应", "回答时", "适合回答", "常见问法", "讲解关键词"} {
+		if strings.Contains(answer, leaked) {
+			t.Fatalf("local route answer leaked authoring instruction %q: %s", leaked, answer)
+		}
+	}
+}
+
 func TestLocalGenerationKeepsSpecificEvidenceAndBoundaryGuidance(t *testing.T) {
 	rag := newTestRAGService(t)
 	chunks := []model.KnowledgeChunk{

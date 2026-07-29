@@ -1,8 +1,16 @@
-﻿package service
+package service
 
 import (
 	"testing"
 )
+
+func TestNormalizeEmbeddingBaseURLUsesDashScopeCompatibleEndpoint(t *testing.T) {
+	got := normalizeEmbeddingBaseURL("https://dashscope.aliyuncs.com/api/v1/")
+	want := "https://dashscope.aliyuncs.com/compatible-mode/v1"
+	if got != want {
+		t.Fatalf("normalizeEmbeddingBaseURL() = %q, want %q", got, want)
+	}
+}
 
 func TestBM25Tokenize(t *testing.T) {
 	p := NewBM25FallbackProvider()

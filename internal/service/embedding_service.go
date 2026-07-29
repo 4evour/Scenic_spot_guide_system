@@ -33,7 +33,7 @@ func NewQwenEmbeddingProvider(cfg *config.EmbeddingConfig) *QwenEmbeddingProvide
 	return &QwenEmbeddingProvider{
 		apiKey:    cfg.APIKey,
 		model:     cfg.Model,
-		baseURL:   cfg.BaseURL,
+		baseURL:   normalizeEmbeddingBaseURL(cfg.BaseURL),
 		available: cfg.APIKey != "",
 		client: &http.Client{
 			Timeout: 30 * time.Second,
@@ -45,6 +45,14 @@ func NewQwenEmbeddingProvider(cfg *config.EmbeddingConfig) *QwenEmbeddingProvide
 		},
 		guard: newModelGuard("embedding"),
 	}
+}
+
+func normalizeEmbeddingBaseURL(baseURL string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "https://dashscope.aliyuncs.com/api/v1" {
+		return "https://dashscope.aliyuncs.com/compatible-mode/v1"
+	}
+	return baseURL
 }
 
 func (p *QwenEmbeddingProvider) Name() string {

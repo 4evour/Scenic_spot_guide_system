@@ -19,11 +19,43 @@ import (
 
 // OpenAI 兼容 API 类型定义（供多处复用）
 type openAIRequest struct {
-	Model    string `json:"model"`
+	Model          string `json:"model"`
+	EnableThinking *bool  `json:"enable_thinking,omitempty"`
+	Thinking       *struct {
+		Type string `json:"type"`
+	} `json:"thinking,omitempty"`
 	Messages []struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
 	} `json:"messages"`
+}
+
+func isDeepSeekChatProvider(baseURL, model string) bool {
+	return strings.Contains(strings.ToLower(baseURL), "api.deepseek.com") ||
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(model)), "deepseek-")
+}
+
+func applyNonThinkingRequestOptions(request *openAIRequest, baseURL string) {
+	if isDeepSeekChatProvider(baseURL, request.Model) {
+		request.EnableThinking = nil
+		request.Thinking = &struct {
+			Type string `json:"type"`
+		}{Type: "disabled"}
+		return
+	}
+	disabled := false
+	request.EnableThinking = &disabled
+	request.Thinking = nil
+}
+
+func applyNonThinkingMapOptions(request map[string]interface{}, baseURL, model string) {
+	delete(request, "enable_thinking")
+	delete(request, "thinking")
+	if isDeepSeekChatProvider(baseURL, model) {
+		request["thinking"] = map[string]string{"type": "disabled"}
+		return
+	}
+	request["enable_thinking"] = false
 }
 
 type openAIError struct {
@@ -198,7 +230,10 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 			"cache_hit", trace.CacheHit,
 			"chunk_count", trace.ChunkCount,
 			"retrieval_ms", trace.RetrievalMs,
+			"query_enhancement_ms", trace.QueryEnhancementMs,
 			"embedding_ms", trace.EmbeddingMs,
+			"scoring_ms", trace.ScoringMs,
+			"rerank_ms", trace.RerankMs,
 			"generation_ms", trace.GenerationMs,
 			"total_ms", trace.TotalMs,
 			"query_len", len([]rune(promptQuery)),
@@ -247,8 +282,16 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 	}
 
 	retrievalStart := time.Now()
-	chunks, err := s.RetrieveRelevantKnowledge(retrievalQuery, TopK)
+	retrievalTiming := retrievalPhaseTiming{}
+	chunks, err := s.retrieveRelevantKnowledgeWithOptions(retrievalQuery, RetrievalOptions{
+		TopK:                 TopK,
+		SkipModelEnhancement: true,
+	}, &retrievalTiming)
 	trace.RetrievalMs = time.Since(retrievalStart).Milliseconds()
+	trace.QueryEnhancementMs = retrievalTiming.queryEnhancementMs
+	trace.EmbeddingMs = retrievalTiming.embeddingMs
+	trace.ScoringMs = retrievalTiming.scoringMs
+	trace.RerankMs = retrievalTiming.rerankMs
 	trace.ChunkCount = len(chunks)
 	trace.Sources = buildRAGSources(chunks, 3)
 	trace.Confidence, trace.ShouldAbstain = calculateChunkEvidence(retrievalQuery+" "+promptQuery, chunks)
@@ -298,6 +341,7 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 			},
 		},
 	}
+	applyNonThinkingRequestOptions(&req, s.chatBaseURL)
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
@@ -309,8 +353,11 @@ func (s *RAGService) queryWithRAGTraceInternal(ctx context.Context, retrievalQue
 
 	modelStart := time.Now()
 	modelResult, modelErr, _ := s.modelRequests.Do(cacheKey, func() (interface{}, error) {
+		requestCtx, cancel := s.chatRequestContext(ctx)
+		defer cancel()
+
 		var responseBody []byte
-		err := s.chatGuard.run(ctx, func(callCtx context.Context) error {
+		err := s.chatGuard.run(requestCtx, func(callCtx context.Context) error {
 			request, err := http.NewRequestWithContext(callCtx, http.MethodPost, apiURL, bytes.NewReader(reqBody))
 			if err != nil {
 				return err
@@ -392,13 +439,20 @@ func (s *RAGService) CallLLMStreaming(ctx context.Context, systemPrompt, userPro
 			{"role": "user", "content": userPrompt},
 		},
 	}
+	applyNonThinkingMapOptions(reqBody, s.chatBaseURL, s.chatModel)
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		return "", fmt.Errorf("stream request marshal failed: %w", err)
 	}
 
 	apiURL := s.chatBaseURL + "/chat/completions"
-	return s.chatGuard.runStreaming(ctx, func(callCtx context.Context) (string, bool, error) {
+	requestCtx, cancelRequest := context.WithCancel(ctx)
+	defer cancelRequest()
+	firstTokenTimer := time.AfterFunc(s.firstTokenTimeout(), cancelRequest)
+	defer firstTokenTimer.Stop()
+	firstTokenReceived := false
+
+	return s.chatGuard.runStreaming(requestCtx, func(callCtx context.Context) (string, bool, error) {
 		request, err := http.NewRequestWithContext(callCtx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
 		if err != nil {
 			return "", false, err
@@ -436,6 +490,10 @@ func (s *RAGService) CallLLMStreaming(ctx context.Context, systemPrompt, userPro
 			if len(chunk.Choices) > 0 {
 				token := chunk.Choices[0].Delta.Content
 				if token != "" {
+					if !firstTokenReceived {
+						firstTokenReceived = true
+						firstTokenTimer.Stop()
+					}
 					emitted = true
 					fullResponse.WriteString(token)
 					if onToken != nil {
@@ -469,6 +527,12 @@ func (s *RAGService) generateAnswerFromChunks(query string, chunks []model.Knowl
 	return s.generateAnswerFromChunksWithContext(query, chunks, "")
 }
 
+// LocalGeneratePublic 是 generateAnswerFromChunksWithContext 的导出包装，
+// 供离线审核工具（cmd/rag-audit）在 LLM 不可用或失败兜底时复用同一套本地生成逻辑。
+func (s *RAGService) LocalGeneratePublic(query string, chunks []model.KnowledgeChunk) string {
+	return s.generateAnswerFromChunksWithContext(query, chunks, "")
+}
+
 func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []model.KnowledgeChunk, sessionContext string) string {
 	var content strings.Builder
 	for _, chunk := range chunks {
@@ -489,7 +553,9 @@ func (s *RAGService) generateAnswerFromChunksWithContext(query string, chunks []
 	}
 
 	if isRouteIntent(intentText) {
-		snippets := s.extractRelevantSnippets(query+" 路线 游览 雨天 亲子 老人 休息点", chunks, 4)
+		// 只扩展通用路线词，避免把“雨天、亲子、老人”等互斥人群同时注入
+		// 查询，导致本地抽取把无关路线混进当前游客的回答。
+		snippets := s.extractRelevantSnippets(intentText+" 路线 游览", chunks, 4)
 		if len(snippets) == 0 {
 			snippets = splitKnowledgeSentences(fullContent)
 		}
@@ -950,14 +1016,61 @@ func hasMeasurement(sentence string) bool {
 }
 
 func isKnowledgeMetaSentence(sentence string) bool {
-	return containsAny(sentence, []string{"游客常问", "常见问法", "问答素材", "回答策略", "资料来源"})
+	trimmed := strings.TrimSpace(sentence)
+	return containsAny(trimmed, []string{"游客常问", "常见问法", "问答素材", "回答策略", "资料来源", "边界问法"}) ||
+		strings.Contains(trimmed, "回答应") ||
+		strings.HasPrefix(trimmed, "回答时") ||
+		strings.HasPrefix(trimmed, "适合回答") ||
+		strings.HasPrefix(trimmed, "系统可以") ||
+		strings.HasPrefix(trimmed, "数字人小灵可以") ||
+		strings.HasPrefix(trimmed, "讲解关键词")
+}
+
+func sanitizeKnowledgeSentence(sentence string) string {
+	trimmed := strings.TrimSpace(sentence)
+	if trimmed == "" {
+		return ""
+	}
+
+	// 部分知识切片混入了“何时使用这条知识”的编写说明。本地降级不会经过
+	// 模型改写，因此把这类说明转换为面向游客的直接建议，避免原样泄漏。
+	if strings.HasPrefix(trimmed, "当游客问") {
+		if marker := strings.LastIndex(trimmed, "时，可推荐"); marker >= 0 {
+			recommendation := strings.TrimSpace(trimmed[marker+len("时，可推荐"):])
+			if recommendation != "" {
+				return "建议" + recommendation
+			}
+		}
+		return ""
+	}
+	if isKnowledgeMetaSentence(trimmed) {
+		return ""
+	}
+
+	// 保留句子前面的事实，移除附着在事实后的内部回答说明。
+	for _, marker := range []string{"，适合回答", "，回答时", "，回答应"} {
+		if index := strings.Index(trimmed, marker); index > 0 {
+			trimmed = strings.TrimSpace(trimmed[:index])
+			break
+		}
+	}
+	trimmed = strings.ReplaceAll(trimmed, "可推荐", "建议安排")
+	trimmed = strings.ReplaceAll(trimmed, "配置时长约", "参考游览时长约")
+	return trimmed
 }
 
 func splitKnowledgeSentences(content string) []string {
 	content = strings.ReplaceAll(content, "\r\n", "\n")
-	return compactKeywords(strings.FieldsFunc(content, func(r rune) bool {
+	raw := compactKeywords(strings.FieldsFunc(content, func(r rune) bool {
 		return strings.ContainsRune("。！？；\n", r)
 	}))
+	sanitized := make([]string, 0, len(raw))
+	for _, sentence := range raw {
+		if sentence = sanitizeKnowledgeSentence(sentence); sentence != "" {
+			sanitized = append(sanitized, sentence)
+		}
+	}
+	return compactKeywords(sanitized)
 }
 
 func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (string, error) {
@@ -1006,6 +1119,7 @@ func (s *RAGService) QueryGeneralChat(ctx context.Context, query, lang string) (
 			},
 		},
 	}
+	applyNonThinkingRequestOptions(&req, s.chatBaseURL)
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
@@ -1075,6 +1189,7 @@ func (s *RAGService) CallLLM(ctx context.Context, systemPrompt, userPrompt strin
 			{Role: "user", Content: userPrompt},
 		},
 	}
+	applyNonThinkingRequestOptions(&req, s.chatBaseURL)
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return "", fmt.Errorf("AI 分析请求序列化失败: %w", err)
@@ -1101,9 +1216,12 @@ func (s *RAGService) callChatCompletion(ctx context.Context, requestBody []byte)
 		return nil, fmt.Errorf("Chat 模型保护器未初始化")
 	}
 
+	requestCtx, cancel := s.chatRequestContext(ctx)
+	defer cancel()
+
 	endpoint := strings.TrimRight(s.chatBaseURL, "/") + "/chat/completions"
 	var responseBody []byte
-	err := s.chatGuard.run(ctx, func(callCtx context.Context) error {
+	err := s.chatGuard.run(requestCtx, func(callCtx context.Context) error {
 		req, err := http.NewRequestWithContext(callCtx, http.MethodPost, endpoint, bytes.NewReader(requestBody))
 		if err != nil {
 			return err
