@@ -7,7 +7,9 @@ export const VOICE_LATENCY_EVENTS = [
   'answer_request',
   'answer_start',
   'answer_complete',
+  'opening_audio_play_start',
   'tts_first_byte',
+  'answer_audio_play_start',
   'audio_play_start',
   'audio_complete',
 ] as const
@@ -27,6 +29,8 @@ export type VoiceLatencySnapshot = {
     answer_generation?: number
     answer_to_tts_first_byte?: number
     tts_to_audio_play_start?: number
+    asr_to_audio_play_start?: number
+    asr_to_answer_audio_play_start?: number
     audio_playback?: number
     voice_pipeline_total?: number
   }
@@ -85,7 +89,9 @@ export class VoiceLatencyTrace {
       asr_to_answer_start: duration(event('asr_result'), event('answer_start')),
       answer_generation: duration(event('answer_request'), event('answer_complete')),
       answer_to_tts_first_byte: duration(event('answer_complete'), event('tts_first_byte')),
-      tts_to_audio_play_start: duration(event('tts_first_byte'), event('audio_play_start')),
+      tts_to_audio_play_start: duration(event('tts_first_byte'), event('answer_audio_play_start')),
+      asr_to_audio_play_start: duration(event('asr_result'), event('audio_play_start')),
+      asr_to_answer_audio_play_start: duration(event('asr_result'), event('answer_audio_play_start')),
       audio_playback: duration(event('audio_play_start'), event('audio_complete')),
       voice_pipeline_total: duration(event('mic_start'), event('audio_complete')),
     }
