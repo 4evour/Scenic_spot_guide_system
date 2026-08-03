@@ -1,6 +1,9 @@
 # Scenic Spot Guide System
 
 [![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
+作者水平有限，并未拿到任何奖项，不过该项目确实耗费了我大量的精力。于是决定开源出来，供大家学习参考，本项目的主要着力点在于rag知识库，生成回答的链路优化，完善的后台管理，鉴权保护。
+能力有限，欢迎指正。
+
 
 景区智能导览系统，面向景区游客问答、导览内容管理、路线推荐、运营数据看板和数字人导览场景。项目采用 Go/Gin 提供后端 API，PostgreSQL/GORM 作为主数据库配置，SQLite 仅作为本地开发和轻量测试配置，Vue 3 + Vite 构建前端页面，并集成本地知识库 RAG 与 Open-LLM-VTuber 数字人联调能力。
 
