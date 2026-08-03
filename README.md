@@ -1,7 +1,9 @@
 # Scenic Spot Guide System
 
 [![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
-作者水平有限，并未拿到任何奖项，不过该项目确实耗费了我大量的精力。于是决定开源出来，供大家学习参考，本项目的主要着力点在于rag知识库，生成回答的链路优化，完善的后台管理，鉴权保护。
+
+作者水平有限，并未拿到任何奖项，不过该项目确实耗费了我大量的精力。
+于是决定开源出来，供大家学习参考，本项目的主要着力点在于rag知识库，生成回答的链路优化，完善的后台管理，鉴权保护。
 能力有限，欢迎指正。
 
 
