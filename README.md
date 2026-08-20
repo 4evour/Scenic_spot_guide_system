@@ -2,12 +2,20 @@
 
 [![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
 
-作者水平有限，并未拿到任何奖项，不过该项目确实耗费了我大量的精力。
-于是决定开源出来，供大家学习参考，本项目的主要着力点在于rag知识库，生成回答的链路优化，完善的后台管理，鉴权保护。
-能力有限，欢迎指正。
+面向景区游客问答、导览内容管理、路线推荐、运营数据看板和数字人导览的可复现示例系统。项目采用 Go/Gin 提供后端 API，PostgreSQL/GORM 作为生产数据库配置，SQLite 用于本地开发和轻量测试，Vue 3 + Vite 构建前端，并集成本地 RAG 检索与 Open-LLM-VTuber 联调能力。
 
+> 项目定位是作品集与演示系统，不宣称已经达到大规模生产部署标准。评测数字均限定在对应数据集、检索模式和 `retrieval-only` 口径内。
 
-景区智能导览系统，面向景区游客问答、导览内容管理、路线推荐、运营数据看板和数字人导览场景。项目采用 Go/Gin 提供后端 API，PostgreSQL/GORM 作为主数据库配置，SQLite 仅作为本地开发和轻量测试配置，Vue 3 + Vite 构建前端页面，并集成本地知识库 RAG 与 Open-LLM-VTuber 数字人联调能力。
+## 快速了解
+
+- [快速启动](#快速启动)：Docker Compose（PostgreSQL）或本地 SQLite 两条路径。
+- [访问入口](#访问入口)：服务启动后的页面和健康检查地址。
+- [RAG 评估](#rag-评估)：数据边界、复现命令和当前基准。
+- [数字人服务](#数字人服务)：Open-LLM-VTuber、Live2D 和语音降级路径。
+
+![系统架构](docs/assets/judge-doc/architecture.svg)
+
+![RAG 检索流程](docs/assets/judge-doc/rag-flow.svg)
 
 ## 系统架构
 
@@ -28,13 +36,13 @@ graph TB
 
     subgraph 数据层
         H[(PostgreSQL/SQLite)]
-        I[知识库 JSONL<br/>154 条真实资料]
+        I[知识库 JSONL<br/>81 条基础 + 162 条真实资料]
     end
 
     subgraph 外部服务
-        J[DeepSeek LLM]
+        J[OpenAI 兼容 LLM<br/>示例：DashScope/Qwen]
         K[DashScope Embedding]
-        L[百度 TTS]
+        L[Edge TTS]
         M[Open-LLM-VTuber<br/>Live2D 数字人]
     end
 
@@ -62,7 +70,7 @@ flowchart LR
     D & E & F & G & H --> I[Top-K 候选]
     I --> J[实体聚焦加分]
     J --> K{LLM 可用?}
-    K -->|是| L[DeepSeek 生成回答]
+    K -->|是| L[配置的 LLM 生成回答]
     K -->|否| M[本地规则 Fallback]
     L & M --> N[回答 + 来源]
 ```
@@ -73,12 +81,12 @@ flowchart LR
 - **用户反馈闭环**：每个 AI 回答支持 👍👎 反馈，数据自动进入统计大屏。
 - **数字人导览**：Live2D 虚拟形象 + 情绪检测 + 语音合成，通过 OpenAI 兼容接口和 `/vtuber-ws/*` 代理对接 Open-LLM-VTuber。
 
-当前仓库中的 `mao_pro` 为 Live2D Inc. 提供的 Niziiro Mao 官方示例数据，仅作为临时联调形象，不代表灵山专属角色或古典汉服形象。This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with terms and conditions set by Live2D Inc. This content itself is created at the author’s sole discretion. 完整条款见 `LICENSE-Live2D.md`；正式参赛发布版本应替换为具有独立授权的 `lingshan_xiaoling` 模型。
+当前仓库中的 `mao_pro` 为 Live2D Inc. 提供的 Niziiro Mao 官方示例数据，仅作为临时联调形象，不代表灵山专属角色或古典汉服形象。This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with terms and conditions set by Live2D Inc. This content itself is created at the author’s sole discretion. 完整条款见 `LICENSE-Live2D.md`；`lingshan_xiaoling` 只是计划中的独立授权模型，目前不随仓库提供。
 - **数据大屏**：基于真实接口展示 5 个 KPI 卡片、24h 趋势、关注点分布、热门问答、满意度趋势、知识库条目和最近对话；暂无后端来源的热力、终端、活动等运营态势显示空状态，不再使用硬编码演示数值。
 - **管理后台**：景点、路线、讲解内容、二维码、知识库、数字人形象、游客问题处理、游客感受度报告和系统设置。
 - **Prometheus 监控**：`/metrics` 端点暴露请求量、延迟 P50/P95/P99、RAG 查询耗时、缓存命中率等指标。
 - **安全加固**：JWT 算法混淆防护、IDOR 权限校验、密码策略、全局限流、CSP/HSTS 安全头、登录统一错误防枚举、CSRF 防护、Secure Cookie 策略、限流器优雅停止、API 响应体大小限制、/metrics 端点管理员鉴权保护。
-- **RAG 评估框架**：203 条真实问答评测集，Recall@8 99.5%，支持 5 种模式对比、分组统计、失败分析。
+- **RAG 评估框架**：当前真实资料评测集为 162 个切片、210 条问答，支持 5 种模式对比、分组统计和失败分析。最近一次本地 `light-rerank` retrieval-only 结果为通过率 97.62%、Recall@8 94.33%、MRR@8 0.798；这不是线上准确率或生成质量指标。
 
 ## 接口契约与鉴权
 
@@ -94,7 +102,7 @@ flowchart LR
 
 - 后端：Go 1.25.0、Gin、GORM、PostgreSQL、SQLite local/dev profile
 - 前端：Vue 3、Vite、TypeScript、PixiJS、Live2D
-- AI/RAG：DeepSeek 兼容接口、DashScope `text-embedding-v2`、本地 JSONL 知识库、BM25 + Embedding 双路召回 + RRF 融合
+- AI/RAG：OpenAI 兼容模型接口（示例配置为 DashScope/Qwen，可替换为 DeepSeek 等服务）、DashScope `text-embedding-v2`、本地 JSONL 知识库、BM25 + Embedding 双路召回 + RRF 融合
 - 监控：Prometheus（`/metrics` 端点：请求量、延迟直方图、RAG 查询耗时、缓存命中率）
 - 静态资源：Go 服务托管 `static` 目录，Vue 构建产物输出到 `static/vue-app`
 
@@ -103,12 +111,14 @@ flowchart LR
 ```text
 .
 ├── main.go                      # 服务启动和依赖装配
+├── cmd/                         # demo-seed、rag-eval、坐标校准等命令
 ├── configs/                     # 本地配置目录，config.yaml 不提交
 ├── internal/                    # 后端配置、模型、仓储、服务和处理器
 ├── knowledge/                   # 景区知识库语料、基础样例和 3000/300 合成规模验证集
 ├── web-vue/                     # Vue 前端源码
 ├── static/                      # 静态页面、数字人资源和 Vue 构建产物
 ├── docs/                        # API、数字人联调和面试说明
+├── docker-compose.yml            # PostgreSQL + 应用编排
 └── PROJECT_OVERVIEW.md          # 项目长期说明文档
 ```
 
@@ -116,28 +126,31 @@ flowchart LR
 
 - Go 1.25.0 或与 `go.mod` 匹配的版本
 - Node.js 20+ 与 npm
-- Docker Desktop 或本地 PostgreSQL 16+
-- 可选：DeepSeek API Key、DashScope Embedding API Key、语音服务配置；无 Key 时仍可启动页面并运行本地检索评估
+- Docker Desktop（Compose 路径）或本地 SQLite；使用外部 PostgreSQL 时需要 PostgreSQL 16+
+- 可选：兼容 OpenAI 的 LLM API Key、DashScope Embedding API Key；Edge TTS 默认不需要项目侧 API Key。无外部 Key 时仍可启动页面并运行本地检索评估，但生成式回答和在线语音能力会降级。
 
 ## 快速启动
 
-1. 准备配置文件：
+### 路径 A：Docker Compose + PostgreSQL
+
+Compose 不读取 `configs/config.yaml` 中的数据库密码，而是要求通过环境变量提供。首次启动前复制环境变量模板并填入本机值：
 
 ```powershell
-Copy-Item configs/config.example.yaml configs/config.yaml
+Copy-Item .env.example .env
+# 编辑 .env，至少填写：
+# SCENIC_GUIDE_DATABASE_PASSWORD=<YOUR_DATABASE_PASSWORD>
+# SCENIC_GUIDE_SECURITY_JWT_SECRET=<64_HEX_CHARACTERS>
 ```
 
-在 `configs/config.yaml` 中按需填写 `ai.api_key`、`embedding.api_key`、`speech.api_key`。JWT 密钥优先通过部署环境或密钥管理系统注入；真实配置文件已被 `.gitignore` 忽略，不应提交。
+`.env` 只用于本地启动，必须保持未提交。JWT 密钥仅接受恰好 64 个 hex 字符（32 bytes），或 base64 解码后不少于 32 bytes；不要把真实密钥、数据库密码或 API Key 写入 README、日志或提交记录。
 
-JWT 密钥仅接受以下两种格式：恰好 64 个 hex 字符（32 bytes），或 base64 解码后不少于 32 bytes。任意普通字符串（即使长度达到 32 字符）和包含 `generate`、`change`、`your` 等占位词的值都会被拒绝；校验错误只说明允许的格式，不回显输入密钥。
+可用以下命令生成 JWT 密钥：
 
-已安装 OpenSSL 的环境可用以下跨平台命令生成 64 hex：
-
-```shell
+```powershell
 openssl rand -hex 32
 ```
 
-不依赖 OpenSSL 时，可在 PowerShell 中生成：
+没有 OpenSSL 时：
 
 ```powershell
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
@@ -147,30 +160,35 @@ $rng.Dispose()
 $env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 ```
 
-迁移时要注意签名语义已经变化：旧版本把配置文本本身作为签名密钥，新版本会先把 64-hex 或 base64 文本解码为字节材料。即使升级前后 `SCENIC_GUIDE_SECURITY_JWT_SECRET` 的 64-hex 文本完全不变，新版本也会改用解码后的 32 bytes 签名，因此旧 JWT 仍会失效。多实例不得在新旧版本混跑时做普通滚动发布，否则两种签名语义会导致实例互相拒绝 JWT；应先把同一个合规值同步到所有实例，再协调或原子切换版本，并安排用户重新登录。不要把密钥或启动错误中的敏感值复制到仓库；排查时只检查格式、注入位置和实例一致性。
-
-2. 使用 Docker Compose 启动 PostgreSQL 和应用：
-
 ```powershell
-$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$bytes = New-Object byte[] 32
-$rng.GetBytes($bytes)
-$rng.Dispose()
-$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 docker compose up --build
 ```
 
-Compose 默认启动 `postgres:16-alpine`，应用通过 `SCENIC_GUIDE_DATABASE_DRIVER=postgres` 连接数据库。需要本地轻量运行时，也可以显式切换到 `database.driver: sqlite`；这只是开发配置，不是 PostgreSQL 故障后的自动接管或高可用方案。
+Compose 默认启动 `postgres:16-alpine`，应用通过 `SCENIC_GUIDE_DATABASE_DRIVER=postgres` 连接数据库。首次启动不会自动创建演示用户；需要演示数据时，在应用容器之外按“演示数据初始化”章节执行，或直接使用路径 B。
 
-3. 安装后端依赖：
+### 路径 B：本地 SQLite + 演示模式
+
+该路径适合快速体验，不需要启动 PostgreSQL：
+
+```powershell
+Copy-Item configs/config.example.yaml configs/config.yaml
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
+go run ./cmd/demo-seed -admin-password "<YOUR_LOCAL_DEMO_PASSWORD>"
+go run .
+```
+
+演示种子会创建 `visitor` 和 `admin` 两个本地账号，并导入当前 243 条知识切片（81 条基础资料 + 162 条真实资料）；密码由你在命令行传入，不在仓库中提供固定值。默认配置使用 SQLite，仅用于本地开发或轻量测试，不是 PostgreSQL 故障后的自动接管或高可用方案。
+
+### 前端构建与检查
+
+如果需要从源码重新生成前端静态资源：
 
 ```powershell
 go mod download
-```
-
-4. 构建前端：
-
-```powershell
 Set-Location web-vue
 npm install
 npm run build
@@ -183,36 +201,17 @@ Set-Location ..
 node scripts/check-secrets.mjs
 ```
 
-5. 可选：初始化演示账号与演示数据：
-
-```powershell
-go run ./cmd/demo-seed --admin-password "ScenicDemo123456"
-```
-
-本地演示账号为 `visitor / ScenicDemo123456` 和 `admin / ScenicDemo123456`。该命令会写入管理员、游客、20 个景点、5 条路线、243 条知识切片，并生成约两周的合成交互趋势、聊天会话、景点评分和路线推荐数据。该密码只适用于本地答辩演示，公开部署时必须替换。
-
-6. 本地直启服务：
-
-```powershell
-go run .
-```
-
-默认监听 `0.0.0.0:8080`。启动后会自动迁移 PostgreSQL 或显式配置的 SQLite 本地数据库，并在知识库为空时导入 `knowledge/lingshan_chunks.jsonl`。
+服务默认监听 `0.0.0.0:8080`；仅在本机使用时建议通过防火墙或反向代理限制访问范围。启动后会自动迁移 PostgreSQL 或显式配置的 SQLite 数据库，并在知识库为空时导入 `knowledge/lingshan_chunks.jsonl`。
 
 ## 一键复现
 
-本项目不提供公网 Demo 链接，仓库负责可复现，博客负责展示说明。默认复现路径不需要 DeepSeek、DashScope 或语音服务 Key：
+本项目不提供公网 Demo 链接，仓库负责可复现，博客负责展示说明。最短的本地演示路径是：
 
 ```powershell
-$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$bytes = New-Object byte[] 32
-$rng.GetBytes($bytes)
-$rng.Dispose()
-$env:SCENIC_GUIDE_SECURITY_JWT_SECRET = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
-docker compose up --build
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local.ps1 -Restart
 ```
 
-启动后访问 `http://127.0.0.1:8080/` 会统一跳转到数字人登录入口 `/digital-human#/login`。管理后台和数据看板继续保留独立路由。无 Key 情况下，RAG 评估和基础问答使用本地 BM25/词面检索；DeepSeek、DashScope Embedding 和语音服务只作为可选增强。
+启动后访问 `http://127.0.0.1:8080/` 会统一跳转到数字人登录入口 `/digital-human#/login`。管理后台和数据看板继续保留独立路由。无外部 Key 时，RAG 评估和基础问答使用本地 BM25/词面检索；LLM、Embedding 和在线语音仅作为可选增强。
 
 复现 RAG smoke test：
 
@@ -239,7 +238,7 @@ go run ./cmd/rag-eval -knowledge knowledge/lingshan_scale_3000.jsonl -eval knowl
 
 项目保留 Vue Live2D 视图，同时主联调路径定位为 Open-LLM-VTuber 协议适配和前端二开。后端提供 `/v1/chat/completions` OpenAI 兼容接口、`stream=true` SSE 流式响应，并将 `/vtuber-ws/*` 代理到本机 `127.0.0.1:12393`。
 
-`Open-LLM-VTuber/frontend/assets/scenic-tech-demo.js` 和 `.css` 是景区定制注入层，包含品牌导览面板、连接状态、麦克风权限状态、回答流式状态、打断/重试按钮和当前会话 `trace_id` 展示。联调清单见 `docs/digital-human-production-check.md`。
+`Open-LLM-VTuber/frontend/assets/scenic-tech-demo.js` 和 `.css` 是景区定制注入层，包含品牌导览面板、连接状态、麦克风权限状态、回答流式状态、打断/重试按钮和当前会话 `trace_id` 展示。该路径只有在按本地答辩包要求将 `Open-LLM-VTuber` 与本仓库放在同级目录时才存在；联调清单见 `docs/digital-human-production-check.md`。
 
 如不启动外部数字人服务，普通后台、看板和基础问答接口仍可运行；涉及实时语音或 WebSocket 驱动的能力会受限。
 
@@ -277,7 +276,7 @@ $env:SCENIC_GUIDE_DATABASE_HOST="127.0.0.1"
 $env:SCENIC_GUIDE_DATABASE_PORT="5432"
 $env:SCENIC_GUIDE_DATABASE_NAME="scenic_guide"
 $env:SCENIC_GUIDE_DATABASE_USER="scenic"
-$env:SCENIC_GUIDE_DATABASE_PASSWORD="scenic_password"
+$env:SCENIC_GUIDE_DATABASE_PASSWORD="<YOUR_DATABASE_PASSWORD>"
 $env:SCENIC_GUIDE_SECURITY_TOKEN_EXPIRE_HOURS="4"
 $env:SCENIC_GUIDE_AI_API_KEY="你的服务端密钥"
 ```
@@ -294,7 +293,7 @@ $env:SCENIC_GUIDE_AI_API_KEY="你的服务端密钥"
 
 ## RAG 评估
 
-项目保留 `knowledge/lingshan_chunks.jsonl` 与 `knowledge/lingshan_eval_qa.json` 作为 32 个知识切片、5 条评测问答的快速 smoke test；同时提供 `knowledge/lingshan_scale_3000.jsonl` 与 `knowledge/lingshan_eval_300.json` 作为“合成规模验证集”，用于复现 3000 切片、300 问答的闭集检索实验。该数据集不是独立真实景区生产数据，也不等同完整景区知识库。
+项目保留 `knowledge/lingshan_chunks.jsonl` 与 `knowledge/lingshan_eval_qa.json` 作为 81 个基础知识切片、5 条评测问答的快速 smoke test；同时提供 `knowledge/lingshan_scale_3000.jsonl` 与 `knowledge/lingshan_eval_300.json` 作为“合成规模验证集”，用于复现 3000 切片、300 问答的闭集检索实验。真实资料评测使用 `knowledge/real/lingshan_real_chunks.jsonl`（162 个切片）和 `knowledge/real/lingshan_real_eval_open.json`（210 条问答）。这些数据不是完整的景区生产知识库，合成闭集结果也不能外推为开放域准确率。
 
 ```powershell
 go run ./cmd/rag-eval -k 8 -format text
@@ -309,9 +308,16 @@ go run ./cmd/rag-eval -knowledge knowledge/real/lingshan_real_chunks.jsonl -eval
 
 评估数据格式包含 `question`、`expected_keywords`、`expected_chunk_ids`、`category`、`difficulty`。评估报告包含用例总数、通过率、Recall@K、MRR@K、关键词平均覆盖率、分类统计、失败原因、失败样例和检索耗时 p50/p95；如需在 CI 或脚本中失败退出，可追加 `-fail-on-miss`。
 
-3000/300 合成闭集实验仅作为内部回归数据集，不能作为简历主卖点，也不能外推为开放域真实问答召回率。简历主口径使用 `knowledge/real/` 真实资料评估集：122 个真实资料切片、203 条独立评测问答。优化前本地 retrieval-only 基线为 BM25 `pass 88.2% / Recall@8 85.5% / MRR@8 0.749`，`light-rerank pass 88.2% / Recall@8 86.0% / MRR@8 0.761`；该结果不包含外部 Embedding、大模型生成、ASR 或 TTS。
+3000/300 合成闭集实验仅作为内部回归数据集，不能外推为开放域真实问答召回率。当前真实资料评测集包含 162 个切片、210 条独立问答；以下结果来自本仓库当前代码和数据，在 `retrieval-only`、`k=8`、并发 16、单轮复现口径下，不包含外部 Embedding、大模型生成、ASR 或 TTS：
 
-当前轻量 rerank 是本地规则实现，不引入重型 Cross-Encoder。2026-05-26 按失败样例做定向优化后，检索链路增加了只用于召回和打分的查询扩展，并补强少量真实资料切片中的游客问法与边界词；用户原始问题和生成 prompt 不会被扩展词改写。真实资料 retrieval-only 单轮对比结果为：`bm25-local` 通过率 98.5%、Recall@8 94.8%、MRR@8 0.793、p50/p95 约 9ms/16-19ms；`light-rerank` 通过率 99.5%、Recall@8 95.3%、MRR@8 0.802、p50/p95 约 10ms/20-21ms。这个提升来自“语料与问法映射增强 + 可解释重排”，不代表生成质量、开放域泛化能力或线上 SLA。
+| 模式 | 通过率 | Recall@8 | MRR@8 | p50/p95 |
+| --- | ---: | ---: | ---: | ---: |
+| `bm25-local` | 204/210（97.14%） | 93.93% | 0.777 | 约 17/26 ms |
+| `light-rerank` | 205/210（97.62%） | 94.33% | 0.798 | 约 20/32 ms |
+
+延迟会随机器和运行状态波动；这些指标只描述当前评测集上的本地检索链路，不代表线上 SLA、生成质量或开放域泛化能力。
+
+当前轻量 rerank 是本地规则实现，不引入重型 Cross-Encoder。检索链路包含查询扩展、游客问法补强和可解释重排；用户原始问题和生成 prompt 不会被扩展词改写。若数据集或评测用例变化，应重新运行上面的命令并同步更新本表，不要沿用历史指标。
 
 运行时问答接口支持传入 `session_id` 做短期多轮承接。后端只保留最近 5 轮，并在内部提取主题实体、意图类型和实时边界状态，用于把“它有多高”“下雨呢”“现在人多吗”等追问改写成更明确的检索 query。公开 API 响应结构不暴露 `rewritten_query` 或上下文主题；本地无 Key fallback 会按事实、路线、边界三类组织回答，涉及票价、开放、客流、排队、无人机、宠物等实时问题时提示以官方最新公告或现场公示为准。
 
@@ -341,35 +347,15 @@ go run ./cmd/amap-calibrate
 
 命令仅在五个景点全部返回有效且名称明确匹配时原子替换校准文件；新结果默认 `verified: false`。人工核对入口或主要观景点后填写 `verified_at` 并改为 `verified: true`，再运行 `cmd/demo-seed`。任一查询失败、空结果、坐标越界或名称不确定时，命令返回失败且保留原文件。
 
-## 代码审查修复记录
+## 安全、许可证与贡献
 
-本次代码审查对后端安全性、健壮性和代码质量进行了全面加固，主要变更如下：
+- 认证、CSRF、限流、CSP、Cookie 和 `/metrics` 鉴权边界见 [`docs/api.md`](docs/api.md) 与 [`docs/digital-human-production-check.md`](docs/digital-human-production-check.md)。
+- 项目内的 Live2D 示例资源不适用项目代码的默认许可，使用前必须阅读 [`LICENSE-Live2D.md`](LICENSE-Live2D.md)。正式发布应替换为具有独立授权的模型。
+- 当前仓库未提供独立的根目录项目许可证；如果要作为通用开源项目分发，请补充 `LICENSE` 并在此处明确代码、数据和第三方资源的许可边界。
+- 提交代码前至少运行 `make check`、`go vet ./...` 和 `node scripts/check-secrets.mjs`；涉及前端时再运行 `npm run lint` 与 `npm run build`。
 
-### 后端安全与健壮性
-- **CSRF 防护**：所有 /api/v1 路由新增 CSRF Token 校验中间件，登录时同步设置 CSRF Cookie。
-- **Secure Cookie**：登录/登出 Cookie 的 Secure 标志根据 GIN_MODE=release 或 SCENIC_GUIDE_COOKIE_SECURE=true 环境变量自动启用。
-- **限流器优雅停止**：RateLimitMiddleware 后台清理 goroutine 支持通过 channel 信号停止，新增 StopRateLimiters() 函数供服务关闭时调用，避免 goroutine 泄漏。
-- **API 响应体大小限制**：LLM API 响应读取增加 20MB 上限（`readLimitedBody`），防止异常响应耗尽内存。
-- **IDOR 修复**：用户更新/删除操作增加 isRecordNotFound 错误区分，避免信息泄露。
-- **/metrics 端点保护**：Prometheus 指标端点现在需要 AuthMiddleware + AdminMiddleware 鉴权。
-- **密钥检测增强**：scripts/check-secrets.mjs 新增高德地图 API Key 检测规则。
+详细的历史修复记录和版本变更请查看 [`CHANGELOG.md`](CHANGELOG.md)，不要把一次性的审查笔记堆积在 README 首页。
 
-### 代码质量改进
-- **统一输入校验**：user_handler.go 提取 validateUsername、validateEmail、validateRole、userPayload 等共享函数，消除重复代码。
-- **统一错误处理**：新增 handler/errors.go，提供 isRecordNotFound 统一封装 gorm.ErrRecordNotFound 判断。
-- **限流器可测试化**：NewRateLimitMiddlewareWithStopper 内部构造函数支持单元测试中精确控制清理 goroutine。
-- **路由整理**：新增 /map Vue SPA 路由、/api/v1/scenic/profile 景区信息接口、/api/v1/track 轻量行为追踪接口。
-
-### 前端改进
-- **ESLint + Prettier**：web-vue 新增 .eslintrc.cjs、.prettierrc.json、.prettierignore 配置文件。
-- **Vue 路由完善**：router/index.ts 补充缺失路由定义，修复首次导航空白问题。
-- **CRUD 表格修复**：useCrudTable.ts 简化逻辑，修复 Go PascalCase 与前端 camelCase 字段名不匹配导致数据不显示的问题。
-
-### 测试覆盖
-- 新增 internal/handler/digital_human_auth_test.go：数字人接口鉴权测试。
-- 新增 internal/handler/user_handler_test.go：用户注册/登录/CRUD 全流程测试。
-- 新增 internal/repository/crud_safety_test.go：通用 CRUD 安全性测试。
-- 新增 docs/architecture.md：系统解耦架构说明文档。
 ## 清理与提交约定
 
 - 不提交 `configs/config.yaml`、`.env`、数据库文件、日志、可执行文件和本地缓存。
