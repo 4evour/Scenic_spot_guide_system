@@ -1,0 +1,13 @@
+{
+  "name": "Scenic Spot Guide System",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "scenic-guide",
+      "command": "export SCENIC_GUIDE_SECURITY_JWT_SECRET=\"$(openssl rand -hex 32)\" SCENIC_GUIDE_DATABASE_DRIVER=sqlite SCENIC_GUIDE_DATABASE_PATH=./data/scenic_guide.db SCENIC_GUIDE_DEMO_MODE=true SCENIC_GUIDE_DEMO_PASSWORD=ScenicDemo123456 SCENIC_GUIDE_ADMIN_PASSWORD=ScenicDemo123456 && exec go run ."
+    }
+  ],
+  "ports": [
+    { "name": "scenic-guide", "port": 8080 }
+  ]
+}
