@@ -284,7 +284,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		var writeMu sync.Mutex
 
 		// 心跳 goroutine：每 15 秒发送 SSE 注释保持连接
-		go func() {
+		pkg.SafeGo("ai-chat-stream-heartbeat", func() {
 			ticker := time.NewTicker(15 * time.Second)
 			defer ticker.Stop()
 			for {
@@ -300,9 +300,12 @@ func (h *AIHandler) Chat(c *gin.Context) {
 					return
 				}
 			}
-		}()
+		})
 
-		go func() {
+		// 用 SafeGo 包裹流式查询：未 recover 的 panic 会终止整个进程，
+		// 拖垮所有在线用户。defer close(doneCh) 在 panic 展开时仍会执行，
+		// 保证心跳与主流程能正常收尾。
+		pkg.SafeGo("ai-chat-stream", func() {
 			defer close(doneCh)
 			directLocationAnswer, hasDirectLocationAnswer := buildDirectLocationAnswer(req.Message, req.Location)
 			response, route, trace, err := h.ragService.QueryWithRAGStreaming(
@@ -400,7 +403,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			fmt.Fprintf(writer, "data: [DONE]\n\n")
 			flusher.Flush()
 			writeMu.Unlock()
-		}()
+		})
 		<-doneCh
 	} else {
 		// 非流式：阻塞等待完整响应
