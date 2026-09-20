@@ -11,6 +11,8 @@ const MAX_SAMPLE_WINDOW = 5;
 
 export interface SpotWithCoords {
   id: string | number;
+  /** 后端数字 ID，用于调用只接受数字 ID 的接口（如按景点查讲解内容）。 */
+  backendId?: string | number;
   name: string;
   lat: number;
   lng: number;
