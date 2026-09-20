@@ -4,8 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useSeniorMode } from '../composables/useSeniorMode';
 import { apiFetch } from '../services/api';
+import { useAuthStore } from '../stores/auth';
+import { getCSRFToken } from '../utils/csrf';
 
 const { t } = useI18n();
+const authStore = useAuthStore();
 const router = useRouter();
 const { seniorModeEnabled, toggleSeniorMode } = useSeniorMode();
 const QR_INTRO_STORAGE_KEY = 'sg_qr_intro_payload';
@@ -46,19 +49,30 @@ onMounted(async () => {
   }
 
   try {
-    // 先轻量查询景点信息
+    // 先轻量查询景点信息（公开、无需鉴权）
     const spotData = await apiFetch<SpotInfo>(`/qr/${encodeURIComponent(qrCode)}`);
     spot.value = spotData;
+  } catch (e: unknown) {
+    error.value = (e as Error)?.message || t('qr.spotNotFound');
+    loading.value = false;
+    return;
+  }
 
-    // 再触发 AI 讲解（有缓存，快速）
+  // AI 讲解为增强能力：intro POST 需要 CSRF，而扫码是零态访问（无会话/CSRF）。
+  // 先确保有访客会话，且讲解失败不应把已获取的景点卡片替换成错误页。
+  try {
+    if (!getCSRFToken()) {
+      await authStore.ensureGuestSession();
+    }
     const introData = await apiFetch<IntroResponse>(`/qr/${encodeURIComponent(qrCode)}/intro`, {
       method: 'POST',
       body: '{}',
     });
     intro.value = introData.intro;
     followUpQuestions.value = introData.follow_up_questions || [];
-  } catch (e: unknown) {
-    error.value = (e as Error)?.message || t('qr.spotNotFound');
+  } catch {
+    // 讲解拉取失败时回退到景点自带的讲解词，保持页面可用。
+    intro.value = spot.value?.qr_intro_text || '';
   } finally {
     loading.value = false;
   }
