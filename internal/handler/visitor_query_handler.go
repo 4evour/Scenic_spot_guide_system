@@ -81,14 +81,19 @@ func (h *VisitorQueryHandler) UpdateQuery(c *gin.Context) {
 		return
 	}
 
-	var query model.VisitorQuery
-	if err := c.ShouldBindJSON(&query); err != nil {
+	// 先加载现有记录再绑定，未提交字段保留原值，避免局部更新清零其它列。
+	query, err := h.service.GetQueryByID(uint(id))
+	if err != nil {
+		pkg.NotFound(c, pkg.T(c, "msg_query_not_found"))
+		return
+	}
+	if err := c.ShouldBindJSON(query); err != nil {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	query.ID = uint(id)
-	if err := h.service.UpdateQuery(&query); err != nil {
+	if err := h.service.UpdateQuery(query); err != nil {
 		if isRecordNotFound(err) {
 			pkg.NotFound(c, pkg.T(c, "msg_query_not_found"))
 			return

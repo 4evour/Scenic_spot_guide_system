@@ -148,20 +148,31 @@ func (s *VisitorExperienceService) GetSpotRatingStats(spotID uint) (SpotRatingSt
 		return stats, nil
 	}
 	var overall, culture, photo, facility int
+	// 维度评分可选：0 表示"未评分"，不能计入均值分母，否则会把维度均值拉低。
+	var cultureN, photoN, facilityN int
 	for _, rating := range ratings {
 		overall += rating.OverallRating
-		culture += rating.CultureRating
-		photo += rating.PhotoRating
-		facility += rating.FacilityRating
+		if rating.CultureRating > 0 {
+			culture += rating.CultureRating
+			cultureN++
+		}
+		if rating.PhotoRating > 0 {
+			photo += rating.PhotoRating
+			photoN++
+		}
+		if rating.FacilityRating > 0 {
+			facility += rating.FacilityRating
+			facilityN++
+		}
 		if rating.OverallRating <= 2 {
 			stats.NegativeRatings++
 		}
 	}
 	count := float64(len(ratings))
 	stats.AvgOverall = round1(float64(overall) / count)
-	stats.AvgCulture = round1(float64(culture) / count)
-	stats.AvgPhoto = round1(float64(photo) / count)
-	stats.AvgFacility = round1(float64(facility) / count)
+	stats.AvgCulture = avgOrZero(culture, cultureN)
+	stats.AvgPhoto = avgOrZero(photo, photoN)
+	stats.AvgFacility = avgOrZero(facility, facilityN)
 	return stats, nil
 }
 
@@ -604,4 +615,13 @@ func parseUintSlice(raw string) []uint {
 
 func round1(value float64) float64 {
 	return math.Round(value*10) / 10
+}
+
+// avgOrZero 计算维度均值：分母为该维度真正被评分（>0）的条数；
+// 若没有任何有效评分则返回 0，避免用总评分条数做分母把均值稀释。
+func avgOrZero(sum, n int) float64 {
+	if n <= 0 {
+		return 0
+	}
+	return round1(float64(sum) / float64(n))
 }

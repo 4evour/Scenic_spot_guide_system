@@ -654,7 +654,17 @@ func (h *AIHandler) ListKnowledge(c *gin.Context) {
 		pageSize = 20
 	}
 
-	spotID, _ := strconv.ParseUint(c.Query("spot_id"), 10, 32)
+	// 非法 spot_id（如 "abc"）必须报错，而不是被 ParseUint 静默降级为 0、
+	// 导致过滤失效返回整个知识库。
+	var spotID uint64
+	if raw := c.Query("spot_id"); raw != "" {
+		parsed, perr := strconv.ParseUint(raw, 10, 32)
+		if perr != nil {
+			pkg.BadRequest(c, "spot_id 参数无效")
+			return
+		}
+		spotID = parsed
+	}
 	list, total, err := h.ragService.ListKnowledgeAdvanced(repository.KnowledgeListFilter{
 		Page:              page,
 		PageSize:          pageSize,

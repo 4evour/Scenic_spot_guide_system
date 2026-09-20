@@ -19,6 +19,20 @@ func NewSessionHandler(chatSessionService *service.ChatSessionService) *SessionH
 	return &SessionHandler{chatSessionService: chatSessionService}
 }
 
+// normalizePageParams 解析并规整分页参数，返回校正后的 page/page_size。
+// 非法或越界的值会被夹到合法范围，保证响应里回显的分页元数据与实际使用的一致。
+func normalizePageParams(pageStr, pageSizeStr string) (int, int) {
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	return page, pageSize
+}
+
 // ListSessions 获取当前用户的会话列表
 // GET /api/v1/sessions?page=1&page_size=20
 func (h *SessionHandler) ListSessions(c *gin.Context) {
@@ -29,10 +43,7 @@ func (h *SessionHandler) ListSessions(c *gin.Context) {
 		return
 	}
 
-	pageStr := c.DefaultQuery("page", "1")
-	pageSizeStr := c.DefaultQuery("page_size", "20")
-	page, _ := strconv.Atoi(pageStr)
-	pageSize, _ := strconv.Atoi(pageSizeStr)
+	page, pageSize := normalizePageParams(c.DefaultQuery("page", "1"), c.DefaultQuery("page_size", "20"))
 
 	sessions, total, err := h.chatSessionService.ListSessions(uid, page, pageSize)
 	if err != nil {
@@ -167,10 +178,7 @@ func (h *SessionHandler) SearchMessages(c *gin.Context) {
 		return
 	}
 
-	pageStr := c.DefaultQuery("page", "1")
-	pageSizeStr := c.DefaultQuery("page_size", "20")
-	page, _ := strconv.Atoi(pageStr)
-	pageSize, _ := strconv.Atoi(pageSizeStr)
+	page, pageSize := normalizePageParams(c.DefaultQuery("page", "1"), c.DefaultQuery("page_size", "20"))
 
 	messages, total, err := h.chatSessionService.SearchMessages(uid, keyword, page, pageSize)
 	if err != nil {

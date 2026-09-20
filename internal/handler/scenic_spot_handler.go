@@ -117,14 +117,20 @@ func (h *ScenicSpotHandler) UpdateSpot(c *gin.Context) {
 		return
 	}
 
-	var spot model.ScenicSpot
-	if err := c.ShouldBindJSON(&spot); err != nil {
+	// 先加载现有记录，再把请求体绑定到其上：未提交的字段保留原值，
+	// 避免局部更新（例如只改 description）把 name/坐标等清零。
+	spot, err := h.service.GetSpotByID(uint(id))
+	if err != nil {
+		pkg.NotFound(c, pkg.T(c, "msg_scenic_not_found"))
+		return
+	}
+	if err := c.ShouldBindJSON(spot); err != nil {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	spot.ID = uint(id)
-	if err := h.service.UpdateSpot(&spot); err != nil {
+	if err := h.service.UpdateSpot(spot); err != nil {
 		if isRecordNotFound(err) {
 			pkg.NotFound(c, pkg.T(c, "msg_scenic_not_found"))
 			return

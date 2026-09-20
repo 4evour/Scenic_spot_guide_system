@@ -294,7 +294,16 @@ func (h *QRHandler) GetQRCodeImage(c *gin.Context) {
 		return
 	}
 	if spot.QRCode == "" {
+		// 生成的二维码必须落库并启用，否则下载的图片里编码的 code
+		// 在数据库里不存在，游客扫码会 404（或指向别的景点）。
 		spot.QRCode = generateQRCode(spot.ID, spot.Name)
+		spot.QREnabled = true
+		if err := h.spotService.UpdateSpot(spot); err != nil {
+			slog.Error("持久化二维码失败", "spot_id", spot.ID, "error", err)
+			pkg.InternalError(c, "生成二维码失败")
+			return
+		}
+		h.invalidateCache(spot.QRCode)
 	}
 	scanURL := fmt.Sprintf("%s/scan?id=%s", publicBaseURL(c), spot.QRCode)
 	format := c.DefaultQuery("format", "png")

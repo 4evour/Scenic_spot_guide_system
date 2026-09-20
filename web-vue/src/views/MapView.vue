@@ -30,6 +30,9 @@ declare const AMap: Record<string, unknown>;
 
 type ScenicSpot = {
   id: string;
+  // 后端数据库数字 ID（字符串形式）。id 可能被替换成展示用目录 ID（如 LS-001），
+  // 但按景点查后端内容的接口只接受数字 ID，必须用 backendId。
+  backendId?: string;
   name: string;
   area: string;
   category: string;
@@ -239,6 +242,7 @@ async function loadSpots() {
     setSpots(
       state.spots.map(s => ({
         id: s.id,
+        backendId: s.backendId,
         name: s.name,
         lat: s.lat,
         lng: s.lng,
@@ -315,6 +319,7 @@ function enrichSpot(raw: Record<string, unknown>, i: number): ScenicSpot {
   const id = structured?.id || rawID;
   return {
     id,
+    backendId: rawID,
     name,
     area: String(raw.area || structured?.area || t('map.defaultArea')),
     category: String(raw.category || raw.Category || structured?.category || t('map.defaultCategory')),
@@ -535,6 +540,7 @@ function toggleAutoGuide() {
     setSpots(
       state.spots.map(s => ({
         id: s.id,
+        backendId: s.backendId,
         name: s.name,
         lat: s.lat,
         lng: s.lng,
@@ -573,8 +579,10 @@ watch(nearbySpot, async (spot) => {
 
   // 3. 获取讲解内容
   try {
+    // 讲解内容接口只认后端数字 ID；spot.id 可能是展示用目录 ID（LS-001）。
+    const contentSpotId = spot.backendId ?? spot.id;
     const contents = await apiFetch<Array<{ id: number; title: string; content: string }>>(
-      `/contents/spot/${spot.id}`,
+      `/contents/spot/${contentSpotId}`,
     );
 
     if (!contents || contents.length === 0) {
