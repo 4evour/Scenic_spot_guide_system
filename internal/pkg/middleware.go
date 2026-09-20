@@ -261,7 +261,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
 			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) == 2 && parts[0] == "Bearer" {
+			// scheme 按 RFC 6750 大小写不敏感（"Bearer"/"bearer" 均可）。
+			if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
 				token = parts[1]
 			}
 		}
@@ -362,7 +363,8 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
 			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) == 2 && parts[0] == "Bearer" {
+			// scheme 按 RFC 6750 大小写不敏感（"Bearer"/"bearer" 均可）。
+			if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
 				token = parts[1]
 			}
 		}
