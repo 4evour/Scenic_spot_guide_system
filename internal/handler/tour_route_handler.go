@@ -87,14 +87,19 @@ func (h *TourRouteHandler) UpdateRoute(c *gin.Context) {
 		return
 	}
 
-	var route model.TourRoute
-	if err := c.ShouldBindJSON(&route); err != nil {
+	// 先加载现有记录再绑定，未提交字段保留原值，避免局部更新清零其它列。
+	route, err := h.service.GetRouteByID(uint(id))
+	if err != nil {
+		pkg.NotFound(c, pkg.T(c, "msg_route_not_found"))
+		return
+	}
+	if err := c.ShouldBindJSON(route); err != nil {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	route.ID = uint(id)
-	if err := h.service.UpdateRoute(&route); err != nil {
+	if err := h.service.UpdateRoute(route); err != nil {
 		if isRecordNotFound(err) {
 			pkg.NotFound(c, pkg.T(c, "msg_route_not_found"))
 			return

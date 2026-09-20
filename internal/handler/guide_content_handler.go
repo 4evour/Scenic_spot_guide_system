@@ -127,14 +127,19 @@ func (h *GuideContentHandler) UpdateContent(c *gin.Context) {
 		return
 	}
 
-	var content model.GuideContent
-	if err := c.ShouldBindJSON(&content); err != nil {
+	// 先加载现有记录再绑定，未提交字段保留原值，避免局部更新清零其它列。
+	content, err := h.service.GetContentByID(uint(id))
+	if err != nil {
+		pkg.NotFound(c, pkg.T(c, "msg_content_not_found"))
+		return
+	}
+	if err := c.ShouldBindJSON(content); err != nil {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
 	}
 
 	content.ID = uint(id)
-	if err := h.service.UpdateContent(&content); err != nil {
+	if err := h.service.UpdateContent(content); err != nil {
 		if isRecordNotFound(err) {
 			pkg.NotFound(c, pkg.T(c, "msg_content_not_found"))
 			return

@@ -200,7 +200,8 @@ func (h *AdminHandler) GetDigitalHumanConfig(c *gin.Context) {
 
 // UpdateDigitalHumanConfig 更新数字人配置
 func (h *AdminHandler) UpdateDigitalHumanConfig(c *gin.Context) {
-	var settings service.DigitalHumanSettings
+	// 先加载现有配置再绑定，未提交字段保留原值，避免局部保存清空其它配置。
+	settings := h.statsService.GetDigitalHumanConfig()
 	if err := c.ShouldBindJSON(&settings); err != nil {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
@@ -243,7 +244,8 @@ func (h *AdminHandler) GetSystemSettings(c *gin.Context) {
 
 // UpdateSystemSettings 更新系统设置
 func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
-	var settings service.SystemSettings
+	// 先加载现有设置再绑定，未提交字段保留原值，避免局部保存清空其它设置。
+	settings := h.statsService.GetSystemSettings()
 	if err := c.ShouldBindJSON(&settings); err != nil {
 		pkg.BadRequest(c, pkg.T(c, "err_bad_request"))
 		return
