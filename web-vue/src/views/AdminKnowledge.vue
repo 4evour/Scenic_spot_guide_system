@@ -133,7 +133,8 @@ function getCategory(metadata: string, source: string) {
 function normalizeKnowledge(raw: Record<string, unknown>): KnowledgeItem {
   const metadata = String(getField(raw, 'metadata') || '')
   const source = String(getField(raw, 'source') || 'admin')
-  const updatedAt = String(getField(raw, 'updatedAt') || getField(raw, 'UpdatedAt') || '')
+  // 后端返回 snake_case 的 updated_at；旧代码只读 updatedAt/UpdatedAt 导致该列恒为 '-'。
+  const updatedAt = String(getField(raw, 'updated_at') || getField(raw, 'updatedAt') || getField(raw, 'UpdatedAt') || '')
   return {
     id: String(getField(raw, 'id') || getField(raw, 'ID')),
     title: String(getField(raw, 'title')),
