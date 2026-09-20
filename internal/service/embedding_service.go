@@ -236,8 +236,10 @@ func (p *BM25FallbackProvider) CalculateScore(queryTokens, docTokens []string) f
 		docSet[t]++
 	}
 
-	// Without corpus stats, use simplified scoring
-	if p.totalDocs == 0 {
+	// Without corpus stats, use simplified scoring.
+	// avgDocLen<=0 时（语料统计异常/空 token 文档）继续走标准公式会出现
+	// dl/avgDocLen 的除零，产生 +Inf/NaN 污染排序，这里一并降级到简化打分。
+	if p.totalDocs == 0 || p.avgDocLen <= 0 {
 		score := 0.0
 		for token, qf := range querySet {
 			if df, ok := docSet[token]; ok {

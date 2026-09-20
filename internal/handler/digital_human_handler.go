@@ -133,7 +133,9 @@ func (h *DigitalHumanHandler) ChatText(c *gin.Context) {
 			answer = response
 			if userID, ok := c.Get("user_id"); ok {
 				if id, valid := userID.(uint); valid {
-					go h.ragService.AppendSessionTurnWithUser(req.SessionID, id, req.InputText, answer)
+					// AppendSessionTurnWithUser 内部已用 SafeGo 异步落库，
+					// 外层再包裸 go 只是多一个不受保护的 goroutine，去掉。
+					h.ragService.AppendSessionTurnWithUser(req.SessionID, id, req.InputText, answer)
 				}
 			}
 
@@ -237,7 +239,8 @@ func (h *DigitalHumanHandler) ChatVoiceTranscript(c *gin.Context) {
 			answer = service.ApplyVisitorEmotionCare(emotionResult, response)
 			if userID, ok := c.Get("user_id"); ok {
 				if id, valid := userID.(uint); valid {
-					go h.ragService.AppendSessionTurnWithUser(req.SessionID, id, req.Transcript, answer)
+					// 同上：内部已 SafeGo 落库，无需再包裸 go。
+					h.ragService.AppendSessionTurnWithUser(req.SessionID, id, req.Transcript, answer)
 				}
 			}
 

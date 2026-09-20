@@ -47,6 +47,11 @@ func (s *ChatSessionService) EnsureSession(sessionID string, userID uint, source
 
 	existing, err := s.sessionRepo.FindBySessionID(sessionID)
 	if err == nil && existing != nil {
+		// 会话归属校验：session_id 由客户端生成，若已被他人占用，
+		// 不能把当前用户的消息写进别人的会话（跨用户写入 / 上下文注入）。
+		if existing.UserID != userID {
+			return nil, ErrSessionAccessDenied
+		}
 		return existing, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
