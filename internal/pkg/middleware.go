@@ -91,13 +91,25 @@ func newRateLimitMiddlewareWithStopper(limit int, window time.Duration) (gin.Han
 	return handler, func() { close(stop) }
 }
 
-var rateLimitCleanups []func()
+var (
+	rateLimitMu       sync.Mutex
+	rateLimitCleanups []func()
+)
+
+func registerRateLimitCleanup(stop func()) {
+	rateLimitMu.Lock()
+	rateLimitCleanups = append(rateLimitCleanups, stop)
+	rateLimitMu.Unlock()
+}
 
 func StopRateLimiters() {
-	for _, stop := range rateLimitCleanups {
+	rateLimitMu.Lock()
+	stops := rateLimitCleanups
+	rateLimitCleanups = nil
+	rateLimitMu.Unlock()
+	for _, stop := range stops {
 		stop()
 	}
-	rateLimitCleanups = nil
 }
 
 // RedisRateLimitMiddleware uses Redis INCR + EXPIRE for distributed rate limiting.
@@ -107,7 +119,7 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	if client == nil {
 		// Redis not configured, fall back to in-memory limiter with stopper
 		handler, stopper := newRateLimitMiddlewareWithStopper(limit, window)
-		rateLimitCleanups = append(rateLimitCleanups, stopper)
+		registerRateLimitCleanup(stopper)
 		return handler
 	}
 
@@ -116,6 +128,23 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	}
 	if window <= 0 {
 		window = time.Minute
+	}
+
+	// 单例内存降级限流器：仅在 Redis 首次失败时惰性创建一次并复用。
+	// 之前每次 Redis 执行失败都会新建一个限流器（含后台 ticker goroutine）并
+	// 追加到全局切片，Redis 抖动时会导致 goroutine 泄漏、无锁切片竞态，
+	// 且每个请求都拿到全新计数器使限流形同虚设。
+	var (
+		fbOnce    sync.Once
+		fbHandler gin.HandlerFunc
+	)
+	fallback := func() gin.HandlerFunc {
+		fbOnce.Do(func() {
+			handler, stopper := newRateLimitMiddlewareWithStopper(limit, window)
+			registerRateLimitCleanup(stopper)
+			fbHandler = handler
+		})
+		return fbHandler
 	}
 
 	return func(c *gin.Context) {
@@ -127,9 +156,7 @@ func RedisRateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 		pipe.ExpireNX(ctx, key, window)
 		if _, err := pipe.Exec(ctx); err != nil {
 			slog.Error("Redis rate limit 执行失败，降级到内存限流", "error", err)
-			fallback, stopper := newRateLimitMiddlewareWithStopper(limit, window)
-			rateLimitCleanups = append(rateLimitCleanups, stopper)
-			fallback(c)
+			fallback()(c)
 			return
 		}
 
