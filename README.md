@@ -1,87 +1,50 @@
-# Scenic Spot Guide System
+# Scenic Spot Guide System｜景区智能导览
 
 [![CI](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml/badge.svg)](https://github.com/4evour/Scenic_spot_guide_system/actions/workflows/ci.yml)
 
-面向景区游客问答、导览内容管理、路线推荐、运营数据看板和数字人导览的可复现示例系统。项目采用 Go/Gin 提供后端 API，PostgreSQL/GORM 作为生产数据库配置，SQLite 用于本地开发和轻量测试，Vue 3 + Vite 构建前端，并集成本地 RAG 检索与 Open-LLM-VTuber 联调能力。
+一个面向景区游客与运营人员的全栈演示项目：游客可以查看路线、向知识库提问并与 Live2D 数字人交互；管理员可以维护景点内容并查看运营看板。主服务使用 Go/Gin、Vue 3 和 GORM，提供本地 RAG 检索，并可与独立的 Open-LLM-VTuber 服务联调。
 
-> 项目定位是作品集与演示系统，不宣称已经达到大规模生产部署标准。评测数字均限定在对应数据集、检索模式和 `retrieval-only` 口径内。
+> **定位与边界**：这是可复现的作品集/演示系统，不宣称大规模生产部署能力。PostgreSQL 是主要数据库配置，SQLite 仅用于本地开发和轻量测试；不配置外部模型服务时，生成式回答和实时语音能力会降级。
 
-## 快速了解
+**从这里开始**：[运行截图](#运行截图) · [功能概览](#功能概览) · [快速启动](#快速启动) · [访问入口](#访问入口) · [数字人服务](#数字人服务) · [RAG 评估](#rag-评估)
 
-- [快速启动](#快速启动)：Docker Compose（PostgreSQL）或本地 SQLite 两条路径。
-- [访问入口](#访问入口)：服务启动后的页面和健康检查地址。
-- [RAG 评估](#rag-评估)：数据边界、复现命令和当前基准。
-- [数字人服务](#数字人服务)：Open-LLM-VTuber、Live2D 和语音降级路径。
+## 运行截图
 
-![系统架构](docs/assets/judge-doc/architecture.svg)
+以下是本地运行项目时保存的 Playwright 页面截图，使用演示数据，**不是在线服务实时画面**。游客地图为结构化离线示意图，不应理解为真实底图或实时导航。
 
-![RAG 检索流程](docs/assets/judge-doc/rag-flow.svg)
+### 游客导览与路线
+
+<img src="docs/assets/screenshots/tourist-map.png" alt="游客端地图页面，展示离线导览图、景点路线和个性化路线列表" width="800">
+
+### Live2D 数字人对话
+
+<img src="docs/assets/screenshots/digital-human.png" alt="数字人页面，左侧为 Live2D 示例形象，右侧为游客对话和导览反馈" width="800">
+
+图中的 `mao_pro` 是 Live2D Inc. 提供的 Niziiro Mao 临时联调示例模型，不是项目自有角色；计划中的 `lingshan_xiaoling` 模型目前不随仓库提供。使用和分发前请阅读 [Live2D 资源许可](LICENSE-Live2D.md)。实时语音与 WebSocket 交互需要独立的数字人服务。
+
+> This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with terms and conditions set by Live2D Inc. This content itself is created at the author’s sole discretion.
+
+### 管理员数据看板
+
+<img src="docs/assets/screenshots/admin-dashboard.png" alt="管理员数据大屏，展示服务次数、问答、满意度和热门景点等演示指标" width="800">
+
+看板数字来自截图时的本地演示环境，不代表线上运营数据。截图源文件存放于本地 `output/playwright/`；仓库内只保留用于文档展示的副本。
 
 ## 系统架构
 
-```mermaid
-graph TB
-    subgraph 前端层
-        A[Vue 3 SPA<br/>数据大屏/管理后台/数字人/地图]
-        B[传统 HTML/JS<br/>游客首页/AI 聊天]
-    end
+主服务承载 API、数据管理和 RAG；Vue 前端提供游客、管理与看板界面；Open-LLM-VTuber 作为可独立运行的数字人服务。详细边界和调用链见 [架构文档](docs/architecture.md)。
 
-    subgraph 后端层 Go/Gin
-        C[API 网关<br/>JWT认证/限流/安全头/CORS]
-        D[RAG 检索引擎<br/>BM25 + Embedding + RRF融合]
-        E[数字人服务<br/>会话管理/情绪检测/多轮对话]
-        F[管理后台 API<br/>数据统计/知识库CRUD/配置管理]
-        G[TTS 语音合成]
-    end
+![系统架构](docs/assets/judge-doc/architecture.svg)
 
-    subgraph 数据层
-        H[(PostgreSQL/SQLite)]
-        I[知识库 JSONL<br/>81 条基础 + 162 条真实资料]
-    end
+RAG 的检索、重排与生成路径如下；各模式的适用范围和评测口径见 [RAG 评估](#rag-评估)。
 
-    subgraph 外部服务
-        J[OpenAI 兼容 LLM<br/>示例：DashScope/Qwen]
-        K[DashScope Embedding]
-        L[Edge TTS]
-        M[Open-LLM-VTuber<br/>Live2D 数字人]
-    end
-
-    A & B --> C
-    C --> D & E & F & G
-    D --> H & I
-    D --> J & K
-    E --> D
-    G --> L
-    E --> M
-    F --> H
-```
-
-## RAG 检索流程
-
-```mermaid
-flowchart LR
-    A[用户提问] --> B[查询扩展<br/>17种意图场景]
-    B --> C{检索模式}
-    C -->|bm25-local| D[BM25 倒排索引]
-    C -->|embedding| E[DashScope 语义检索]
-    C -->|hybrid| F[加权融合 0.6E+0.4B]
-    C -->|rrf-fusion| G[RRF 排名融合]
-    C -->|light-rerank| H[BM25 + 可解释重排]
-    D & E & F & G & H --> I[Top-K 候选]
-    I --> J[实体聚焦加分]
-    J --> K{LLM 可用?}
-    K -->|是| L[配置的 LLM 生成回答]
-    K -->|否| M[本地规则 Fallback]
-    L & M --> N[回答 + 来源]
-```
+![RAG 检索流程](docs/assets/judge-doc/rag-flow.svg)
 
 ## 功能概览
 
 - **游客问答（RAG）**：基于景区知识库进行检索增强问答，支持 5 种检索模式（BM25、Embedding、加权混合、RRF 融合、可解释重排），SSE 流式回答（打字机效果），多轮对话上下文追问改写。
 - **用户反馈闭环**：每个 AI 回答支持 👍👎 反馈，数据自动进入统计大屏。
 - **数字人导览**：Live2D 虚拟形象 + 情绪检测 + 语音合成，通过 OpenAI 兼容接口和 `/vtuber-ws/*` 代理对接 Open-LLM-VTuber。
-
-当前仓库中的 `mao_pro` 为 Live2D Inc. 提供的 Niziiro Mao 官方示例数据，仅作为临时联调形象，不代表灵山专属角色或古典汉服形象。This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with terms and conditions set by Live2D Inc. This content itself is created at the author’s sole discretion. 完整条款见 `LICENSE-Live2D.md`；`lingshan_xiaoling` 只是计划中的独立授权模型，目前不随仓库提供。
 - **数据大屏**：基于真实接口展示 5 个 KPI 卡片、24h 趋势、关注点分布、热门问答、满意度趋势、知识库条目和最近对话；暂无后端来源的热力、终端、活动等运营态势显示空状态，不再使用硬编码演示数值。
 - **管理后台**：景点、路线、讲解内容、二维码、知识库、数字人形象、游客问题处理、游客感受度报告和系统设置。
 - **Prometheus 监控**：`/metrics` 端点暴露请求量、延迟 P50/P95/P99、RAG 查询耗时、缓存命中率等指标。
